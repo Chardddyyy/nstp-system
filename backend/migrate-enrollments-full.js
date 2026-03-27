@@ -5,6 +5,7 @@ dotenv.config();
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 3307,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: 'nstp_system',
@@ -30,7 +31,19 @@ async function migrateEnrollments() {
       { name: 'section', type: 'VARCHAR(20)' },
       { name: 'yearLevel', type: 'VARCHAR(20)' },
       { name: 'emergencyContact', type: 'VARCHAR(255)' },
-      { name: 'emergencyNumber', type: 'VARCHAR(50)' }
+      { name: 'emergencyNumber', type: 'VARCHAR(50)' },
+      { name: 'civilStatus', type: 'VARCHAR(50)' },
+      { name: 'height', type: 'VARCHAR(10)' },
+      { name: 'weight', type: 'VARCHAR(10)' },
+      { name: 'bloodType', type: 'VARCHAR(10)' },
+      { name: 'facebookAccount', type: 'VARCHAR(255)' },
+      { name: 'birthMonth', type: 'VARCHAR(2)' },
+      { name: 'birthDay', type: 'VARCHAR(2)' },
+      { name: 'birthYear', type: 'VARCHAR(4)' },
+      { name: 'firstName', type: 'VARCHAR(100)' },
+      { name: 'lastName', type: 'VARCHAR(100)' },
+      { name: 'middleName', type: 'VARCHAR(100)' },
+      { name: 'sex', type: 'VARCHAR(20)' }
     ];
 
     for (const col of columns) {
