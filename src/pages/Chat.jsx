@@ -205,7 +205,6 @@ function Chat() {
     return (
       <div className="w-10 h-10 relative flex items-center justify-center">
         {participantUsers.slice(0, 3).map((participant, index) => {
-          const avatar = AVATAR_OPTIONS[participant?.avatar || 'default'] || AVATAR_OPTIONS.default;
           // Position avatars in a triangular/cluster formation
           const positions = [
             { top: '0px', left: '2px' },    // top left
@@ -214,6 +213,22 @@ function Chat() {
           ];
           const pos = positions[index] || { top: '0px', left: '0px' };
           
+          // Check if participant has profile picture
+          if (participant?.profilePicture) {
+            return (
+              <img
+                key={participant?.id || index}
+                src={participant.profilePicture}
+                alt={participant?.name || 'User'}
+                className="absolute w-5 h-5 rounded-full border border-white shadow-sm object-cover"
+                style={pos}
+                title={participant?.name || 'User'}
+              />
+            );
+          }
+          
+          // Fallback to colored avatar with icon
+          const avatar = AVATAR_OPTIONS[participant?.avatar || 'default'] || AVATAR_OPTIONS.default;
           return (
             <div
               key={participant?.id || index}
@@ -610,6 +625,7 @@ function Chat() {
   const [callStatus, setCallStatus] = useState('calling');
   const [activeCallStartTime, setActiveCallStartTime] = useState(null);
   const [isCallMuted, setIsCallMuted] = useState(false);
+  const [isCameraVideoOff, setIsCameraVideoOff] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [videoCallStatus, setVideoCallStatus] = useState('calling');
   const localVideoRef = useRef(null);

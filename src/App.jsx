@@ -170,7 +170,9 @@ function App() {
       console.log('Adding student:', student);
       const newStudent = await studentsAPI.add(student);
       console.log('Student added successfully:', newStudent);
-      setStudents(prev => [...prev, newStudent]);
+      // Re-fetch all students to ensure table is updated
+      const studentsData = await studentsAPI.getAll();
+      setStudents(studentsData);
       return newStudent;
     } catch (error) {
       console.error('Add student error:', error);
@@ -240,7 +242,9 @@ function App() {
       console.log('Adding report:', report);
       const newReport = await reportsAPI.add(report);
       console.log('Report added successfully:', newReport);
-      setReports(prev => [...prev, newReport]);
+      // Re-fetch all reports to ensure table is updated
+      const reportsData = await reportsAPI.getAll();
+      setReports(reportsData);
       return newReport;
     } catch (error) {
       console.error('Add report error:', error);

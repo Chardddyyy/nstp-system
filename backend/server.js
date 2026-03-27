@@ -225,7 +225,7 @@ app.get('/api/students', authenticateToken, async (req, res) => {
 // Add student
 app.post('/api/students', authenticateToken, async (req, res) => {
   try {
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address } = req.body;
+    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
     
     // Validate required fields
     if (!studentId || !name || !department) {
@@ -241,10 +241,20 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const safeYear = year !== undefined ? year : null;
     const safeContactNumber = contactNumber !== undefined ? contactNumber : null;
     const safeAddress = address !== undefined ? address : null;
+    const safeGender = gender !== undefined ? gender : null;
+    const safeBirthDate = birthDate !== undefined ? birthDate : null;
+    const safeAge = age !== undefined ? age : null;
+    const safeCivilStatus = civilStatus !== undefined ? civilStatus : null;
+    const safeBloodType = bloodType !== undefined ? bloodType : null;
+    const safeHeight = height !== undefined ? height : null;
+    const safeWeight = weight !== undefined ? weight : null;
+    const safeFacebookAccount = facebookAccount !== undefined ? facebookAccount : null;
+    const safeEmergencyName = emergencyName !== undefined ? emergencyName : null;
+    const safeEmergencyNumber = emergencyNumber !== undefined ? emergencyNumber : null;
     
     const [result] = await pool.execute(
-      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress]
+      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress, safeGender, safeBirthDate, safeAge, safeCivilStatus, safeBloodType, safeHeight, safeWeight, safeFacebookAccount, safeEmergencyName, safeEmergencyNumber]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
@@ -259,7 +269,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address } = req.body;
+    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
     
     // Convert undefined to null for optional fields
     const safeEmail = email !== undefined ? email : null;
@@ -270,10 +280,20 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const safeYear = year !== undefined ? year : null;
     const safeContactNumber = contactNumber !== undefined ? contactNumber : null;
     const safeAddress = address !== undefined ? address : null;
+    const safeGender = gender !== undefined ? gender : null;
+    const safeBirthDate = birthDate !== undefined ? birthDate : null;
+    const safeAge = age !== undefined ? age : null;
+    const safeCivilStatus = civilStatus !== undefined ? civilStatus : null;
+    const safeBloodType = bloodType !== undefined ? bloodType : null;
+    const safeHeight = height !== undefined ? height : null;
+    const safeWeight = weight !== undefined ? weight : null;
+    const safeFacebookAccount = facebookAccount !== undefined ? facebookAccount : null;
+    const safeEmergencyName = emergencyName !== undefined ? emergencyName : null;
+    const safeEmergencyNumber = emergencyNumber !== undefined ? emergencyNumber : null;
     
     await pool.execute(
-      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, program = ?, year = ?, contactNumber = ?, address = ? WHERE id = ?',
-      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress, id]
+      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
+      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress, safeGender, safeBirthDate, safeAge, safeCivilStatus, safeBloodType, safeHeight, safeWeight, safeFacebookAccount, safeEmergencyName, safeEmergencyNumber, id]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);

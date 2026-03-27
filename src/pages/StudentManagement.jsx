@@ -45,13 +45,13 @@ function StudentManagement() {
     civilStatus: '',
     gender: '',
     bloodType: '',
-    emergencyContact: '',
-    emergencyName: ''
+    emergencyName: '',
+    emergencyNumber: ''
   });
 
   const handleAddStudent = () => {
     // Validate all required fields
-    const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'address', 'emergencyName', 'emergencyContact'];
+    const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'address', 'emergencyName', 'emergencyNumber'];
     const fieldLabels = {
       studentId: 'Student ID',
       name: 'Full Name',
@@ -69,7 +69,7 @@ function StudentManagement() {
       contactNumber: 'Contact Number',
       address: 'Address',
       emergencyName: 'Emergency Contact Name',
-      emergencyContact: 'Emergency Contact Number'
+      emergencyNumber: 'Emergency Contact Number'
     };
     
     for (const field of requiredFields) {
@@ -94,7 +94,7 @@ function StudentManagement() {
       return;
     }
     
-    if (formData.emergencyContact.length !== 11) {
+    if (formData.emergencyNumber.length !== 11) {
       setNotification({ type: 'error', message: 'Emergency Contact Number must be exactly 11 digits.' });
       setTimeout(() => setNotification(null), 3000);
       return;
@@ -130,7 +130,7 @@ function StudentManagement() {
       address: '',
       bloodType: '',
       emergencyName: '',
-      emergencyContact: ''
+      emergencyNumber: ''
     });
   };
 
@@ -1131,10 +1131,10 @@ function StudentManagement() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Number</label>
                       <input
                         type="tel"
-                        value={formData.emergencyContact}
+                        value={formData.emergencyNumber}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                          setFormData({...formData, emergencyContact: value});
+                          setFormData({...formData, emergencyNumber: value});
                         }}
                         maxLength={11}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"

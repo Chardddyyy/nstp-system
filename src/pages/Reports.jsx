@@ -416,10 +416,10 @@ function Reports() {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'Reviewed': return 'bg-blue-100 text-blue-700';
-      case 'Submitted': return 'bg-green-100 text-green-700';
-      case 'Pending': return 'bg-yellow-100 text-yellow-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Reviewed': return 'bg-blue-100 text-blue-700 border border-blue-200';
+      case 'Submitted': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+      case 'Pending': return 'bg-amber-100 text-amber-700 border border-amber-200';
+      default: return 'bg-gray-100 text-gray-700 border border-gray-200';
     }
   };
 
@@ -602,7 +602,7 @@ function Reports() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-bold text-gray-800">{report.title}</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(report.status)}`}>
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${getStatusColor(report.status)}`}>
                       {report.status}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-medium ${getDeptColor(report.department)}`}>
@@ -620,10 +620,10 @@ function Reports() {
                       {report.createdAt}
                     </span>
                     {report.dueDate && (
-                      <span className="flex items-center text-red-600">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Due: {report.dueDate}
-                      </span>
+                    <span className="flex items-center px-2 py-1 bg-red-50 text-red-700 rounded text-xs font-medium">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Due: {report.dueDate}
+                    </span>
                     )}
                     <span className="flex items-center">
                       <MessageCircle className="w-4 h-4 mr-1" />
@@ -643,7 +643,7 @@ function Reports() {
                   )}
                   {isInstructor && hasSubmitted(report) && (
                     <span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm">
-                      Submitted
+                      {user?.name}
                     </span>
                   )}
                   <button 
