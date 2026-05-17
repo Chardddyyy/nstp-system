@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import React, { useState, createContext, useContext, useEffect, useRef, useCallback } from 'react';
+
+const BASE_PATH = import.meta.env.BASE_URL || '/';
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
 import { hasAllInstructorsGroup, ensureAllInstructorsGroup } from './utils/ensureGroupChat';
@@ -1129,7 +1131,7 @@ function App() {
 
   return (
     <AuthContext.Provider value={contextValue}>
-      <BrowserRouter>
+      <BrowserRouter basename={BASE_PATH}>
         <RealtimeToastStack />
         <IncomingCallOverlay />
         <Routes>

@@ -31,7 +31,7 @@ async function apiCall(endpoint, options) {
     if ((response.status == 403 || response.status == 401) && token) {
       localStorage.removeItem('nstp_token');
       localStorage.removeItem('nstp_user');
-      window.location.href = '/';
+      window.location.href = import.meta.env.BASE_URL || '/';
     }
     throw new Error(error.message || 'API request failed');
   }
