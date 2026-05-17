@@ -1,11 +1,7 @@
 const mysql = require('mysql2/promise');
+const { getDbConfig } = require('./config/dbEnv');
 
-const dbConfig = {
-  host: 'localhost',
-  port: 3307, // Your MySQL port
-  user: 'root',
-  password: '' // XAMPP default
-};
+const dbConfig = getDbConfig({ includeDatabase: false });
 
 async function setupDatabase() {
   try {
@@ -107,21 +103,37 @@ async function setupDatabase() {
     `);
     console.log('✓ report_submissions table created');
     
-    // Conversations table
+    // Conversations table (direct + group)
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS conversations (
         id VARCHAR(255) PRIMARY KEY,
-        participant_1_id INT NOT NULL,
-        participant_2_id INT NOT NULL,
+        participant_1_id INT NULL,
+        participant_2_id INT NULL,
+        is_group BOOLEAN DEFAULT FALSE,
+        group_name VARCHAR(255) NULL,
+        created_by INT NULL,
         last_message TEXT,
-        last_message_time TIMESTAMP,
+        last_message_time TIMESTAMP NULL,
         unread_count INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (participant_1_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (participant_2_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (participant_2_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
     console.log('✓ conversations table created');
+
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS conversation_participants (
+        conversation_id VARCHAR(255) NOT NULL,
+        user_id INT NOT NULL,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (conversation_id, user_id),
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('✓ conversation_participants table created');
     
     // Messages table
     await connection.execute(`
@@ -166,35 +178,66 @@ async function setupDatabase() {
     console.log('✓ calls table created');
     
     // Update existing table schema if needed
-    try {
-      await connection.execute(`ALTER TABLE messages MODIFY COLUMN type VARCHAR(50) DEFAULT 'text'`);
-      await connection.execute(`ALTER TABLE messages MODIFY COLUMN image_url LONGTEXT`);
-      await connection.execute(`ALTER TABLE messages MODIFY COLUMN file_url LONGTEXT`);
-      await connection.execute(`ALTER TABLE messages MODIFY COLUMN audio_url LONGTEXT`);
-      await connection.execute(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url MEDIUMTEXT`);
-      await connection.execute(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)`);
-      await connection.execute(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS audio_url MEDIUMTEXT`);
-      await connection.execute(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration VARCHAR(50)`);
-      console.log('✓ Updated messages table schema');
-    } catch (alterError) {
-      console.log('✓ Schema up to date');
+    const messageAlters = [
+      'ALTER TABLE messages MODIFY COLUMN type VARCHAR(50) DEFAULT \'text\'',
+      'ALTER TABLE messages MODIFY COLUMN image_url LONGTEXT',
+      'ALTER TABLE messages MODIFY COLUMN file_url LONGTEXT',
+      'ALTER TABLE messages MODIFY COLUMN audio_url LONGTEXT',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url MEDIUMTEXT',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name VARCHAR(255)',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS audio_url MEDIUMTEXT',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS duration VARCHAR(50)',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_for JSON NULL',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_for_everyone BOOLEAN DEFAULT FALSE',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_snapshot JSON NULL',
+      'ALTER TABLE messages ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL'
+    ];
+    for (const sql of messageAlters) {
+      try { await connection.execute(sql); } catch (e) { /* ignore */ }
     }
+    console.log('✓ Updated messages table schema');
+
+    const conversationAlters = [
+      'ALTER TABLE conversations MODIFY COLUMN participant_1_id INT NULL',
+      'ALTER TABLE conversations MODIFY COLUMN participant_2_id INT NULL',
+      'ALTER TABLE conversations ADD COLUMN IF NOT EXISTS is_group BOOLEAN DEFAULT FALSE',
+      'ALTER TABLE conversations ADD COLUMN IF NOT EXISTS group_name VARCHAR(255) NULL',
+      'ALTER TABLE conversations ADD COLUMN IF NOT EXISTS created_by INT NULL'
+    ];
+    for (const sql of conversationAlters) {
+      try { await connection.execute(sql); } catch (e) { /* ignore */ }
+    }
+    console.log('✓ Updated conversations table schema');
     
     // Enrollments table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS enrollments (
         id INT PRIMARY KEY AUTO_INCREMENT,
         student_name VARCHAR(255) NOT NULL,
+        firstName VARCHAR(100),
+        lastName VARCHAR(100),
+        middleName VARCHAR(100),
         email VARCHAR(255),
         department ENUM('ROTC', 'CWTS', 'LTS') NOT NULL,
         studentId VARCHAR(50),
         contactNumber VARCHAR(50),
-        birthDate DATE,
-        gender ENUM('Male', 'Female'),
+        homeAddress TEXT,
         address TEXT,
-        program VARCHAR(20),
-        section VARCHAR(20),
-        yearLevel VARCHAR(20),
+        birthDate DATE,
+        birthMonth VARCHAR(2),
+        birthDay VARCHAR(2),
+        birthYear VARCHAR(4),
+        age VARCHAR(10),
+        civilStatus VARCHAR(50),
+        gender VARCHAR(20),
+        height VARCHAR(10),
+        weight VARCHAR(10),
+        facebookAccount VARCHAR(255),
+        bloodType VARCHAR(10),
+        course VARCHAR(100),
+        program VARCHAR(100),
+        section VARCHAR(50),
+        yearLevel VARCHAR(50),
         emergencyContact VARCHAR(255),
         emergencyNumber VARCHAR(50),
         status ENUM('Pending', 'Approved', 'Declined') DEFAULT 'Pending',
@@ -262,8 +305,8 @@ async function setupDatabase() {
   } catch (error) {
     console.error('❌ Database setup failed:', error.message);
     if (error.code === 'ECONNREFUSED') {
-      console.log('\nMake sure MySQL is running on MAMP/XAMPP');
-      console.log('Check that port 8889 is correct for your MySQL server');
+      console.log('\nMake sure XAMPP MySQL is running (port ' + dbConfig.port + ')');
+      console.log('Open XAMPP Control Panel → Start MySQL, then run: npm run setup-db');
     }
     process.exit(1);
   }

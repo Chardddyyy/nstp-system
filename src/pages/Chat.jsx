@@ -61,10 +61,9 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
 };
 
 function Chat() {
-  const { user, logout, allUsers, conversations, messages, startConversation, sendMessage, getUserConversations, editMessage, deleteMessage, addReaction, deleteConversation, clearMessages } = useAuth();
+  const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations, editMessage, deleteMessage, addReaction, clearMessages } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const isAdmin = user?.role === 'admin';
   const messagesEndRef = useRef(null);
 
   const [activeConversationId, setActiveConversationId] = useState(() => {
@@ -79,18 +78,12 @@ function Chat() {
   });
   const [messageText, setMessageText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showContacts, setShowContacts] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editText, setEditText] = useState('');
   const [showMessageMenu, setShowMessageMenu] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showConversations, setShowConversations] = useState(true);
   
-  // Group chat state
-  const [showGroupChatModal, setShowGroupChatModal] = useState(false);
-  const [groupName, setGroupName] = useState('');
-  const [selectedParticipants, setSelectedParticipants] = useState([]);
-
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingIntervalRef = useRef(null);
@@ -134,48 +127,8 @@ function Chat() {
     setMessageText('');
   };
 
-  const handleStartConversation = (contact) => {
-    const conv = startConversation(contact);
-    setActiveConversationId(conv.id);
-    setShowContacts(false);
-    setShowConversations(false); // Hide conversations list on mobile when chat opens
-  };
-
-  const handleCreateGroupChat = () => {
-    if (!groupName.trim() || selectedParticipants.length < 2) {
-      addNotification('Please enter a group name and select at least 2 participants', 'error');
-      return;
-    }
-
-    const groupConversation = {
-      id: `group_${Date.now()}`,
-      isGroup: true,
-      name: groupName,
-      participants: [user.id, ...selectedParticipants],
-      createdAt: new Date().toISOString(),
-      lastMessage: null
-    };
-
-    // Add to conversations (this would need to be handled in the auth context)
-    setActiveConversationId(groupConversation.id);
-    setShowGroupChatModal(false);
-    setGroupName('');
-    setSelectedParticipants([]);
-    setShowContacts(false);
-    setShowConversations(false);
-    addNotification('Group chat created successfully!', 'success');
-  };
-
-  const toggleParticipantSelection = (participantId) => {
-    setSelectedParticipants(prev => 
-      prev.includes(participantId) 
-        ? prev.filter(id => id !== participantId)
-        : [...prev, participantId]
-    );
-  };
-
   const getGroupAvatar = (conversation) => {
-    if (!conversation?.isGroup) return null;
+    if (!isGroupConversation(conversation)) return null;
     
     // Use participantDetails if available from backend, otherwise fallback to allUsers lookup
     let participantUsers = [];
@@ -248,25 +201,6 @@ function Chat() {
       </div>
     );
   };
-
-  // Create instructor/admin group chat
-  useEffect(() => {
-    if (user && (user.role === 'admin' || user.role === 'instructor')) {
-      const instructorsAndAdmin = allUsers.filter(u => u.role === 'admin' || u.role === 'instructor');
-      
-      // Check if group chat already exists
-      const existingGroupChat = conversations.find(c => 
-        c.isGroup && 
-        c.name === 'Instructor & Admin Group' &&
-        c.participants.includes(user.id)
-      );
-      
-      if (!existingGroupChat && instructorsAndAdmin.length > 1) {
-        // Group chat creation will be handled by App context
-        // This prevents console spam
-      }
-    }
-  }, [user, allUsers, conversations]);
 
   const handleSetActiveConversation = (id) => {
     setActiveConversationId(id);
@@ -909,13 +843,17 @@ function Chat() {
     }
   }, [activeConversationId]);
 
+  const isGroupConversation = (conversation) => {
+    return !!(conversation?.isGroup || conversation?.is_group);
+  };
+
   // Helper function to get the correct conversation partner name
   const getConversationPartnerName = (conversation) => {
     if (!conversation || !user) return '';
     
     // If it's a group chat, return the group name
-    if (conversation.isGroup) {
-      return conversation.groupName || conversation.group_name || conversation.name || 'Group Chat';
+    if (isGroupConversation(conversation)) {
+      return conversation.groupName || conversation.group_name || conversation.name || 'All Instructors';
     }
     
     // Find the other participant for private chat
@@ -928,7 +866,7 @@ function Chat() {
 
   // Get the user object for conversation partner
   const getConversationPartner = (conversation) => {
-    if (!conversation || !user) return null;
+    if (!conversation || !user || isGroupConversation(conversation)) return null;
     const otherParticipantId = conversation.participants?.find(id => id !== user.id);
     if (!otherParticipantId) return null;
     return allUsers.find(u => u.id === otherParticipantId);
@@ -952,12 +890,15 @@ function Chat() {
   // Get user's own conversations only (private)
   const userConversations = getUserConversations();
 
-  const filteredConversations = userConversations.filter(c => 
-    c.with.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Get contacts (all users except current user)
-  const contacts = allUsers.filter(u => u.id !== user?.id);
+  const filteredConversations = userConversations
+    .filter(c => getConversationPartnerName(c).toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      const aName = getConversationPartnerName(a);
+      const bName = getConversationPartnerName(b);
+      if (aName === 'All Instructors') return -1;
+      if (bName === 'All Instructors') return 1;
+      return 0;
+    });
 
   // Image viewer and editor handlers
   const handleImageClick = (imageUrl) => {
@@ -1008,25 +949,6 @@ function Chat() {
     setEditorTool('draw');
     setEditorText('');
     setTextPosition(null);
-  };
-
-  const handleDeleteConversation = () => {
-    if (!activeConversation) return;
-    setConfirmModalData({
-      title: 'Delete Conversation',
-      message: `Delete conversation with ${activeConversation.with}? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      isDanger: true,
-      onConfirm: () => {
-        deleteConversation(activeConversation.id);
-        setActiveConversationId(null);
-        setShowChatMenu(false);
-        addNotification('Conversation deleted', 'success');
-        setShowConfirmModal(false);
-      }
-    });
-    setShowConfirmModal(true);
   };
 
   const handleClearChat = () => {
@@ -1419,18 +1341,12 @@ function Chat() {
                 </button>
                 <h2 className="text-lg lg:text-xl font-bold text-gray-800">Messages</h2>
               </div>
-              <button 
-                onClick={() => setShowContacts(!showContacts)}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors touch-manipulation"
-              >
-                {showContacts ? 'Back' : 'New Chat'}
-              </button>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder={showContacts ? "Search contacts..." : "Search conversations..."}
+                placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 lg:pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
@@ -1439,49 +1355,15 @@ function Chat() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {showContacts ? (
-              // Show Contacts List
-              <>
-                <div className="px-4 py-2 bg-gray-100 text-sm font-medium text-gray-600">
-                  {isAdmin ? 'Instructors' : 'Admin & Other Instructors'}
-                </div>
-                {contacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((contact) => (
-                  <button
-                    key={contact.id}
-                    onClick={() => handleStartConversation(contact)}
-                    className="w-full p-3 lg:p-4 flex items-center space-x-3 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation"
-                  >
-                    {getUserAvatar(contact)}
-                    <div className="flex-1 text-left min-w-0">
-                      <h3 className="font-medium text-gray-800 text-sm lg:text-base truncate">{contact.name}</h3>
-                      <p className="text-xs lg:text-sm text-gray-500 truncate">{contact.department} {contact.role === 'admin' ? '(Admin)' : '(Instructor)'}</p>
-                    </div>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">Click to chat</span>
-                  </button>
-                ))}
-              </>
-            ) : (
-              // Show Conversations List
-              <>
+
                 {filteredConversations.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <motion.div className="text-center py-8 text-gray-500 px-4">
                     <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>No conversations yet</p>
-                    <div className="mt-4 space-y-2">
-                      <button 
-                        onClick={() => setShowContacts(true)}
-                        className="block w-full text-green-600 hover:text-green-700 text-sm"
-                      >
-                        Start a new conversation
-                      </button>
-                      <button 
-                        onClick={() => setShowGroupChatModal(true)}
-                        className="block w-full text-blue-600 hover:text-blue-700 text-sm"
-                      >
-                        Create a group chat
-                      </button>
-                    </div>
-                  </div>
+                    {(user?.role === 'admin' || user?.role === 'instructor') && (
+                      <p className="mt-2 text-sm text-gray-400">The All Instructors group will appear here when available.</p>
+                    )}
+                  </motion.div>
                 ) : (
                   filteredConversations.map((conversation) => {
                     const partner = getConversationPartner(conversation);
@@ -1510,7 +1392,7 @@ function Chat() {
                         className={`w-full p-3 lg:p-4 flex items-center space-x-3 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${activeConversationId === conversation.id ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
                       >
                         <div className="relative">
-                          {conversation.isGroup ? getGroupAvatar(conversation) : getUserAvatar(partner)}
+                          {isGroupConversation(conversation) ? getGroupAvatar(conversation) : getUserAvatar(partner)}
                           {/* Red dot indicator for new messages */}
                           {hasNewMessages && (
                             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
@@ -1519,7 +1401,7 @@ function Chat() {
                         <div className="flex-1 text-left min-w-0">
                           <div className="flex items-center justify-between">
                             <h3 className="font-medium text-gray-800 text-sm lg:text-base truncate">
-                              {conversation.isGroup ? 'Group Chat' : getConversationPartnerName(conversation)}
+                              {getConversationPartnerName(conversation)}
                             </h3>
                             <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{conversation.time}</span>
                           </div>
@@ -1535,8 +1417,6 @@ function Chat() {
                     );
                   })
                 )}
-              </>
-            )}
           </div>
         </div>
 
@@ -1556,11 +1436,11 @@ function Chat() {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <div className="flex-shrink-0">
-                    {activeConversation?.isGroup ? getGroupAvatar(activeConversation) : getUserAvatar(getConversationPartner(activeConversation))}
+                    {isGroupConversation(activeConversation) ? getGroupAvatar(activeConversation) : getUserAvatar(getConversationPartner(activeConversation))}
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-gray-800 text-sm lg:text-base truncate">{activePartnerName}</h3>
-                    {activeConversation?.isGroup ? (
+                    {isGroupConversation(activeConversation) ? (
                       <p className="text-xs lg:text-sm text-gray-500 flex items-center">
                         <span className="truncate">{activeConversation.participants?.length || 2} participants</span>
                       </p>
@@ -1581,22 +1461,26 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
-                  <button 
-                    onClick={handleCall}
-                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-                    title="Voice Call"
-                    aria-label="Voice call"
-                  >
-                    <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
-                  <button 
-                    onClick={handleVideoCall}
-                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-                    title="Video Call"
-                    aria-label="Video call"
-                  >
-                    <Video className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
+                  {!isGroupConversation(activeConversation) && (
+                    <>
+                      <button 
+                        onClick={handleCall}
+                        className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                        title="Voice Call"
+                        aria-label="Voice call"
+                      >
+                        <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
+                      </button>
+                      <button 
+                        onClick={handleVideoCall}
+                        className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                        title="Video Call"
+                        aria-label="Video call"
+                      >
+                        <Video className="w-4 h-4 lg:w-5 lg:h-5" />
+                      </button>
+                    </>
+                  )}
                   <div className="relative">
                     <button 
                       onClick={() => setShowChatMenu(!showChatMenu)}
@@ -1614,18 +1498,14 @@ function Chat() {
                         >
                           Clear Chat
                         </button>
-                        <button
-                          onClick={handleDeleteConversation}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
-                        >
-                          Delete Conversation
-                        </button>
-                        <button
-                          onClick={handleBlockUser}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
-                        >
-                          {isBlocked ? 'Unblock User' : 'Block User'}
-                        </button>
+                        {!isGroupConversation(activeConversation) && (
+                          <button
+                            onClick={handleBlockUser}
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
+                          >
+                            {isBlocked ? 'Unblock User' : 'Block User'}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2309,7 +2189,7 @@ function Chat() {
                 <div className="mb-6 sm:mb-8">
                   {/* Avatar */}
                   <div className="relative mx-auto mb-4">
-                    {activeConversation && !activeConversation.isGroup ? (
+                    {activeConversation && !isGroupConversation(activeConversation) ? (
                       <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden bg-gray-700 border-4 border-gray-700">
                         {(() => {
                           const partner = getConversationPartner(activeConversation);
@@ -2646,79 +2526,6 @@ function Chat() {
           )}
         </div>
       </main>
-
-      {/* Group Chat Modal */}
-      {showGroupChatModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-800">Create Group Chat</h3>
-              <button 
-                onClick={() => setShowGroupChatModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  placeholder="Enter group name"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select Participants (minimum 2)
-                </label>
-                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-2">
-                  {contacts.filter(contact => contact.id !== user?.id).map((contact) => (
-                    <label key={contact.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedParticipants.includes(contact.id)}
-                        onChange={() => toggleParticipantSelection(contact.id)}
-                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                      />
-                      <div className="flex items-center space-x-2 flex-1">
-                        <div className={`w-8 h-8 ${AVATAR_OPTIONS[contact.avatar || 'default']?.color || 'bg-gray-400'} rounded-full flex items-center justify-center text-sm`}>
-                          {AVATAR_OPTIONS[contact.avatar || 'default']?.icon || '👤'}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{contact.name}</p>
-                          <p className="text-xs text-gray-500">{contact.department} {contact.role === 'admin' ? '(Admin)' : '(Instructor)'}</p>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button 
-                onClick={() => setShowGroupChatModal(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleCreateGroupChat}
-                disabled={!groupName.trim() || selectedParticipants.length < 2}
-                className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                Create Group
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

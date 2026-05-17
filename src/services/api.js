@@ -1,172 +1,357 @@
 const API_URL = 'http://localhost:3001/api';
 
-// Helper function for API calls
-const apiCall = async (endpoint, options = {}) => {
-  const url = `${API_URL}${endpoint}`;
-  
-  const config = {
+// basic api helper
+async function apiCall(endpoint, options) {
+  var url = API_URL + endpoint;
+  var config = {
     headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    },
-    ...options
+      'Content-Type': 'application/json'
+    }
   };
 
-  // Add auth token if available
-  const token = localStorage.getItem('nstp_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (options) {
+    if (options.method) config.method = options.method;
+    if (options.body) config.body = options.body;
+    if (options.headers) {
+      for (var key in options.headers) {
+        config.headers[key] = options.headers[key];
+      }
+    }
   }
 
-  const response = await fetch(url, config);
-  
+  var token = localStorage.getItem('nstp_token');
+  if (token) {
+    config.headers.Authorization = 'Bearer ' + token;
+  }
+
+  var response = await fetch(url, config);
+
   if (!response.ok) {
-    const error = await response.json();
-    // If token is invalid/expired AND user was logged in, clear storage and reload
-    // Don't redirect during login (when no token exists)
-    if ((response.status === 403 || response.status === 401) && token) {
+    var error = await response.json();
+    if ((response.status == 403 || response.status == 401) && token) {
       localStorage.removeItem('nstp_token');
       localStorage.removeItem('nstp_user');
       window.location.href = '/';
     }
     throw new Error(error.message || 'API request failed');
   }
-  
+
   return response.json();
-};
+}
 
-// Auth API
-export const authAPI = {
-  login: (email, password) => apiCall('/auth/login', {
+// Auth
+export function loginUser(email, password) {
+  return apiCall('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password })
-  })
-};
+    body: JSON.stringify({ email: email, password: password })
+  });
+}
 
-// Users API
-export const usersAPI = {
-  getAll: () => apiCall('/users'),
-  getMe: () => apiCall('/users/me'),
-  update: (id, data) => apiCall(`/users/${id}`, {
+// Users
+export function getUsers() {
+  return apiCall('/users');
+}
+
+export function getMe() {
+  return apiCall('/users/me');
+}
+
+export function updateUser(id, data) {
+  return apiCall('/users/' + id, {
     method: 'PUT',
     body: JSON.stringify(data)
-  }),
-  changePassword: (id, newPassword) => apiCall(`/users/${id}/password`, {
-    method: 'PUT',
-    body: JSON.stringify({ newPassword })
-  })
-};
+  });
+}
 
-// Students API
-export const studentsAPI = {
-  getAll: () => apiCall('/students'),
-  add: (data) => apiCall('/students', {
+export function changePassword(id, newPassword) {
+  return apiCall('/users/' + id + '/password', {
+    method: 'PUT',
+    body: JSON.stringify({ newPassword: newPassword })
+  });
+}
+
+// Students
+export function getStudents() {
+  return apiCall('/students');
+}
+
+export function addStudent(data) {
+  return apiCall('/students', {
     method: 'POST',
     body: JSON.stringify(data)
-  }),
-  update: (id, data) => apiCall(`/students/${id}`, {
+  });
+}
+
+export function updateStudent(id, data) {
+  return apiCall('/students/' + id, {
     method: 'PUT',
     body: JSON.stringify(data)
-  }),
-  delete: (id) => apiCall(`/students/${id}`, {
+  });
+}
+
+export function deleteStudent(id) {
+  return apiCall('/students/' + id, {
     method: 'DELETE'
-  })
-};
+  });
+}
 
-// Reports API
-export const reportsAPI = {
-  getAll: () => apiCall('/reports'),
-  add: (data) => apiCall('/reports', {
+// Reports
+export function getReports() {
+  return apiCall('/reports');
+}
+
+export function addReport(data) {
+  return apiCall('/reports', {
     method: 'POST',
     body: JSON.stringify(data)
-  }),
-  update: (id, data) => apiCall(`/reports/${id}`, {
+  });
+}
+
+export function updateReport(id, data) {
+  return apiCall('/reports/' + id, {
     method: 'PUT',
     body: JSON.stringify(data)
-  }),
-  submit: (id, content) => apiCall(`/reports/${id}/submit`, {
-    method: 'POST',
-    body: JSON.stringify({ content })
-  }),
-  delete: (id) => apiCall(`/reports/${id}`, {
-    method: 'DELETE'
-  })
-};
+  });
+}
 
-// Conversations API
-export const conversationsAPI = {
-  getAll: () => apiCall('/conversations'),
-  create: (withUserId) => apiCall('/conversations', {
+export function submitReport(id, content) {
+  return apiCall('/reports/' + id + '/submit', {
     method: 'POST',
-    body: JSON.stringify({ withUserId })
-  }),
-  createGroup: (name, participants) => apiCall('/conversations/group', {
+    body: JSON.stringify({ content: content })
+  });
+}
+
+export function deleteReport(id) {
+  return apiCall('/reports/' + id, {
+    method: 'DELETE'
+  });
+}
+
+// Conversations
+export function getConversations() {
+  return apiCall('/conversations');
+}
+
+export function createConversation(withUserId) {
+  return apiCall('/conversations', {
     method: 'POST',
-    body: JSON.stringify({ name, participants })
-  }),
-  getMessages: (id) => apiCall(`/conversations/${id}/messages`),
-  sendMessage: (id, data) => apiCall(`/conversations/${id}/messages`, {
+    body: JSON.stringify({ withUserId: withUserId })
+  });
+}
+
+export function createGroup(name, participants) {
+  return apiCall('/conversations/group', {
+    method: 'POST',
+    body: JSON.stringify({ name: name, participants: participants })
+  });
+}
+
+export function getMessages(id) {
+  return apiCall('/conversations/' + id + '/messages');
+}
+
+export function sendMessage(id, data) {
+  return apiCall('/conversations/' + id + '/messages', {
     method: 'POST',
     body: JSON.stringify(data)
-  }),
-  editMessage: (conversationId, messageId, text) => apiCall(`/conversations/${conversationId}/messages/${messageId}`, {
+  });
+}
+
+export function editMessage(conversationId, messageId, text) {
+  return apiCall('/conversations/' + conversationId + '/messages/' + messageId, {
     method: 'PUT',
-    body: JSON.stringify({ text })
-  }),
-  deleteMessage: (conversationId, messageId, forEveryone = false) => apiCall(`/conversations/${conversationId}/messages/${messageId}?forEveryone=${forEveryone}`, {
-    method: 'DELETE'
-  }),
-  addReaction: (conversationId, messageId, emoji) => apiCall(`/conversations/${conversationId}/messages/${messageId}/reactions`, {
-    method: 'POST',
-    body: JSON.stringify({ emoji })
-  }),
-  delete: (id) => apiCall(`/conversations/${id}`, {
-    method: 'DELETE'
-  })
-};
+    body: JSON.stringify({ text: text })
+  });
+}
 
-// Enrollments API
-export const enrollmentsAPI = {
-  getAll: () => apiCall('/enrollments'),
-  submit: (data) => apiCall('/enrollments', {
+export function deleteMessage(conversationId, messageId, forEveryone) {
+  var url = '/conversations/' + conversationId + '/messages/' + messageId;
+  if (forEveryone) url = url + '?forEveryone=true';
+  return apiCall(url, {
+    method: 'DELETE'
+  });
+}
+
+export function restoreMessage(conversationId, messageId) {
+  return apiCall('/conversations/' + conversationId + '/messages/' + messageId + '/restore', {
+    method: 'PUT'
+  });
+}
+
+export function addReaction(conversationId, messageId, emoji) {
+  return apiCall('/conversations/' + conversationId + '/messages/' + messageId + '/reactions', {
+    method: 'POST',
+    body: JSON.stringify({ emoji: emoji })
+  });
+}
+
+export function deleteConversation(id) {
+  return apiCall('/conversations/' + id, {
+    method: 'DELETE'
+  });
+}
+
+// Enrollments
+export function getEnrollments() {
+  return apiCall('/enrollments');
+}
+
+export function submitEnrollment(data) {
+  return apiCall('/enrollments', {
     method: 'POST',
     body: JSON.stringify(data)
-  }),
-  update: (id, status) => apiCall(`/enrollments/${id}`, {
+  });
+}
+
+export function updateEnrollment(id, status) {
+  return apiCall('/enrollments/' + id, {
     method: 'PUT',
-    body: JSON.stringify({ status })
-  })
-};
+    body: JSON.stringify({ status: status })
+  });
+}
 
-// Archives API - Database backed
-export const archivesAPI = {
-  getAll: () => apiCall('/archives'),
-  getByYear: (year) => apiCall(`/archives/${year}`),
-  create: (data) => apiCall('/archives', {
+// Archives
+export function getArchives() {
+  return apiCall('/archives');
+}
+
+export function getArchiveByYear(year) {
+  return apiCall('/archives/' + year);
+}
+
+export function createArchive(data) {
+  return apiCall('/archives', {
     method: 'POST',
     body: JSON.stringify(data)
-  }),
-  delete: (year) => apiCall(`/archives/${year}`, {
-    method: 'DELETE'
-  }),
-  getCurrentBatch: () => apiCall('/current-batch')
-};
+  });
+}
 
-// Calls API
-export const callsAPI = {
-  initiate: (conversationId, callType) => apiCall('/calls', {
+export function deleteArchive(year) {
+  return apiCall('/archives/' + year, {
+    method: 'DELETE'
+  });
+}
+
+export function getCurrentBatch() {
+  return apiCall('/current-batch');
+}
+
+// Calls
+export function initiateCall(conversationId, callType) {
+  return apiCall('/calls', {
     method: 'POST',
     body: JSON.stringify({ conversation_id: conversationId, call_type: callType })
-  }),
-  getIncoming: () => apiCall('/calls/incoming'),
-  answer: (callId) => apiCall(`/calls/${callId}/answer`, {
+  });
+}
+
+export function getIncomingCalls() {
+  return apiCall('/calls/incoming');
+}
+
+export function answerCall(id) {
+  return apiCall('/calls/' + id + '/answer', {
     method: 'PUT'
-  }),
-  end: (callId, status) => apiCall(`/calls/${callId}/end`, {
+  });
+}
+
+export function endCall(id, status) {
+  return apiCall('/calls/' + id + '/end', {
     method: 'PUT',
-    body: JSON.stringify({ status })
-  })
+    body: JSON.stringify({ status: status || 'ended' })
+  });
+}
+
+export function getCallById(id) {
+  return apiCall('/calls/' + id);
+}
+
+export function sendCallOffer(callId, sdp) {
+  return apiCall('/calls/' + callId + '/webrtc/offer', {
+    method: 'PUT',
+    body: JSON.stringify({ sdp: sdp })
+  });
+}
+
+export function sendCallAnswer(callId, sdp) {
+  return apiCall('/calls/' + callId + '/webrtc/answer', {
+    method: 'PUT',
+    body: JSON.stringify({ sdp: sdp })
+  });
+}
+
+export function sendCallIce(callId, candidate) {
+  return apiCall('/calls/' + callId + '/webrtc/ice', {
+    method: 'POST',
+    body: JSON.stringify({ candidate: candidate })
+  });
+}
+
+export function getCallWebRTCSignaling(callId) {
+  return apiCall('/calls/' + callId + '/webrtc');
+}
+
+// Old style exports for compatibility
+export const authAPI = {
+  login: loginUser
 };
 
-// Health check
-export const healthCheck = () => apiCall('/health');
+export const usersAPI = {
+  getAll: getUsers,
+  getMe: getMe,
+  update: updateUser,
+  changePassword: changePassword
+};
+
+export const studentsAPI = {
+  getAll: getStudents,
+  add: addStudent,
+  update: updateStudent,
+  delete: deleteStudent
+};
+
+export const reportsAPI = {
+  getAll: getReports,
+  add: addReport,
+  update: updateReport,
+  submit: submitReport,
+  delete: deleteReport
+};
+
+export const conversationsAPI = {
+  getAll: getConversations,
+  create: createConversation,
+  createGroup: createGroup,
+  getMessages: getMessages,
+  sendMessage: sendMessage,
+  editMessage: editMessage,
+  deleteMessage: deleteMessage,
+  restoreMessage: restoreMessage,
+  addReaction: addReaction,
+  delete: deleteConversation
+};
+
+export const enrollmentsAPI = {
+  getAll: getEnrollments,
+  submit: submitEnrollment,
+  update: updateEnrollment
+};
+
+export const archivesAPI = {
+  getAll: getArchives,
+  getByYear: getArchiveByYear,
+  create: createArchive,
+  delete: deleteArchive,
+  getCurrentBatch: getCurrentBatch
+};
+
+export const callsAPI = {
+  initiate: initiateCall,
+  getIncoming: getIncomingCalls,
+  getById: getCallById,
+  answer: answerCall,
+  end: endCall,
+  sendOffer: sendCallOffer,
+  sendAnswer: sendCallAnswer,
+  sendIce: sendCallIce,
+  getWebRTCSignaling: getCallWebRTCSignaling
+};

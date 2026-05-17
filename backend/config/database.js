@@ -1,13 +1,10 @@
 const mysql = require('mysql2/promise');
+const { getDbConfig } = require('./dbEnv');
 
-const dbConfig = {
-  host: 'localhost',
-  port: 3307, // Your MySQL port
-  user: 'root',
-  password: '', // XAMPP default
-  database: 'nstp_system'
-};
-
-const pool = mysql.createPool(dbConfig);
+const pool = mysql.createPool({
+  ...getDbConfig(),
+  waitForConnections: true,
+  connectionLimit: 10
+});
 
 module.exports = pool;

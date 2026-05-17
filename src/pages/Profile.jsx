@@ -159,30 +159,17 @@ function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <User className="w-6 h-6" />
-          <span className="font-bold">My Profile</span>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
 
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <User className="w-8 h-8" />
@@ -254,7 +241,7 @@ function Profile() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -264,19 +251,21 @@ function Profile() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <div>
               <h2 className="text-2xl lg:text-3xl font-bold text-gray-800">My Profile</h2>
-            <p className="text-gray-600">Manage your account information</p>
+              <p className="text-gray-600">Manage your account information</p>
+            </div>
           </div>
-          </div>
-          <button 
+          <button
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center ${isEditing ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
           >

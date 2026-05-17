@@ -2,7 +2,7 @@ import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare, 
   LogOut, User, ChevronLeft, Calendar as CalendarIcon, Plus, X,
-  ChevronRight, ChevronLeft as ChevronLeftIcon
+  ChevronRight, ChevronLeft as ChevronLeftIcon, Menu
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useMemo } from 'react';
@@ -237,32 +237,17 @@ function Calendar() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <CalendarIcon className="w-6 h-6" />
-          <span className="font-bold">Calendar</span>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
 
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <CalendarIcon className="w-8 h-8" />
@@ -334,7 +319,7 @@ function Calendar() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -344,14 +329,14 @@ function Calendar() {
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">Calendar</h1>

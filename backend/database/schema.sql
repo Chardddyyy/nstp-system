@@ -74,17 +74,30 @@ CREATE TABLE IF NOT EXISTS report_submissions (
   FOREIGN KEY (instructor_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Conversations table
+-- Conversations table (direct + group)
 CREATE TABLE IF NOT EXISTS conversations (
   id VARCHAR(255) PRIMARY KEY,
-  participant_1_id INT NOT NULL,
-  participant_2_id INT NOT NULL,
+  participant_1_id INT NULL,
+  participant_2_id INT NULL,
+  is_group BOOLEAN DEFAULT FALSE,
+  group_name VARCHAR(255) NULL,
+  created_by INT NULL,
   last_message TEXT,
   last_message_time TIMESTAMP,
   unread_count INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (participant_1_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (participant_2_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (participant_2_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS conversation_participants (
+  conversation_id VARCHAR(255) NOT NULL,
+  user_id INT NOT NULL,
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (conversation_id, user_id),
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Messages table
@@ -113,14 +126,29 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS enrollments (
   id INT PRIMARY KEY AUTO_INCREMENT,
   student_name VARCHAR(255) NOT NULL,
+  firstName VARCHAR(100),
+  lastName VARCHAR(100),
+  middleName VARCHAR(100),
   email VARCHAR(255),
   department ENUM('ROTC', 'CWTS', 'LTS') NOT NULL,
   studentId VARCHAR(50),
   contactNumber VARCHAR(50),
-  birthDate DATE,
-  gender VARCHAR(20),
+  homeAddress TEXT,
   address TEXT,
+  birthDate DATE,
+  birthMonth VARCHAR(2),
+  birthDay VARCHAR(2),
+  birthYear VARCHAR(4),
+  age VARCHAR(10),
+  civilStatus VARCHAR(50),
+  gender VARCHAR(20),
+  height VARCHAR(10),
+  weight VARCHAR(10),
+  facebookAccount VARCHAR(255),
+  bloodType VARCHAR(10),
   course VARCHAR(100),
+  program VARCHAR(100),
+  section VARCHAR(50),
   yearLevel VARCHAR(50),
   emergencyContact VARCHAR(255),
   emergencyNumber VARCHAR(50),

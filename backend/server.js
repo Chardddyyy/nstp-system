@@ -1,110 +1,198 @@
-const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const xss = require('xss');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+var express = require('express');
+var cors = require('cors');
+var jwt = require('jsonwebtoken');
+var pool = require('./config/database');
+var { getDbConfig } = require('./config/dbEnv');
 
-const pool = require('./config/database');
-
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// XSS Sanitization middleware
-const sanitizeInput = (req, res, next) => {
-  const sanitize = (obj) => {
-    if (typeof obj === 'string') {
-      return xss(obj, {
-        whiteList: {}, // No HTML tags allowed
-        stripIgnoreTag: true,
-        stripIgnoreTagBody: ['script']
-      });
-    }
-    if (typeof obj === 'object' && obj !== null) {
-      for (let key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          obj[key] = sanitize(obj[key]);
-        }
-      }
-    }
-    return obj;
-  };
-  
-  if (req.body) req.body = sanitize(req.body);
-  if (req.query) req.query = sanitize(req.query);
-  if (req.params) req.params = sanitize(req.params);
-  
-  next();
-};
+var app = express();
+var PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(sanitizeInput); // Apply XSS sanitization to all requests
 
 // Middleware to verify JWT
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+function authenticateToken(req, res, next) {
+  var authHeader = req.headers['authorization'];
+  var token = null;
+  if (authHeader) {
+    var parts = authHeader.split(' ');
+    if (parts.length === 2) {
+      token = parts[1];
+    }
+  }
 
   if (!token) {
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+  jwt.verify(token, 'your-secret-key', function(err, user) {
     if (err) {
       return res.status(403).json({ message: 'Invalid token' });
     }
     req.user = user;
     next();
   });
-};
+}
+
+async function ensureMessageRestoreColumns() {
+  var alters = [
+    'ALTER TABLE messages ADD COLUMN deleted_snapshot JSON NULL',
+    'ALTER TABLE messages ADD COLUMN deleted_at TIMESTAMP NULL',
+    'ALTER TABLE messages ADD COLUMN deleted_for JSON NULL',
+    'ALTER TABLE messages ADD COLUMN deleted_for_everyone BOOLEAN DEFAULT FALSE'
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* exists */ }
+  }
+}
+
+async function ensureWebRTCColumns() {
+  var alters = [
+    'ALTER TABLE calls ADD COLUMN offer_sdp MEDIUMTEXT NULL',
+    'ALTER TABLE calls ADD COLUMN answer_sdp MEDIUMTEXT NULL',
+    'ALTER TABLE calls ADD COLUMN caller_ice JSON NULL',
+    'ALTER TABLE calls ADD COLUMN receiver_ice JSON NULL'
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* exists */ }
+  }
+}
+
+async function getCallForUser(callId, userId) {
+  const [calls] = await pool.execute(
+    'SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR receiver_id = ?)',
+    [callId, userId, userId]
+  );
+  return calls.length > 0 ? calls[0] : null;
+}
+
+async function appendCallIce(callId, column, candidate) {
+  const [rows] = await pool.execute(
+    'SELECT caller_ice, receiver_ice FROM calls WHERE id = ?',
+    [callId]
+  );
+  if (rows.length === 0) return;
+  var list = [];
+  var raw = rows[0][column];
+  if (raw) {
+    try {
+      list = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!Array.isArray(list)) list = [];
+    } catch (e) {
+      list = [];
+    }
+  }
+  list.push(candidate);
+  await pool.execute(
+    'UPDATE calls SET ' + column + ' = ? WHERE id = ?',
+    [JSON.stringify(list), callId]
+  );
+}
+
+async function ensureConversationSchema() {
+  var alters = [
+    'ALTER TABLE conversations MODIFY COLUMN participant_1_id INT NULL',
+    'ALTER TABLE conversations MODIFY COLUMN participant_2_id INT NULL',
+    'ALTER TABLE conversations ADD COLUMN is_group BOOLEAN DEFAULT FALSE',
+    'ALTER TABLE conversations ADD COLUMN group_name VARCHAR(255) NULL',
+    'ALTER TABLE conversations ADD COLUMN created_by INT NULL'
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* exists */ }
+  }
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS conversation_participants (
+        conversation_id VARCHAR(255) NOT NULL,
+        user_id INT NOT NULL,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (conversation_id, user_id),
+        FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+  } catch (e) { /* ignore */ }
+}
+
+function parseDeletedFor(deletedFor) {
+  if (!deletedFor) return [];
+  try {
+    var parsed = typeof deletedFor === 'string' ? JSON.parse(deletedFor) : deletedFor;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+async function userCanAccessConversation(conversationId, userId) {
+  const [conversationCheck] = await pool.execute(
+    'SELECT is_group FROM conversations WHERE id = ?',
+    [conversationId]
+  );
+  if (conversationCheck.length === 0) return false;
+
+  if (conversationCheck[0].is_group) {
+    const [participants] = await pool.execute(
+      'SELECT 1 FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
+      [conversationId, userId]
+    );
+    return participants.length > 0;
+  }
+
+  const [conversations] = await pool.execute(
+    'SELECT 1 FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
+    [conversationId, userId, userId]
+  );
+  return conversations.length > 0;
+}
 
 // ===== AUTH ROUTES =====
 
 // Login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async function(req, res) {
   try {
-    const { email, password } = req.body;
+    var email = req.body.email;
+    var password = req.body.password;
     
-    console.log('Received login request:', { email, passwordLength: password?.length, body: req.body });
+    console.log('Received login request:', { email: email, passwordLength: password ? password.length : 0, body: req.body });
     
-    const [users] = await pool.execute(
+    var result = await pool.execute(
       'SELECT * FROM users WHERE email = ?',
       [email]
     );
+    var users = result[0];
 
     if (users.length === 0) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const user = users[0];
+    var user = users[0];
     
-    // Normalize passwords for comparison
-    const providedPassword = String(password).trim();
-    const storedPassword = String(user.password).trim();
+    var providedPassword = String(password).trim();
+    var storedPassword = String(user.password).trim();
     
     console.log('Login attempt:', { 
-      email, 
+      email: email, 
       providedPassword: providedPassword, 
       storedPassword: storedPassword,
       match: providedPassword === storedPassword
     });
     
-    // Simple plain text password comparison
     if (providedPassword !== storedPassword) {
       console.log('Password mismatch');
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign(
+    var token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key',
+      'your-secret-key',
       { expiresIn: '24h' }
     );
 
     res.json({
-      token,
+      token: token,
       user: {
         id: user.id,
         email: user.email,
@@ -225,14 +313,18 @@ app.get('/api/students', authenticateToken, async (req, res) => {
 // Add student
 app.post('/api/students', authenticateToken, async (req, res) => {
   try {
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
+    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
     
     // Validate required fields
     if (!studentId || !name || !department) {
       return res.status(400).json({ message: 'Missing required fields: studentId, name, department' });
     }
     
-    // Convert undefined to null for optional fields
+    // Build birthDate from separate fields if not provided directly
+    let safeBirthDate = birthDate;
+    if (!safeBirthDate && birthMonth && birthDay && birthYear) {
+      safeBirthDate = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
+    }
     const safeEmail = email !== undefined ? email : null;
     const safeSection = section !== undefined ? section : null;
     const safeSemester = semester !== undefined ? semester : null;
@@ -242,7 +334,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const safeContactNumber = contactNumber !== undefined ? contactNumber : null;
     const safeAddress = address !== undefined ? address : null;
     const safeGender = gender !== undefined ? gender : null;
-    const safeBirthDate = birthDate !== undefined ? birthDate : null;
+    // safeBirthDate already declared above
     const safeAge = age !== undefined ? age : null;
     const safeCivilStatus = civilStatus !== undefined ? civilStatus : null;
     const safeBloodType = bloodType !== undefined ? bloodType : null;
@@ -679,25 +771,8 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
       WHERE m.conversation_id = ?
       ORDER BY m.created_at ASC
     `, [conversationId]);
-    
-    // Filter out messages deleted for everyone or for this user in JS
-    const filteredMessages = messages.filter(msg => {
-      // Skip if deleted for everyone
-      if (msg.deleted_for_everyone === 1 || msg.deleted_for_everyone === true) return false;
-      
-      // Skip if deleted for this user
-      if (msg.deleted_for) {
-        try {
-          const deletedFor = JSON.parse(msg.deleted_for);
-          return !deletedFor.includes(req.user.id);
-        } catch (e) {
-          return true;
-        }
-      }
-      return true;
-    });
 
-    res.json(filteredMessages);
+    res.json(messages);
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -955,8 +1030,18 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
       if (message.sender_id !== userId) {
         return res.status(403).json({ message: 'Only the sender can delete for everyone' });
       }
+
+      var snapshot = JSON.stringify({
+        text: message.text,
+        type: message.type || 'text',
+        image_url: message.image_url,
+        file_url: message.file_url,
+        file_name: message.file_name,
+        audio_url: message.audio_url,
+        duration: message.duration
+      });
       
-      // Mark as deleted for everyone by setting text and clearing content
+      // Mark as deleted for everyone; keep snapshot so it can be restored
       await pool.execute(
         `UPDATE messages 
          SET text = '[deleted]', 
@@ -966,9 +1051,10 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
              file_name = NULL, 
              audio_url = NULL,
              deleted_for_everyone = TRUE,
+             deleted_snapshot = ?,
              deleted_at = NOW()
          WHERE id = ?`,
-        [messageId]
+        [snapshot, messageId]
       );
       
       res.json({ message: 'Message deleted for everyone', forEveryone: true });
@@ -1000,6 +1086,100 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
   }
 });
 
+// Restore a deleted message (for me or for everyone)
+app.put('/api/conversations/:conversationId/messages/:messageId/restore', authenticateToken, async (req, res) => {
+  try {
+    const { conversationId, messageId } = req.params;
+    const userId = req.user.id;
+
+    if (!(await userCanAccessConversation(conversationId, userId))) {
+      return res.status(403).json({ message: 'Not authorized to restore messages in this conversation' });
+    }
+
+    const [messages] = await pool.execute(
+      'SELECT * FROM messages WHERE id = ? AND conversation_id = ?',
+      [messageId, conversationId]
+    );
+
+    if (messages.length === 0) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    const message = messages[0];
+    const deletedForEveryone = message.deleted_for_everyone === 1 || message.deleted_for_everyone === true;
+    const deletedFor = parseDeletedFor(message.deleted_for);
+    const hiddenForMe = deletedFor.includes(userId);
+
+    if (!deletedForEveryone && !hiddenForMe) {
+      return res.status(400).json({ message: 'Message is not deleted' });
+    }
+
+    if (deletedForEveryone) {
+      if (message.sender_id !== userId) {
+        return res.status(403).json({ message: 'Only the sender can restore a message deleted for everyone' });
+      }
+
+      var snapshot = null;
+      if (message.deleted_snapshot) {
+        try {
+          snapshot = typeof message.deleted_snapshot === 'string'
+            ? JSON.parse(message.deleted_snapshot)
+            : message.deleted_snapshot;
+        } catch (e) {
+          snapshot = null;
+        }
+      }
+
+      if (!snapshot) {
+        return res.status(400).json({ message: 'Cannot restore — original content was not saved' });
+      }
+
+      await pool.execute(
+        `UPDATE messages SET
+          text = ?,
+          type = ?,
+          image_url = ?,
+          file_url = ?,
+          file_name = ?,
+          audio_url = ?,
+          duration = ?,
+          deleted_for_everyone = FALSE,
+          deleted_snapshot = NULL,
+          deleted_at = NULL
+         WHERE id = ?`,
+        [
+          snapshot.text || '',
+          snapshot.type || 'text',
+          snapshot.image_url || null,
+          snapshot.file_url || null,
+          snapshot.file_name || null,
+          snapshot.audio_url || null,
+          snapshot.duration || null,
+          messageId
+        ]
+      );
+    } else {
+      const nextDeletedFor = deletedFor.filter(function(id) { return id !== userId; });
+      await pool.execute(
+        'UPDATE messages SET deleted_for = ? WHERE id = ?',
+        [nextDeletedFor.length > 0 ? JSON.stringify(nextDeletedFor) : null, messageId]
+      );
+    }
+
+    const [restored] = await pool.execute(`
+      SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.id = ?
+    `, [messageId]);
+
+    res.json(restored[0]);
+  } catch (error) {
+    console.error('Restore message error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Delete conversation
 app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
   try {
@@ -1007,28 +1187,17 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
     
     // Check if this is a group conversation
     const [conversationCheck] = await pool.execute(
-      'SELECT is_group FROM conversations WHERE id = ?',
+      'SELECT is_group, group_name FROM conversations WHERE id = ?',
       [id]
     );
-    
-    let isAuthorized = false;
-    
+
     if (conversationCheck.length > 0 && conversationCheck[0].is_group) {
-      // For group chats, check if user is a participant
-      const [participants] = await pool.execute(
-        'SELECT * FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
-        [id, req.user.id]
-      );
-      isAuthorized = participants.length > 0;
-    } else {
-      // For direct chats, check if user is participant_1 or participant_2
-      const [conversations] = await pool.execute(
-        'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-        [id, req.user.id, req.user.id]
-      );
-      isAuthorized = conversations.length > 0;
+      return res.status(400).json({
+        message: 'Group chats cannot be deleted. Use Clear Chat to remove messages from your view, or restore individual messages.'
+      });
     }
     
+    const isAuthorized = await userCanAccessConversation(id, req.user.id);
     if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -1043,27 +1212,63 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
 
 // ===== CALL MANAGEMENT =====
 
+// Get call status (caller/receiver polling)
+app.get('/api/calls/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [calls] = await pool.execute(
+      `SELECT c.*, u.name as caller_name
+       FROM calls c
+       JOIN users u ON c.caller_id = u.id
+       WHERE c.id = ? AND (c.caller_id = ? OR c.receiver_id = ?)`,
+      [id, req.user.id, req.user.id]
+    );
+    if (calls.length === 0) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    res.json(calls[0]);
+  } catch (error) {
+    console.error('Get call error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Initiate a call
 app.post('/api/calls', authenticateToken, async (req, res) => {
   try {
     const { conversation_id, call_type } = req.body;
     const caller_id = req.user.id;
     
-    // Verify user is part of this conversation
+    if (!(await userCanAccessConversation(conversation_id, caller_id))) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
     const [conversations] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-      [conversation_id, caller_id, caller_id]
+      'SELECT * FROM conversations WHERE id = ?',
+      [conversation_id]
     );
     
     if (conversations.length === 0) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(404).json({ message: 'Conversation not found' });
     }
-    
-    // Get the other participant
+
     const conversation = conversations[0];
-    const receiver_id = conversation.participant_1_id === caller_id 
-      ? conversation.participant_2_id 
+    if (conversation.is_group) {
+      return res.status(400).json({
+        message: 'Calls work in direct chats only. Start a private message first.'
+      });
+    }
+
+    const receiver_id = conversation.participant_1_id === caller_id
+      ? conversation.participant_2_id
       : conversation.participant_1_id;
+
+    await pool.execute(
+      `UPDATE calls SET status = 'ended', ended_at = NOW()
+       WHERE status = 'ringing' AND ended_at IS NULL
+       AND ((caller_id = ? AND receiver_id = ?) OR (caller_id = ? AND receiver_id = ?))`,
+      [caller_id, receiver_id, receiver_id, caller_id]
+    );
     
     // Create call record
     const [result] = await pool.execute(
@@ -1169,17 +1374,29 @@ app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
     const finalStatus = status || 'ended';
     let messageText = '';
     
-    if (finalStatus === 'missed') {
-      messageText = '📞 Missed call';
-    } else if (finalStatus === 'declined') {
-      messageText = '📞 Call declined';
-    } else if (duration > 0) {
-      const mins = Math.floor(duration / 60);
+    const callLabel = call.call_type === 'video' ? 'Video call' : 'Voice call';
+    let durationStr = '';
+    if (duration > 0) {
+      const hours = Math.floor(duration / 3600);
+      const mins = Math.floor((duration % 3600) / 60);
       const secs = duration % 60;
-      const durationStr = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')} min` : `${secs} sec`;
-      messageText = `📞 Call ended • ${durationStr}`;
+      if (hours > 0) {
+        durationStr = `${hours} hr ${mins} min ${secs} sec`;
+      } else if (mins > 0) {
+        durationStr = `${mins} min ${secs} sec`;
+      } else {
+        durationStr = `${secs} sec`;
+      }
+    }
+
+    if (finalStatus === 'missed') {
+      messageText = `📞 Missed ${callLabel.toLowerCase()}`;
+    } else if (finalStatus === 'declined') {
+      messageText = `📞 ${callLabel} declined`;
+    } else if (duration > 0) {
+      messageText = `📞 ${callLabel} ended • ${durationStr}`;
     } else {
-      messageText = '📞 Call ended';
+      messageText = `📞 ${callLabel} ended`;
     }
     
     // Insert call log message
@@ -1198,6 +1415,82 @@ app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('End call error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// WebRTC signaling for calls
+app.get('/api/calls/:id/webrtc', authenticateToken, async (req, res) => {
+  try {
+    const call = await getCallForUser(req.params.id, req.user.id);
+    if (!call) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    res.json({
+      offer_sdp: call.offer_sdp,
+      answer_sdp: call.answer_sdp,
+      caller_ice: call.caller_ice,
+      receiver_ice: call.receiver_ice,
+      call_type: call.call_type,
+      status: call.status
+    });
+  } catch (error) {
+    console.error('Get WebRTC signaling error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/calls/:id/webrtc/offer', authenticateToken, async (req, res) => {
+  try {
+    const call = await getCallForUser(req.params.id, req.user.id);
+    if (!call) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    if (call.caller_id !== req.user.id) {
+      return res.status(403).json({ message: 'Only caller can send offer' });
+    }
+    await pool.execute(
+      'UPDATE calls SET offer_sdp = ? WHERE id = ?',
+      [JSON.stringify(req.body.sdp), req.params.id]
+    );
+    res.json({ message: 'Offer saved' });
+  } catch (error) {
+    console.error('Save offer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/calls/:id/webrtc/answer', authenticateToken, async (req, res) => {
+  try {
+    const call = await getCallForUser(req.params.id, req.user.id);
+    if (!call) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    if (call.receiver_id !== req.user.id) {
+      return res.status(403).json({ message: 'Only receiver can send answer' });
+    }
+    await pool.execute(
+      'UPDATE calls SET answer_sdp = ? WHERE id = ?',
+      [JSON.stringify(req.body.sdp), req.params.id]
+    );
+    res.json({ message: 'Answer saved' });
+  } catch (error) {
+    console.error('Save answer error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/api/calls/:id/webrtc/ice', authenticateToken, async (req, res) => {
+  try {
+    const call = await getCallForUser(req.params.id, req.user.id);
+    if (!call) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    const column = call.caller_id === req.user.id ? 'caller_ice' : 'receiver_ice';
+    await appendCallIce(req.params.id, column, req.body.candidate);
+    res.json({ message: 'ICE candidate saved' });
+  } catch (error) {
+    console.error('Save ICE error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1331,6 +1624,11 @@ app.get('/api/enrollments', authenticateToken, async (req, res) => {
 // Submit enrollment
 app.post('/api/enrollments', async (req, res) => {
   try {
+    console.log('📥 Enrollment request received:', {
+      body: req.body,
+      timestamp: new Date().toISOString()
+    });
+
     const { 
       firstName, lastName, middleName, fullName,
       studentId, email, contactNumber,
@@ -1342,10 +1640,17 @@ app.post('/api/enrollments', async (req, res) => {
       emergencyContact, emergencyNumber, emergencyName
     } = req.body;
     
+    console.log('✅ Fields extracted successfully');
+    
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
     const finalAddress = homeAddress || address;
     const finalEmergencyContact = emergencyName || emergencyContact;
+    
+    console.log('Executing database insert with:', {
+      name, firstName, lastName, middleName, email, nstpComponent, studentId, contactNumber,
+      birthDate, program, section, yearLevel
+    });
     
     const [result] = await pool.execute(
       `INSERT INTO enrollments 
@@ -1362,10 +1667,15 @@ app.post('/api/enrollments', async (req, res) => {
       ]
     );
 
+    console.log('✅ Insert successful, ID:', result.insertId);
+
     const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
+    console.log('✅ Enrollment fetched:', enrollments[0]);
+    
     res.status(201).json(enrollments[0]);
   } catch (error) {
-    console.error('Submit enrollment error:', error);
+    console.error('❌ Submit enrollment error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -1383,7 +1693,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
       [status, req.user.id, id]
     );
 
-    // If approved, create student record
+    // If approved, create student record (skip if already exists)
     if (status === 'Approved') {
       const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
       const enrollment = enrollments[0];
@@ -1391,35 +1701,45 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
       console.log('Creating student from enrollment:', enrollment);
       
       try {
-        // Build birthdate from separate fields if available
-        let birthDate = enrollment.birthDate;
-        if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
-          birthDate = `${enrollment.birthYear}-${enrollment.birthMonth.padStart(2, '0')}-${enrollment.birthDay.padStart(2, '0')}`;
-        }
-        
-        await pool.execute(
-          `INSERT INTO students (
-            studentId, name, email, department, status,
-            section, year, program, address, contactNumber,
-            gender, birthDate, age, civilStatus, height, weight,
-            bloodType, facebookAccount, emergencyContact, emergencyNumber
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            enrollment.studentId, enrollment.student_name, enrollment.email, enrollment.department, 'Active',
-            enrollment.section, enrollment.yearLevel, enrollment.program, enrollment.address, enrollment.contactNumber,
-            enrollment.gender || enrollment.sex || null,
-            birthDate,
-            enrollment.age || null,
-            enrollment.civilStatus || null,
-            enrollment.height || null,
-            enrollment.weight || null,
-            enrollment.bloodType || null,
-            enrollment.facebookAccount || null,
-            enrollment.emergencyContact || enrollment.emergencyName || null,
-            enrollment.emergencyNumber || null
-          ]
+        // Check if student with this ID already exists
+        const [existingStudents] = await pool.execute(
+          'SELECT id FROM students WHERE studentId = ?',
+          [enrollment.studentId]
         );
-        console.log('Student created successfully with full demographic data');
+        
+        if (existingStudents.length > 0) {
+          console.log('Student with ID ' + enrollment.studentId + ' already exists, skipping creation');
+        } else {
+          // Build birthdate from separate fields if available
+          let birthDate = enrollment.birthDate;
+          if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
+            birthDate = `${enrollment.birthYear}-${enrollment.birthMonth.padStart(2, '0')}-${enrollment.birthDay.padStart(2, '0')}`;
+          }
+          
+          await pool.execute(
+            `INSERT INTO students (
+              studentId, name, email, department, status,
+              section, year, program, address, contactNumber,
+              gender, birthDate, age, civilStatus, height, weight,
+              bloodType, facebookAccount, emergencyContact, emergencyNumber
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              enrollment.studentId, enrollment.student_name, enrollment.email, enrollment.department, 'Active',
+              enrollment.section, enrollment.yearLevel, enrollment.program, enrollment.address, enrollment.contactNumber,
+              enrollment.gender || enrollment.sex || null,
+              birthDate,
+              enrollment.age || null,
+              enrollment.civilStatus || null,
+              enrollment.height || null,
+              enrollment.weight || null,
+              enrollment.bloodType || null,
+              enrollment.facebookAccount || null,
+              enrollment.emergencyContact || enrollment.emergencyName || null,
+              enrollment.emergencyNumber || null
+            ]
+          );
+          console.log('Student created successfully with full demographic data');
+        }
       } catch (insertError) {
         console.error('Error inserting student:', insertError);
         throw insertError;
@@ -1767,7 +2087,23 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API available at http://localhost:${PORT}/api`);
+Promise.all([
+  ensureMessageRestoreColumns(),
+  ensureConversationSchema(),
+  ensureWebRTCColumns()
+]).catch(function(err) {
+  console.warn('Schema migration:', err.message);
+});
+
+app.listen(PORT, async function() {
+  var db = getDbConfig();
+  console.log('Server running on port ' + PORT);
+  console.log('API available at http://localhost:' + PORT + '/api');
+  try {
+    await pool.execute('SELECT 1');
+    console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
+  } catch (err) {
+    console.error('Database NOT connected:', err.message);
+    console.error('Start XAMPP MySQL, then run: cd backend && npm run setup-db');
+  }
 });

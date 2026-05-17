@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import { GraduationCap, ArrowLeft, CheckCircle, X, FileText, Shield, Eye } from 'lucide-react';
@@ -7,6 +7,7 @@ function Enrollment() {
   const navigate = useNavigate();
   const { submitEnrollment } = useAuth();
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState(() => {
     const saved = localStorage.getItem('enrollmentFormData');
     return saved ? JSON.parse(saved) : {
@@ -40,26 +41,44 @@ function Enrollment() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
+  // Refs for auto-focus functionality
+  const fieldRefs = useRef({});
+
   const validateForm = () => {
     const newErrors = {};
 
+    // Required fields validation
+    const requiredFields = [
+      'lastName', 'firstName', 'studentId', 'homeAddress', 'email',
+      'program', 'yearLevel', 'section',
+      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'contactNumber',
+      'emergencyContact', 'emergencyNumber'
+    ];
+
+    requiredFields.forEach(field => {
+      const value = formData[field];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        newErrors[field] = 'This field is required';
+      }
+    });
+
     // Student ID - exactly 9 digits
-    if (!/^\d{9}$/.test(formData.studentId)) {
+    if (formData.studentId && !/^\d{9}$/.test(formData.studentId)) {
       newErrors.studentId = 'Student ID must be exactly 9 digits';
     }
 
     // Email - must contain @
-    if (!formData.email.includes('@')) {
+    if (formData.email && !formData.email.includes('@')) {
       newErrors.email = 'Email must contain @ symbol';
     }
 
     // Contact Number - exactly 11 digits
-    if (!/^\d{11}$/.test(formData.contactNumber)) {
+    if (formData.contactNumber && !/^\d{11}$/.test(formData.contactNumber)) {
       newErrors.contactNumber = 'Contact Number must be exactly 11 digits';
     }
 
     // Emergency Number - exactly 11 digits
-    if (!/^\d{11}$/.test(formData.emergencyNumber)) {
+    if (formData.emergencyNumber && !/^\d{11}$/.test(formData.emergencyNumber)) {
       newErrors.emergencyNumber = 'Emergency Contact Number must be exactly 11 digits';
     }
 
@@ -72,16 +91,35 @@ function Enrollment() {
       if (month < 1 || month > 12) {
         newErrors.birthMonth = 'Month must be between 1-12';
       }
-      if (month > 12) {
-        newErrors.birthDate = 'Month cannot exceed 12';
+      if (day < 1 || day > 31) {
+        newErrors.birthDay = 'Day must be between 1-31';
       }
-      if (year.toString().length !== 4) {
-        newErrors.birthDate = 'Year must be 4 digits';
+      if (year.toString().length !== 4 || isNaN(year)) {
+        newErrors.birthYear = 'Year must be 4 digits';
       }
     }
 
+    // Terms and Privacy Policy agreement required
+    if (!agreedToTerms) {
+      newErrors.terms = 'You must agree to the Terms and Privacy Policy to submit';
+    }
+
+    // Update state with errors
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    // Auto-focus to first field with error
+    if (Object.keys(newErrors).length > 0) {
+      const firstErrorField = Object.keys(newErrors)[0];
+      console.log('First error field:', firstErrorField);
+      if (fieldRefs.current[firstErrorField]) {
+        setTimeout(() => {
+          fieldRefs.current[firstErrorField]?.focus();
+        }, 0);
+      }
+    }
+
+    // Return the errors object (not relying on state)
+    return newErrors;
   };
 
   const handleChange = (e) => {
@@ -130,32 +168,64 @@ function Enrollment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submit attempted');
-    console.log('Form data:', formData);
     
-    if (!validateForm()) {
-      console.log('Validation failed, errors:', errors);
-      alert('Please fix the errors in the form before submitting.\n\nCheck that:\n- Student ID is exactly 9 digits\n- Email contains @\n- Contact numbers are exactly 11 digits\n- All required fields are filled');
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('⏳ Already submitting, please wait...');
       return;
     }
     
-    console.log('Validation passed, submitting...');
+    console.log('=== FORM SUBMIT TRIGGERED ===');
+    console.log('Form data:', formData);
+    console.log('Agreed to terms:', agreedToTerms);
+    
+    const validationErrors = validateForm();
+    console.log('Validation errors:', validationErrors);
+    console.log('Has errors:', Object.keys(validationErrors).length > 0);
+    
+    if (Object.keys(validationErrors).length > 0) {
+      console.log('❌ Validation failed');
+      alert('Please fill in all required fields. Check the red highlighted fields above.');
+      return;
+    }
+    
+    console.log('✅ Validation passed, preparing to submit...');
+    setIsSubmitting(true);
+    
     try {
-      await submitEnrollment({
+      const enrollmentData = {
         ...formData,
         fullName: `${formData.lastName}, ${formData.firstName} ${formData.middleName}`.trim(),
         birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
         status: 'Pending',
-      });
+      };
+      
+      console.log('📤 Sending enrollment data:', enrollmentData);
+      console.log('Calling submitEnrollment...');
+      
+      const result = await submitEnrollment(enrollmentData);
+      
+      console.log('✅ Enrollment submitted successfully:', result);
+      alert('✅ Enrollment submitted successfully! Redirecting to home page...');
+      
       setSubmitted(true);
       localStorage.removeItem('enrollmentFormData');
-      // Redirect to landing page after 5 seconds
+      
+      // Redirect to landing page after 3 seconds
       setTimeout(() => {
         navigate('/');
-      }, 5000);
+      }, 3000);
+      
     } catch (error) {
-      console.error('Enrollment submission failed:', error);
-      alert('Failed to submit enrollment. Please try again.');
+      console.error('❌ Enrollment submission failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        stack: error.stack
+      });
+      alert(`Failed to submit enrollment: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -219,24 +289,28 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                   <input
+                    ref={el => fieldRefs.current.lastName = el}
                     type="text"
                     name="lastName"
                     required
                     value={formData.lastName}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.lastName ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                   <input
+                    ref={el => fieldRefs.current.firstName = el}
                     type="text"
                     name="firstName"
                     required
                     value={formData.firstName}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.firstName ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
@@ -245,7 +319,7 @@ function Enrollment() {
                     name="middleName"
                     value={formData.middleName}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -254,27 +328,30 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Student No. (9 digits) *</label>
                   <input
+                    ref={el => fieldRefs.current.studentId = el}
                     type="text"
                     name="studentId"
                     required
                     placeholder="202400001"
                     value={formData.studentId}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.studentId ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.studentId ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
                   {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Home Address *</label>
                   <input
+                    ref={el => fieldRefs.current.homeAddress = el}
                     type="text"
                     name="homeAddress"
                     required
                     placeholder="Blk 1 Lot 2, Mahogany Street, Green Village, Naic, Cavite"
                     value={formData.homeAddress}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.homeAddress ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.homeAddress && <p className="text-red-500 text-xs mt-1">{errors.homeAddress}</p>}
                   <p className="text-xs text-gray-500 mt-1">Format: Block and Lot, Street, Village/Subdivision, Municipality, Province</p>
                 </div>
               </div>
@@ -282,13 +359,14 @@ function Enrollment() {
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
                 <input
+                  ref={el => fieldRefs.current.email = el}
                   type="email"
                   name="email"
                   required
                   placeholder="example@email.com"
                   value={formData.email}
                   onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.email ? 'border-red-500' : ''}`}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                 />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
@@ -301,11 +379,12 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Program *</label>
                   <select
+                    ref={el => fieldRefs.current.program = el}
                     name="program"
                     required
                     value={formData.program}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.program ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   >
                     <option value="">Select Program</option>
                     <option value="BSIT">BSIT</option>
@@ -316,15 +395,17 @@ function Enrollment() {
                     <option value="BEED Science">BEED Science</option>
                     <option value="BSED">BSED</option>
                   </select>
+                  {errors.program && <p className="text-red-500 text-xs mt-1">{errors.program}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Section *</label>
                   <select
+                    ref={el => fieldRefs.current.section = el}
                     name="section"
                     required
                     value={formData.section}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.section ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   >
                     <option value="">Select Section</option>
                     <option value="A">A</option>
@@ -332,15 +413,17 @@ function Enrollment() {
                     <option value="C">C</option>
                     <option value="D">D</option>
                   </select>
+                  {errors.section && <p className="text-red-500 text-xs mt-1">{errors.section}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Year Level *</label>
                   <select
+                    ref={el => fieldRefs.current.yearLevel = el}
                     name="yearLevel"
                     required
                     value={formData.yearLevel}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.yearLevel ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   >
                     <option value="">Select Year</option>
                     <option value="1st Year">1st Year</option>
@@ -348,6 +431,7 @@ function Enrollment() {
                     <option value="3rd Year">3rd Year</option>
                     <option value="4th Year">4th Year</option>
                   </select>
+                  {errors.yearLevel && <p className="text-red-500 text-xs mt-1">{errors.yearLevel}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">NSTP Component *</label>
@@ -356,7 +440,7 @@ function Enrollment() {
                     required
                     value={formData.nstpComponent}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="CWTS">CWTS</option>
                     <option value="LTS">LTS</option>
@@ -373,38 +457,44 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month (1-12) *</label>
                   <input
+                    ref={el => fieldRefs.current.birthMonth = el}
                     type="text"
                     name="birthMonth"
                     required
                     placeholder="MM"
                     value={formData.birthMonth}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthMonth ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.birthMonth && <p className="text-red-500 text-xs mt-1">{errors.birthMonth}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Birth Day (1-31) *</label>
                   <input
+                    ref={el => fieldRefs.current.birthDay = el}
                     type="text"
                     name="birthDay"
                     required
                     placeholder="DD"
                     value={formData.birthDay}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthDay ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.birthDay && <p className="text-red-500 text-xs mt-1">{errors.birthDay}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Birth Year (4 digits) *</label>
                   <input
+                    ref={el => fieldRefs.current.birthYear = el}
                     type="text"
                     name="birthYear"
                     required
                     placeholder="YYYY"
                     value={formData.birthYear}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthYear ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.birthYear && <p className="text-red-500 text-xs mt-1">{errors.birthYear}</p>}
                 </div>
               </div>
 
@@ -412,22 +502,25 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
                   <input
+                    ref={el => fieldRefs.current.age = el}
                     type="text"
                     name="age"
                     required
                     value={formData.age}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.age ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.age && <p className="text-red-500 text-xs mt-1">{errors.age}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Civil Status *</label>
                   <select
+                    ref={el => fieldRefs.current.civilStatus = el}
                     name="civilStatus"
                     required
                     value={formData.civilStatus}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.civilStatus ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   >
                     <option value="">Select</option>
                     <option value="Single">Single</option>
@@ -435,20 +528,23 @@ function Enrollment() {
                     <option value="Divorced">Divorced</option>
                     <option value="Widowed">Widowed</option>
                   </select>
+                  {errors.civilStatus && <p className="text-red-500 text-xs mt-1">{errors.civilStatus}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sex *</label>
                   <select
+                    ref={el => fieldRefs.current.sex = el}
                     name="sex"
                     required
                     value={formData.sex}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.sex ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   >
                     <option value="">Select</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                   </select>
+                  {errors.sex && <p className="text-red-500 text-xs mt-1">{errors.sex}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
@@ -458,7 +554,7 @@ function Enrollment() {
                     placeholder="cm"
                     value={formData.height}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -472,7 +568,7 @@ function Enrollment() {
                     placeholder="kg"
                     value={formData.weight}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -481,7 +577,7 @@ function Enrollment() {
                     name="bloodType"
                     value={formData.bloodType}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="">Select</option>
                     <option value="A">A</option>
@@ -501,14 +597,16 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (11 digits) *</label>
                   <input
+                    ref={el => fieldRefs.current.contactNumber = el}
                     type="text"
                     name="contactNumber"
                     required
                     placeholder="09123456789"
                     value={formData.contactNumber}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.contactNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.contactNumber && <p className="text-red-500 text-xs mt-1">{errors.contactNumber}</p>}
                 </div>
               </div>
 
@@ -520,7 +618,7 @@ function Enrollment() {
                   placeholder="facebook.com/username"
                   value={formData.facebookAccount}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -532,24 +630,27 @@ function Enrollment() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person *</label>
                   <input
+                    ref={el => fieldRefs.current.emergencyContact = el}
                     type="text"
                     name="emergencyContact"
                     required
                     value={formData.emergencyContact}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.emergencyContact ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
+                  {errors.emergencyContact && <p className="text-red-500 text-xs mt-1">{errors.emergencyContact}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number *</label>
                   <input
+                    ref={el => fieldRefs.current.emergencyNumber = el}
                     type="tel"
                     name="emergencyNumber"
                     required
                     placeholder="11 digits (e.g., 09123456789)"
                     value={formData.emergencyNumber}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.emergencyNumber ? 'border-red-500' : ''}`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.emergencyNumber ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
                   {errors.emergencyNumber && (
                     <p className="text-red-500 text-xs mt-1">{errors.emergencyNumber}</p>
@@ -562,11 +663,17 @@ function Enrollment() {
             <div className="border-b pb-6">
               <div className="flex items-start space-x-3">
                 <input
+                  ref={el => fieldRefs.current.terms = el}
                   type="checkbox"
                   id="terms"
                   checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  onChange={(e) => {
+                    setAgreedToTerms(e.target.checked);
+                    if (e.target.checked && errors.terms) {
+                      setErrors({ ...errors, terms: '' });
+                    }
+                  }}
+                  className={`mt-1 w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 ${errors.terms ? 'border-red-500' : ''}`}
                 />
                 <div className="flex-1">
                   <label htmlFor="terms" className="text-sm text-gray-700">
@@ -594,9 +701,14 @@ function Enrollment() {
               </p>
               <button
                 type="submit"
-                className="bg-green-700 hover:bg-green-800 text-white font-bold px-8 py-3 rounded-lg transition-colors"
+                disabled={isSubmitting}
+                className={`font-bold px-8 py-3 rounded-lg transition-colors ${
+                  isSubmitting 
+                    ? 'bg-yellow-600 text-white cursor-wait opacity-75' 
+                    : 'bg-green-700 hover:bg-green-800 active:bg-green-900 text-white'
+                }`}
               >
-                Submit Enrollment
+                {isSubmitting ? 'Submitting...' : 'Submit Enrollment'}
               </button>
             </div>
           </form>

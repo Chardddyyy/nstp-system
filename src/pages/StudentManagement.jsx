@@ -189,6 +189,16 @@ function StudentManagement() {
 
   const openEditModal = (student) => {
     setSelectedStudent(student);
+    // Parse birthDate into separate fields if available
+    let birthMonth = '', birthDay = '', birthYear = '';
+    if (student.birthDate) {
+      const date = new Date(student.birthDate);
+      if (!isNaN(date.getTime())) {
+        birthMonth = (date.getMonth() + 1).toString();
+        birthDay = date.getDate().toString();
+        birthYear = date.getFullYear().toString();
+      }
+    }
     // Ensure all fields have default values to prevent uncontrolled input warning
     setFormData({
       studentId: student.studentId || '',
@@ -198,13 +208,20 @@ function StudentManagement() {
       year: student.year || '1st Year',
       program: student.program || '',
       section: student.section || '',
-      gender: student.gender || 'Male',
-      birthdate: student.birthdate || '',
+      gender: student.gender || '',
+      birthMonth: student.birthMonth || birthMonth || '',
+      birthDay: student.birthDay || birthDay || '',
+      birthYear: student.birthYear || birthYear || '',
+      age: student.age || '',
+      civilStatus: student.civilStatus || '',
+      height: student.height || '',
+      weight: student.weight || '',
       bloodType: student.bloodType || '',
+      facebookAccount: student.facebookAccount || '',
       contactNumber: student.contactNumber || '',
-      address: student.address || '',
-      emergencyName: student.emergencyName || '',
-      emergencyContact: student.emergencyContact || ''
+      address: student.address || student.homeAddress || '',
+      emergencyName: student.emergencyName || student.emergencyContact || '',
+      emergencyNumber: student.emergencyNumber || ''
     });
     setShowEditModal(true);
   };
@@ -238,29 +255,16 @@ function StudentManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <span className="font-bold">Students</span>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
-
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <GraduationCap className="w-8 h-8" />
@@ -332,7 +336,7 @@ function StudentManagement() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -342,10 +346,12 @@ function StudentManagement() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
@@ -840,141 +846,88 @@ function StudentManagement() {
         {/* View Student Modal */}
         {showViewModal && viewStudent && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800">Student Information</h3>
-                <button onClick={closeViewModal} className="p-1 text-gray-400 hover:text-gray-600">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Sticky Header */}
+              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
+                <h3 className="text-lg font-bold flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
+                  Student Information
+                </h3>
+                <button onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
               
-              <div className="space-y-4">
-                {/* Profile Header */}
-                <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                  <div className={`w-16 h-16 ${getDepartmentColor(viewStudent.department)} rounded-full flex items-center justify-center text-2xl font-bold`}>
-                    {viewStudent.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-800">{viewStudent.name}</h4>
-                    <p className="text-sm text-gray-500">{viewStudent.studentId}</p>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${getDepartmentColor(viewStudent.department)}`}>
-                      {viewStudent.department}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Student ID</label>
-                    <p className="text-sm font-medium text-gray-800">{viewStudent.studentId}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Program</label>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(viewStudent.department)}`}>
-                      {viewStudent.department}
-                    </span>
-                  </div>
-                </div>
-
+              <div className="p-6 space-y-6">
+                {/* Personal Information Section */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase">Full Name</label>
-                  <p className="text-sm font-medium text-gray-800">{viewStudent.name}</p>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Student ID:</span> <span className="font-medium">{viewStudent.studentId}</span></div>
+                    <div><span className="text-gray-500">Full Name:</span> <span className="font-medium">{viewStudent.name}</span></div>
+                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{viewStudent.email || '-'}</span></div>
+                    <div><span className="text-gray-500">Contact:</span> <span className="font-medium">{viewStudent.contactNumber || '-'}</span></div>
+                    <div><span className="text-gray-500">Address:</span> <span className="font-medium">{viewStudent.homeAddress || viewStudent.address || '-'}</span></div>
+                    <div><span className="text-gray-500">Facebook:</span> <span className="font-medium">{viewStudent.facebookAccount || '-'}</span></div>
+                  </div>
                 </div>
 
+                {/* Academic Information Section */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase">Email</label>
-                  <p className="text-sm font-medium text-gray-800">{viewStudent.email}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Department</label>
-                    <p className="text-sm font-medium text-gray-800">{viewStudent.department}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Section</label>
-                    <p className="text-sm font-medium text-gray-800">{viewStudent.section || '-'}</p>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Academic Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Program:</span> <span className="font-medium">{viewStudent.program || '-'}</span></div>
+                    <div><span className="text-gray-500">Section:</span> <span className="font-medium">{viewStudent.section || '-'}</span></div>
+                    <div><span className="text-gray-500">Year Level:</span> <span className="font-medium">{viewStudent.year || '-'}</span></div>
+                    <div><span className="text-gray-500">NSTP Component:</span> <span className="font-medium">{viewStudent.department || '-'}</span></div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Year Level</label>
-                    <p className="text-sm font-medium text-gray-800">{viewStudent.year}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase">Program</label>
-                    <p className="text-sm font-medium text-gray-800">{viewStudent.program}</p>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Personal Information</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Sex</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.gender || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Birthdate</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Age</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.age || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Civil Status</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.civilStatus || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Blood Type</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.bloodType || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Height (cm)</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.height || '-'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Weight (kg)</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.weight || '-'}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Facebook Account</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.facebookAccount || '-'}</p>
-                    </div>
-                  </div>
-                </div>
-
+                {/* Demographic Information Section */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase">Contact Number</label>
-                  <p className="text-sm font-medium text-gray-800">{viewStudent.contactNumber}</p>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</span></div>
+                    <div><span className="text-gray-500">Age:</span> <span className="font-medium">{viewStudent.age || '-'}</span></div>
+                    <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{viewStudent.gender || '-'}</span></div>
+                    <div><span className="text-gray-500">Civil Status:</span> <span className="font-medium">{viewStudent.civilStatus || '-'}</span></div>
+                    <div><span className="text-gray-500">Height:</span> <span className="font-medium">{viewStudent.height ? `${viewStudent.height} cm` : '-'}</span></div>
+                    <div><span className="text-gray-500">Weight:</span> <span className="font-medium">{viewStudent.weight ? `${viewStudent.weight} kg` : '-'}</span></div>
+                    <div><span className="text-gray-500">Blood Type:</span> <span className="font-medium">{viewStudent.bloodType || '-'}</span></div>
+                  </div>
                 </div>
 
+                {/* Emergency Contact Section */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase">Home Address</label>
-                  <p className="text-sm font-medium text-gray-800">{viewStudent.homeAddress || viewStudent.address || '-'}</p>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Emergency Contact</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Contact Person:</span> <span className="font-medium">{viewStudent.emergencyContact || '-'}</span></div>
+                    <div><span className="text-gray-500">Contact Number:</span> <span className="font-medium">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</span></div>
+                  </div>
                 </div>
 
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Emergency Contact</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Status Section */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Contact Name</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.emergencyName}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 uppercase">Emergency Number</label>
-                      <p className="text-sm font-medium text-gray-800">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</p>
+                      <span className="text-gray-500 text-sm">Status:</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
+                        viewStudent.status === 'Active' ? 'bg-green-100 text-green-700' :
+                        viewStudent.status === 'Inactive' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {viewStudent.status || 'Active'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end mt-6">
+              {/* Sticky Footer */}
+              <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
                 <button 
                   onClick={closeViewModal}
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
                   Close
                 </button>
@@ -984,7 +937,7 @@ function StudentManagement() {
         )}
         {showEditModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-xl font-bold text-gray-800 mb-4">Edit Student</h3>
               <div className="space-y-4">
                 {/* Basic Information */}
@@ -1015,6 +968,15 @@ function StudentManagement() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
@@ -1030,13 +992,17 @@ function StudentManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.section}
                       onChange={(e) => setFormData({...formData, section: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      placeholder="e.g., A, B, C"
-                    />
+                    >
+                      <option value="">Select Section</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1055,20 +1021,97 @@ function StudentManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.program}
                       onChange={(e) => setFormData({...formData, program: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      placeholder="BS Computer Science"
-                    />
+                    >
+                      <option value="">Select Program</option>
+                      <option value="BSIT">BSIT</option>
+                      <option value="BSCS">BSCS</option>
+                      <option value="BSFAS">BSFAS</option>
+                      <option value="BSHM">BSHM</option>
+                      <option value="BSBA">BSBA</option>
+                      <option value="BEED Science">BEED Science</option>
+                      <option value="BSED">BSED</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Personal Information */}
+                {/* Personal Information - Matching Enrollment Form */}
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Personal Information</h4>
-                  <div className="grid grid-cols-2 gap-4">
+                  
+                  {/* Birth Date - Separate Fields */}
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month (1-12)</label>
+                      <input
+                        type="text"
+                        value={formData.birthMonth}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val > 12) val = '12';
+                          setFormData({...formData, birthMonth: val});
+                        }}
+                        placeholder="MM"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Day (1-31)</label>
+                      <input
+                        type="text"
+                        value={formData.birthDay}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val > 31) val = '31';
+                          setFormData({...formData, birthDay: val});
+                        }}
+                        placeholder="DD"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Year (4 digits)</label>
+                      <input
+                        type="text"
+                        value={formData.birthYear}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                          setFormData({...formData, birthYear: val});
+                        }}
+                        placeholder="YYYY"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Age, Civil Status, Sex, Height */}
+                  <div className="grid grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                      <input
+                        type="text"
+                        value={formData.age}
+                        onChange={(e) => setFormData({...formData, age: e.target.value.replace(/\D/g, '')})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Civil Status</label>
+                      <select
+                        value={formData.civilStatus}
+                        onChange={(e) => setFormData({...formData, civilStatus: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      >
+                        <option value="">Select</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="Widowed">Widowed</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
                       <select
@@ -1076,42 +1119,85 @@ function StudentManagement() {
                         onChange={(e) => setFormData({...formData, gender: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       >
+                        <option value="">Select</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
                       <input
-                        type="date"
-                        value={formData.birthdate}
-                        onChange={(e) => setFormData({...formData, birthdate: e.target.value})}
+                        type="text"
+                        value={formData.height}
+                        onChange={(e) => setFormData({...formData, height: e.target.value.replace(/[^0-9.]/g, '')})}
+                        placeholder="cm"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       />
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                  <input
-                    type="tel"
-                    value={formData.contactNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                      setFormData({...formData, contactNumber: value});
-                    }}
-                    maxLength={11}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-20 resize-none"
-                  />
+                  {/* Weight, Blood Type, Contact, Facebook */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                      <input
+                        type="text"
+                        value={formData.weight}
+                        onChange={(e) => setFormData({...formData, weight: e.target.value.replace(/[^0-9.]/g, '')})}
+                        placeholder="kg"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Blood Type</label>
+                      <select
+                        value={formData.bloodType}
+                        onChange={(e) => setFormData({...formData, bloodType: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      >
+                        <option value="">Select</option>
+                        <option value="A">A</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B">B</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB">AB</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O">O</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (11 digits)</label>
+                      <input
+                        type="tel"
+                        value={formData.contactNumber}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                          setFormData({...formData, contactNumber: value});
+                        }}
+                        maxLength={11}
+                        placeholder="09123456789"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Account</label>
+                      <input
+                        type="text"
+                        value={formData.facebookAccount}
+                        onChange={(e) => setFormData({...formData, facebookAccount: e.target.value})}
+                        placeholder="facebook.com/username"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Emergency Contact */}
@@ -1119,7 +1205,7 @@ function StudentManagement() {
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Emergency Contact</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
                       <input
                         type="text"
                         value={formData.emergencyName}
@@ -1128,7 +1214,7 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Number</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (11 digits)</label>
                       <input
                         type="tel"
                         value={formData.emergencyNumber}
@@ -1137,6 +1223,7 @@ function StudentManagement() {
                           setFormData({...formData, emergencyNumber: value});
                         }}
                         maxLength={11}
+                        placeholder="09123456789"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       />
                     </div>

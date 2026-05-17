@@ -1,7 +1,7 @@
 import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare, 
-  LogOut, User, ChevronLeft, Calendar, Menu, ChevronRight, Bell, CheckCircle, Trash2, X, CheckSquare, Square
+  LogOut, User, ChevronLeft, Calendar, Menu, ChevronRight, Bell, CheckCircle, Trash2, X, CheckSquare, Square, Shield, TrendingUp
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -17,87 +17,125 @@ const AVATAR_OPTIONS = {
 };
 
 function InstructorDashboard() {
-  const { user, logout, students, reports, conversations } = useAuth();
+  const { user, logout, students, reports, conversations, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Notification states
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('nstp_instructor_notifications');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, title: 'New student registration', message: 'A new student has registered in your department', time: '5 min ago', read: false, type: 'student' },
-      { id: 2, title: 'Report submission', message: 'Student Juan Dela Cruz submitted a report', time: '1 hour ago', read: false, type: 'report' },
-      { id: 3, title: 'System update', message: 'System maintenance scheduled for tonight', time: '2 hours ago', read: true, type: 'system' }
-    ];
-  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   
-  // Save notifications to localStorage
-  useEffect(() => {
-    localStorage.setItem('nstp_instructor_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-  
-  // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (showNotifications && !e.target.closest('.notification-container')) {
-        setShowNotifications(false);
-        setDeleteMode(false);
-        setSelectedNotifications([]);
-      }
+      if (!showNotifications) return;
+      if (e.target.closest('.notification-container')) return;
+      setShowNotifications(false);
+      setDeleteMode(false);
+      setSelectedNotifications([]);
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
   
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const toggleDeleteMode = () => {
-    setDeleteMode(!deleteMode);
-    setSelectedNotifications([]);
-  };
-  
-  const toggleNotificationSelection = (id) => {
-    setSelectedNotifications(prev => 
-      prev.includes(id) 
-        ? prev.filter(nId => nId !== id)
-        : [...prev, id]
+  // Check if user is loaded - after all hooks
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
     );
-  };
+  }
   
-  const selectAllNotifications = () => {
-    if (selectedNotifications.length === notifications.length) {
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
+  
+  // Simple function to toggle delete mode
+  function handleToggleDeleteMode() {
+    if (deleteMode) {
+      setDeleteMode(false);
       setSelectedNotifications([]);
     } else {
-      setSelectedNotifications(notifications.map(n => n.id));
+      setDeleteMode(true);
+      setSelectedNotifications([]);
     }
-  };
+  }
   
-  const deleteSelectedNotifications = () => {
-    setNotifications(prev => prev.filter(n => !selectedNotifications.includes(n.id)));
+  function notificationIdsMatch(a, b) {
+    return String(a) === String(b);
+  }
+
+  function handleSelectNotification(id) {
+    setSelectedNotifications(function(prev) {
+      const has = prev.some(function(nId) { return notificationIdsMatch(nId, id); });
+      if (has) {
+        return prev.filter(function(nId) { return !notificationIdsMatch(nId, id); });
+      }
+      return prev.concat([id]);
+    });
+  }
+  
+  function handleSelectAll(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const list = notifications || [];
+    setSelectedNotifications(function(prev) {
+      const allSelected = list.length > 0 && list.every(function(n) {
+        return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+      });
+      if (allSelected) return [];
+      return list.map(function(n) { return n.id; });
+    });
+  }
+  
+  function handleDeleteSelected(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const selectedSet = new Set(selectedNotifications.map(function(id) { return String(id); }));
+    setNotifications(function(prev) {
+      return (prev || []).filter(function(n) {
+        return !selectedSet.has(String(n.id));
+      });
+    });
     setSelectedNotifications([]);
     setDeleteMode(false);
-  };
+  }
   
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
+  // Mark all as read
+  function handleMarkAllRead() {
+    const newNotifications = notifications.map(n => {
+      return { ...n, read: true };
+    });
+    setNotifications(newNotifications);
+  }
   
-  const handleNotificationClick = (notification) => {
-    // Mark as read when clicked
-    setNotifications(prev => prev.map(n => 
-      n.id === notification.id ? { ...n, read: true } : n
-    ));
+  // Handle notification click
+  function handleNotificationItemClick(notification) {
+    // Mark as read
+    const newNotifications = notifications.map(n => {
+      if (n.id === notification.id) {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    setNotifications(newNotifications);
     
     // Navigate based on type
     if (notification.type === 'student') {
       navigate('/students');
     } else if (notification.type === 'report') {
       navigate('/reports');
+    } else if (notification.type === 'message') {
+      navigate('/chat');
+    } else if (notification.link && notification.link !== '#') {
+      navigate(notification.link);
     }
     
     setShowNotifications(false);
@@ -158,30 +196,16 @@ function InstructorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Shield className="w-6 h-6" />
-          <span className="font-bold">{user?.department} Dashboard</span>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
-
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center`}>
@@ -253,20 +277,22 @@ function InstructorDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <div>
               <h2 className="text-2xl lg:text-3xl font-bold text-gray-800">{user?.department} Dashboard</h2>
-            <p className="text-gray-600">Welcome back, {user?.name}</p>
-          </div>
+              <p className="text-gray-600">Welcome back, {user?.name}</p>
+            </div>
           </div>
           <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
             {/* Notification Container */}
@@ -285,7 +311,10 @@ function InstructorDashboard() {
               
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                <div
+                  className="notification-dropdown absolute right-0 top-full mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
@@ -293,7 +322,7 @@ function InstructorDashboard() {
                         {!deleteMode ? (
                           <>
                             <button 
-                              onClick={toggleDeleteMode}
+                              onClick={handleToggleDeleteMode}
                               className="text-sm text-red-600 hover:text-red-700"
                               title="Delete notifications"
                             >
@@ -303,18 +332,22 @@ function InstructorDashboard() {
                         ) : (
                           <>
                             <button 
-                              onClick={selectAllNotifications}
+                              type="button"
+                              onClick={handleSelectAll}
                               className="text-sm text-gray-600 hover:text-gray-800"
                               title="Select all"
                             >
-                              {selectedNotifications.length === notifications.length ? (
+                              {(notifications || []).length > 0 && (notifications || []).every(function(n) {
+                                return selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+                              }) ? (
                                 <CheckSquare className="w-5 h-5" />
                               ) : (
                                 <Square className="w-5 h-5" />
                               )}
                             </button>
                             <button 
-                              onClick={deleteSelectedNotifications}
+                              type="button"
+                              onClick={handleDeleteSelected}
                               disabled={selectedNotifications.length === 0}
                               className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
                               title="Delete selected"
@@ -322,7 +355,7 @@ function InstructorDashboard() {
                               <Trash2 className="w-5 h-5" />
                             </button>
                             <button 
-                              onClick={toggleDeleteMode}
+                              onClick={handleToggleDeleteMode}
                               className="text-sm text-gray-600 hover:text-gray-800"
                               title="Cancel"
                             >
@@ -340,7 +373,7 @@ function InstructorDashboard() {
                       notifications.map(notification => (
                         <div 
                           key={notification.id}
-                          onClick={() => !deleteMode && handleNotificationClick(notification)}
+                          onClick={() => !deleteMode && handleNotificationItemClick(notification)}
                           className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-start space-x-3 ${
                             !notification.read ? 'bg-blue-50' : ''
                           } ${deleteMode ? 'cursor-default' : ''}`}
@@ -349,11 +382,11 @@ function InstructorDashboard() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleNotificationSelection(notification.id);
+                                handleSelectNotification(notification.id);
                               }}
                               className="mt-1"
                             >
-                              {selectedNotifications.includes(notification.id) ? (
+                              {selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, notification.id); }) ? (
                                 <CheckSquare className="w-5 h-5 text-green-600" />
                               ) : (
                                 <Square className="w-5 h-5 text-gray-400" />

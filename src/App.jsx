@@ -1,5 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, createContext, useContext, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import RealtimeToastStack from './components/RealtimeToastStack';
+import IncomingCallOverlay from './components/IncomingCallOverlay';
+import { hasAllInstructorsGroup, ensureAllInstructorsGroup } from './utils/ensureGroupChat';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -10,27 +13,376 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI } from './services/api';
 
-export const AuthContext = createContext(null);
+export var AuthContext = createContext(null);
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [pendingEnrollments, setPendingEnrollments] = useState([]);
-  const [reports, setReports] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [messages, setMessages] = useState({});
-  const [archivedYears, setArchivedYears] = useState([]);
-  const [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
-  const [loading, setLoading] = useState(true);
+  var [user, setUser] = useState(null);
+  var [users, setUsers] = useState([]);
+  var [students, setStudents] = useState([]);
+  var [pendingEnrollments, setPendingEnrollments] = useState([]);
+  var [reports, setReports] = useState([]);
+  var [conversations, setConversations] = useState([]);
+  var [messages, setMessages] = useState({});
+  var [archivedYears, setArchivedYears] = useState([]);
+  var [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
+  var [loading, setLoading] = useState(true);
+  var [notifications, setNotifications] = useState([]);
+  var [toasts, setToasts] = useState([]);
+  var [incomingCall, setIncomingCall] = useState(null);
+  var [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
+  var outgoingCallIdRef = useRef(null);
+  var ringAudioContextRef = useRef(null);
+
+  var baselineReady = useRef(false);
+  var seenEnrollmentIds = useRef(new Set());
+  var seenSubmissionKeys = useRef(new Set());
+  var seenReportIds = useRef(new Set());
+  var seenConvLastMessageTime = useRef({});
+  var POLL_INTERVAL_MS = 5000;
+
+  function getNotificationStorageKey(role) {
+    return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
+  }
+
+  var pushNotification = useCallback(function(notif) {
+    var item = {
+      id: Date.now() + '-' + Math.random().toString(36).slice(2, 11),
+      time: 'Just now',
+      read: false,
+      title: notif.title,
+      message: notif.message,
+      type: notif.type || 'system',
+      link: notif.link || '#'
+    };
+
+    setNotifications(function(prev) {
+      var next = [item];
+      for (var i = 0; i < prev.length; i++) {
+        next.push(prev[i]);
+      }
+      return next.slice(0, 50);
+    });
+
+    setToasts(function(prev) {
+      var next = [item];
+      for (var j = 0; j < prev.length; j++) {
+        next.push(prev[j]);
+      }
+      return next.slice(0, 5);
+    });
+
+    if (typeof window !== 'undefined' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try {
+        new Notification(item.title, { body: item.message });
+      } catch (e) { /* ignore */ }
+    }
+
+    setTimeout(function() {
+      setToasts(function(prev) {
+        return prev.filter(function(t) { return t.id !== item.id; });
+      });
+    }, 6000);
+  }, []);
+
+  var dismissToast = useCallback(function(toastId) {
+    setToasts(function(prev) {
+      return prev.filter(function(t) { return t.id !== toastId; });
+    });
+  }, []);
+
+  function resetRealtimeBaseline() {
+    baselineReady.current = false;
+    seenEnrollmentIds.current = new Set();
+    seenSubmissionKeys.current = new Set();
+    seenReportIds.current = new Set();
+    seenConvLastMessageTime.current = {};
+  }
+
+  function seedRealtimeBaseline(pending, reportsList, convList, currentUser) {
+    for (var i = 0; i < pending.length; i++) {
+      seenEnrollmentIds.current.add(pending[i].id);
+    }
+    for (var r = 0; r < reportsList.length; r++) {
+      var report = reportsList[r];
+      if (currentUser.role === 'instructor' && report.department === currentUser.department) {
+        seenReportIds.current.add(report.id);
+      }
+      var subs = report.submissions || [];
+      for (var s = 0; s < subs.length; s++) {
+        seenSubmissionKeys.current.add(report.id + '-' + subs[s].instructor_id + '-' + subs[s].id);
+      }
+    }
+    for (var c = 0; c < convList.length; c++) {
+      if (convList[c].last_message_time) {
+        seenConvLastMessageTime.current[convList[c].id] = String(convList[c].last_message_time);
+      }
+    }
+    baselineReady.current = true;
+  }
+
+  function detectRealtimeChanges(pending, reportsList, convList, currentUser) {
+    if (!baselineReady.current || !currentUser) return;
+
+    if (currentUser.role === 'admin') {
+      for (var i = 0; i < pending.length; i++) {
+        var enrollment = pending[i];
+        if (!seenEnrollmentIds.current.has(enrollment.id)) {
+          seenEnrollmentIds.current.add(enrollment.id);
+          var enrollName = enrollment.student_name || enrollment.firstName || 'A student';
+          pushNotification({
+            title: 'New Enrollment',
+            message: enrollName + ' submitted an enrollment application',
+            type: 'enrollment',
+            link: '/admin/dashboard'
+          });
+        }
+      }
+
+      for (var r = 0; r < reportsList.length; r++) {
+        var report = reportsList[r];
+        var subs = report.submissions || [];
+        for (var s = 0; s < subs.length; s++) {
+          var subKey = report.id + '-' + subs[s].instructor_id + '-' + subs[s].id;
+          if (!seenSubmissionKeys.current.has(subKey)) {
+            seenSubmissionKeys.current.add(subKey);
+            pushNotification({
+              title: 'New Report Submission',
+              message: 'Report "' + (report.title || 'Untitled') + '" was submitted',
+              type: 'report',
+              link: '/reports'
+            });
+          }
+        }
+      }
+    }
+
+    if (currentUser.role === 'instructor') {
+      for (var ir = 0; ir < reportsList.length; ir++) {
+        var instReport = reportsList[ir];
+        if (instReport.department === currentUser.department && !seenReportIds.current.has(instReport.id)) {
+          seenReportIds.current.add(instReport.id);
+          pushNotification({
+            title: 'New Report Assignment',
+            message: 'New report: ' + (instReport.title || 'Untitled'),
+            type: 'report',
+            link: '/reports'
+          });
+        }
+      }
+    }
+  }
+
+  async function checkConversationMessages(convList, currentUser) {
+    if (!baselineReady.current || !currentUser) return;
+
+    for (var i = 0; i < convList.length; i++) {
+      var conv = convList[i];
+      var currTime = conv.last_message_time ? String(conv.last_message_time) : null;
+      var prevTime = seenConvLastMessageTime.current[conv.id];
+
+      if (currTime && prevTime && currTime !== prevTime) {
+        try {
+          var msgs = await conversationsAPI.getMessages(conv.id);
+          if (msgs.length > 0) {
+            var latest = msgs[msgs.length - 1];
+            if (latest.sender_id !== currentUser.id) {
+              var senderName = latest.sender_name || 'Someone';
+              var preview = latest.text || (latest.type === 'image' ? 'Sent an image' : 'Sent a message');
+              if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+              pushNotification({
+                title: 'New Message',
+                message: senderName + ': ' + preview,
+                type: 'message',
+                link: '/chat'
+              });
+            }
+            setMessages(function(prev) {
+              var next = {};
+              for (var key in prev) {
+                next[key] = prev[key];
+              }
+              next[conv.id] = msgs;
+              return next;
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to poll messages for conversation', conv.id);
+        }
+      }
+
+      if (currTime) {
+        seenConvLastMessageTime.current[conv.id] = currTime;
+      }
+    }
+  }
+
+  async function mergeAllInstructorsGroup(usersData, conversationsData, currentUser) {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'instructor')) {
+      return conversationsData;
+    }
+    if (hasAllInstructorsGroup(conversationsData)) {
+      return conversationsData;
+    }
+    var groupChat = await ensureAllInstructorsGroup(usersData, currentUser);
+    if (!groupChat) return conversationsData;
+    var merged = [groupChat];
+    for (var i = 0; i < conversationsData.length; i++) {
+      merged.push(conversationsData[i]);
+    }
+    setConversations(merged);
+    setMessages(function(prev) {
+      var next = {};
+      for (var key in prev) {
+        next[key] = prev[key];
+      }
+      if (!next[groupChat.id]) {
+        next[groupChat.id] = [];
+      }
+      return next;
+    });
+    return merged;
+  }
+
+  async function refreshLiveData() {
+    if (!user) return;
+    try {
+      var reportsData = await reportsAPI.getAll();
+      setReports(reportsData);
+
+      var usersData = users;
+      if (!usersData.length) {
+        usersData = await usersAPI.getAll();
+        setUsers(usersData);
+      }
+
+      var conversationsData = await conversationsAPI.getAll();
+      conversationsData = await mergeAllInstructorsGroup(usersData, conversationsData, user);
+      setConversations(conversationsData);
+
+      var pending = pendingEnrollments;
+      if (user.role === 'admin') {
+        var enrollmentsData = await enrollmentsAPI.getAll();
+        pending = [];
+        for (var i = 0; i < enrollmentsData.length; i++) {
+          if (enrollmentsData[i].status === 'Pending') {
+            pending.push(enrollmentsData[i]);
+          }
+        }
+        setPendingEnrollments(pending);
+      }
+
+      if (!baselineReady.current) {
+        seedRealtimeBaseline(pending, reportsData, conversationsData, user);
+      } else {
+        detectRealtimeChanges(pending, reportsData, conversationsData, user);
+        await checkConversationMessages(conversationsData, user);
+      }
+    } catch (error) {
+      console.warn('Live refresh failed:', error);
+    }
+  }
+
+  // Load notifications from storage when user logs in
+  useEffect(function() {
+    if (!user) return;
+    var saved = localStorage.getItem(getNotificationStorageKey(user.role));
+    if (saved) {
+      try {
+        setNotifications(JSON.parse(saved));
+      } catch (e) {
+        setNotifications([]);
+      }
+    } else {
+      setNotifications([]);
+    }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(function() {});
+    }
+  }, [user]);
+
+  useEffect(function() {
+    if (!user) return;
+    localStorage.setItem(getNotificationStorageKey(user.role), JSON.stringify(notifications));
+  }, [notifications, user]);
+
+  // Real-time polling while logged in
+  useEffect(function() {
+    if (!user || loading) return;
+
+    refreshLiveData();
+    var interval = setInterval(refreshLiveData, POLL_INTERVAL_MS);
+    return function() {
+      clearInterval(interval);
+    };
+  }, [user, loading]);
+
+  // Poll for incoming/outgoing calls
+  useEffect(function() {
+    if (!user) return;
+
+    async function pollCalls() {
+      try {
+        var incomingList = await callsAPI.getIncoming();
+        if (incomingList.length > 0) {
+          setIncomingCall(incomingList[0]);
+        } else {
+          setIncomingCall(null);
+        }
+
+        if (outgoingCallIdRef.current) {
+          var outgoing = await callsAPI.getById(outgoingCallIdRef.current);
+          setOutgoingCallStatus(outgoing.status);
+        }
+      } catch (e) {
+        /* ignore poll errors */
+      }
+    }
+
+    pollCalls();
+    var callInterval = setInterval(pollCalls, 2000);
+    return function() {
+      clearInterval(callInterval);
+    };
+  }, [user]);
+
+  function registerOutgoingCall(callId) {
+    outgoingCallIdRef.current = callId;
+    setOutgoingCallStatus('ringing');
+  }
+
+  function clearOutgoingCall() {
+    outgoingCallIdRef.current = null;
+    setOutgoingCallStatus(null);
+  }
+
+  async function declineIncomingCall(callId) {
+    try {
+      await callsAPI.end(callId, 'declined');
+    } catch (e) {
+      console.warn('Decline call failed:', e);
+    }
+    setIncomingCall(null);
+  }
+
+  async function answerIncomingCall(call) {
+    try {
+      await callsAPI.answer(call.id);
+      setIncomingCall(null);
+      window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
+    } catch (e) {
+      console.error('Answer call failed:', e);
+    }
+  }
 
   // Load user from token on mount
-  useEffect(() => {
-    const token = localStorage.getItem('nstp_token');
+  useEffect(function() {
+    var token = localStorage.getItem('nstp_token');
     if (token) {
       loadCurrentUser();
     } else {
@@ -39,87 +391,93 @@ function App() {
   }, []);
 
   // Load current user data
-  const loadCurrentUser = async () => {
+  async function loadCurrentUser() {
     try {
-      const userData = await usersAPI.getMe();
+      var userData = await usersAPI.getMe();
       setUser(userData);
-      await loadAllData();
+      await loadAllData(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('nstp_token');
-    } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // Load all data from API
-  const loadAllData = async () => {
+  // Load all data from API - sequential, not parallel
+  async function loadAllData(currentUser) {
     try {
-      const [usersData, studentsData, reportsData, enrollmentsData, conversationsData, archivesData, batchData] = await Promise.all([
-        usersAPI.getAll(),
-        studentsAPI.getAll(),
-        reportsAPI.getAll(),
-        enrollmentsAPI.getAll(),
-        conversationsAPI.getAll(),
-        archivesAPI.getAll().catch(() => []),
-        archivesAPI.getCurrentBatch().catch(() => ({ year: new Date().getFullYear() }))
-      ]);
+      var usersData = await usersAPI.getAll();
+      var studentsData = await studentsAPI.getAll();
+      var reportsData = await reportsAPI.getAll();
+      var enrollmentsData = await enrollmentsAPI.getAll();
+      var conversationsData = await conversationsAPI.getAll();
+      
+      var archivesData = [];
+      try {
+        archivesData = await archivesAPI.getAll();
+      } catch (e) {
+        archivesData = [];
+      }
+      
+      var batchData = { year: new Date().getFullYear() };
+      try {
+        batchData = await archivesAPI.getCurrentBatch();
+      } catch (e) {
+        batchData = { year: new Date().getFullYear() };
+      }
 
       setUsers(usersData);
       setStudents(studentsData);
       setReports(reportsData);
-      setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
+      
+      var pending = [];
+      for (var i = 0; i < enrollmentsData.length; i++) {
+        if (enrollmentsData[i].status === 'Pending') {
+          pending.push(enrollmentsData[i]);
+        }
+      }
+      setPendingEnrollments(pending);
+
+      var activeUser = currentUser || user;
+      conversationsData = await mergeAllInstructorsGroup(usersData, conversationsData, activeUser);
       setConversations(conversationsData);
       setArchivedYears(archivesData);
       setCurrentBatch(batchData.year.toString());
 
-      // Auto-create group chat for admin/instructors if doesn't exist
-      const currentUser = user;
-      if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'instructor')) {
-        const hasGroupChat = conversationsData.some(c => c.isGroup && c.groupName === 'All Instructors');
-        if (!hasGroupChat) {
-          const instructorsAndAdmin = usersData.filter(u => u.role === 'admin' || u.role === 'instructor');
-          if (instructorsAndAdmin.length > 1) {
-            try {
-              const participantIds = instructorsAndAdmin.map(u => u.id);
-              const groupChat = await conversationsAPI.createGroup('All Instructors', participantIds);
-              setConversations(prev => [groupChat, ...prev]);
-              setMessages(prev => ({ ...prev, [groupChat.id]: [] }));
-            } catch (err) {
-              console.log('Group chat may already exist:', err.message);
-            }
-          }
-        }
-      }
-
       // Load messages for each conversation
-      const messagesData = {};
-      for (const conv of conversationsData) {
+      var messagesData = {};
+      for (var p = 0; p < conversationsData.length; p++) {
         try {
-          const convMessages = await conversationsAPI.getMessages(conv.id);
-          messagesData[conv.id] = convMessages;
+          var convMessages = await conversationsAPI.getMessages(conversationsData[p].id);
+          messagesData[conversationsData[p].id] = convMessages;
         } catch (err) {
-          messagesData[conv.id] = [];
+          messagesData[conversationsData[p].id] = [];
         }
       }
       setMessages(messagesData);
+
+      if (activeUser) {
+        resetRealtimeBaseline();
+        seedRealtimeBaseline(pending, reportsData, conversationsData, activeUser);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-
-  const login = async (email, password) => {
+  async function login(email, password) {
     try {
       console.log('Login attempt:', email);
-      const response = await authAPI.login(email, password);
+      var response = await authAPI.login(email, password);
       console.log('Login response:', response);
       
       if (response.token) {
         localStorage.setItem('nstp_token', response.token);
         setUser(response.user);
-        console.log('User set after login:', response.user, 'Role:', response.user?.role);
-        await loadAllData();
+        console.log('User set after login:', response.user, 'Role:', response.user ? response.user.role : undefined);
+        await loadAllData(response.user);
         return { success: true, role: response.user.role };
       } else {
         return { success: false, message: 'Invalid server response' };
@@ -128,9 +486,9 @@ function App() {
       console.error('Login error:', error);
       return { success: false, message: error.message || 'Invalid email or password' };
     }
-  };
+  }
 
-  const logout = () => {
+  function logout() {
     localStorage.removeItem('nstp_token');
     setUser(null);
     setUsers([]);
@@ -139,22 +497,27 @@ function App() {
     setReports([]);
     setConversations([]);
     setMessages({});
-  };
+    setNotifications([]);
+    setToasts([]);
+    setIncomingCall(null);
+    clearOutgoingCall();
+    resetRealtimeBaseline();
+  }
 
-  const updateUser = async (updatedData) => {
+  async function updateUserData(updatedData) {
     try {
-      const updated = await usersAPI.update(user.id, updatedData);
+      var updated = await usersAPI.update(user.id, updatedData);
       setUser(updated);
-      const usersData = await usersAPI.getAll();
+      var usersData = await usersAPI.getAll();
       setUsers(usersData);
       return updated;
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
     }
-  };
+  }
 
-  const changePassword = async (newPassword) => {
+  async function changeUserPassword(newPassword) {
     try {
       await usersAPI.changePassword(user.id, newPassword);
       return true;
@@ -162,229 +525,427 @@ function App() {
       console.error('Change password error:', error);
       throw error;
     }
-  };
+  }
 
   // Student management
-  const addStudent = async (student) => {
+  async function addStudentFunc(student) {
     try {
       console.log('Adding student:', student);
-      const newStudent = await studentsAPI.add(student);
+      var newStudent = await studentsAPI.add(student);
       console.log('Student added successfully:', newStudent);
-      // Re-fetch all students to ensure table is updated
-      const studentsData = await studentsAPI.getAll();
+      var studentsData = await studentsAPI.getAll();
       setStudents(studentsData);
       return newStudent;
     } catch (error) {
       console.error('Add student error:', error);
       throw error;
     }
-  };
+  }
 
-  const updateStudent = async (id, data) => {
+  async function updateStudentFunc(id, data) {
     try {
-      const updated = await studentsAPI.update(id, data);
-      setStudents(prev => prev.map(s => s.id === id ? updated : s));
+      var updated = await studentsAPI.update(id, data);
+      setStudents(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id === id) {
+            newArr.push(updated);
+          } else {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
       return updated;
     } catch (error) {
       console.error('Update student error:', error);
       throw error;
     }
-  };
+  }
 
-  const deleteStudent = async (id) => {
+  async function deleteStudentFunc(id) {
     try {
       await studentsAPI.delete(id);
-      setStudents(prev => prev.filter(s => s.id !== id));
+      setStudents(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id !== id) {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
     } catch (error) {
       console.error('Delete student error:', error);
       throw error;
     }
-  };
+  }
 
   // Enrollment management
-  const submitEnrollment = async (enrollment) => {
+  async function submitEnrollmentFunc(enrollment) {
     try {
-      const newEnrollment = await enrollmentsAPI.submit(enrollment);
-      setPendingEnrollments(prev => [...prev, newEnrollment]);
+      var newEnrollment = await enrollmentsAPI.submit(enrollment);
+      setPendingEnrollments(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          newArr.push(prev[i]);
+        }
+        newArr.push(newEnrollment);
+        return newArr;
+      });
       return newEnrollment;
     } catch (error) {
       console.error('Submit enrollment error:', error);
       throw error;
     }
-  };
+  }
 
-  const approveEnrollment = async (id) => {
+  async function approveEnrollmentFunc(id) {
     try {
-      const updated = await enrollmentsAPI.update(id, 'Approved');
-      setPendingEnrollments(prev => prev.filter(e => e.id !== id));
-      const studentsData = await studentsAPI.getAll();
+      var updated = await enrollmentsAPI.update(id, 'Approved');
+      setPendingEnrollments(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id !== id) {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
+      var studentsData = await studentsAPI.getAll();
       setStudents(studentsData);
       return updated;
     } catch (error) {
       console.error('Approve enrollment error:', error);
       throw error;
     }
-  };
+  }
 
-  const declineEnrollment = async (id) => {
+  async function declineEnrollmentFunc(id) {
     try {
       await enrollmentsAPI.update(id, 'Declined');
-      setPendingEnrollments(prev => prev.filter(e => e.id !== id));
+      setPendingEnrollments(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id !== id) {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
     } catch (error) {
       console.error('Decline enrollment error:', error);
       throw error;
     }
-  };
+  }
 
   // Report management
-  const addReport = async (report) => {
+  async function addReportFunc(report) {
     try {
       console.log('Adding report:', report);
-      const newReport = await reportsAPI.add(report);
+      var newReport = await reportsAPI.add(report);
       console.log('Report added successfully:', newReport);
-      // Re-fetch all reports to ensure table is updated
-      const reportsData = await reportsAPI.getAll();
+      var reportsData = await reportsAPI.getAll();
       setReports(reportsData);
       return newReport;
     } catch (error) {
       console.error('Add report error:', error);
       throw error;
     }
-  };
+  }
 
-  const updateReport = async (id, data) => {
+  async function updateReportFunc(id, data) {
     try {
-      const updated = await reportsAPI.update(id, data);
-      setReports(prev => prev.map(r => r.id === id ? updated : r));
+      var updated = await reportsAPI.update(id, data);
+      setReports(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id === id) {
+            newArr.push(updated);
+          } else {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
       return updated;
     } catch (error) {
       console.error('Update report error:', error);
       throw error;
     }
-  };
+  }
 
-  const deleteReport = async (id) => {
+  async function deleteReportFunc(id) {
     try {
       await reportsAPI.delete(id);
-      setReports(prev => prev.filter(r => r.id !== id));
+      setReports(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id !== id) {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
     } catch (error) {
       console.error('Delete report error:', error);
       throw error;
     }
-  };
+  }
 
-  const submitReport = async (reportId, submission) => {
+  async function submitReportFunc(reportId, submission) {
     try {
       await reportsAPI.submit(reportId, submission.content);
-      const reportsData = await reportsAPI.getAll();
+      var reportsData = await reportsAPI.getAll();
       setReports(reportsData);
     } catch (error) {
       console.error('Submit report error:', error);
       throw error;
     }
-  };
+  }
 
-  // Legacy functions for compatibility (these would need proper implementation)
-  const editMessage = async (conversationId, messageId, newText) => {
+  async function editMessageFunc(conversationId, messageId, newText) {
     try {
-      const updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
+      var updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
       
-      // Update message in local state
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: prev[conversationId].map(msg => 
-          msg.id === messageId ? { ...msg, text: newText, edited: 1 } : msg
-        )
-      }));
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          if (key === conversationId) {
+            var newMsgs = [];
+            for (var i = 0; i < prev[key].length; i++) {
+              if (prev[key][i].id === messageId) {
+                var copied = {};
+                for (var prop in prev[key][i]) {
+                  copied[prop] = prev[key][i][prop];
+                }
+                copied.text = newText;
+                copied.edited = 1;
+                newMsgs.push(copied);
+              } else {
+                newMsgs.push(prev[key][i]);
+              }
+            }
+            newObj[key] = newMsgs;
+          } else {
+            newObj[key] = prev[key];
+          }
+        }
+        return newObj;
+      });
       
       return updated;
     } catch (error) {
       console.error('Edit message error:', error);
       throw error;
     }
-  };
+  }
 
-  const deleteMessage = async (conversationId, messageId, forEveryone = false) => {
+  async function deleteMessageFunc(conversationId, messageId, forEveryone) {
+    if (forEveryone === undefined) forEveryone = false;
     try {
       await conversationsAPI.deleteMessage(conversationId, messageId, forEveryone);
       
-      // Update local state to remove or mark message as deleted
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: prev[conversationId].map(msg => 
-          msg.id === messageId 
-            ? { ...msg, deletedForMe: true, deletedForEveryone: forEveryone, text: forEveryone ? '[deleted]' : msg.text }
-            : msg
-        )
-      }));
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          if (key === conversationId) {
+            var newMsgs = [];
+            for (var i = 0; i < prev[key].length; i++) {
+              if (prev[key][i].id === messageId) {
+                var copied = {};
+                for (var prop in prev[key][i]) {
+                  copied[prop] = prev[key][i][prop];
+                }
+                copied.deleted_for_everyone = forEveryone;
+                copied.deletedForEveryone = forEveryone;
+                copied.type = forEveryone ? 'deleted' : copied.type;
+                if (forEveryone) {
+                  copied.text = '[deleted]';
+                } else {
+                  var deletedFor = [];
+                  if (copied.deleted_for) {
+                    try {
+                      deletedFor = typeof copied.deleted_for === 'string'
+                        ? JSON.parse(copied.deleted_for)
+                        : copied.deleted_for;
+                    } catch (e) {
+                      deletedFor = [];
+                    }
+                  }
+                  if (user && deletedFor.indexOf(user.id) < 0) {
+                    deletedFor.push(user.id);
+                  }
+                  copied.deleted_for = JSON.stringify(deletedFor);
+                  copied.deletedForMe = true;
+                }
+                newMsgs.push(copied);
+              } else {
+                newMsgs.push(prev[key][i]);
+              }
+            }
+            newObj[key] = newMsgs;
+          } else {
+            newObj[key] = prev[key];
+          }
+        }
+        return newObj;
+      });
       
       return { success: true };
     } catch (error) {
       console.error('Delete message error:', error);
       throw error;
     }
-  };
+  }
 
-  const addReaction = async (conversationId, messageId, emoji) => {
+  async function restoreMessageFunc(conversationId, messageId) {
     try {
-      const result = await conversationsAPI.addReaction(conversationId, messageId, emoji);
+      var restored = await conversationsAPI.restoreMessage(conversationId, messageId);
+
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          if (key === conversationId) {
+            var newMsgs = [];
+            for (var i = 0; i < prev[key].length; i++) {
+              if (prev[key][i].id === messageId) {
+                newMsgs.push(restored);
+              } else {
+                newMsgs.push(prev[key][i]);
+              }
+            }
+            newObj[key] = newMsgs;
+          } else {
+            newObj[key] = prev[key];
+          }
+        }
+        return newObj;
+      });
+
+      return restored;
+    } catch (error) {
+      console.error('Restore message error:', error);
+      throw error;
+    }
+  }
+
+  async function addReactionFunc(conversationId, messageId, emoji) {
+    try {
+      var result = await conversationsAPI.addReaction(conversationId, messageId, emoji);
       
-      // Update message reactions in local state
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: prev[conversationId].map(msg => 
-          msg.id === messageId ? { ...msg, reactions: result.reactions } : msg
-        )
-      }));
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          if (key === conversationId) {
+            var newMsgs = [];
+            for (var i = 0; i < prev[key].length; i++) {
+              if (prev[key][i].id === messageId) {
+                var copied = {};
+                for (var prop in prev[key][i]) {
+                  copied[prop] = prev[key][i][prop];
+                }
+                copied.reactions = result.reactions;
+                newMsgs.push(copied);
+              } else {
+                newMsgs.push(prev[key][i]);
+              }
+            }
+            newObj[key] = newMsgs;
+          } else {
+            newObj[key] = prev[key];
+          }
+        }
+        return newObj;
+      });
       
       return result;
     } catch (error) {
       console.error('Add reaction error:', error);
       throw error;
     }
-  };
+  }
 
-  const addReportComment = async (reportId, comment) => {
+  async function addReportCommentFunc(reportId, comment) {
     console.log('Add report comment not yet implemented in API');
-  };
+  }
 
   // Chat functions
-  const startConversation = async (withUser) => {
+  async function startConversationFunc(withUser) {
     try {
-      const conversation = await conversationsAPI.create(withUser.id);
-      const exists = conversations.find(c => c.id === conversation.id);
+      var conversation = await conversationsAPI.create(withUser.id);
+      var exists = false;
+      for (var i = 0; i < conversations.length; i++) {
+        if (conversations[i].id === conversation.id) {
+          exists = true;
+          break;
+        }
+      }
       if (!exists) {
-        setConversations(prev => [conversation, ...prev]);
-        setMessages(prev => ({ ...prev, [conversation.id]: [] }));
+        setConversations(function(prev) {
+          var newArr = [conversation];
+          for (var j = 0; j < prev.length; j++) {
+            newArr.push(prev[j]);
+          }
+          return newArr;
+        });
+        setMessages(function(prev) {
+          var newObj = {};
+          for (var key in prev) {
+            newObj[key] = prev[key];
+          }
+          newObj[conversation.id] = [];
+          return newObj;
+        });
       }
       return conversation;
     } catch (error) {
       console.error('Start conversation error:', error);
       throw error;
     }
-  };
+  }
 
-  const createGroupChat = async (name, participantIds) => {
+  async function createGroupChatFunc(name, participantIds) {
     try {
-      const conversation = await conversationsAPI.createGroup(name, participantIds);
-      const exists = conversations.find(c => c.id === conversation.id);
+      var conversation = await conversationsAPI.createGroup(name, participantIds);
+      var exists = false;
+      for (var i = 0; i < conversations.length; i++) {
+        if (conversations[i].id === conversation.id) {
+          exists = true;
+          break;
+        }
+      }
       if (!exists) {
-        setConversations(prev => [conversation, ...prev]);
-        setMessages(prev => ({ ...prev, [conversation.id]: [] }));
+        setConversations(function(prev) {
+          var newArr = [conversation];
+          for (var j = 0; j < prev.length; j++) {
+            newArr.push(prev[j]);
+          }
+          return newArr;
+        });
+        setMessages(function(prev) {
+          var newObj = {};
+          for (var key in prev) {
+            newObj[key] = prev[key];
+          }
+          newObj[conversation.id] = [];
+          return newObj;
+        });
       }
       return conversation;
     } catch (error) {
       console.error('Create group chat error:', error);
       throw error;
     }
-  };
+  }
 
-  const sendMessage = async (conversationId, message) => {
+  async function sendMessageFunc(conversationId, message) {
     try {
       console.log('Sending message to conversation:', conversationId, 'Message:', message);
-      const newMsg = await conversationsAPI.sendMessage(conversationId, {
+      var msgType = message.type ? message.type : 'text';
+      var newMsg = await conversationsAPI.sendMessage(conversationId, {
         text: message.text,
-        type: message.type || 'text',
+        type: msgType,
         image_url: message.imageUrl,
         file_url: message.fileUrl,
         file_name: message.fileName,
@@ -393,75 +954,130 @@ function App() {
       });
       console.log('Message sent successfully:', newMsg);
 
-      // Add formatted time to message
-      const msgWithTime = {
-        ...newMsg,
-        time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+      var msgWithTime = {};
+      for (var prop in newMsg) {
+        msgWithTime[prop] = newMsg[prop];
+      }
+      var date = new Date(newMsg.created_at);
+      msgWithTime.time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (newMsg.sender_id != null) {
+        msgWithTime.senderId = newMsg.sender_id;
+        msgWithTime.sender_id = newMsg.sender_id;
+      } else if (user) {
+        msgWithTime.senderId = user.id;
+        msgWithTime.sender_id = user.id;
+      }
 
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: [...(prev[conversationId] || []), msgWithTime]
-      }));
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          newObj[key] = prev[key];
+        }
+        var existing = prev[conversationId] ? prev[conversationId] : [];
+        var newArr = [];
+        for (var i = 0; i < existing.length; i++) {
+          newArr.push(existing[i]);
+        }
+        newArr.push(msgWithTime);
+        newObj[conversationId] = newArr;
+        return newObj;
+      });
 
-      setConversations(prev => prev.map(c => 
-        c.id === conversationId 
-          ? { ...c, last_message: message.text, last_message_time: new Date().toISOString() }
-          : c
-      ));
+      setConversations(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id === conversationId) {
+            var copied = {};
+            for (var prop in prev[i]) {
+              copied[prop] = prev[i][prop];
+            }
+            copied.last_message = message.text;
+            copied.last_message_time = new Date().toISOString();
+            newArr.push(copied);
+          } else {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
 
       return msgWithTime;
     } catch (error) {
       console.error('Send message error:', error);
       throw error;
     }
-  };
+  }
 
-  const deleteConversation = async (conversationId) => {
+  async function deleteConversationFunc(conversationId) {
     try {
       await conversationsAPI.delete(conversationId);
-      setConversations(prev => prev.filter(c => c.id !== conversationId));
-      setMessages(prev => {
-        const newMessages = { ...prev };
-        delete newMessages[conversationId];
-        return newMessages;
+      setConversations(function(prev) {
+        var newArr = [];
+        for (var i = 0; i < prev.length; i++) {
+          if (prev[i].id !== conversationId) {
+            newArr.push(prev[i]);
+          }
+        }
+        return newArr;
+      });
+      setMessages(function(prev) {
+        var newObj = {};
+        for (var key in prev) {
+          if (key !== conversationId) {
+            newObj[key] = prev[key];
+          }
+        }
+        return newObj;
       });
     } catch (error) {
       console.error('Delete conversation error:', error);
       throw error;
     }
-  };
+  }
 
-  const clearMessages = async (conversationId) => {
-    setMessages(prev => ({ ...prev, [conversationId]: [] }));
-  };
-
-  const getUserConversations = () => {
-    if (!user) return [];
-    return conversations.filter(c => {
-      // Include direct conversations where user is a participant
-      if (c.participant_1_id === user.id || c.participant_2_id === user.id) {
-        return true;
+  function clearMessagesFunc(conversationId) {
+    setMessages(function(prev) {
+      var newObj = {};
+      for (var key in prev) {
+        newObj[key] = prev[key];
       }
-      // Include group conversations where user is in participants list
-      if (c.isGroup && c.participants?.includes(user.id)) {
-        return true;
-      }
-      return false;
+      newObj[conversationId] = [];
+      return newObj;
     });
-  };
+  }
 
-  // Clear batch data
-  const clearBatchData = async () => {
-    for (const student of students) {
-      await deleteStudent(student.id);
+  function getUserConversations() {
+    if (!user) return [];
+    var result = [];
+    for (var i = 0; i < conversations.length; i++) {
+      var c = conversations[i];
+      if (c.participant_1_id === user.id || c.participant_2_id === user.id) {
+        result.push(c);
+      } else if (c.isGroup && c.participants) {
+        for (var j = 0; j < c.participants.length; j++) {
+          if (c.participants[j] === user.id) {
+            result.push(c);
+            break;
+          }
+        }
+      }
     }
-    for (const report of reports) {
-      await deleteReport(report.id);
-    }
-  };
+    return result;
+  }
 
-  const ProtectedRoute = ({ children, allowedRoles }) => {
+  async function clearBatchData() {
+    for (var i = 0; i < students.length; i++) {
+      await deleteStudentFunc(students[i].id);
+    }
+    for (var j = 0; j < reports.length; j++) {
+      await deleteReportFunc(reports[j].id);
+    }
+  }
+
+  function ProtectedRoute(props) {
+    var children = props.children;
+    var allowedRoles = props.allowedRoles;
+    
     if (loading) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -475,32 +1091,47 @@ function App() {
     
     if (!user) return <Navigate to="/login" />;
     
-    // Debug logging
-    console.log('ProtectedRoute check:', { userRole: user?.role, allowedRoles, hasRole: user?.role && allowedRoles?.includes(user.role) });
+    console.log('ProtectedRoute check:', { userRole: user ? user.role : null, allowedRoles: allowedRoles, hasRole: user && allowedRoles ? allowedRoles.indexOf(user.role) >= 0 : false });
     
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-      console.log('Role mismatch - redirecting to home');
-      return <Navigate to="/" />;
+    if (allowedRoles) {
+      var hasRole = false;
+      for (var i = 0; i < allowedRoles.length; i++) {
+        if (allowedRoles[i] === user.role) {
+          hasRole = true;
+          break;
+        }
+      }
+      if (!hasRole) {
+        console.log('Role mismatch - redirecting to home');
+        return <Navigate to="/" />;
+      }
     }
     
     return children;
-  };
+  }
 
-  const contextValue = {
-    user, login, logout, updateUser, changePassword, allUsers: users,
-    students, reports, conversations: getUserConversations(), messages, pendingEnrollments,
-    archivedYears, currentBatch,
-    addStudent, updateStudent, deleteStudent,
-    addReport, updateReport, deleteReport, submitReport, addReportComment,
-    startConversation, createGroupChat, sendMessage, getUserConversations, editMessage, addReaction, deleteMessage,
-    deleteConversation, clearMessages,
-    clearBatchData, submitEnrollment, approveEnrollment, declineEnrollment,
-    loading, refreshData: loadAllData
+  var contextValue = {
+    user: user, login: login, logout: logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
+    students: students, reports: reports, conversations: getUserConversations(), messages: messages, pendingEnrollments: pendingEnrollments,
+    archivedYears: archivedYears, currentBatch: currentBatch,
+    addStudent: addStudentFunc, updateStudent: updateStudentFunc, deleteStudent: deleteStudentFunc,
+    addReport: addReportFunc, updateReport: updateReportFunc, deleteReport: deleteReportFunc, submitReport: submitReportFunc, addReportComment: addReportCommentFunc,
+    startConversation: startConversationFunc, createGroupChat: createGroupChatFunc, sendMessage: sendMessageFunc, getUserConversations: getUserConversations, editMessage: editMessageFunc, addReaction: addReactionFunc, deleteMessage: deleteMessageFunc, restoreMessage: restoreMessageFunc,
+    deleteConversation: deleteConversationFunc, clearMessages: clearMessagesFunc,
+    clearBatchData: clearBatchData, submitEnrollment: submitEnrollmentFunc, approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
+    loading: loading, refreshData: loadAllData, refreshLiveData: refreshLiveData,
+    notifications: notifications, setNotifications: setNotifications, pushNotification: pushNotification,
+    toasts: toasts, dismissToast: dismissToast,
+    incomingCall: incomingCall, outgoingCallStatus: outgoingCallStatus,
+    registerOutgoingCall: registerOutgoingCall, clearOutgoingCall: clearOutgoingCall,
+    answerIncomingCall: answerIncomingCall, declineIncomingCall: declineIncomingCall
   };
 
   return (
     <AuthContext.Provider value={contextValue}>
-      <Router>
+      <BrowserRouter>
+        <RealtimeToastStack />
+        <IncomingCallOverlay />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -513,7 +1144,7 @@ function App() {
           <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
         </Routes>
-      </Router>
+      </BrowserRouter>
     </AuthContext.Provider>
   );
 }

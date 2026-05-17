@@ -1,7 +1,7 @@
 import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare, 
-  LogOut, User, ChevronLeft, ChevronRight, Plus, Search, Download,
+  LogOut, User, ChevronLeft, ChevronRight, Plus, Search,
   Send, MessageCircle, Eye, Calendar, CheckCircle, Clock,
   Edit, Trash2, Upload, File, X, Menu
 } from 'lucide-react';
@@ -434,19 +434,19 @@ function Reports() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <FileText className="w-6 h-6" />
-          <span className="font-bold">Reports</span>
-        </div>
-      </div>
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
     
      
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <div>
@@ -517,7 +517,7 @@ function Reports() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
@@ -527,10 +527,12 @@ function Reports() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
@@ -543,8 +545,7 @@ function Reports() {
               </p>
             </div>
           </div>
-        </div>
-        {isAdmin && (
+          {isAdmin && (
             <button 
               onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
@@ -553,6 +554,7 @@ function Reports() {
               <span>Create Assignment</span>
             </button>
           )}
+        </div>
 
         {/* Filters */}
         <div className="bg-white p-4 rounded-xl shadow-md mb-6">
@@ -719,17 +721,6 @@ function Reports() {
             </button>
           </div>
         )}
-
-        {/* Calendar Button */}
-        <div className="flex justify-center mt-8">
-          <Link
-            to="/calendar"
-            className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg transition-colors"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Show Calendar</span>
-          </Link>
-        </div>
 
         {/* Create Report Assignment Modal (Admin) */}
         {showCreateModal && (

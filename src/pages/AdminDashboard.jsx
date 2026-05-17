@@ -7,7 +7,7 @@ import {
   BarChart3, Archive, RotateCcw, History, TrendingUp as TrendingUpIcon, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 // Avatar options for display
 const AVATAR_OPTIONS = {
@@ -20,114 +20,28 @@ const AVATAR_OPTIONS = {
 };
 
 function AdminDashboard() {
-  const { user, logout, clearBatchData, students, reports, allUsers, messages, conversations, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch } = useAuth();
+  const { user, logout, clearBatchData, students, reports, allUsers, messages, conversations, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Notification states
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('nstp_admin_notifications');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, title: 'New student registration', message: 'A new student has registered', time: '5 min ago', read: false, type: 'student', link: '/students' },
-      { id: 2, title: 'Report submission', message: 'New report submitted for review', time: '1 hour ago', read: false, type: 'report', link: '/reports' },
-      { id: 3, title: 'System update', message: 'System maintenance scheduled', time: '2 hours ago', read: true, type: 'system', link: '#' }
-    ];
-  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   
-  // Save notifications to localStorage
-  useEffect(() => {
-    localStorage.setItem('nstp_admin_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-  
-  // Monitor for new messages and create notifications
-  useEffect(() => {
-    const currentMessageCount = Object.values(messages).reduce((acc, convMessages) => acc + (convMessages?.length || 0), 0);
-    
-    if (currentMessageCount > prevMessageCount.current && prevMessageCount.current > 0) {
-      // New message received - create notification
-      const newNotif = {
-        id: Date.now(),
-        title: 'New Message',
-        message: 'You have received a new message',
-        time: 'Just now',
-        read: false,
-        type: 'message',
-        link: '/chat'
-      };
-      setNotifications(prev => [newNotif, ...prev]);
-    }
-    
-    prevMessageCount.current = currentMessageCount;
-  }, [messages]);
-  
-  // Monitor for new enrollments and create notifications
-  useEffect(() => {
-    if (pendingEnrollments.length > prevEnrollmentCount.current && prevEnrollmentCount.current > 0) {
-      // New enrollment received - create notification
-      const newNotif = {
-        id: Date.now(),
-        title: 'New Enrollment',
-        message: `A new student has submitted an enrollment application`,
-        time: 'Just now',
-        read: false,
-        type: 'enrollment',
-        link: '/admin/dashboard'
-      };
-      setNotifications(prev => [newNotif, ...prev]);
-    }
-    
-    prevEnrollmentCount.current = pendingEnrollments.length;
-  }, [pendingEnrollments]);
-  
-  // Monitor for new report submissions and create notifications
-  useEffect(() => {
-    const currentReportSubmissions = reports.reduce((acc, report) => acc + (report.submissions?.length || 0), 0);
-    
-    if (currentReportSubmissions > prevReportCount.current && prevReportCount.current > 0) {
-      // New report submission received - create notification
-      const newNotif = {
-        id: Date.now(),
-        title: 'New Report Submission',
-        message: 'An instructor has submitted a report',
-        time: 'Just now',
-        read: false,
-        type: 'report',
-        link: '/reports'
-      };
-      setNotifications(prev => [newNotif, ...prev]);
-    }
-    
-    prevReportCount.current = currentReportSubmissions;
-  }, [reports]);
-  
-  // Close notification panel when clicking outside
+  // Close notification panel when clicking outside (not while using delete controls)
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (showNotifications && !e.target.closest('.notification-container')) {
-        setShowNotifications(false);
-        setDeleteMode(false);
-        setSelectedNotifications([]);
-      }
+      if (!showNotifications) return;
+      if (e.target.closest('.notification-container')) return;
+      setShowNotifications(false);
+      setDeleteMode(false);
+      setSelectedNotifications([]);
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
-
-  // Auto-refresh data every 30 seconds to check for new enrollments
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (refreshData) {
-        refreshData();
-      }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [refreshData]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -139,50 +53,93 @@ function AdminDashboard() {
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   
-  // Refs for tracking previous counts to detect new items
-  const prevEnrollmentCount = useRef(0);
-  const prevMessageCount = useRef(0);
-  const prevReportCount = useRef(0);
-  const notificationsShown = useRef(new Set());
-  
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const toggleDeleteMode = () => {
-    setDeleteMode(!deleteMode);
-    setSelectedNotifications([]);
-  };
-  
-  const toggleNotificationSelection = (id) => {
-    setSelectedNotifications(prev => 
-      prev.includes(id) 
-        ? prev.filter(nId => nId !== id)
-        : [...prev, id]
+  // Check if user is loaded - after all hooks
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
     );
-  };
+  }
   
-  const selectAllNotifications = () => {
-    if (selectedNotifications.length === notifications.length) {
+  const unreadCount = (notifications || []).filter(n => !n.read).length;
+  
+  // Simple function to toggle delete mode
+  function handleToggleDeleteMode() {
+    if (deleteMode) {
+      setDeleteMode(false);
       setSelectedNotifications([]);
     } else {
-      setSelectedNotifications(notifications.map(n => n.id));
+      setDeleteMode(true);
+      setSelectedNotifications([]);
     }
-  };
+  }
   
-  const deleteSelectedNotifications = () => {
-    setNotifications(prev => prev.filter(n => !selectedNotifications.includes(n.id)));
+  function notificationIdsMatch(a, b) {
+    return String(a) === String(b);
+  }
+
+  function handleSelectNotification(id) {
+    setSelectedNotifications(function(prev) {
+      const has = prev.some(function(nId) { return notificationIdsMatch(nId, id); });
+      if (has) {
+        return prev.filter(function(nId) { return !notificationIdsMatch(nId, id); });
+      }
+      return prev.concat([id]);
+    });
+  }
+  
+  function handleSelectAll(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const list = notifications || [];
+    setSelectedNotifications(function(prev) {
+      const allSelected = list.length > 0 && list.every(function(n) {
+        return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+      });
+      if (allSelected) return [];
+      return list.map(function(n) { return n.id; });
+    });
+  }
+  
+  function handleDeleteSelected(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const selectedSet = new Set(selectedNotifications.map(function(id) { return String(id); }));
+    setNotifications(function(prev) {
+      return (prev || []).filter(function(n) {
+        return !selectedSet.has(String(n.id));
+      });
+    });
     setSelectedNotifications([]);
     setDeleteMode(false);
-  };
+  }
   
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
+  // Mark all as read
+  function handleMarkAllRead() {
+    const newNotifications = (notifications || []).map(n => {
+      return { ...n, read: true };
+    });
+    setNotifications(newNotifications);
+  }
   
-  const handleNotificationClick = (notification) => {
-    // Mark as read when clicked
-    setNotifications(prev => prev.map(n => 
-      n.id === notification.id ? { ...n, read: true } : n
-    ));
+  // Handle notification click
+  function handleNotificationItemClick(notification) {
+    // Mark as read
+    const newNotifications = (notifications || []).map(n => {
+      if (n.id === notification.id) {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+    setNotifications(newNotifications);
     
     // Navigate to the link
     if (notification.link && notification.link !== '#') {
@@ -192,7 +149,7 @@ function AdminDashboard() {
     setShowNotifications(false);
     setDeleteMode(false);
     setSelectedNotifications([]);
-  };
+  }
 
   const handleLogout = () => {
     logout();
@@ -333,22 +290,17 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <GraduationCap className="w-6 h-6" />
-          <span className="font-bold">Admin Dashboard</span>
-        </div>
-        <button 
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 hover:bg-green-700 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </div>
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {sidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3 text-white">
             <span className="text-xl font-bold">National Service Training Program</span>
@@ -415,7 +367,7 @@ function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ease-in-out p-4 lg:p-8 ${sidebarOpen ? 'ml-64' : 'ml-0 lg:ml-0'}`}>
+      <main className="transition-all duration-300 ease-in-out p-4 lg:p-8 lg:ml-64">
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -440,10 +392,12 @@ function AdminDashboard() {
 
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
@@ -473,21 +427,24 @@ function AdminDashboard() {
               
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+                <div
+                  className="notification-dropdown absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-200 z-50"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-800">Notifications</h3>
                     <div className="flex items-center space-x-2">
                       {!deleteMode ? (
                         <>
                           <button 
-                            onClick={markAllAsRead}
+                            onClick={handleMarkAllRead}
                             className="text-sm text-green-600 hover:text-green-700"
                             title="Mark all as read"
                           >
                             <CheckCircle className="w-5 h-5" />
                           </button>
                           <button 
-                            onClick={toggleDeleteMode}
+                            onClick={handleToggleDeleteMode}
                             className="text-sm text-red-600 hover:text-red-700"
                             title="Delete notifications"
                           >
@@ -503,18 +460,22 @@ function AdminDashboard() {
                       ) : (
                         <>
                           <button 
-                            onClick={selectAllNotifications}
+                            type="button"
+                            onClick={handleSelectAll}
                             className="text-sm text-gray-600 hover:text-gray-800"
                             title="Select all"
                           >
-                            {selectedNotifications.length === notifications.length ? (
+                            {(notifications || []).length > 0 && (notifications || []).every(function(n) {
+                              return selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+                            }) ? (
                               <CheckSquare className="w-5 h-5" />
                             ) : (
                               <Square className="w-5 h-5" />
                             )}
                           </button>
                           <button 
-                            onClick={deleteSelectedNotifications}
+                            type="button"
+                            onClick={handleDeleteSelected}
                             disabled={selectedNotifications.length === 0}
                             className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
                             title="Delete selected"
@@ -522,7 +483,7 @@ function AdminDashboard() {
                             <Trash2 className="w-5 h-5" />
                           </button>
                           <button 
-                            onClick={toggleDeleteMode}
+                            onClick={handleToggleDeleteMode}
                             className="text-sm text-gray-600 hover:text-gray-800"
                             title="Cancel"
                           >
@@ -539,7 +500,7 @@ function AdminDashboard() {
                       notifications.map((notification) => (
                         <div 
                           key={notification.id}
-                          onClick={() => !deleteMode && handleNotificationClick(notification)}
+                          onClick={() => !deleteMode && handleNotificationItemClick(notification)}
                           className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-start space-x-3 ${
                             !notification.read ? 'bg-blue-50' : ''
                           } ${deleteMode ? 'cursor-default' : ''}`}
@@ -548,11 +509,11 @@ function AdminDashboard() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleNotificationSelection(notification.id);
+                                handleSelectNotification(notification.id);
                               }}
                               className="mt-1"
                             >
-                              {selectedNotifications.includes(notification.id) ? (
+                              {selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, notification.id); }) ? (
                                 <CheckSquare className="w-5 h-5 text-green-600" />
                               ) : (
                                 <Square className="w-5 h-5 text-gray-400" />
@@ -1146,7 +1107,7 @@ function AdminDashboard() {
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{selectedEnrollment.birthDate}</span></div>
+                    <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '-'}</span></div>
                     <div><span className="text-gray-500">Age:</span> <span className="font-medium">{selectedEnrollment.age}</span></div>
                     <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{selectedEnrollment.gender}</span></div>
                     <div><span className="text-gray-500">Civil Status:</span> <span className="font-medium">{selectedEnrollment.civilStatus}</span></div>
