@@ -23,6 +23,40 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+function ProtectedRoute(props) {
+  var { user, loading } = useAuth();
+  var children = props.children;
+  var allowedRoles = props.allowedRoles;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" />;
+
+  if (allowedRoles) {
+    var hasRole = false;
+    for (var i = 0; i < allowedRoles.length; i++) {
+      if (allowedRoles[i] === user.role) {
+        hasRole = true;
+        break;
+      }
+    }
+    if (!hasRole) {
+      return <Navigate to="/" />;
+    }
+  }
+
+  return children;
+}
+
 function App() {
   var [user, setUser] = useState(null);
   var [users, setUsers] = useState([]);
@@ -1074,42 +1108,6 @@ function App() {
     for (var j = 0; j < reports.length; j++) {
       await deleteReportFunc(reports[j].id);
     }
-  }
-
-  function ProtectedRoute(props) {
-    var children = props.children;
-    var allowedRoles = props.allowedRoles;
-    
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      );
-    }
-    
-    if (!user) return <Navigate to="/login" />;
-    
-    console.log('ProtectedRoute check:', { userRole: user ? user.role : null, allowedRoles: allowedRoles, hasRole: user && allowedRoles ? allowedRoles.indexOf(user.role) >= 0 : false });
-    
-    if (allowedRoles) {
-      var hasRole = false;
-      for (var i = 0; i < allowedRoles.length; i++) {
-        if (allowedRoles[i] === user.role) {
-          hasRole = true;
-          break;
-        }
-      }
-      if (!hasRole) {
-        console.log('Role mismatch - redirecting to home');
-        return <Navigate to="/" />;
-      }
-    }
-    
-    return children;
   }
 
   var contextValue = {

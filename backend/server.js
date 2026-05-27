@@ -1920,10 +1920,17 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
     const [archives] = await pool.execute(
       'SELECT * FROM archived_years ORDER BY year DESC'
     );
-    res.json(archives.map(archive => ({
-      ...archive,
-      data: archive.data ? JSON.parse(archive.data) : null
-    })));
+    res.json(archives.map(archive => {
+      var parsedData = null;
+      if (archive.data) {
+        try {
+          parsedData = typeof archive.data === 'string' ? JSON.parse(archive.data) : archive.data;
+        } catch (e) {
+          parsedData = null;
+        }
+      }
+      return { ...archive, data: parsedData };
+    }));
   } catch (error) {
     console.error('Get archives error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -2087,10 +2094,37 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+async function ensureArchiveTables() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS archived_years (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        year INT NOT NULL,
+        students INT DEFAULT 0,
+        reports INT DEFAULT 0,
+        archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        data JSON,
+        UNIQUE KEY unique_year (year)
+      )
+    `);
+  } catch (e) { /* exists */ }
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS current_batch (
+        id INT PRIMARY KEY DEFAULT 1,
+        year INT NOT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (e) { /* exists */ }
+}
+
 Promise.all([
   ensureMessageRestoreColumns(),
   ensureConversationSchema(),
-  ensureWebRTCColumns()
+  ensureWebRTCColumns(),
+  ensureArchiveTables()
 ]).catch(function(err) {
   console.warn('Schema migration:', err.message);
 });
