@@ -91,6 +91,32 @@ async function appendCallIce(callId, column, candidate) {
   );
 }
 
+async function ensureBatchTables() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS archived_years (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        year INT NOT NULL,
+        students INT DEFAULT 0,
+        reports INT DEFAULT 0,
+        archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        data JSON,
+        UNIQUE KEY unique_year (year)
+      )
+    `);
+  } catch (e) { /* exists */ }
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS current_batch (
+        id INT PRIMARY KEY DEFAULT 1,
+        year INT NOT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (e) { /* exists */ }
+}
+
 async function ensureConversationSchema() {
   var alters = [
     'ALTER TABLE conversations MODIFY COLUMN participant_1_id INT NULL',
@@ -1922,7 +1948,9 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
     );
     res.json(archives.map(archive => ({
       ...archive,
-      data: archive.data ? JSON.parse(archive.data) : null
+      data: archive.data
+        ? (typeof archive.data === 'string' ? JSON.parse(archive.data) : archive.data)
+        : null
     })));
   } catch (error) {
     console.error('Get archives error:', error);
@@ -1973,7 +2001,9 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
     
     res.json({
       ...archive,
-      data: archive.data ? JSON.parse(archive.data) : null,
+      data: archive.data
+        ? (typeof archive.data === 'string' ? JSON.parse(archive.data) : archive.data)
+        : null,
       studentData: students,
       reportData: reports
     });
@@ -2090,7 +2120,8 @@ app.get('/api/health', async (req, res) => {
 Promise.all([
   ensureMessageRestoreColumns(),
   ensureConversationSchema(),
-  ensureWebRTCColumns()
+  ensureWebRTCColumns(),
+  ensureBatchTables()
 ]).catch(function(err) {
   console.warn('Schema migration:', err.message);
 });

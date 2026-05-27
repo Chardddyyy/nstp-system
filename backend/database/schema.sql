@@ -159,6 +159,46 @@ CREATE TABLE IF NOT EXISTS enrollments (
   FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Calls table for voice/video calls
+CREATE TABLE IF NOT EXISTS calls (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  conversation_id VARCHAR(255) NOT NULL,
+  caller_id INT NOT NULL,
+  receiver_id INT NOT NULL,
+  call_type ENUM('voice', 'video') DEFAULT 'voice',
+  status ENUM('ringing', 'connected', 'ended', 'declined', 'missed') DEFAULT 'ringing',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  connected_at TIMESTAMP NULL,
+  ended_at TIMESTAMP NULL,
+  duration INT DEFAULT 0,
+  offer_sdp MEDIUMTEXT NULL,
+  answer_sdp MEDIUMTEXT NULL,
+  caller_ice JSON NULL,
+  receiver_ice JSON NULL,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (caller_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Archived years table for batch management
+CREATE TABLE IF NOT EXISTS archived_years (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  year INT NOT NULL,
+  students INT DEFAULT 0,
+  reports INT DEFAULT 0,
+  archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  data JSON,
+  UNIQUE KEY unique_year (year)
+);
+
+-- Current batch tracking
+CREATE TABLE IF NOT EXISTS current_batch (
+  id INT PRIMARY KEY DEFAULT 1,
+  year INT NOT NULL,
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Insert default users (plain text passwords)
 INSERT INTO users (id, email, password, role, name, department, avatar) VALUES
 (1, 'admin@cvsu.edu.ph', 'admin123', 'admin', 'Admin User', 'NSTP Office', 'default'),
