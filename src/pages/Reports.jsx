@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, ChevronRight, Plus, Search,
   Send, MessageCircle, Eye, Calendar, CheckCircle, Clock,
-  Edit, Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle
+  Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef, useMemo, useEffect } from 'react';

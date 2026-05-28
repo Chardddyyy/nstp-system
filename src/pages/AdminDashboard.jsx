@@ -1,10 +1,10 @@
 import { useAuth } from '../App';
 import { archivesAPI } from '../services/api';
-import { 
+import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, TrendingUp, GraduationCap, Shield,
-  BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square, CircleCheckBig,
-  BarChart3, Archive, RotateCcw, History, TrendingUp as TrendingUpIcon, ChevronDown, ChevronUp, Menu
+  LogOut, User, TrendingUp,
+  BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square, CircleCheckBig,
+  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';

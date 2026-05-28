@@ -1,11 +1,11 @@
 import { useAuth } from '../App';
 import { callsAPI } from '../services/api';
-import { 
-  LayoutDashboard, Users, FileText, MessageSquare, 
-  LogOut, User, ChevronLeft, ChevronRight, Send, Search,
+import {
+  LayoutDashboard, Users, FileText, MessageSquare,
+  LogOut, User, Send, Search,
   Phone, Video, MoreVertical, Paperclip, Smile,
   Mic, Camera, Image, X, Download, Edit3, Pencil, Type,
-  Play, Menu, ArrowLeft, Users as UsersIcon, Plus, MicOff, Calendar,
+  Play, Menu, ArrowLeft, MicOff, Calendar,
   Volume2, VolumeX
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';

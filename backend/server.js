@@ -47,10 +47,17 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
-// ── Global rate limiter: 200 req / 15 min per IP ─────────────────────────────
+// ── Global rate limiter ───────────────────────────────────────────────────────
+// The app polls every 2s (calls) + 8s (live data × 4 API calls) per user.
+// Rough max per logged-in user per 15 min:
+//   pollCalls:      450 req  (2s × 15min)
+//   refreshLiveData: 450 req  (8s × 15min × ~4 calls each)
+//   UI interactions: ~100 req
+// → set limit at 3 000 / 15 min per IP (leaves room for multiple tabs).
+// Sensitive endpoints (login, enrollment) have their own tighter limiters.
 var globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 3000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please try again later.' },
@@ -1490,7 +1497,7 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
 app.get('/api/calls/incoming', authenticateToken, async (req, res) => {
   try {
     const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id, conv.is_group, conv.name as group_name
+      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id, conv.is_group, conv.group_name
        FROM calls c
        JOIN users u ON c.caller_id = u.id
        JOIN conversations conv ON c.conversation_id = conv.id

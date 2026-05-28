@@ -1,8 +1,8 @@
 import { useAuth } from '../App';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, ChevronLeft, Calendar, Plus, Search, Filter,
-  Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu, Archive, RotateCcw,
+  LogOut, User, Calendar, Plus, Search, Filter,
+  Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -54,79 +54,110 @@ function StudentManagement() {
 
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportDept, setExportDept] = useState('All');
 
-  const exportToExcel = () => {
-    setIsExporting(true);
+  // Parse birth date from either individual fields or the combined birthDate column
+  function parseBirthFields(s) {
+    const month = s.birthMonth || '';
+    const day   = s.birthDay   || '';
+    const year  = s.birthYear  || '';
+    if (month && day && year) return { month, day, year };
+
+    // Fall back to birthDate (e.g. "2000-03-15" or a Date object from MySQL)
+    if (s.birthDate) {
+      const raw = typeof s.birthDate === 'string' ? s.birthDate : String(s.birthDate);
+      // ISO format YYYY-MM-DD
+      const m = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return { month: String(parseInt(m[2])), day: String(parseInt(m[3])), year: m[1] };
+    }
+    return { month, day, year };
+  }
+
+  const mapStudentRow = (s) => {
+    const birth = parseBirthFields(s);
+    return {
+      'Student ID':        s.studentId             || '',
+      'Last Name':         (s.name||'').split(',')[0]?.trim() || s.name || '',
+      'First Name':        (s.name||'').split(',')[1]?.trim() || '',
+      'Full Name':         s.name                  || '',
+      'Email':             s.email                 || '',
+      'NSTP Component':    s.department            || '',
+      'Program':           s.program               || '',
+      'Year Level':        s.year                  || '',
+      'Section':           s.section               || '',
+      'Status':            s.status                || 'Active',
+      'Contact Number':    s.contactNumber         || '',
+      'Address':           s.address || s.homeAddress || '',
+      'Birth Month':       birth.month,
+      'Birth Day':         birth.day,
+      'Birth Year':        birth.year,
+      'Age':               s.age                   || '',
+      'Civil Status':      s.civilStatus           || '',
+      'Sex/Gender':        s.gender                || '',
+      'Blood Type':        s.bloodType             || '',
+      'Height (cm)':       s.height                || '',
+      'Weight (kg)':       s.weight                || '',
+      'Facebook Account':  s.facebookAccount       || '',
+      'Emergency Contact': s.emergencyContact || s.emergencyName || '',
+      'Emergency Number':  s.emergencyNumber       || '',
+      'Date Added':        s.created_at ? new Date(s.created_at).toLocaleDateString() : '',
+    };
+  };
+
+  const runExport = () => {
     try {
-      const list = viewingArchive && archiveViewData?.studentData
+      const allStudents = viewingArchive && archiveViewData?.studentData
         ? archiveViewData.studentData
         : students;
 
+      const list = exportDept === 'All'
+        ? allStudents
+        : allStudents.filter(s => s.department === exportDept);
+
       if (!list || list.length === 0) {
-        setNotification({ type: 'error', message: 'No student records to export.' });
+        setNotification({ type: 'error', message: 'No student records found for the selected filter.' });
         setTimeout(() => setNotification(null), 3000);
-        setIsExporting(false);
         return;
       }
 
-      const mapRow = (s) => ({
-        'Student ID':           s.studentId       || '',
-        'Last Name':            (s.name || '').split(',')[0]?.trim() || s.name || '',
-        'First Name':           (s.name || '').split(',')[1]?.trim() || '',
-        'Full Name':            s.name            || '',
-        'Email':                s.email           || '',
-        'NSTP Component':       s.department      || '',
-        'Program':              s.program         || '',
-        'Year Level':           s.year            || '',
-        'Section':              s.section         || '',
-        'Status':               s.status          || 'Active',
-        'Contact Number':       s.contactNumber   || '',
-        'Address':              s.address || s.homeAddress || '',
-        'Birth Month':          s.birthMonth      || '',
-        'Birth Day':            s.birthDay        || '',
-        'Birth Year':           s.birthYear       || '',
-        'Age':                  s.age             || '',
-        'Civil Status':         s.civilStatus     || '',
-        'Sex/Gender':           s.gender          || '',
-        'Blood Type':           s.bloodType       || '',
-        'Height (cm)':          s.height          || '',
-        'Weight (kg)':          s.weight          || '',
-        'Facebook Account':     s.facebookAccount || '',
-        'Emergency Contact':    s.emergencyContact || s.emergencyName || '',
-        'Emergency Number':     s.emergencyNumber || '',
-        'Date Added':           s.created_at ? new Date(s.created_at).toLocaleDateString() : '',
-      });
-
       const wb = XLSX.utils.book_new();
 
-      // Sheet 1: All students
-      const allRows = list.map(mapRow);
-      const wsAll = XLSX.utils.json_to_sheet(allRows);
-      applyColumnWidths(wsAll, allRows);
-      XLSX.utils.book_append_sheet(wb, wsAll, 'All Students');
+      if (exportDept === 'All') {
+        // Sheet per department + one combined sheet
+        const allRows = list.map(mapStudentRow);
+        const wsAll = XLSX.utils.json_to_sheet(allRows);
+        applyColumnWidths(wsAll, allRows);
+        XLSX.utils.book_append_sheet(wb, wsAll, 'All Students');
 
-      // Sheets 2-4: per department
-      ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
-        const rows = list.filter(s => s.department === dept).map(mapRow);
-        if (rows.length > 0) {
-          const ws = XLSX.utils.json_to_sheet(rows);
-          applyColumnWidths(ws, rows);
-          XLSX.utils.book_append_sheet(wb, ws, dept);
-        }
-      });
+        ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
+          const rows = list.filter(s => s.department === dept).map(mapStudentRow);
+          if (rows.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(rows);
+            applyColumnWidths(ws, rows);
+            XLSX.utils.book_append_sheet(wb, ws, dept);
+          }
+        });
+      } else {
+        // Single sheet for the selected department
+        const rows = list.map(mapStudentRow);
+        const ws = XLSX.utils.json_to_sheet(rows);
+        applyColumnWidths(ws, rows);
+        XLSX.utils.book_append_sheet(wb, ws, exportDept);
+      }
 
       const batchLabel = viewingArchive && archiveViewData ? `Batch${archiveViewData.year}` : 'Current';
-      const dateStr = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `NSTP_Students_${batchLabel}_${dateStr}.xlsx`);
+      const deptLabel  = exportDept === 'All' ? 'AllDepts' : exportDept;
+      const dateStr    = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `NSTP_Students_${deptLabel}_${batchLabel}_${dateStr}.xlsx`);
 
-      setNotification({ type: 'success', message: `Exported ${list.length} student record(s) to Excel.` });
+      setNotification({ type: 'success', message: `Downloaded ${list.length} student record(s) as Excel.` });
       setTimeout(() => setNotification(null), 3000);
-    } catch (err) {
+      setShowExportModal(false);
+    } catch {
       setNotification({ type: 'error', message: 'Export failed. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     }
-    setIsExporting(false);
   };
 
   function applyColumnWidths(ws, rows) {
@@ -508,13 +539,12 @@ function StudentManagement() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               type="button"
-              onClick={exportToExcel}
-              disabled={isExporting}
-              title="Download all students as Excel file"
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait"
+              onClick={() => setShowExportModal(true)}
+              title="Download students as Excel file"
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700"
             >
               <FileSpreadsheet className="w-5 h-5" />
-              <span>{isExporting ? 'Exporting...' : 'Download Excel'}</span>
+              <span>Download Excel</span>
             </button>
             {isAdmin && (
               <button
@@ -666,6 +696,71 @@ function StudentManagement() {
             >
               Next
             </button>
+          </div>
+        )}
+
+        {/* Export Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2">
+                  <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-lg font-bold text-gray-800">Download Excel</h3>
+                </div>
+                <button type="button" onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Department</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['All', 'CWTS', 'LTS', 'ROTC'].map(dept => {
+                      const colors = {
+                        All:  'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200',
+                        CWTS: 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100',
+                        LTS:  'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100',
+                        ROTC: 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100',
+                      };
+                      const selected = {
+                        All:  'bg-gray-700 border-gray-700 text-white',
+                        CWTS: 'bg-blue-600 border-blue-600 text-white',
+                        LTS:  'bg-purple-600 border-purple-600 text-white',
+                        ROTC: 'bg-red-600 border-red-600 text-white',
+                      };
+                      return (
+                        <button
+                          key={dept}
+                          type="button"
+                          onClick={() => setExportDept(dept)}
+                          className={`px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all ${exportDept === dept ? selected[dept] : colors[dept]}`}
+                        >
+                          {dept === 'All' ? '📋 All Departments' : dept === 'CWTS' ? '🔵 CWTS' : dept === 'LTS' ? '🟣 LTS' : '🔴 ROTC'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                  {exportDept === 'All'
+                    ? <>Will create <strong>4 sheets</strong>: All Students + one sheet per department.</>
+                    : <>Will create a single <strong>{exportDept}</strong> sheet with all {exportDept} student records.</>
+                  }
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-5">
+                <button type="button" onClick={() => setShowExportModal(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+                  Cancel
+                </button>
+                <button type="button" onClick={runExport} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+                  <Download className="w-4 h-4" /> Download
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

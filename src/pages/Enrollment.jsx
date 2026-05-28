@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
-import { GraduationCap, ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle } from 'lucide-react';
 
 function Enrollment() {
   const { submitEnrollment } = useAuth();

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Users, FileText, MessageSquare, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe } from 'lucide-react';
+import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Carousel images - using the actual CvSU Naic campus photo

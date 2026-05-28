@@ -1,7 +1,7 @@
 import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, ChevronLeft, Calendar, Menu, ChevronRight, Bell, CheckCircle, Trash2, X, CheckSquare, Square, Shield, TrendingUp, CircleCheckBig
+  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, CircleCheckBig, TrendingUp
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
