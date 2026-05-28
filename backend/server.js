@@ -480,11 +480,16 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields: studentId, name, department' });
     }
 
-    const n = (v) => v !== undefined ? v : null;
-    // Build birthDate from separate fields if not provided directly
+    const n = (v) => (v === undefined || v === null || v === '') ? null : v;
+    // Build a valid DATE string only if all three parts are present and make a plausible date
     let safeBirthDate = n(birthDate);
-    if (!safeBirthDate && birthMonth && birthDay && birthYear) {
-      safeBirthDate = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
+    if (!safeBirthDate && n(birthMonth) && n(birthDay) && n(birthYear)) {
+      const m = parseInt(birthMonth, 10);
+      const d = parseInt(birthDay, 10);
+      const y = parseInt(birthYear, 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2100) {
+        safeBirthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
     }
 
     const [result] = await pool.execute(
@@ -496,11 +501,10 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     res.status(201).json(students[0]);
   } catch (error) {
     console.error('Add student error:', error);
-    // Duplicate studentId → ER_DUP_ENTRY (MySQL errno 1062)
     if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
       return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
   }
 });
 
@@ -510,10 +514,18 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
 
-    const n = (v) => v !== undefined ? v : null;
+    // Convert undefined OR empty string to null (empty string breaks DATE columns in MySQL strict mode)
+    const n = (v) => (v === undefined || v === null || v === '') ? null : v;
+
+    // Build a valid DATE string only if all three parts are present and make a plausible date
     let safeBirthDate = n(birthDate);
-    if (!safeBirthDate && birthMonth && birthDay && birthYear) {
-      safeBirthDate = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
+    if (!safeBirthDate && n(birthMonth) && n(birthDay) && n(birthYear)) {
+      const m = parseInt(birthMonth, 10);
+      const d = parseInt(birthDay, 10);
+      const y = parseInt(birthYear, 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2100) {
+        safeBirthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      }
     }
 
     await pool.execute(
@@ -525,7 +537,10 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     res.json(students[0]);
   } catch (error) {
     console.error('Update student error:', error);
-    res.status(500).json({ message: 'Server error' });
+    if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
+      return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
+    }
+    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
   }
 });
 

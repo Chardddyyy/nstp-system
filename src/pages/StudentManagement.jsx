@@ -173,8 +173,12 @@ function StudentManagement() {
       setNotification({ type: 'success', message: 'Student updated successfully!' });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      setNotification({ type: 'error', message: 'Failed to update student. Please try again.' });
-      setTimeout(() => setNotification(null), 3000);
+      const raw = error?.message || '';
+      const msg = raw.toLowerCase().includes('already exists')
+        ? `Student ID "${formData.studentId}" is already taken. Use a different ID.`
+        : raw || 'Failed to update student. Please try again.';
+      setNotification({ type: 'error', message: msg });
+      setTimeout(() => setNotification(null), 5000);
     } finally {
       setIsEditingStudent(false);
     }
