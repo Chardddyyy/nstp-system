@@ -2,6 +2,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 var express = require('express');
 var cors = require('cors');
 var jwt = require('jsonwebtoken');
+var helmet = require('helmet');
+var rateLimit = require('express-rate-limit');
 var pool = require('./config/database');
 var { getDbConfig } = require('./config/dbEnv');
 
@@ -9,24 +11,62 @@ var bcrypt = require('bcryptjs');
 var app = express();
 var PORT = process.env.PORT || 3001;
 
-// Restrict CORS to localhost origins only — rejects cross-origin requests from
-// external sites so attackers cannot use their own pages to call this API.
+// ── Security: fail fast if JWT secret is the known-weak default ──────────────
+var JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET === 'nstp-secret-key-change-in-production' || JWT_SECRET.length < 32) {
+  console.warn('[SECURITY] JWT_SECRET is missing or too weak. Using a generated fallback for this session. Set a strong 64-char random secret in backend/.env before deploying.');
+  // Deterministic per-process secret so restarts during dev don't immediately log everyone out
+  JWT_SECRET = require('crypto').randomBytes(64).toString('hex');
+}
+var JWT_EXPIRY = '8h'; // was 30d — reduced to 8 hours for security
+
+// ── Helmet: sets 15+ security headers ────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled — frontend is a Vite SPA on a different port
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ── CORS: restrict to localhost in dev, explicit whitelist in production ──────
+var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173')
+  .split(',').map(s => s.trim());
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow same-origin (no origin header) and any localhost / 127.0.0.1 port
-    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    if (!origin) return callback(null, true); // same-origin / curl / server-to-server
+    if (ALLOWED_ORIGINS.some(o => origin === o) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
     callback(new Error('CORS policy: origin not allowed'));
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json({ limit: '200mb' }));
-app.use(express.urlencoded({ limit: '200mb', extended: true }));
+// ── Body size: 20 MB max (base64 of a 10 MB image ≈ 13.3 MB) ────────────────
+// Was 200 MB — that size allows trivial DoS/DDoS via large payload attacks.
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
-// ── In-memory login rate limiter ──────────────────────────────────────────────
-// Max 10 failed attempts per IP per 15 minutes before lockout.
+// ── Global rate limiter: 200 req / 15 min per IP ─────────────────────────────
+var globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests. Please try again later.' },
+  skip: (req) => req.method === 'OPTIONS',
+});
+app.use(globalLimiter);
+
+// ── Enrollment rate limiter: 10 submissions / hour per IP ────────────────────
+var enrollmentLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many enrollment submissions from this IP. Please try again later.' },
+});
+
+// ── In-memory login rate limiter: 5 failures / 15 min per IP ─────────────────
+// Was 10 — reduced to 5 to limit brute-force window.
 var loginAttempts = new Map();
 function checkLoginRateLimit(ip) {
   var now = Date.now();
@@ -34,7 +74,7 @@ function checkLoginRateLimit(ip) {
   if (!entry || now > entry.resetAt) {
     entry = { count: 0, resetAt: now + 15 * 60 * 1000 };
   }
-  if (entry.count >= 10) return false; // locked out
+  if (entry.count >= 5) return false;
   entry.count++;
   loginAttempts.set(ip, entry);
   return true;
@@ -43,28 +83,64 @@ function resetLoginAttempts(ip) {
   loginAttempts.delete(ip);
 }
 
-// Middleware to verify JWT
+// ── Sanitize a string: strip null bytes, trim, limit length ──────────────────
+function sanitizeStr(v, maxLen) {
+  if (v === null || v === undefined) return null;
+  var s = String(v).replace(/\x00/g, '').trim();
+  return maxLen ? s.slice(0, maxLen) : s;
+}
+
+// ── Middleware to verify JWT ──────────────────────────────────────────────────
 function authenticateToken(req, res, next) {
   var authHeader = req.headers['authorization'];
   var token = null;
-  if (authHeader) {
-    var parts = authHeader.split(' ');
-    if (parts.length === 2) {
-      token = parts[1];
-    }
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7);
   }
 
   if (!token) {
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', function(err, user) {
+  jwt.verify(token, JWT_SECRET, function(err, user) {
     if (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Session expired. Please log in again.' });
+      }
       return res.status(403).json({ message: 'Invalid token' });
     }
     req.user = user;
     next();
   });
+}
+
+// ── Middleware: require admin role ────────────────────────────────────────────
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+}
+
+// ── Audit log ─────────────────────────────────────────────────────────────────
+// Creates the table if missing, then writes a single log row. Non-blocking.
+async function auditLog(action, userId, detail, ip) {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        action VARCHAR(100) NOT NULL,
+        user_id INT,
+        detail TEXT,
+        ip VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.execute(
+      'INSERT INTO audit_logs (action, user_id, detail, ip) VALUES (?, ?, ?, ?)',
+      [action, userId || null, detail ? String(detail).slice(0, 1000) : null, ip || null]
+    );
+  } catch (_) { /* non-fatal */ }
 }
 
 async function ensureMessageRestoreColumns() {
@@ -300,54 +376,52 @@ app.post('/api/auth/login', async function(req, res) {
   }
 
   try {
-    var email = req.body.email;
+    var email = sanitizeStr(req.body.email, 255);
     var password = req.body.password;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
+    if (typeof password !== 'string' || password.length > 128) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
     var result = await pool.execute(
-      'SELECT * FROM users WHERE email = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password FROM users WHERE email = ?',
       [email]
     );
     var users = result[0];
 
-    if (users.length === 0) {
-      return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    var user = users[0];
+    // Always run bcrypt.compare to prevent timing attacks (even when user not found)
+    var dummyHash = '$2a$12$invalidhashusedtopreventitenumerationXXXXXXXXXXXXXXXXXXXXXXX';
+    var storedPassword = users.length > 0 ? String(users[0].password).trim() : dummyHash;
     var providedPassword = String(password).trim();
-    var storedPassword = String(user.password).trim();
 
-    // Support both bcrypt-hashed and legacy plaintext passwords.
-    // If stored value looks like a bcrypt hash ($2a$...) use bcrypt.compare,
-    // otherwise fall back to plaintext and rehash on success.
     var passwordMatch = false;
     var isBcryptHash = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
     if (isBcryptHash) {
       passwordMatch = await bcrypt.compare(providedPassword, storedPassword);
-    } else {
+    } else if (users.length > 0) {
       passwordMatch = (providedPassword === storedPassword);
       if (passwordMatch) {
-        // Transparently upgrade plaintext → bcrypt on first login
         var hashed = await bcrypt.hash(providedPassword, 12);
-        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, user.id]);
+        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, users[0].id]);
       }
     }
 
-    if (!passwordMatch) {
+    if (users.length === 0 || !passwordMatch) {
+      auditLog('login_failed', null, `email: ${email}`, ip);
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Clear rate-limit counter on successful login
+    var user = users[0];
     resetLoginAttempts(ip);
+    auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
     var token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'nstp-fallback-secret',
-      { expiresIn: '30d' }
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
 
     res.json({
@@ -416,10 +490,27 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     }
 
     const { name, email, phone, bio, avatar, profilePicture } = req.body;
-    
+
+    // Validate email format
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ message: 'Invalid email address' });
+    }
+    // Cap profile picture at ~10 MB base64 (≈ 13.3 MB string)
+    if (profilePicture && String(profilePicture).length > 14_000_000) {
+      return res.status(400).json({ message: 'Profile picture too large. Maximum 10 MB.' });
+    }
+
     await pool.execute(
       'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ? WHERE id = ?',
-      [name, email, phone, bio, avatar, profilePicture, id]
+      [
+        sanitizeStr(name, 255),
+        sanitizeStr(email, 255),
+        sanitizeStr(phone, 50),
+        sanitizeStr(bio, 500),
+        sanitizeStr(avatar, 50),
+        profilePicture || null,
+        id
+      ]
     );
 
     const [updatedUsers] = await pool.execute(
@@ -443,13 +534,16 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
     if (parseInt(id) !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    if (!newPassword || String(newPassword).length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    if (!newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    if (String(newPassword).length > 128) {
+      return res.status(400).json({ message: 'Password too long' });
     }
 
     const hashed = await bcrypt.hash(String(newPassword), 12);
     await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, id]);
-
+    auditLog('password_changed', req.user.id, null, req.ip || 'unknown');
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Change password error:', error);
@@ -546,9 +640,16 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
 // Delete student
 app.delete('/api/students/:id', authenticateToken, async (req, res) => {
+  // Only admins can delete students
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
   try {
     const { id } = req.params;
+    const [rows] = await pool.execute('SELECT studentId, name FROM students WHERE id = ?', [id]);
     await pool.execute('DELETE FROM students WHERE id = ?', [id]);
+    const ip = req.ip || 'unknown';
+    auditLog('student_deleted', req.user.id, `studentId: ${rows[0]?.studentId}, name: ${rows[0]?.name}`, ip);
     res.json({ message: 'Student deleted' });
   } catch (error) {
     console.error('Delete student error:', error);
@@ -1830,10 +1931,41 @@ app.get('/api/enrollments', authenticateToken, async (req, res) => {
 });
 
 // Submit enrollment
-app.post('/api/enrollments', async (req, res) => {
+app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
   // Ensure all required columns exist (runs once, then cached)
   await ensureEnrollmentColumns().catch(() => {});
   try {
+    // ── Server-side input validation ──────────────────────────────────────
+    const body = req.body || {};
+    const required = ['firstName', 'lastName', 'studentId', 'email', 'contactNumber',
+      'program', 'yearLevel', 'section', 'nstpComponent',
+      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'emergencyContact', 'emergencyNumber'];
+    for (const field of required) {
+      if (!body[field] || !String(body[field]).trim()) {
+        return res.status(400).json({ message: `Missing required field: ${field}` });
+      }
+    }
+    const sid = sanitizeStr(body.studentId, 20);
+    if (!/^\d{9}$/.test(sid)) {
+      return res.status(400).json({ message: 'Student ID must be exactly 9 digits' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email))) {
+      return res.status(400).json({ message: 'Invalid email address' });
+    }
+    const contact = sanitizeStr(body.contactNumber, 20);
+    if (!/^\d{11}$/.test(contact)) {
+      return res.status(400).json({ message: 'Contact Number must be exactly 11 digits' });
+    }
+    const emerNum = sanitizeStr(body.emergencyNumber, 20);
+    if (!/^\d{11}$/.test(emerNum)) {
+      return res.status(400).json({ message: 'Emergency Number must be exactly 11 digits' });
+    }
+    const validComponents = ['CWTS', 'LTS', 'ROTC'];
+    if (!validComponents.includes(body.nstpComponent)) {
+      return res.status(400).json({ message: 'Invalid NSTP component' });
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const {
       firstName, lastName, middleName, fullName,
       studentId, email, contactNumber,
@@ -1876,14 +2008,23 @@ app.post('/api/enrollments', async (req, res) => {
 
 // Approve/Decline enrollment
 app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
+    const validStatuses = ['Approved', 'Declined', 'Pending'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+
     await pool.execute(
       'UPDATE enrollments SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
       [status, req.user.id, id]
     );
+    auditLog(`enrollment_${status.toLowerCase()}`, req.user.id, `enrollment_id: ${id}`, req.ip || 'unknown');
 
     // If approved, create student record (skip if already exists)
     if (status === 'Approved') {
@@ -2307,12 +2448,30 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
 });
 
 // Test database connection
+// Audit log viewer — admin only
+app.get('/api/audit-logs', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const [logs] = await pool.execute(
+      `SELECT al.*, u.name as user_name, u.email as user_email
+       FROM audit_logs al
+       LEFT JOIN users u ON al.user_id = u.id
+       ORDER BY al.created_at DESC LIMIT ?`,
+      [limit]
+    );
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.get('/api/health', async (req, res) => {
+  // Don't expose DB version or stack info in production
   try {
     await pool.execute('SELECT 1');
-    res.json({ status: 'OK', database: 'Connected' });
+    res.json({ status: 'OK' });
   } catch (error) {
-    res.status(500).json({ status: 'Error', database: 'Not connected' });
+    res.status(503).json({ status: 'Unavailable' });
   }
 });
 

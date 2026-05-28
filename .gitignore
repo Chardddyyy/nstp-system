@@ -1,3 +1,10 @@
+# Environment / secrets — NEVER commit these
+.env
+backend/.env
+# Allow example templates to be tracked
+!.env.example
+!backend/.env.example
+
 # Logs
 logs
 *.log

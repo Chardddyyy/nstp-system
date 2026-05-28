@@ -338,8 +338,8 @@ function Profile() {
       setTimeout(() => setNotification(null), 3000);
       return;
     }
-    if (formData.newPassword.length < 6) {
-      setNotification({ type: 'error', message: 'Password must be at least 6 characters!' });
+    if (formData.newPassword.length < 8) {
+      setNotification({ type: 'error', message: 'Password must be at least 8 characters!' });
       setTimeout(() => setNotification(null), 3000);
       return;
     }
