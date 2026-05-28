@@ -163,8 +163,8 @@ function AdminDashboard() {
     totalInstructors: allUsers.filter(u => u.role === 'instructor').length,
     // Pending reports = reports created by admin that don't have submissions yet
     pendingReports: reports.filter(r => !r.submissions || r.submissions.length === 0).length,
-    unreadMessages: Object.values(messages).reduce((acc, msgs) => acc + (msgs?.length || 0), 0)
-  }), [students, allUsers, reports, messages]);
+    unreadMessages: (notifications || []).filter(n => n.type === 'message' && !n.read).length
+  }), [students, allUsers, reports, notifications]);
 
   // Calculate current year stats for comparison (after stats is defined)
   const currentYear = new Date().getFullYear();
