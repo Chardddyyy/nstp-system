@@ -235,15 +235,12 @@ async function ensureEnrollmentColumns() {
 }
 
 async function ensureReportsDeptColumn() {
-  try {
-    await pool.execute('ALTER TABLE reports MODIFY COLUMN department VARCHAR(50)');
-  } catch (e) { /* ignore */ }
-  try {
-    await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_data LONGTEXT NULL');
-  } catch (e) { /* exists */ }
-  try {
-    await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_name VARCHAR(255) NULL');
-  } catch (e) { /* exists */ }
+  // Force department to VARCHAR(50) so 'All' and other non-ENUM values are accepted.
+  // CHANGE COLUMN + MODIFY COLUMN cover both MySQL 5.7 and 8.x syntax differences.
+  try { await pool.execute("ALTER TABLE reports MODIFY COLUMN department VARCHAR(50) NULL"); } catch (_) {}
+  try { await pool.execute("ALTER TABLE reports CHANGE COLUMN department department VARCHAR(50) NULL"); } catch (_) {}
+  try { await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_data LONGTEXT NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_name VARCHAR(255) NULL'); } catch (_) {}
 }
 
 async function ensureReportsBatchYear() {
@@ -740,8 +737,8 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     reports[0].submissions = [];
     res.status(201).json(reports[0]);
   } catch (error) {
-    console.error('Add report error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Add report error:', error.sqlMessage || error.message, error.code);
+    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
   }
 });
 

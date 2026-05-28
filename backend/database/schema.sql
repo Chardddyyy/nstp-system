@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS reports (
   id INT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  department ENUM('ROTC', 'CWTS', 'LTS', 'NSTP Office'),
+  department VARCHAR(50),
   status ENUM('Draft', 'Submitted', 'Reviewed') DEFAULT 'Draft',
   due_date DATE,
   created_by INT,
