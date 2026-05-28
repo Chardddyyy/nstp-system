@@ -696,6 +696,25 @@ function Chat() {
     currentCallIdRef.current = null;
   };
 
+  // ── Group call ─────────────────────────────────────────────────────
+  const handleGroupCall = async (type) => {
+    if (!activeConversation) return;
+    try {
+      const callData = await callsAPI.initiate(activeConversation.id, type);
+      // Group call: just notify and show outgoing screen; individual WebRTC answers come back via incoming call overlay
+      if (callData.is_group) {
+        const label = type === 'video' ? 'Video' : 'Voice';
+        addNotification(`${label} call started — ringing all members...`, 'info');
+        // Register all call ids so we can track any of them
+        if (callData.call_ids && callData.call_ids.length > 0) {
+          registerOutgoingCall(callData.call_ids[0]);
+        }
+      }
+    } catch (err) {
+      addNotification(err?.message || 'Could not start group call', 'error');
+    }
+  };
+
   // ── Voice call ─────────────────────────────────────────────────────
   const handleCall = async () => {
     if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
@@ -1528,26 +1547,22 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
-                  {!isGroupConversation(activeConversation) && (
-                    <>
-                      <button 
-                        onClick={handleCall}
-                        className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-                        title="Voice Call"
-                        aria-label="Voice call"
-                      >
-                        <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
-                      </button>
-                      <button 
-                        onClick={handleVideoCall}
-                        className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-                        title="Video Call"
-                        aria-label="Video call"
-                      >
-                        <Video className="w-4 h-4 lg:w-5 lg:h-5" />
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('voice') : handleCall}
+                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    title="Voice Call"
+                    aria-label="Voice call"
+                  >
+                    <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
+                  </button>
+                  <button
+                    onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('video') : handleVideoCall}
+                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    title="Video Call"
+                    aria-label="Video call"
+                  >
+                    <Video className="w-4 h-4 lg:w-5 lg:h-5" />
+                  </button>
                   <div className="relative" ref={chatMenuRef}>
                     <button
                       onClick={() => setShowChatMenu(!showChatMenu)}
@@ -1559,12 +1574,14 @@ function Chat() {
                     </button>
                     {showChatMenu && (
                       <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[180px]">
-                        <button
-                          onClick={handleClearChat}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                        >
-                          Clear Chat
-                        </button>
+                        {!isGroupConversation(activeConversation) && (
+                          <button
+                            onClick={handleClearChat}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                          >
+                            Clear Chat
+                          </button>
+                        )}
                         {!isGroupConversation(activeConversation) && (
                           <button
                             onClick={handleBlockUser}

@@ -1389,7 +1389,7 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
 app.get('/api/calls/incoming', authenticateToken, async (req, res) => {
   try {
     const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id
+      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id, conv.is_group, conv.name as group_name
        FROM calls c
        JOIN users u ON c.caller_id = u.id
        JOIN conversations conv ON c.conversation_id = conv.id
@@ -1423,9 +1423,47 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
     }
 
     const conversation = conversations[0];
+    const [callers] = await pool.execute('SELECT name FROM users WHERE id = ?', [caller_id]);
+    const caller_name = callers[0]?.name || 'Unknown';
+
+    // Group call: create one call record per other participant, share a group_call_id
     if (conversation.is_group) {
-      return res.status(400).json({
-        message: 'Calls work in direct chats only. Start a private message first.'
+      // Ensure group_call_id column exists
+      try { await pool.execute('ALTER TABLE calls ADD COLUMN group_call_id VARCHAR(36) NULL'); } catch (_) {}
+
+      const participants = JSON.parse(conversation.participants || '[]');
+      const others = participants.filter(id => id !== caller_id);
+      if (others.length === 0) {
+        return res.status(400).json({ message: 'No other participants in group.' });
+      }
+
+      const groupCallId = `grp-${Date.now()}-${caller_id}`;
+      const callIds = [];
+
+      for (const receiver_id of others) {
+        // Cancel any existing ringing call with this receiver
+        await pool.execute(
+          `UPDATE calls SET status='ended', ended_at=NOW() WHERE status='ringing' AND ended_at IS NULL AND caller_id=? AND receiver_id=?`,
+          [caller_id, receiver_id]
+        );
+        const [result] = await pool.execute(
+          `INSERT INTO calls (conversation_id, caller_id, receiver_id, call_type, status, group_call_id, started_at)
+           VALUES (?, ?, ?, ?, 'ringing', ?, NOW())`,
+          [conversation_id, caller_id, receiver_id, call_type, groupCallId]
+        );
+        callIds.push(result.insertId);
+      }
+
+      return res.status(201).json({
+        id: callIds[0],
+        group_call_id: groupCallId,
+        call_ids: callIds,
+        conversation_id,
+        caller_id,
+        caller_name,
+        call_type,
+        is_group: true,
+        status: 'ringing'
       });
     }
 
@@ -1439,18 +1477,14 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
        AND ((caller_id = ? AND receiver_id = ?) OR (caller_id = ? AND receiver_id = ?))`,
       [caller_id, receiver_id, receiver_id, caller_id]
     );
-    
+
     // Create call record
     const [result] = await pool.execute(
-      `INSERT INTO calls (conversation_id, caller_id, receiver_id, call_type, status, started_at) 
+      `INSERT INTO calls (conversation_id, caller_id, receiver_id, call_type, status, started_at)
        VALUES (?, ?, ?, ?, 'ringing', NOW())`,
       [conversation_id, caller_id, receiver_id, call_type]
     );
-    
-    // Get caller info
-    const [callers] = await pool.execute('SELECT name FROM users WHERE id = ?', [caller_id]);
-    const caller_name = callers[0]?.name || 'Unknown';
-    
+
     res.status(201).json({
       id: result.insertId,
       conversation_id,

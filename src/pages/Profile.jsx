@@ -3,10 +3,13 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, Camera, Mail, Phone,
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
-  Calendar, CheckCircle, AlertCircle
+  Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
+const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
 
 // Pre-defined avatar options
 const AVATAR_OPTIONS = [
@@ -43,6 +46,195 @@ function Profile() {
 
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Camera + editor state
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [facingMode, setFacingMode] = useState('user');
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorMode, setEditorMode] = useState('draw'); // 'draw' | 'text' | 'emoji'
+  const [drawColor, setDrawColor] = useState('#000000');
+  const [brushSize, setBrushSize] = useState(4);
+  const [editorText, setEditorText] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState('😊');
+  const [history, setHistory] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [textPosition, setTextPosition] = useState(null);
+  const videoRef = useRef(null);
+  const editorCanvasRef = useRef(null);
+  const drawLastPos = useRef(null);
+
+  const stopCamera = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    }
+  }, [cameraStream]);
+
+  const openCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+      setCameraStream(stream);
+      setShowCameraModal(true);
+      setCapturedImage(null);
+      setShowEditor(false);
+    } catch {
+      setNotification({ type: 'error', message: 'Camera access denied. Please allow camera in browser settings.' });
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const flipCamera = async () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: newMode }, audio: false });
+        setCameraStream(stream);
+      } catch { /* ignore */ }
+    }
+  };
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    // No mirror — draw as-is (natural orientation)
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedImage(dataUrl);
+    stopCamera();
+    setShowEditor(true);
+    setHistory([dataUrl]);
+    setEditorMode('draw');
+  };
+
+  useEffect(() => {
+    if (showEditor && capturedImage && editorCanvasRef.current) {
+      const canvas = editorCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+      };
+      img.src = capturedImage;
+    }
+  }, [showEditor, capturedImage]);
+
+  const saveHistoryState = () => {
+    if (!editorCanvasRef.current) return;
+    const snap = editorCanvasRef.current.toDataURL('image/jpeg', 0.9);
+    setHistory(prev => [...prev.slice(-19), snap]);
+  };
+
+  const undoEditor = () => {
+    if (history.length <= 1) return;
+    const prev = history[history.length - 2];
+    setHistory(h => h.slice(0, -1));
+    const canvas = editorCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
+    img.src = prev;
+  };
+
+  const getCanvasPos = (e) => {
+    const canvas = editorCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  };
+
+  const onCanvasPointerDown = (e) => {
+    e.preventDefault();
+    if (editorMode === 'draw') {
+      saveHistoryState();
+      setIsDrawing(true);
+      drawLastPos.current = getCanvasPos(e);
+    } else if (editorMode === 'text' && editorText.trim()) {
+      saveHistoryState();
+      const pos = getCanvasPos(e);
+      const canvas = editorCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      ctx.font = `bold ${Math.max(canvas.width * 0.05, 24)}px Arial`;
+      ctx.fillStyle = drawColor;
+      ctx.strokeStyle = drawColor === '#ffffff' ? '#000' : '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeText(editorText, pos.x, pos.y);
+      ctx.fillText(editorText, pos.x, pos.y);
+    } else if (editorMode === 'emoji') {
+      saveHistoryState();
+      const pos = getCanvasPos(e);
+      const canvas = editorCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      ctx.font = `${Math.max(canvas.width * 0.07, 32)}px Arial`;
+      ctx.fillText(selectedEmoji, pos.x - 16, pos.y + 16);
+    }
+  };
+
+  const onCanvasPointerMove = (e) => {
+    e.preventDefault();
+    if (!isDrawing || editorMode !== 'draw') return;
+    const canvas = editorCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const pos = getCanvasPos(e);
+    ctx.beginPath();
+    ctx.strokeStyle = drawColor;
+    ctx.lineWidth = brushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.moveTo(drawLastPos.current.x, drawLastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    drawLastPos.current = pos;
+  };
+
+  const onCanvasPointerUp = () => { setIsDrawing(false); };
+
+  const applyEditorImage = () => {
+    if (!editorCanvasRef.current) return;
+    const dataUrl = editorCanvasRef.current.toDataURL('image/jpeg', 0.85);
+    // Compress to 300px max for storage
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 300;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+      else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      setFormData(prev => ({ ...prev, profilePicture: c.toDataURL('image/jpeg', 0.8) }));
+    };
+    img.src = dataUrl;
+    setShowEditor(false);
+    setShowCameraModal(false);
+    setCapturedImage(null);
+  };
+
+  const closeCameraModal = () => {
+    stopCamera();
+    setShowCameraModal(false);
+    setCapturedImage(null);
+    setShowEditor(false);
+    setHistory([]);
+  };
 
   const handleLogout = () => {
     logout();
@@ -328,16 +520,24 @@ function Profile() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={openCamera}
                         className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors"
-                        title="Upload Photo"
+                        title="Take Photo"
                       >
                         <Camera className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-10 h-10 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white transition-colors"
+                        title="Upload from Gallery"
+                      >
+                        <Upload className="w-5 h-5" />
                       </button>
                     </div>
                   )}
                 </div>
-                
+
                 {/* Hidden file input */}
                 <input
                   type="file"
@@ -539,6 +739,188 @@ function Profile() {
           </div>
         </div>
       </main>
+
+      {/* Camera / Photo Editor Modal */}
+      {showCameraModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[9999] p-2">
+          <div className="bg-gray-900 rounded-2xl overflow-hidden w-full max-w-md">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-800">
+              <span className="text-white font-semibold text-sm">
+                {showEditor ? 'Edit Photo' : 'Take Photo'}
+              </span>
+              <button type="button" onClick={closeCameraModal} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Live Camera View */}
+            {!showEditor && (
+              <div className="relative bg-black">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full max-h-[60vh] object-cover"
+                  style={{ transform: 'scaleX(1)' }}
+                />
+                <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-6">
+                  <button
+                    type="button"
+                    onClick={flipCamera}
+                    className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+                    title="Flip Camera"
+                  >
+                    <SwitchCamera className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="w-16 h-16 bg-white rounded-full border-4 border-gray-400 hover:border-gray-200 transition-colors flex items-center justify-center"
+                  >
+                    <div className="w-12 h-12 bg-white rounded-full" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { stopCamera(); fileInputRef.current?.click(); setShowCameraModal(false); }}
+                    className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
+                    title="Upload from Gallery"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Photo Editor */}
+            {showEditor && capturedImage && (
+              <div className="flex flex-col">
+                {/* Canvas */}
+                <div className="relative bg-black flex items-center justify-center">
+                  <canvas
+                    ref={editorCanvasRef}
+                    className="max-w-full max-h-[50vh] object-contain touch-none"
+                    style={{ cursor: editorMode === 'draw' ? 'crosshair' : editorMode === 'text' ? 'text' : 'cell' }}
+                    onMouseDown={onCanvasPointerDown}
+                    onMouseMove={onCanvasPointerMove}
+                    onMouseUp={onCanvasPointerUp}
+                    onMouseLeave={onCanvasPointerUp}
+                    onTouchStart={onCanvasPointerDown}
+                    onTouchMove={onCanvasPointerMove}
+                    onTouchEnd={onCanvasPointerUp}
+                  />
+                </div>
+
+                {/* Editor Toolbar */}
+                <div className="bg-gray-800 p-3 space-y-2">
+                  {/* Mode buttons */}
+                  <div className="flex gap-2 justify-center">
+                    {[
+                      { mode: 'draw', icon: <Pencil className="w-4 h-4" />, label: 'Draw' },
+                      { mode: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
+                      { mode: 'emoji', icon: <Smile className="w-4 h-4" />, label: 'Emoji' },
+                    ].map(({ mode, icon, label }) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setEditorMode(mode)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editorMode === mode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        {icon}{label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={undoEditor}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                      title="Undo"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Draw options */}
+                  {editorMode === 'draw' && (
+                    <div className="space-y-2">
+                      <div className="flex gap-1.5 flex-wrap">
+                        {DRAW_COLORS.map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setDrawColor(c)}
+                            className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                            style={{ backgroundColor: c, borderColor: drawColor === c ? '#60a5fa' : 'transparent' }}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-xs">Size</span>
+                        <input type="range" min={2} max={20} value={brushSize} onChange={e => setBrushSize(+e.target.value)} className="flex-1 h-1 accent-blue-500" />
+                        <span className="text-gray-300 text-xs w-4">{brushSize}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Text options */}
+                  {editorMode === 'text' && (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={editorText}
+                        onChange={e => setEditorText(e.target.value)}
+                        placeholder="Type text, then tap on photo"
+                        className="w-full bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm placeholder-gray-500 outline-none"
+                        autoComplete="off"
+                      />
+                      <div className="flex gap-1.5 flex-wrap">
+                        {DRAW_COLORS.map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setDrawColor(c)}
+                            className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+                            style={{ backgroundColor: c, borderColor: drawColor === c ? '#60a5fa' : 'transparent' }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Emoji options */}
+                  {editorMode === 'emoji' && (
+                    <div className="space-y-2">
+                      <p className="text-gray-400 text-xs">Select emoji, then tap on photo</p>
+                      <div className="flex flex-wrap gap-1">
+                        {QUICK_EMOJIS.map(em => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => setSelectedEmoji(em)}
+                            className={`w-8 h-8 text-lg rounded flex items-center justify-center transition-colors ${selectedEmoji === em ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Apply button */}
+                  <button
+                    type="button"
+                    onClick={applyEditorImage}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                  >
+                    <Check className="w-4 h-4" /> Use This Photo
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

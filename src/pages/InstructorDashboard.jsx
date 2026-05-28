@@ -1,7 +1,7 @@
 import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, ChevronLeft, Calendar, Menu, ChevronRight, Bell, CheckCircle, Trash2, X, CheckSquare, Square, Shield, TrendingUp
+  LogOut, User, ChevronLeft, Calendar, Menu, ChevronRight, Bell, CheckCircle, Trash2, X, CheckSquare, Square, Shield, TrendingUp, CircleCheckBig
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -332,17 +332,13 @@ function InstructorDashboard() {
                 >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      {/* Select All — toggles all on/off */}
                       <button
                         type="button"
                         onClick={handleSelectAll}
                         title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
-                        className="text-gray-400 hover:text-gray-600"
+                        className="text-gray-400 hover:text-green-600 transition-colors"
                       >
-                        {selectedNotifications.length === (notifications || []).length && notifications.length > 0
-                          ? <CheckSquare className="w-5 h-5 text-green-600" />
-                          : <Square className="w-5 h-5" />
-                        }
+                        <CircleCheckBig className={`w-5 h-5 ${selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'text-green-600' : ''}`} />
                       </button>
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
                     </div>

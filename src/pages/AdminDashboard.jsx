@@ -3,7 +3,7 @@ import { archivesAPI } from '../services/api';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, TrendingUp, GraduationCap, Shield,
-  BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
+  BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square, CircleCheckBig,
   BarChart3, Archive, RotateCcw, History, TrendingUp as TrendingUpIcon, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -500,12 +500,22 @@ function AdminDashboard() {
                   onTouchStart={(e) => e.stopPropagation()}
                 >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="font-semibold text-gray-800">Notifications</h3>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectAll}
+                        title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
+                        className="text-gray-400 hover:text-green-600 transition-colors"
+                      >
+                        <CircleCheckBig className={`w-5 h-5 ${selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'text-green-600' : ''}`} />
+                      </button>
+                      <h3 className="font-semibold text-gray-800">Notifications</h3>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <button
                         type="button"
                         onClick={handleMarkAllRead}
-                        className="text-sm text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700"
                         title="Mark all as read"
                       >
                         <CheckCircle className="w-5 h-5" />
@@ -514,7 +524,7 @@ function AdminDashboard() {
                         type="button"
                         onClick={handleDeleteSelected}
                         disabled={selectedNotifications.length === 0}
-                        className="text-sm text-red-600 hover:text-red-700 disabled:opacity-30"
+                        className="text-red-600 hover:text-red-700 disabled:opacity-30"
                         title="Delete selected"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -1325,18 +1335,11 @@ function AdminDashboard() {
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{report.description}</p>
-                          {report.submissions && report.submissions.length > 0 && (
-                            <div className="mt-2">
-                              <p className="text-xs font-medium text-gray-500 mb-1">Submissions:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {report.submissions.map((sub, sidx) => (
-                                  <span key={sidx} className="text-xs bg-white px-2 py-1 rounded border">
-                                    {sub.instructor} ({sub.department})
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            {report.due_date && <span>Due: {new Date(report.due_date).toLocaleDateString()}</span>}
+                            <span>{report.submission_count ?? report.submissions?.length ?? 0} submission(s)</span>
+                            {report.created_by_name && <span>By: {report.created_by_name}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
