@@ -2,7 +2,8 @@ import { useAuth } from '../App';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, Calendar, Plus, Search, Filter,
-  Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu, Archive, RotateCcw
+  Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu, Archive, RotateCcw,
+  CheckCircle, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
@@ -21,6 +22,7 @@ function StudentManagement() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [notification, setNotification] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagination state
@@ -64,24 +66,32 @@ function StudentManagement() {
 
     for (const field of requiredFields) {
       if (!formData[field] || formData[field].toString().trim() === '') {
-        setNotification({ type: 'error', message: `Please fill in the ${fieldLabels[field]} field.` });
+        setNotification({ type: 'error', message: `"${fieldLabels[field]}" is required. Please fill it in before saving.` });
+        setTimeout(() => setNotification(null), 5000);
         return;
       }
     }
-    if (formData.studentId.length !== 9) {
-      setNotification({ type: 'error', message: 'Student ID must be exactly 9 digits.' });
+    const idLen = formData.studentId.replace(/\D/g, '').length;
+    if (idLen !== 9) {
+      setNotification({ type: 'error', message: `Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.` });
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
-    if (formData.contactNumber.length !== 11) {
-      setNotification({ type: 'error', message: 'Contact Number must be exactly 11 digits.' });
+    const contactLen = formData.contactNumber.replace(/\D/g, '').length;
+    if (contactLen !== 11) {
+      setNotification({ type: 'error', message: `Contact Number must be exactly 11 digits — you entered ${contactLen} digit${contactLen !== 1 ? 's' : ''}.` });
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
-    if (formData.emergencyNumber.length !== 11) {
-      setNotification({ type: 'error', message: 'Emergency Contact Number must be exactly 11 digits.' });
+    const emerLen = formData.emergencyNumber.replace(/\D/g, '').length;
+    if (emerLen !== 11) {
+      setNotification({ type: 'error', message: `Emergency Contact Number must be exactly 11 digits — you entered ${emerLen} digit${emerLen !== 1 ? 's' : ''}.` });
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
     if (!formData.email.includes('@')) {
-      setNotification({ type: 'error', message: 'Email must contain @ symbol.' });
+      setNotification({ type: 'error', message: 'Email address must contain "@" — e.g. student@cvsu.edu.ph.' });
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
 
@@ -99,10 +109,12 @@ function StudentManagement() {
         emergencyName: '', emergencyNumber: ''
       });
     } catch (error) {
-      // API failed — keep the modal open so the user doesn't lose their data
-      const msg = error?.message || 'Failed to add student. Please try again.';
+      const raw = error?.message || '';
+      const msg = raw.toLowerCase().includes('already exists')
+        ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
+        : raw || 'Failed to add student. Please try again.';
       setNotification({ type: 'error', message: msg });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 6000);
     } finally {
       setIsAddingStudent(false);
     }
@@ -169,11 +181,14 @@ function StudentManagement() {
   };
 
   const handleDeleteStudent = (id) => {
-    if (confirm('Are you sure you want to delete this student?')) {
-      deleteStudent(id);
-      setNotification({ type: 'success', message: 'Student deleted successfully!' });
-      setTimeout(() => setNotification(null), 3000);
-    }
+    setConfirmDialog({
+      message: 'Are you sure you want to delete this student? This action cannot be undone.',
+      onConfirm: () => {
+        deleteStudent(id);
+        setNotification({ type: 'success', message: 'Student deleted successfully!' });
+        setTimeout(() => setNotification(null), 3000);
+      }
+    });
   };
 
   const openEditModal = (student) => {
@@ -353,13 +368,34 @@ function StudentManagement() {
           </div>
         )}
 
-        {/* Notification */}
+        {/* Centered notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            <span className="flex-1 text-sm">{notification.message}</span>
-            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-              <X className="w-4 h-4" />
-            </button>
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
+            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+              {notification.type === 'success'
+                ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+              <span className="flex-1">{notification.message}</span>
+              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm dialog */}
+        {confirmDialog && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+              <div className="flex items-start gap-3 mb-5">
+                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-gray-800 text-sm font-medium">{confirmDialog.message}</p>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors">Cancel</button>
+                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">Delete</button>
+              </div>
+            </div>
           </div>
         )}
 

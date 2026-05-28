@@ -68,22 +68,31 @@ function Enrollment() {
 
     // Student ID - exactly 9 digits
     if (formData.studentId && !/^\d{9}$/.test(formData.studentId)) {
-      newErrors.studentId = 'Student ID must be exactly 9 digits';
+      const idLen = formData.studentId.replace(/\D/g, '').length;
+      newErrors.studentId = idLen < 9
+        ? `Student ID is too short — ${idLen} digit${idLen !== 1 ? 's' : ''} entered, need exactly 9`
+        : `Student ID is too long — ${idLen} digit${idLen !== 1 ? 's' : ''} entered, need exactly 9`;
     }
 
     // Email - must contain @
     if (formData.email && !formData.email.includes('@')) {
-      newErrors.email = 'Email must contain @ symbol';
+      newErrors.email = 'Invalid email — must contain "@" (e.g. student@cvsu.edu.ph)';
     }
 
     // Contact Number - exactly 11 digits
     if (formData.contactNumber && !/^\d{11}$/.test(formData.contactNumber)) {
-      newErrors.contactNumber = 'Contact Number must be exactly 11 digits';
+      const cLen = formData.contactNumber.replace(/\D/g, '').length;
+      newErrors.contactNumber = cLen < 11
+        ? `Contact Number is too short — ${cLen} digit${cLen !== 1 ? 's' : ''} entered, need exactly 11`
+        : `Contact Number is too long — ${cLen} digit${cLen !== 1 ? 's' : ''} entered, need exactly 11`;
     }
 
     // Emergency Number - exactly 11 digits
     if (formData.emergencyNumber && !/^\d{11}$/.test(formData.emergencyNumber)) {
-      newErrors.emergencyNumber = 'Emergency Contact Number must be exactly 11 digits';
+      const eLen = formData.emergencyNumber.replace(/\D/g, '').length;
+      newErrors.emergencyNumber = eLen < 11
+        ? `Emergency Number is too short — ${eLen} digit${eLen !== 1 ? 's' : ''} entered, need exactly 11`
+        : `Emergency Number is too long — ${eLen} digit${eLen !== 1 ? 's' : ''} entered, need exactly 11`;
     }
 
     // Birth Date validation
@@ -91,15 +100,15 @@ function Enrollment() {
       const month = parseInt(formData.birthMonth, 10);
       const day = parseInt(formData.birthDay, 10);
       const year = parseInt(formData.birthYear, 10);
-      
-      if (month < 1 || month > 12) {
-        newErrors.birthMonth = 'Month must be between 1-12';
+
+      if (isNaN(month) || month < 1 || month > 12) {
+        newErrors.birthMonth = `Invalid month "${formData.birthMonth}" — must be 1 to 12`;
       }
-      if (day < 1 || day > 31) {
-        newErrors.birthDay = 'Day must be between 1-31';
+      if (isNaN(day) || day < 1 || day > 31) {
+        newErrors.birthDay = `Invalid day "${formData.birthDay}" — must be 1 to 31`;
       }
-      if (year.toString().length !== 4 || isNaN(year)) {
-        newErrors.birthYear = 'Year must be 4 digits';
+      if (isNaN(year) || year.toString().length !== 4) {
+        newErrors.birthYear = `Invalid year "${formData.birthYear}" — must be a 4-digit year (e.g. 2005)`;
       }
     }
 
@@ -204,7 +213,13 @@ function Enrollment() {
         status: error.status,
         stack: error.stack
       });
-      showToast(`Failed to submit: ${error.message}`, 'error');
+      const raw = error?.message || '';
+      const friendly = raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate')
+        ? `Student ID "${formData.studentId}" is already enrolled. Please check your Student ID.`
+        : raw
+          ? `Submission failed: ${raw}`
+          : 'Submission failed. Please check your internet connection and try again.';
+      showToast(friendly, 'error');
     } finally {
       setIsSubmitting(false);
     }

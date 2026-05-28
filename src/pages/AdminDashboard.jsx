@@ -3,7 +3,7 @@ import { archivesAPI } from '../services/api';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, TrendingUp, GraduationCap, Shield,
-  BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, Trash2, CheckSquare, Square,
+  BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
   BarChart3, Archive, RotateCcw, History, TrendingUp as TrendingUpIcon, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -52,6 +52,17 @@ function AdminDashboard() {
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+
+  const showNotif = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const showConfirm = (message, onConfirm) => {
+    setConfirmDialog({ message, onConfirm });
+  };
   
   // Check if user is loaded - after all hooks
   if (!user) {
@@ -193,13 +204,12 @@ function AdminDashboard() {
   
   const confirmNewBatch = async () => {
     if (confirmText.toLowerCase() !== 'confirm') {
-      alert('Please type "confirm" to proceed with creating a new batch.');
+      showNotif('error', 'You must type "confirm" exactly to proceed with creating a new batch.');
       return;
     }
-    
+
     try {
-      // Archive current data via API with component breakdown
-      await archivesAPI.create({ 
+      await archivesAPI.create({
         year: parseInt(currentBatch),
         data: {
           cwts: stats.cwtsStudents,
@@ -207,22 +217,17 @@ function AdminDashboard() {
           rotc: stats.rotcStudents
         }
       });
-      
-      // Clear all current student and report data
+
       await clearBatchData();
-      
-      // Refresh data to get new current batch
       await refreshData();
-      
-      // Reset confirmation
+
       setShowNewBatchConfirm(false);
       setConfirmText('');
-      
-      // Show success notification
-      alert(`Batch ${currentBatch} has been archived successfully. New batch started with cleared records.`);
+
+      showNotif('success', `Batch ${currentBatch} archived successfully. New batch started with cleared records.`);
     } catch (error) {
       console.error('Archive batch error:', error);
-      alert('Failed to archive batch. Please try again.');
+      showNotif('error', 'Failed to archive batch. Please try again.');
     }
   };
 
@@ -243,16 +248,20 @@ function AdminDashboard() {
   };
 
   // Delete archived batch
-  const handleDeleteArchivedBatch = async (yearToDelete) => {
-    if (confirm(`Are you sure you want to delete Batch ${yearToDelete} from archives? This cannot be undone.`)) {
-      try {
-        await archivesAPI.delete(yearToDelete);
-        await refreshData(); // Refresh to update the list
-      } catch (error) {
-        console.error('Delete archive error:', error);
-        alert('Failed to delete archive. Please try again.');
+  const handleDeleteArchivedBatch = (yearToDelete) => {
+    showConfirm(
+      `Delete Batch ${yearToDelete} from archives? This cannot be undone.`,
+      async () => {
+        try {
+          await archivesAPI.delete(yearToDelete);
+          await refreshData();
+          showNotif('success', `Batch ${yearToDelete} deleted from archives.`);
+        } catch (error) {
+          console.error('Delete archive error:', error);
+          showNotif('error', 'Failed to delete archive. Please try again.');
+        }
       }
-    }
+    );
   };
 
   // Return to current batch view
@@ -287,6 +296,49 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* Centered notification toast */}
+      {notification && (
+        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
+          <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+            {notification.type === 'success'
+              ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            <span className="flex-1">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Centered confirm dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+            <div className="flex items-start gap-3 mb-5">
+              <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-gray-800 text-sm font-medium">{confirmDialog.message}</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar */}
       {sidebarOpen && (

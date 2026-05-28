@@ -1,9 +1,9 @@
 import { useAuth } from '../App';
-import { 
-  LayoutDashboard, Users, FileText, MessageSquare, 
+import {
+  LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, Camera, Mail, Phone,
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
-  Calendar
+  Calendar, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef } from 'react';
@@ -265,13 +265,18 @@ function Profile() {
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Notification */}
+        {/* Centered notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            <span className="flex-1 text-sm">{notification.message}</span>
-            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-              <X className="w-4 h-4" />
-            </button>
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
+            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+              {notification.type === 'success'
+                ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+              <span className="flex-1">{notification.message}</span>
+              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 
