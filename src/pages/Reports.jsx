@@ -1,15 +1,15 @@
 import { useAuth } from '../App';
-import { 
-  LayoutDashboard, Users, FileText, MessageSquare, 
+import {
+  LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, ChevronRight, Plus, Search,
   Send, MessageCircle, Eye, Calendar, CheckCircle, Clock,
-  Edit, Trash2, Upload, File, X, Menu
+  Edit, Trash2, Upload, File, X, Menu, Archive, RotateCcw
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 
 function Reports() {
-  const { user, logout, reports, addReport, deleteReport, submitReport, addReportComment } = useAuth();
+  const { user, logout, reports, addReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
@@ -206,29 +206,43 @@ function Reports() {
     navigate('/login');
   };
 
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
+
   // Admin creates a report assignment for instructors
-  const handleCreateReport = () => {
+  const handleCreateReport = async () => {
     const newReport = {
       title: createForm.title,
       description: createForm.description,
       department: createForm.department,
-      due_date: createForm.dueDate, // snake_case for backend
+      due_date: createForm.dueDate,
       createdBy: user?.name,
       createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       status: 'Draft',
-      referenceFile: createForm.referenceFile
+      referenceFile: createForm.referenceFile,
+      reference_file_data: createForm.referenceFile?.data || null,
+      reference_file_name: createForm.referenceFile?.name || null,
     };
-    
-    addReport(newReport);
-    setShowCreateModal(false);
-    setCurrentPage(1); // Reset to page 1 so new report is visible
-    setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
-    setNotification({ type: 'success', message: 'Report assignment created!' });
-    setTimeout(() => setNotification(null), 3000);
+
+    setIsCreatingReport(true);
+    try {
+      await addReport(newReport);
+      setShowCreateModal(false);
+      setCurrentPage(1);
+      setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
+      setNotification({ type: 'success', message: 'Report assignment created!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to create report. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsCreatingReport(false);
+    }
   };
 
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
   // Instructor submits their report
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     if (!submitForm.content.trim() && !submitForm.attachment) {
       setNotification({ type: 'error', message: 'Please enter report content or attach a file!' });
       setTimeout(() => setNotification(null), 3000);
@@ -244,21 +258,31 @@ function Reports() {
       attachment: submitForm.attachment
     };
 
-    submitReport(selectedReport.id, submission);
-
-    setShowSubmitModal(false);
-    setSubmitForm({ content: '', attachment: null });
-    setSelectedReport(null);
-    setNotification({ type: 'success', message: 'Report submitted successfully!' });
-    setTimeout(() => setNotification(null), 3000);
+    setIsSubmittingReport(true);
+    try {
+      await submitReport(selectedReport.id, submission);
+      setShowSubmitModal(false);
+      setSubmitForm({ content: '', attachment: null });
+      setSelectedReport(null);
+      setNotification({ type: 'success', message: 'Report submitted successfully!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to submit report. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   // Handle file selection for admin reference
   const handleReferenceFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setCreateForm({ ...createForm, referenceFile: { name: file.name, size: file.size, type: file.type } });
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setCreateForm(prev => ({ ...prev, referenceFile: { name: file.name, size: file.size, type: file.type, data: evt.target.result } }));
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle file selection for instructor submission
@@ -304,8 +328,13 @@ function Reports() {
     return report.submissions.some(s => s.instructor === user?.name);
   };
 
+  // Use archived report data when in archive view, otherwise live data
+  const sourceReports = viewingArchive && archiveViewData?.reportData
+    ? archiveViewData.reportData
+    : reports;
+
   // Filter reports - instructors see only their department assignments - memoized for performance
-  const filteredReports = useMemo(() => reports.filter(report => {
+  const filteredReports = useMemo(() => sourceReports.filter(report => {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || report.status === filterStatus;
     const matchesDept = filterDept === 'All' || report.department === 'All' || report.department === filterDept;
@@ -322,7 +351,7 @@ function Reports() {
     }
     
     return matchesSearch && matchesStatus && matchesDept;
-  }), [reports, searchTerm, filterStatus, filterDept, isInstructor, user]);
+  }), [sourceReports, searchTerm, filterStatus, filterDept, isInstructor, user]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -331,7 +360,7 @@ function Reports() {
   const currentReports = filteredReports.slice(indexOfFirstReport, indexOfLastReport);
 
   // Reset to page 1 when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterDept]);
 
@@ -436,7 +465,7 @@ function Reports() {
     <div className="min-h-screen bg-gray-50">
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
@@ -446,7 +475,7 @@ function Reports() {
      
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
             <div>
@@ -457,48 +486,54 @@ function Reports() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') || 
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard') 
-              ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <User className="w-5 h-5" />
             <span>Profile</span>
@@ -506,7 +541,8 @@ function Reports() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-green-700 text-red-300"
           >
@@ -517,11 +553,35 @@ function Reports() {
       </aside>
 
       {/* Main Content */}
-      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
+      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        {/* Archive Banner */}
+        {viewingArchive && archiveViewData && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
+              <div>
+                <h2 className="text-base font-bold text-amber-800">Previous Report — Batch {archiveViewData.year}</h2>
+                <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Back to Current</span>
+            </button>
+          </div>
+        )}
+
         {/* Notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {notification.message}
+          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            <span className="flex-1 text-sm">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -531,7 +591,7 @@ function Reports() {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
@@ -545,8 +605,9 @@ function Reports() {
               </p>
             </div>
           </div>
-          {isAdmin && (
-            <button 
+          {isAdmin && !viewingArchive && (
+            <button
+              type="button"
               onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
             >
@@ -559,20 +620,25 @@ function Reports() {
         {/* Filters */}
         <div className="bg-white p-4 rounded-xl shadow-md mb-6">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
+                  id="report-search"
+                  name="reportSearch"
                   placeholder="Search reports..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  autoComplete="off"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 />
               </div>
             </div>
             {isAdmin && (
               <select
+                id="filter-dept"
+                name="filterDept"
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
@@ -584,6 +650,8 @@ function Reports() {
               </select>
             )}
             <select
+              id="filter-status"
+              name="filterStatus"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
@@ -600,9 +668,9 @@ function Reports() {
         <div className="space-y-4">
           {currentReports.map((report) => (
             <div key={report.id} className="bg-white rounded-xl shadow-md p-6">
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h3 className="text-lg font-bold text-gray-800">{report.title}</h3>
                     <span className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${getStatusColor(report.status)}`}>
                       {report.status}
@@ -612,7 +680,7 @@ function Reports() {
                     </span>
                   </div>
                   <p className="text-gray-600 mb-2">{report.description}</p>
-                  <div className="flex items-center text-sm text-gray-500 space-x-4">
+                  <div className="flex flex-wrap items-center text-sm text-gray-500 gap-x-4 gap-y-1">
                     <span className="flex items-center">
                       <User className="w-4 h-4 mr-1" />
                       Created by: {report.createdBy}
@@ -631,12 +699,19 @@ function Reports() {
                       <MessageCircle className="w-4 h-4 mr-1" />
                       {(report.comments || []).length} replies
                     </span>
+                    {(report.reference_file_data || report.reference_file_name || report.referenceFile) && (
+                      <span className="flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                        <File className="w-3 h-3 mr-1" />
+                        Reference file attached
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 shrink-0">
                   {/* Only instructors can submit reports */}
-                  {isInstructor && !hasSubmitted(report) && (
-                    <button 
+                  {isInstructor && !viewingArchive && !hasSubmitted(report) && (
+                    <button
+                      type="button"
                       onClick={() => openSubmitModal(report)}
                       className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
                     >
@@ -648,14 +723,16 @@ function Reports() {
                       {user?.name}
                     </span>
                   )}
-                  <button 
+                  <button
+                    type="button"
                     onClick={() => openViewModal(report)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <Eye className="w-5 h-5" />
                   </button>
-                  {isAdmin && (
-                    <button 
+                  {isAdmin && !viewingArchive && (
+                    <button
+                      type="button"
                       onClick={() => handleDeleteReport(report.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
@@ -703,6 +780,7 @@ function Reports() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center space-x-2 mt-6">
             <button
+              type="button"
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -713,6 +791,7 @@ function Reports() {
               Page {currentPage} of {totalPages}
             </span>
             <button
+              type="button"
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -725,7 +804,7 @@ function Reports() {
         {/* Create Report Assignment Modal (Admin) */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
               <h3 className="text-xl font-bold text-gray-800 mb-4">Create Report Assignment</h3>
               <div className="space-y-4">
                 <div>
@@ -766,7 +845,7 @@ function Reports() {
                     placeholder="Describe what instructors need to submit (e.g., Activity Schedule, DTR, Grading Sheet, Attendance, etc.)"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
                     <select
@@ -815,6 +894,7 @@ function Reports() {
                         <File className="w-4 h-4 text-blue-600" />
                         <span className="text-sm text-blue-700 truncate max-w-[200px]">{createForm.referenceFile.name}</span>
                         <button
+                          type="button"
                           onClick={() => setCreateForm({...createForm, referenceFile: null})}
                           className="text-blue-600 hover:text-blue-800"
                         >
@@ -827,18 +907,20 @@ function Reports() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleCreateReport}
-                  disabled={!createForm.title.trim() || !createForm.description.trim()}
-                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"
+                  disabled={!createForm.title.trim() || !createForm.description.trim() || isCreatingReport}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Create Assignment
+                  {isCreatingReport ? 'Creating...' : 'Create Assignment'}
                 </button>
               </div>
             </div>
@@ -848,7 +930,7 @@ function Reports() {
         {/* Submit Report Modal (Instructor) */}
         {showSubmitModal && selectedReport && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Submit Report</h3>
               <p className="text-gray-600 mb-4">{selectedReport.title}</p>
               
@@ -891,6 +973,7 @@ function Reports() {
                         <File className="w-4 h-4 text-green-600" />
                         <span className="text-sm text-green-700 truncate max-w-[200px]">{submitForm.attachment.name}</span>
                         <button
+                          type="button"
                           onClick={() => setSubmitForm({...submitForm, attachment: null})}
                           className="text-green-600 hover:text-green-800"
                         >
@@ -902,29 +985,41 @@ function Reports() {
                   <p className="text-xs text-gray-500 mt-1">Attach supporting documents or images (PDF, Word, Excel, Images)</p>
                 </div>
 
-                {/* Show admin reference file if exists */}
-                {selectedReport.referenceFile && (
-                  <div className="bg-blue-50 rounded-lg p-3">
+                {/* Show admin reference file if exists — check both DB fields and in-memory object */}
+                {(selectedReport.reference_file_data || selectedReport.referenceFile?.data) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm font-medium text-blue-800 mb-2">Admin Reference File:</p>
                     <div className="flex items-center space-x-2">
-                      <File className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-blue-700">{selectedReport.referenceFile.name}</span>
+                      <File className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm text-blue-700 truncate flex-1">
+                        {selectedReport.reference_file_name || selectedReport.referenceFile?.name}
+                      </span>
+                      <a
+                        href={selectedReport.reference_file_data || selectedReport.referenceFile?.data}
+                        download={selectedReport.reference_file_name || selectedReport.referenceFile?.name || 'reference-file'}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline whitespace-nowrap flex-shrink-0"
+                      >
+                        Download
+                      </a>
                     </div>
                   </div>
                 )}
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowSubmitModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleSubmitReport}
-                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors"
+                  disabled={isSubmittingReport}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Submit Report
+                  {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
                 </button>
               </div>
             </div>
@@ -934,13 +1029,14 @@ function Reports() {
         {/* View Report Modal with Comments/Replies */}
         {showViewModal && selectedReport && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800">{selectedReport.title}</h3>
                   <p className="text-sm text-gray-500">Created by {selectedReport.createdBy}</p>
                 </div>
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowViewModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -959,6 +1055,23 @@ function Reports() {
                   </span>
                 </div>
               </div>
+
+              {(selectedReport.reference_file_data || selectedReport.referenceFile?.data) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center space-x-3">
+                  <File className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-800">Admin Reference File</p>
+                    <p className="text-xs text-blue-600 truncate">{selectedReport.reference_file_name || selectedReport.referenceFile?.name}</p>
+                  </div>
+                  <a
+                    href={selectedReport.reference_file_data || selectedReport.referenceFile?.data}
+                    download={selectedReport.reference_file_name || selectedReport.referenceFile?.name || 'reference-file'}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors flex-shrink-0"
+                  >
+                    Download
+                  </a>
+                </div>
+              )}
 
               {selectedReport.submissions.length > 0 && (
                 <div className="mb-6">
@@ -1011,9 +1124,10 @@ function Reports() {
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Type your reply..."
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+                    onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddComment(); } }}
                   />
-                  <button 
+                  <button
+                    type="button"
                     onClick={handleAddComment}
                     disabled={!newComment.trim()}
                     className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -1035,12 +1149,14 @@ function Reports() {
               </h3>
               <div className="flex items-center space-x-2">
                 <button
+                  type="button"
                   onClick={() => changeMonth(-1)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => changeMonth(1)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -1048,6 +1164,7 @@ function Reports() {
                 </button>
                 {isAdmin && (
                   <button
+                    type="button"
                     onClick={() => setShowAddEventModal(true)}
                     className="ml-4 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
                   >
@@ -1130,6 +1247,7 @@ function Reports() {
                       </div>
                       {event.createdBy && isAdmin && (
                         <button
+                          type="button"
                           onClick={() => handleDeleteEvent(event.id)}
                           className="text-red-500 hover:text-red-700 text-sm"
                         >
@@ -1185,13 +1303,15 @@ function Reports() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowAddEventModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleAddEvent}
                   disabled={!newEvent.title.trim() || !newEvent.date}
                   className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"

@@ -1,12 +1,15 @@
 import { useAuth } from '../App';
 import { X, Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+
+const PUBLIC_ROUTES = ['/', '/enrollment', '/login'];
 
 function RealtimeToastStack() {
   const { user, toasts, dismissToast } = useAuth();
-  const navigate = useNavigate();
+  const location = useLocation();
 
   if (!user || !toasts?.length) return null;
+  if (PUBLIC_ROUTES.includes(location.pathname)) return null;
 
   return (
     <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
@@ -22,18 +25,6 @@ function RealtimeToastStack() {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-gray-900 text-sm">{toast.title}</p>
             <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">{toast.message}</p>
-            {toast.link && (
-              <button
-                type="button"
-                onClick={() => {
-                  navigate(toast.link);
-                  dismissToast(toast.id);
-                }}
-                className="mt-2 text-xs font-medium text-green-700 hover:text-green-900 underline"
-              >
-                View
-              </button>
-            )}
           </div>
           <button
             type="button"

@@ -4,16 +4,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/nstp-system/',
+  // Use root path for dev, /nstp-system/ for production
+  base: process.env.NODE_ENV === 'production' ? '/nstp-system/' : '/',
   plugins: [
     react(), 
-    tailwindcss(),
-    {
-      name: 'html-transform',
-      transformIndexHtml(html, ctx) {
-        // Replace placeholder paths with actual base paths during build
-        return html.replace(/\/nstp-system\//g, ctx.server ? '/nstp-system/' : '/nstp-system/')
-      }
-    }
+    tailwindcss()
   ],
 })

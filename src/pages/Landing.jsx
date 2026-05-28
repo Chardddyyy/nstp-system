@@ -1,26 +1,26 @@
 import { Link } from 'react-router-dom';
 import { Shield, Users, FileText, MessageSquare, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Carousel images - using the actual CvSU Naic campus photo
 const CAROUSEL_IMAGES = [
   {
-    src: "/cvsunaiccampus.png",
+    src: `${import.meta.env.BASE_URL}cvsunaiccampus.png`,
     title: "Welcome to NSTP",
     subtitle: "Building Tomorrow's Leaders Through NSTP"
   },
   {
-    src: "/IMG_9578.JPG",
+    src: `${import.meta.env.BASE_URL}IMG_9578.JPG`,
     title: "ROTC Training",
     subtitle: "Developing Discipline and Leadership Skills"
   },
   {
-    src: "/cwts cover.jpg",
+    src: `${import.meta.env.BASE_URL}cwts-cover.jpg`,
     title: "CWTS Community Service",
     subtitle: "Serving the Community with Compassion"
   },
   {
-    src: "/lts cover.jpg",
+    src: `${import.meta.env.BASE_URL}lts-cover.jpg`,
     title: "LTS Literacy Program",
     subtitle: "Empowering Through Education"
   }
@@ -28,21 +28,29 @@ const CAROUSEL_IMAGES = [
 
 function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const timerRef = useRef(null);
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
+    }, 5000);
+  }, []);
 
   // Auto-advance carousel
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+    startTimer();
+    return () => clearInterval(timerRef.current);
+  }, [startTimer]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
+    startTimer();
   };
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + CAROUSEL_IMAGES.length) % CAROUSEL_IMAGES.length);
+    startTimer();
   };
 
   return (
@@ -50,13 +58,13 @@ function Landing() {
       {/* Header */}
       <header className="bg-green-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center overflow-hidden">
-              <img src="/cvsu.png" alt="CvSU Logo" className="w-10 h-10 object-contain" />
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center overflow-hidden shrink-0">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold">Cavite State University Naic</h1>
-              <p className="text-green-200 text-sm">NSTP Record & Report Management System</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold truncate">Cavite State University Naic</h1>
+              <p className="text-green-200 text-xs sm:text-sm hidden sm:block">NSTP Record & Report Management System</p>
             </div>
           </div>
           <Link 
@@ -69,11 +77,11 @@ function Landing() {
       </header>
 
       {/* Hero Carousel Section */}
-      <section className="relative h-[500px] overflow-hidden">
+      <section className="relative h-[220px] xs:h-[280px] sm:h-[380px] md:h-[500px] overflow-hidden">
         {CAROUSEL_IMAGES.map((image, index) => (
           <div
             key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
+            className={`absolute inset-0 transition-opacity duration-700 ${
               index === currentSlide ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -81,11 +89,12 @@ function Landing() {
               src={image.src}
               alt={image.title}
               className="w-full h-full object-cover"
+              loading={index === 0 ? 'eager' : 'lazy'}
             />
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <div className="text-center text-white px-4">
-                <h2 className="text-4xl md:text-5xl font-bold mb-4">{image.title}</h2>
-                <p className="text-xl md:text-2xl text-yellow-400">{image.subtitle}</p>
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-4">{image.title}</h2>
+                <p className="text-base sm:text-xl md:text-2xl text-yellow-400">{image.subtitle}</p>
               </div>
             </div>
           </div>
@@ -110,7 +119,7 @@ function Landing() {
           {CAROUSEL_IMAGES.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentSlide(index)}
+              onClick={() => { setCurrentSlide(index); startTimer(); }}
               className={`w-3 h-3 rounded-full transition-colors ${
                 index === currentSlide ? 'bg-yellow-400' : 'bg-white/50'
               }`}
@@ -124,7 +133,7 @@ function Landing() {
         <div className="max-w-7xl mx-auto text-center">
           <Link 
             to="/enrollment" 
-            className="inline-block bg-yellow-500 hover:bg-yellow-600 text-green-900 font-bold px-12 py-4 rounded-xl text-xl transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            className="inline-block bg-yellow-500 hover:bg-yellow-600 text-green-900 font-bold px-12 py-4 rounded-xl text-xl transition-colors shadow-lg hover:shadow-xl active:scale-95"
           >
             Enroll Now!
           </Link>
@@ -213,7 +222,7 @@ function Landing() {
             {/* About - Left side */}
             <div className="md:w-2/3">
               <div className="flex items-center space-x-3 mb-4">
-                <img src="/cvsu.png" alt="CvSU Logo" className="w-8 h-8 object-contain" />
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-8 h-8 object-contain" />
                 <h4 className="text-xl font-bold">Cavite State University Naic</h4>
               </div>
               <p className="text-green-200 text-sm leading-relaxed mb-4">
@@ -225,10 +234,10 @@ function Landing() {
             </div>
 
             {/* Contact Info - Far right */}
-            <div className="md:w-auto md:text-right">
+            <div className="md:w-auto md:text-right w-full">
               <h5 className="text-lg font-semibold mb-4 text-yellow-400">Contact Us</h5>
               <ul className="space-y-3 text-green-200 text-sm">
-                <li className="flex items-center space-x-2 md:justify-end">
+                <li className="flex items-center space-x-2 md:justify-end flex-wrap gap-y-1">
                   <a 
                     href="https://www.cvsu-naic.edu.ph/"
                     target="_blank" 

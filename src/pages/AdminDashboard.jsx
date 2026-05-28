@@ -1,8 +1,8 @@
 import { useAuth } from '../App';
 import { archivesAPI } from '../services/api';
 import { 
-  LayoutDashboard, Users, FileText, MessageSquare, 
-  LogOut, User, TrendingUp, GraduationCap, Shield, 
+  LayoutDashboard, Users, FileText, MessageSquare,
+  LogOut, User, TrendingUp, GraduationCap, Shield,
   BookOpen, ChevronRight, Bell, Calendar, X, CheckCircle, Trash2, CheckSquare, Square,
   BarChart3, Archive, RotateCcw, History, TrendingUp as TrendingUpIcon, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
@@ -20,27 +20,29 @@ const AVATAR_OPTIONS = {
 };
 
 function AdminDashboard() {
-  const { user, logout, clearBatchData, students, reports, allUsers, messages, conversations, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications } = useAuth();
+  const { user, logout, clearBatchData, students, reports, allUsers, messages, conversations, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
-  const [deleteMode, setDeleteMode] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   
-  // Close notification panel when clicking outside (not while using delete controls)
+  // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!showNotifications) return;
       if (e.target.closest('.notification-container')) return;
       setShowNotifications(false);
-      setDeleteMode(false);
       setSelectedNotifications([]);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [showNotifications]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -48,8 +50,6 @@ function AdminDashboard() {
   const [selectedYear, setSelectedYear] = useState(null);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const [viewingArchive, setViewingArchive] = useState(false);
-  const [archiveViewData, setArchiveViewData] = useState(null);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   
@@ -66,17 +66,6 @@ function AdminDashboard() {
   }
   
   const unreadCount = (notifications || []).filter(n => !n.read).length;
-  
-  // Simple function to toggle delete mode
-  function handleToggleDeleteMode() {
-    if (deleteMode) {
-      setDeleteMode(false);
-      setSelectedNotifications([]);
-    } else {
-      setDeleteMode(true);
-      setSelectedNotifications([]);
-    }
-  }
   
   function notificationIdsMatch(a, b) {
     return String(a) === String(b);
@@ -119,9 +108,8 @@ function AdminDashboard() {
       });
     });
     setSelectedNotifications([]);
-    setDeleteMode(false);
   }
-  
+
   // Mark all as read
   function handleMarkAllRead() {
     const newNotifications = (notifications || []).map(n => {
@@ -147,7 +135,6 @@ function AdminDashboard() {
     }
     
     setShowNotifications(false);
-    setDeleteMode(false);
     setSelectedNotifications([]);
   }
 
@@ -239,11 +226,20 @@ function AdminDashboard() {
     }
   };
 
-  // View archived batch data
-  const handleViewBatch = (yearData) => {
-    setArchiveViewData(yearData);
-    setViewingArchive(true);
+  // View archived batch data — fetch detailed student/report data
+  const handleViewBatch = async (yearData) => {
     setShowArchiveModal(false);
+    try {
+      const detailed = await archivesAPI.getByYear(yearData.year);
+      setArchiveViewData({
+        ...yearData,
+        studentData: detailed.studentData || [],
+        reportData: detailed.reportData || []
+      });
+    } catch (e) {
+      setArchiveViewData({ ...yearData, studentData: [], reportData: [] });
+    }
+    setViewingArchive(true);
   };
 
   // Delete archived batch
@@ -264,6 +260,7 @@ function AdminDashboard() {
     setViewingArchive(false);
     setArchiveViewData(null);
   };
+
 
   // Empty activities and messages
   const recentActivities = [];
@@ -294,13 +291,13 @@ function AdminDashboard() {
       {/* Sidebar */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3 text-white">
             <span className="text-xl font-bold">National Service Training Program</span>
@@ -309,46 +306,61 @@ function AdminDashboard() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate('/admin/dashboard')}
+          <button
+            type="button"
+            onClick={() => { navigate('/admin/dashboard'); setSidebarOpen(false); }}
+            disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              viewingArchive ? 'opacity-40 cursor-not-allowed' :
               location.pathname === '/admin/dashboard' ? 'bg-green-700' : 'hover:bg-green-700/50'
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'
+            }`}
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+              location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'
+            }`}
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <User className="w-5 h-5" />
             <span>Profile</span>
@@ -356,7 +368,8 @@ function AdminDashboard() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -367,7 +380,7 @@ function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="transition-all duration-300 ease-in-out p-4 lg:p-8 lg:ml-64">
+      <main className={`transition-all duration-300 ease-in-out p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -380,6 +393,7 @@ function AdminDashboard() {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={handleBackToCurrent}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
               >
@@ -396,7 +410,7 @@ function AdminDashboard() {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
@@ -413,7 +427,8 @@ function AdminDashboard() {
           <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
             {/* Notification Bell */}
             <div className="relative notification-container">
-              <button 
+              <button
+                type="button"
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
@@ -428,69 +443,37 @@ function AdminDashboard() {
               {/* Notification Dropdown */}
               {showNotifications && (
                 <div
-                  className="notification-dropdown absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-200 z-50"
+                  className="notification-dropdown absolute right-0 mt-2 w-[min(24rem,90vw)] bg-white rounded-xl shadow-lg border border-gray-200 z-50"
                   onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                 >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <h3 className="font-semibold text-gray-800">Notifications</h3>
                     <div className="flex items-center space-x-2">
-                      {!deleteMode ? (
-                        <>
-                          <button 
-                            onClick={handleMarkAllRead}
-                            className="text-sm text-green-600 hover:text-green-700"
-                            title="Mark all as read"
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                          </button>
-                          <button 
-                            onClick={handleToggleDeleteMode}
-                            className="text-sm text-red-600 hover:text-red-700"
-                            title="Delete notifications"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                          <button 
-                            onClick={() => setShowNotifications(false)}
-                            className="text-gray-400 hover:text-gray-600"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button 
-                            type="button"
-                            onClick={handleSelectAll}
-                            className="text-sm text-gray-600 hover:text-gray-800"
-                            title="Select all"
-                          >
-                            {(notifications || []).length > 0 && (notifications || []).every(function(n) {
-                              return selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, n.id); });
-                            }) ? (
-                              <CheckSquare className="w-5 h-5" />
-                            ) : (
-                              <Square className="w-5 h-5" />
-                            )}
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={handleDeleteSelected}
-                            disabled={selectedNotifications.length === 0}
-                            className="text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
-                            title="Delete selected"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                          <button 
-                            onClick={handleToggleDeleteMode}
-                            className="text-sm text-gray-600 hover:text-gray-800"
-                            title="Cancel"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </>
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        className="text-sm text-blue-600 hover:text-blue-700"
+                        title="Mark all as read"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteSelected}
+                        disabled={selectedNotifications.length === 0}
+                        className="text-sm text-red-600 hover:text-red-700 disabled:opacity-30"
+                        title="Delete selected"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
@@ -498,29 +481,30 @@ function AdminDashboard() {
                       <p className="p-4 text-gray-500 text-center">No notifications</p>
                     ) : (
                       notifications.map((notification) => (
-                        <div 
+                        <div
                           key={notification.id}
-                          onClick={() => !deleteMode && handleNotificationItemClick(notification)}
-                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-start space-x-3 ${
+                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 flex items-start space-x-3 ${
                             !notification.read ? 'bg-blue-50' : ''
-                          } ${deleteMode ? 'cursor-default' : ''}`}
+                          }`}
                         >
-                          {deleteMode && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectNotification(notification.id);
-                              }}
-                              className="mt-1"
-                            >
-                              {selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, notification.id); }) ? (
-                                <CheckSquare className="w-5 h-5 text-green-600" />
-                              ) : (
-                                <Square className="w-5 h-5 text-gray-400" />
-                              )}
-                            </button>
-                          )}
-                          <div className="flex-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectNotification(notification.id);
+                            }}
+                            className="mt-1 shrink-0"
+                          >
+                            {selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, notification.id); }) ? (
+                              <CheckSquare className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <Square className="w-5 h-5 text-gray-400" />
+                            )}
+                          </button>
+                          <div
+                            className="flex-1 cursor-pointer"
+                            onClick={() => handleNotificationItemClick(notification)}
+                          >
                             <div className="flex items-center justify-between">
                               <h4 className={`text-sm font-medium ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
                                 {notification.title}
@@ -530,7 +514,7 @@ function AdminDashboard() {
                             <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-gray-600'}`}>
                               {notification.message}
                             </p>
-                            {!notification.read && !deleteMode && (
+                            {!notification.read && (
                               <span className="inline-block mt-2 w-2 h-2 bg-blue-500 rounded-full"></span>
                             )}
                           </div>
@@ -538,16 +522,13 @@ function AdminDashboard() {
                       ))
                     )}
                   </div>
-                  {notifications.length > 0 && !deleteMode && (
-                    <div className="p-3 border-t border-gray-200 text-center">
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
             {/* User Profile */}
-            <button 
+            <button
+              type="button"
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow hover:shadow-md transition-shadow w-full sm:w-auto justify-center"
             >
@@ -713,14 +694,16 @@ function AdminDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                             <button
-                              onClick={() => approveEnrollment(enrollment.id)}
+                              type="button"
+                              onClick={async () => { try { await approveEnrollment(enrollment.id); } catch (e) {} }}
                               className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center"
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
                             </button>
                             <button
-                              onClick={() => declineEnrollment(enrollment.id)}
+                              type="button"
+                              onClick={async () => { try { await declineEnrollment(enrollment.id); } catch (e) {} }}
                               className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center"
                             >
                               <X className="w-4 h-4 mr-1" />
@@ -748,7 +731,8 @@ function AdminDashboard() {
               <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
               Cavite State University Naic Component Enrollment Comparison
             </h3>
-            <button 
+            <button
+              type="button"
               onClick={() => setShowAnalytics(!showAnalytics)}
               className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center"
             >
@@ -897,9 +881,9 @@ function AdminDashboard() {
         {/* Batch Management - Hide when viewing archive */}
         {!viewingArchive && (
           <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-xl shadow-md p-6 mb-8 text-white">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center">
+                <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
                   <Archive className="w-7 h-7" />
                 </div>
                 <div>
@@ -910,15 +894,17 @@ function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <button 
+              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
+                <button
+                  type="button"
                   onClick={() => setShowArchiveModal(true)}
                   className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                 >
                   <History className="w-5 h-5" />
                   <span>View Archive</span>
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleNewBatch}
                   className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
                 >
@@ -942,7 +928,8 @@ function AdminDashboard() {
                   <History className="w-6 h-6 mr-2 text-green-600" />
                   Select Batch to View
                 </h3>
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowArchiveModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -955,30 +942,22 @@ function AdminDashboard() {
                 ) : (
                   <div className="space-y-3">
                     {archivedYears.sort((a, b) => b.year - a.year).map((year) => (
-                      <div key={year.year} className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                      <div key={year.year} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-lg p-4 gap-3">
                         <div>
                           <h4 className="text-lg font-semibold text-gray-800">Batch {year.year}</h4>
                           <p className="text-sm text-gray-500">{year.students} students • {year.reports} reports</p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center flex-wrap gap-2">
                           <button
+                            type="button"
                             onClick={() => handleViewBatch(year)}
                             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             View Batch
                           </button>
+
                           <button
-                            onClick={() => {
-                              setArchiveViewData(year);
-                              setShowArchiveDetails(true);
-                              setShowArchiveModal(false);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                            title="View Details"
-                          >
-                            Details
-                          </button>
-                          <button
+                            type="button"
                             onClick={() => handleDeleteArchivedBatch(year.year)}
                             className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                             title="Delete Batch"
@@ -992,7 +971,8 @@ function AdminDashboard() {
                 )}
               </div>
               <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowArchiveModal(false)}
                   className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -1012,7 +992,8 @@ function AdminDashboard() {
                   <Archive className="w-6 h-6 mr-2 text-red-600" />
                   Start New Batch
                 </h3>
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1035,22 +1016,27 @@ function AdminDashboard() {
                 </label>
                 <input
                   type="text"
+                  id="confirm-batch"
+                  name="confirmBatch"
                   value={confirmText}
                   onChange={(e) => setConfirmText(e.target.value)}
                   placeholder="Type confirm here..."
+                  autoComplete="off"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  onKeyPress={(e) => e.key === 'Enter' && confirmNewBatch()}
+                  onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmNewBatch(); } }}
                 />
               </div>
               
               <div className="flex space-x-3">
                 <button
+                  type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
                   className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={confirmNewBatch}
                   disabled={confirmText.toLowerCase() !== 'confirm'}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white rounded-lg font-medium transition-colors"
@@ -1071,6 +1057,7 @@ function AdminDashboard() {
                   Student Enrollment Details
                 </h3>
                 <button
+                  type="button"
                   onClick={() => setSelectedEnrollment(null)}
                   className="p-1 hover:bg-green-700 rounded-lg transition-colors"
                 >
@@ -1082,7 +1069,7 @@ function AdminDashboard() {
                 {/* Personal Information */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Student ID:</span> <span className="font-medium">{selectedEnrollment.studentId}</span></div>
                     <div><span className="text-gray-500">Full Name:</span> <span className="font-medium">{selectedEnrollment.fullName}</span></div>
                     <div><span className="text-gray-500">Email:</span> <span className="font-medium">{selectedEnrollment.email}</span></div>
@@ -1095,7 +1082,7 @@ function AdminDashboard() {
                 {/* Academic Information */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Academic Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Program:</span> <span className="font-medium">{selectedEnrollment.program}</span></div>
                     <div><span className="text-gray-500">Section:</span> <span className="font-medium">{selectedEnrollment.section}</span></div>
                     <div><span className="text-gray-500">Year Level:</span> <span className="font-medium">{selectedEnrollment.yearLevel}</span></div>
@@ -1106,7 +1093,7 @@ function AdminDashboard() {
                 {/* Demographic Information */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '-'}</span></div>
                     <div><span className="text-gray-500">Age:</span> <span className="font-medium">{selectedEnrollment.age}</span></div>
                     <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{selectedEnrollment.gender}</span></div>
@@ -1120,7 +1107,7 @@ function AdminDashboard() {
                 {/* Emergency Contact */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Emergency Contact</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Contact Person:</span> <span className="font-medium">{selectedEnrollment.emergencyContact}</span></div>
                     <div><span className="text-gray-500">Contact Number:</span> <span className="font-medium">{selectedEnrollment.emergencyNumber}</span></div>
                   </div>
@@ -1145,8 +1132,9 @@ function AdminDashboard() {
               {/* Action Buttons */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex space-x-3">
                 <button
-                  onClick={() => {
-                    approveEnrollment(selectedEnrollment.id);
+                  type="button"
+                  onClick={async () => {
+                    try { await approveEnrollment(selectedEnrollment.id); } catch (e) {}
                     setSelectedEnrollment(null);
                   }}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
@@ -1155,8 +1143,9 @@ function AdminDashboard() {
                   Approve
                 </button>
                 <button
-                  onClick={() => {
-                    declineEnrollment(selectedEnrollment.id);
+                  type="button"
+                  onClick={async () => {
+                    try { await declineEnrollment(selectedEnrollment.id); } catch (e) {}
                     setSelectedEnrollment(null);
                   }}
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
@@ -1165,6 +1154,7 @@ function AdminDashboard() {
                   Decline
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedEnrollment(null)}
                   className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -1184,6 +1174,7 @@ function AdminDashboard() {
                   Batch {archiveViewData.year} Archive Details
                 </h3>
                 <button
+                  type="button"
                   onClick={() => setShowArchiveDetails(false)}
                   className="p-1 hover:bg-green-700 rounded-lg transition-colors"
                 >
@@ -1195,7 +1186,7 @@ function AdminDashboard() {
                 {/* Archive Summary */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <h4 className="text-lg font-semibold text-amber-800 mb-3">Archive Summary</h4>
-                  <div className="grid grid-cols-4 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                     <div className="bg-white rounded-lg p-3">
                       <p className="text-2xl font-bold text-blue-600">{archiveViewData.students || 0}</p>
                       <p className="text-sm text-gray-600">Total Students</p>
@@ -1221,7 +1212,7 @@ function AdminDashboard() {
                     <Users className="w-5 h-5 mr-2" />
                     Student Information
                   </h4>
-                  {archiveViewData.studentDetails && archiveViewData.studentDetails.length > 0 ? (
+                  {archiveViewData.studentData && archiveViewData.studentData.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-100">
@@ -1234,19 +1225,19 @@ function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {archiveViewData.studentDetails.map((student, idx) => (
+                          {archiveViewData.studentData.map((student, idx) => (
                             <tr key={idx} className="border-b border-gray-100">
                               <td className="px-4 py-2">{student.studentId}</td>
-                              <td className="px-4 py-2">{student.fullName}</td>
+                              <td className="px-4 py-2">{student.name}</td>
                               <td className="px-4 py-2">{student.program}</td>
                               <td className="px-4 py-2">
                                 <span className={`px-2 py-1 rounded text-xs ${
-                                  student.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
-                                  student.nstpComponent === 'LTS' ? 'bg-purple-100 text-purple-700' :
-                                  student.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
+                                  student.department === 'CWTS' ? 'bg-green-100 text-green-700' :
+                                  student.department === 'LTS' ? 'bg-purple-100 text-purple-700' :
+                                  student.department === 'ROTC' ? 'bg-red-100 text-red-700' :
                                   'bg-gray-100 text-gray-700'
                                 }`}>
-                                  {student.nstpComponent}
+                                  {student.department}
                                 </span>
                               </td>
                               <td className="px-4 py-2">{student.status || 'Completed'}</td>
@@ -1266,9 +1257,9 @@ function AdminDashboard() {
                     <FileText className="w-5 h-5 mr-2" />
                     Report Details
                   </h4>
-                  {archiveViewData.reportDetails && archiveViewData.reportDetails.length > 0 ? (
+                  {archiveViewData.reportData && archiveViewData.reportData.length > 0 ? (
                     <div className="space-y-3">
-                      {archiveViewData.reportDetails.map((report, idx) => (
+                      {archiveViewData.reportData.map((report, idx) => (
                         <div key={idx} className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h5 className="font-medium text-gray-800">{report.title}</h5>
@@ -1316,12 +1307,14 @@ function AdminDashboard() {
               {/* Action Buttons */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex space-x-3">
                 <button
+                  type="button"
                   onClick={() => setShowArchiveDetails(false)}
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
                   Close
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowArchiveDetails(false);
                     handleBackToCurrent();

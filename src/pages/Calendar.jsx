@@ -241,16 +241,15 @@ function Calendar() {
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
-            <CalendarIcon className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-lg">National Service Training Program</h1>
               <p className="text-xs text-green-200">Calendar</p>
@@ -259,47 +258,53 @@ function Calendar() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard')}
+          <button
+            type="button"
+            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') || 
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard') 
+              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
+              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
               ? 'bg-green-700' : 'hover:bg-green-700/50'
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
+          <button
+            type="button"
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
+          <button
+            type="button"
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
+          <button
+            type="button"
+            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
+          <button
+            type="button"
+            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
             <CalendarIcon className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
+          <button
+            type="button"
+            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <User className="w-5 h-5" />
@@ -308,7 +313,8 @@ function Calendar() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -319,11 +325,14 @@ function Calendar() {
       </aside>
 
       {/* Main Content */}
-      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
+      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {notification.message}
+          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            <span className="flex-1 text-sm">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -333,7 +342,7 @@ function Calendar() {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
@@ -346,7 +355,8 @@ function Calendar() {
             </div>
           </div>
           {isAdmin && (
-            <button 
+            <button
+              type="button"
               onClick={() => setShowAddEventModal(true)}
               className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
             >
@@ -364,12 +374,14 @@ function Calendar() {
             </h2>
             <div className="flex items-center space-x-2">
               <button
+                type="button"
                 onClick={() => changeMonth(-1)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ChevronLeftIcon className="w-5 h-5" />
               </button>
               <button
+                type="button"
                 onClick={() => changeMonth(1)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -378,39 +390,48 @@ function Calendar() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-medium text-gray-600 text-sm py-2">
-                {day}
+          <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
+            {[
+              { full: 'Sun', short: 'S' },
+              { full: 'Mon', short: 'M' },
+              { full: 'Tue', short: 'T' },
+              { full: 'Wed', short: 'W' },
+              { full: 'Thu', short: 'T' },
+              { full: 'Fri', short: 'F' },
+              { full: 'Sat', short: 'S' },
+            ].map(day => (
+              <div key={day.full} className="text-center font-medium text-gray-600 text-xs sm:text-sm py-2">
+                <span className="sm:hidden">{day.short}</span>
+                <span className="hidden sm:inline">{day.full}</span>
               </div>
             ))}
-            
+
             {getDaysInMonth(currentDate).map((day, index) => {
               const dayEvents = day ? getEventsForDate(day) : [];
-              const isToday = day === new Date().getDate() && 
-                             currentDate.getMonth() === new Date().getMonth() && 
+              const isToday = day === new Date().getDate() &&
+                             currentDate.getMonth() === new Date().getMonth() &&
                              currentDate.getFullYear() === new Date().getFullYear();
-              
+
               return (
                 <div
                   key={index}
-                  className={`min-h-[100px] p-2 border rounded-lg cursor-pointer transition-colors ${
+                  className={`min-h-[36px] sm:min-h-[80px] md:min-h-[100px] p-0.5 sm:p-2 border rounded sm:rounded-lg cursor-pointer transition-colors ${
                     day ? 'hover:bg-gray-50' : ''
                   } ${isToday ? 'bg-blue-50 border-blue-300' : 'border-gray-200'}`}
                   onClick={() => day && setSelectedDate(day)}
                 >
                   {day && (
                     <>
-                      <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                      <div className={`text-xs sm:text-sm font-medium mb-0 sm:mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                         {day}
                       </div>
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 3).map((event, idx) => (
+                      <div className="space-y-0.5 hidden sm:block">
+                        {dayEvents.slice(0, 2).map((event, idx) => (
                           <div
                             key={idx}
-                            className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 ${
-                              event.type === 'holiday' 
-                                ? 'bg-red-100 text-red-700' 
+                            className={`text-xs p-0.5 sm:p-1 rounded truncate cursor-pointer hover:opacity-80 ${
+                              event.type === 'holiday'
+                                ? 'bg-red-100 text-red-700'
                                 : 'bg-green-100 text-green-700'
                             }`}
                             title={event.title}
@@ -418,12 +439,24 @@ function Calendar() {
                             {event.title}
                           </div>
                         ))}
-                        {dayEvents.length > 3 && (
+                        {dayEvents.length > 2 && (
                           <div className="text-xs text-gray-500">
-                            +{dayEvents.length - 3} more
+                            +{dayEvents.length - 2} more
                           </div>
                         )}
                       </div>
+                      {dayEvents.length > 0 && (
+                        <div className="sm:hidden mt-0.5 flex flex-wrap gap-0.5">
+                          {dayEvents.slice(0, 2).map((event, idx) => (
+                            <span
+                              key={idx}
+                              className={`w-1.5 h-1.5 rounded-full inline-block ${
+                                event.type === 'holiday' ? 'bg-red-400' : 'bg-green-400'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -453,6 +486,7 @@ function Calendar() {
                     </div>
                     {event.createdBy && isAdmin && (
                       <button
+                        type="button"
                         onClick={() => handleDeleteEvent(event.id)}
                         className="text-red-500 hover:text-red-700 text-sm"
                       >
@@ -475,7 +509,8 @@ function Calendar() {
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-800">Add Event</h3>
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowAddEventModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -487,16 +522,21 @@ function Calendar() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
                   <input
                     type="text"
+                    id="event-title"
+                    name="eventTitle"
                     value={newEvent.title}
                     onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                     placeholder="Enter event title"
+                    autoComplete="off"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
                   <input
                     type="date"
+                    id="event-date"
+                    name="eventDate"
                     value={newEvent.date}
                     onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
@@ -504,13 +544,15 @@ function Calendar() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowAddEventModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleAddEvent}
                   disabled={!newEvent.title.trim() || !newEvent.date}
                   className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"

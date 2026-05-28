@@ -27,11 +27,16 @@ async function apiCall(endpoint, options) {
   var response = await fetch(url, config);
 
   if (!response.ok) {
-    var error = await response.json();
-    if ((response.status == 403 || response.status == 401) && token) {
+    var error = await response.json().catch(function() { return {}; });
+    if ((response.status === 403 || response.status === 401) && token) {
       localStorage.removeItem('nstp_token');
       localStorage.removeItem('nstp_user');
-      window.location.href = import.meta.env.BASE_URL || '/';
+      // Dispatch event so App.jsx handles logout via React Router (no hard page reload).
+      // The flag prevents multiple polls from firing this more than once per session.
+      if (!window.__nstp_session_expired__) {
+        window.__nstp_session_expired__ = true;
+        window.dispatchEvent(new CustomEvent('nstp-session-expired'));
+      }
     }
     throw new Error(error.message || 'API request failed');
   }
@@ -146,8 +151,10 @@ export function createGroup(name, participants) {
   });
 }
 
-export function getMessages(id) {
-  return apiCall('/conversations/' + id + '/messages');
+export function getMessages(id, limit) {
+  var url = '/conversations/' + id + '/messages';
+  if (limit) url = url + '?limit=' + limit;
+  return apiCall(url);
 }
 
 export function sendMessage(id, data) {

@@ -1,14 +1,14 @@
 import { useAuth } from '../App';
-import { 
-  LayoutDashboard, Users, FileText, MessageSquare, 
+import {
+  LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, Calendar, Plus, Search, Filter,
-  Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu
+  Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu, Archive, RotateCcw
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 function StudentManagement() {
-  const { user, logout, allUsers, students, addStudent, updateStudent, deleteStudent } = useAuth();
+  const { user, logout, allUsers, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
@@ -49,89 +49,63 @@ function StudentManagement() {
     emergencyNumber: ''
   });
 
-  const handleAddStudent = () => {
-    // Validate all required fields
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+
+  const handleAddStudent = async () => {
     const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'address', 'emergencyName', 'emergencyNumber'];
     const fieldLabels = {
-      studentId: 'Student ID',
-      name: 'Full Name',
-      email: 'Email',
-      department: 'Department',
-      year: 'Year Level',
-      program: 'Program',
-      section: 'Section',
-      gender: 'Sex',
-      birthMonth: 'Birth Month',
-      birthDay: 'Birth Day',
-      birthYear: 'Birth Year',
-      age: 'Age',
-      civilStatus: 'Civil Status',
-      contactNumber: 'Contact Number',
-      address: 'Address',
-      emergencyName: 'Emergency Contact Name',
-      emergencyNumber: 'Emergency Contact Number'
+      studentId: 'Student ID', name: 'Full Name', email: 'Email', department: 'Department',
+      year: 'Year Level', program: 'Program', section: 'Section', gender: 'Sex',
+      birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year', age: 'Age',
+      civilStatus: 'Civil Status', contactNumber: 'Contact Number', address: 'Address',
+      emergencyName: 'Emergency Contact Name', emergencyNumber: 'Emergency Contact Number'
     };
-    
+
     for (const field of requiredFields) {
       if (!formData[field] || formData[field].toString().trim() === '') {
         setNotification({ type: 'error', message: `Please fill in the ${fieldLabels[field]} field.` });
-        setTimeout(() => setNotification(null), 3000);
         return;
       }
     }
-    
-    // Validate studentId is 9 digits
     if (formData.studentId.length !== 9) {
       setNotification({ type: 'error', message: 'Student ID must be exactly 9 digits.' });
-      setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
-    // Validate contact numbers are 11 digits
     if (formData.contactNumber.length !== 11) {
       setNotification({ type: 'error', message: 'Contact Number must be exactly 11 digits.' });
-      setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
     if (formData.emergencyNumber.length !== 11) {
       setNotification({ type: 'error', message: 'Emergency Contact Number must be exactly 11 digits.' });
-      setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
-    // Validate email contains @
     if (!formData.email.includes('@')) {
       setNotification({ type: 'error', message: 'Email must contain @ symbol.' });
-      setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
-    addStudent(formData);
-    setShowAddModal(false);
-    setCurrentPage(1); // Reset to page 1 so new student is visible
-    setNotification({ type: 'success', message: 'Student added successfully!' });
-    setTimeout(() => setNotification(null), 3000);
-    setFormData({
-      studentId: '',
-      name: '',
-      email: '',
-      department: 'CWTS',
-      year: '',
-      program: '',
-      section: '',
-      gender: '',
-      birthMonth: '',
-      birthDay: '',
-      birthYear: '',
-      age: '',
-      civilStatus: '',
-      contactNumber: '',
-      address: '',
-      bloodType: '',
-      emergencyName: '',
-      emergencyNumber: ''
-    });
+
+    setIsAddingStudent(true);
+    try {
+      await addStudent(formData);
+      // Only close the modal AFTER the API call succeeds
+      setShowAddModal(false);
+      setCurrentPage(1);
+      setNotification({ type: 'success', message: 'Student added successfully!' });
+      setFormData({
+        studentId: '', name: '', email: '', department: 'CWTS', year: '', program: '',
+        section: '', gender: '', birthMonth: '', birthDay: '', birthYear: '', age: '',
+        civilStatus: '', contactNumber: '', address: '', bloodType: '',
+        emergencyName: '', emergencyNumber: ''
+      });
+    } catch (error) {
+      // API failed — keep the modal open so the user doesn't lose their data
+      const msg = error?.message || 'Failed to add student. Please try again.';
+      setNotification({ type: 'error', message: msg });
+      setTimeout(() => setNotification(null), 5000);
+    } finally {
+      setIsAddingStudent(false);
+    }
   };
 
   const handleLogout = () => {
@@ -139,22 +113,27 @@ function StudentManagement() {
     navigate('/login');
   };
 
+  // Use archived student data when in archive view, otherwise live data
+  const sourceStudents = viewingArchive && archiveViewData?.studentData
+    ? archiveViewData.studentData
+    : students;
+
   // Filter students based on search and department - memoized for performance
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    return sourceStudents.filter(student => {
       if (!student || !student.name || !student.studentId) return false;
-      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDept = filterDept === 'All' || student.department === filterDept;
-      
+
       // Instructors only see their department students
       if (!isAdmin && user?.department) {
         return matchesSearch && student.department === user.department;
       }
-      
+
       return matchesSearch && matchesDept;
     });
-  }, [students, searchTerm, filterDept, isAdmin, user?.department]);
+  }, [sourceStudents, searchTerm, filterDept, isAdmin, user?.department]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -163,20 +142,30 @@ function StudentManagement() {
   const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
 
   // Reset to page 1 when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterDept]);
 
   const handleEditStudent = async () => {
+    setIsEditingStudent(true);
     try {
       await updateStudent(selectedStudent.id, formData);
       setShowEditModal(false);
       setSelectedStudent(null);
+      setFormData({
+        studentId: '', name: '', email: '', department: 'CWTS', year: '', program: '',
+        section: '', gender: '', birthMonth: '', birthDay: '', birthYear: '', age: '',
+        civilStatus: '', contactNumber: '', address: '', bloodType: '', height: '', weight: '',
+        facebookAccount: '', emergencyName: '', emergencyNumber: ''
+      });
       setNotification({ type: 'success', message: 'Student updated successfully!' });
+      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       setNotification({ type: 'error', message: 'Failed to update student. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsEditingStudent(false);
     }
-    setTimeout(() => setNotification(null), 3000);
   };
 
   const handleDeleteStudent = (id) => {
@@ -258,16 +247,15 @@ function StudentManagement() {
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
-            <GraduationCap className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-lg">Cavite State University Naic</h1>
               <p className="text-xs text-green-200">{isAdmin ? 'Student' : user?.department + ' Instructor'}</p>
@@ -276,48 +264,54 @@ function StudentManagement() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') || 
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard') 
-              ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
+            disabled={viewingArchive}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
           >
             <User className="w-5 h-5" />
             <span>Profile</span>
@@ -325,7 +319,8 @@ function StudentManagement() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button
+            type="button"
             onClick={() => { handleLogout(); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -336,11 +331,35 @@ function StudentManagement() {
       </aside>
 
       {/* Main Content */}
-      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
+      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        {/* Archive Banner */}
+        {viewingArchive && archiveViewData && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
+              <div>
+                <h2 className="text-base font-bold text-amber-800">Previous Report — Batch {archiveViewData.year}</h2>
+                <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 shrink-0"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Back to Current</span>
+            </button>
+          </div>
+        )}
+
         {/* Notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {notification.message}
+          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            <span className="flex-1 text-sm">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -350,7 +369,7 @@ function StudentManagement() {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
@@ -361,9 +380,12 @@ function StudentManagement() {
             </div>
           </div>
           {isAdmin && (
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
+            <button
+              type="button"
+              onClick={() => !viewingArchive && setShowAddModal(true)}
+              disabled={viewingArchive}
+              title={viewingArchive ? 'Exit archive view to add students' : ''}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white ${viewingArchive ? 'bg-green-700/40 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
             >
               <Plus className="w-5 h-5" />
               <span>Add Student</span>
@@ -374,14 +396,17 @@ function StudentManagement() {
         {/* Filters */}
         <div className="bg-white p-4 rounded-xl shadow-md mb-6">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
+                  id="student-search"
+                  name="studentSearch"
                   placeholder="Search by name or student ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  autoComplete="off"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 />
               </div>
@@ -390,6 +415,8 @@ function StudentManagement() {
               <div className="flex items-center space-x-2">
                 <Filter className="w-5 h-5 text-gray-500" />
                 <select
+                  id="filter-dept"
+                  name="filterDept"
                   value={filterDept}
                   onChange={(e) => setFilterDept(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
@@ -412,9 +439,9 @@ function StudentManagement() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program (ROTC/LTS/CWTS)</th>
+                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
                   {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
@@ -432,10 +459,10 @@ function StudentManagement() {
                         <p className="text-sm text-gray-500">{student.email}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.section || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.year}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -446,17 +473,21 @@ function StudentManagement() {
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            onClick={() => openEditModal(student)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Edit Student"
+                          <button
+                            type="button"
+                            onClick={() => !viewingArchive && openEditModal(student)}
+                            disabled={viewingArchive}
+                            title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
+                            className={`p-1 rounded ${viewingArchive ? 'text-blue-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'}`}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteStudent(student.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete Student"
+                          <button
+                            type="button"
+                            onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
+                            disabled={viewingArchive}
+                            title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
+                            className={`p-1 rounded ${viewingArchive ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -479,6 +510,7 @@ function StudentManagement() {
         {totalPages > 1 && (
           <div className="flex items-center justify-center space-x-2 mt-6">
             <button
+              type="button"
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -489,6 +521,7 @@ function StudentManagement() {
               Page {currentPage} of {totalPages}
             </span>
             <button
+              type="button"
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -501,7 +534,21 @@ function StudentManagement() {
         {/* Add Student Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div
+              className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
+                if (e.key === 'Escape') { e.preventDefault(); setShowAddModal(false); }
+                if (e.key === 'Tab') {
+                  const focusable = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea'));
+                  if (!focusable.length) return;
+                  const first = focusable[0], last = focusable[focusable.length - 1];
+                  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+              }}
+            >
               <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Student</h3>
               <div className="space-y-4">
                 <div>
@@ -545,8 +592,8 @@ function StudentManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Home Address <span className="text-red-500">*</span></label>
                   <input
                     type="text"
-                    value={formData.homeAddress}
-                    onChange={(e) => setFormData({...formData, homeAddress: e.target.value})}
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                     required
                   />
@@ -668,7 +715,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Age, Civil Status, Sex */}
-                  <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
                       <input
@@ -826,17 +873,20 @@ function StudentManagement() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleAddStudent}
-                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors"
+                  disabled={isAddingStudent}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-800 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg transition-colors"
                 >
-                  Add Student
+                  {isAddingStudent ? 'Adding...' : 'Add Student'}
                 </button>
               </div>
             </div>
@@ -846,14 +896,14 @@ function StudentManagement() {
         {/* View Student Modal */}
         {showViewModal && viewStudent && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
               <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
                 <h3 className="text-lg font-bold flex items-center">
                   <Users className="w-5 h-5 mr-2" />
                   Student Information
                 </h3>
-                <button onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors">
+                <button type="button" onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -862,7 +912,7 @@ function StudentManagement() {
                 {/* Personal Information Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Student ID:</span> <span className="font-medium">{viewStudent.studentId}</span></div>
                     <div><span className="text-gray-500">Full Name:</span> <span className="font-medium">{viewStudent.name}</span></div>
                     <div><span className="text-gray-500">Email:</span> <span className="font-medium">{viewStudent.email || '-'}</span></div>
@@ -875,7 +925,7 @@ function StudentManagement() {
                 {/* Academic Information Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Academic Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Program:</span> <span className="font-medium">{viewStudent.program || '-'}</span></div>
                     <div><span className="text-gray-500">Section:</span> <span className="font-medium">{viewStudent.section || '-'}</span></div>
                     <div><span className="text-gray-500">Year Level:</span> <span className="font-medium">{viewStudent.year || '-'}</span></div>
@@ -886,7 +936,7 @@ function StudentManagement() {
                 {/* Demographic Information Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</span></div>
                     <div><span className="text-gray-500">Age:</span> <span className="font-medium">{viewStudent.age || '-'}</span></div>
                     <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{viewStudent.gender || '-'}</span></div>
@@ -900,7 +950,7 @@ function StudentManagement() {
                 {/* Emergency Contact Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Emergency Contact</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div><span className="text-gray-500">Contact Person:</span> <span className="font-medium">{viewStudent.emergencyContact || '-'}</span></div>
                     <div><span className="text-gray-500">Contact Number:</span> <span className="font-medium">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</span></div>
                   </div>
@@ -925,7 +975,8 @@ function StudentManagement() {
 
               {/* Sticky Footer */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
-                <button 
+                <button
+                  type="button"
                   onClick={closeViewModal}
                   className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -937,7 +988,21 @@ function StudentManagement() {
         )}
         {showEditModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div
+              className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
+                if (e.key === 'Escape') { e.preventDefault(); setShowEditModal(false); }
+                if (e.key === 'Tab') {
+                  const focusable = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea'));
+                  if (!focusable.length) return;
+                  const first = focusable[0], last = focusable[focusable.length - 1];
+                  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+                  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+                }
+              }}
+            >
               <h3 className="text-xl font-bold text-gray-800 mb-4">Edit Student</h3>
               <div className="space-y-4">
                 {/* Basic Information */}
@@ -1088,7 +1153,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Age, Civil Status, Sex, Height */}
-                  <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
                       <input
@@ -1231,17 +1296,20 @@ function StudentManagement() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button 
+                <button
+                  type="button"
                   onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
+                  type="button"
                   onClick={handleEditStudent}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  disabled={isEditingStudent}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg transition-colors"
                 >
-                  Save Changes
+                  {isEditingStudent ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>

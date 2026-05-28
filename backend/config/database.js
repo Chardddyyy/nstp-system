@@ -4,7 +4,8 @@ const { getDbConfig } = require('./dbEnv');
 const pool = mysql.createPool({
   ...getDbConfig(),
   waitForConnections: true,
-  connectionLimit: 10
+  connectionLimit: 25,
+  queueLimit: 0
 });
 
 module.exports = pool;

@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS students (
   bloodType VARCHAR(10),
   emergencyContact VARCHAR(255),
   emergencyNumber VARCHAR(50),
+  profilePicture TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -54,7 +55,7 @@ CREATE TABLE IF NOT EXISTS reports (
   id INT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  department VARCHAR(100),
+  department ENUM('ROTC', 'CWTS', 'LTS', 'NSTP Office'),
   status ENUM('Draft', 'Submitted', 'Reviewed') DEFAULT 'Draft',
   due_date DATE,
   created_by INT,
@@ -83,7 +84,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   group_name VARCHAR(255) NULL,
   created_by INT NULL,
   last_message TEXT,
-  last_message_time TIMESTAMP,
+  last_message_time TIMESTAMP NULL,
   unread_count INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (participant_1_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -91,6 +92,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Conversation participants (for group chats)
 CREATE TABLE IF NOT EXISTS conversation_participants (
   conversation_id VARCHAR(255) NOT NULL,
   user_id INT NOT NULL,
@@ -106,17 +108,18 @@ CREATE TABLE IF NOT EXISTS messages (
   conversation_id VARCHAR(255) NOT NULL,
   sender_id INT NOT NULL,
   text TEXT,
-  type ENUM('text', 'image', 'file', 'voice', 'system', 'deleted') DEFAULT 'text',
-  image_url TEXT,
-  file_url TEXT,
+  type VARCHAR(50) DEFAULT 'text',
+  image_url LONGTEXT,
+  file_url LONGTEXT,
   file_name VARCHAR(255),
-  audio_url TEXT,
-  duration VARCHAR(20),
+  audio_url LONGTEXT,
+  duration VARCHAR(50),
   reactions JSON,
   edited BOOLEAN DEFAULT FALSE,
+  deleted_snapshot JSON,
+  deleted_at TIMESTAMP NULL,
   deleted_for JSON,
   deleted_for_everyone BOOLEAN DEFAULT FALSE,
-  deleted_at TIMESTAMP NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
   FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
@@ -159,10 +162,53 @@ CREATE TABLE IF NOT EXISTS enrollments (
   FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Insert default users (plain text passwords)
+-- Calls table (voice/video)
+CREATE TABLE IF NOT EXISTS calls (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  conversation_id VARCHAR(255) NOT NULL,
+  caller_id INT NOT NULL,
+  receiver_id INT NOT NULL,
+  call_type ENUM('voice', 'video') DEFAULT 'voice',
+  status ENUM('ringing', 'connected', 'ended', 'declined', 'missed') DEFAULT 'ringing',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  connected_at TIMESTAMP NULL,
+  ended_at TIMESTAMP NULL,
+  duration INT DEFAULT 0,
+  sdp_offer TEXT,
+  sdp_answer TEXT,
+  ice_candidates JSON,
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (caller_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Archived years (batch management)
+CREATE TABLE IF NOT EXISTS archived_years (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  year INT NOT NULL,
+  students INT DEFAULT 0,
+  reports INT DEFAULT 0,
+  archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  data JSON,
+  UNIQUE KEY unique_year (year)
+);
+
+-- Current batch tracker
+CREATE TABLE IF NOT EXISTS current_batch (
+  id INT PRIMARY KEY DEFAULT 1,
+  year INT NOT NULL,
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Default users
 INSERT INTO users (id, email, password, role, name, department, avatar) VALUES
 (1, 'admin@cvsu.edu.ph', 'admin123', 'admin', 'Admin User', 'NSTP Office', 'default'),
 (2, 'cwts@cvsu.edu.ph', 'cwts123', 'instructor', 'CWTS Instructor', 'CWTS', 'default'),
 (3, 'lts@cvsu.edu.ph', 'lts123', 'instructor', 'LTS Instructor', 'LTS', 'default'),
 (4, 'rotc@cvsu.edu.ph', 'rotc123', 'instructor', 'ROTC Instructor', 'ROTC', 'default')
+ON DUPLICATE KEY UPDATE id=id;
+
+-- Default batch year
+INSERT INTO current_batch (id, year) VALUES (1, 2025)
 ON DUPLICATE KEY UPDATE id=id;

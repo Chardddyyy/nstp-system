@@ -49,20 +49,29 @@ function Profile() {
     navigate('/login');
   };
 
-  const handleSave = () => {
-    updateUser({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      bio: formData.bio,
-      avatar: formData.avatar,
-      profilePicture: formData.profilePicture
-    });
-    
-    setIsEditing(false);
-    setShowAvatarSelector(false);
-    setNotification({ type: 'success', message: 'Profile updated successfully!' });
-    setTimeout(() => setNotification(null), 3000);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateUser({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        bio: formData.bio,
+        avatar: formData.avatar,
+        profilePicture: formData.profilePicture
+      });
+      setIsEditing(false);
+      setShowAvatarSelector(false);
+      setNotification({ type: 'success', message: 'Profile updated successfully!' });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to save profile. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleProfilePictureChange = (e) => {
@@ -129,23 +138,31 @@ function Profile() {
     );
   };
 
-  const handlePasswordChange = () => {
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handlePasswordChange = async () => {
     if (formData.newPassword !== formData.confirmPassword) {
       setNotification({ type: 'error', message: 'Passwords do not match!' });
       setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
     if (formData.newPassword.length < 6) {
       setNotification({ type: 'error', message: 'Password must be at least 6 characters!' });
       setTimeout(() => setNotification(null), 3000);
       return;
     }
-    
-    changePassword(formData.newPassword);
-    setNotification({ type: 'success', message: 'Password changed successfully!' });
-    setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
-    setTimeout(() => setNotification(null), 3000);
+    setIsChangingPassword(true);
+    try {
+      await changePassword(formData.newPassword);
+      setNotification({ type: 'success', message: 'Password changed successfully!' });
+      setTimeout(() => setNotification(null), 3000);
+      setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Failed to change password. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const getDepartmentColor = () => {
@@ -163,16 +180,15 @@ function Profile() {
       {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-green-700">
           <div className="flex items-center space-x-3">
-            <User className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-lg">National Service Training Program</h1>
               <p className="text-xs text-green-200">My Profile</p>
@@ -181,47 +197,53 @@ function Profile() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard')}
+          <button
+            type="button"
+            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') || 
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard') 
+              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
+              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
               ? 'bg-green-700' : 'hover:bg-green-700/50'
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
+          <button
+            type="button"
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
+          <button
+            type="button"
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
+          <button
+            type="button"
+            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
+          <button
+            type="button"
+            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
+          <button
+            type="button"
+            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
             <User className="w-5 h-5" />
@@ -230,7 +252,8 @@ function Profile() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button
+            type="button"
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -241,11 +264,14 @@ function Profile() {
       </aside>
 
       {/* Main Content */}
-      <main className="transition-all duration-300 p-4 lg:p-8 lg:ml-64">
+      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Notification */}
         {notification && (
-          <div className={`fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-            {notification.message}
+          <div className={`fixed top-4 right-4 max-w-xs px-4 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3 ${notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            <span className="flex-1 text-sm">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -255,7 +281,7 @@ function Profile() {
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg lg:hidden shrink-0"
+              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6 text-gray-700" />
@@ -266,11 +292,13 @@ function Profile() {
             </div>
           </div>
           <button
+            type="button"
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center ${isEditing ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            disabled={isSaving}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-wait ${isEditing ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
           >
             {isEditing ? <Save className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            <span>{isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+            <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
           </button>
         </div>
 
@@ -285,14 +313,16 @@ function Profile() {
                   </div>
                   {isEditing && (
                     <div className="absolute bottom-0 right-0 flex space-x-1">
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => setShowAvatarSelector(!showAvatarSelector)}
                         className="w-10 h-10 bg-yellow-500 hover:bg-yellow-600 rounded-full flex items-center justify-center text-white transition-colors"
                         title="Select Avatar"
                       >
                         <User className="w-5 h-5" />
                       </button>
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors"
                         title="Upload Photo"
@@ -323,6 +353,7 @@ function Profile() {
                   <div className="flex justify-center space-x-3">
                     {AVATAR_OPTIONS.map((avatar) => (
                       <button
+                        type="button"
                         key={avatar.id}
                         onClick={() => handleAvatarSelect(avatar.id)}
                         className={`w-12 h-12 ${avatar.color} rounded-full flex items-center justify-center text-2xl transition-transform hover:scale-110 ${formData.avatar === avatar.id ? 'ring-2 ring-offset-2 ring-green-500' : ''}`}
@@ -365,9 +396,12 @@ function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                   <input
                     type="text"
+                    id="profile-name"
+                    name="name"
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
                     disabled={!isEditing}
+                    autoComplete="name"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
                   />
                 </div>
@@ -375,9 +409,12 @@ function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                   <input
                     type="email"
+                    id="profile-email"
+                    name="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     disabled={!isEditing}
+                    autoComplete="email"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
                   />
                 </div>
@@ -387,10 +424,13 @@ function Profile() {
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="tel"
+                      id="profile-phone"
+                      name="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       disabled={!isEditing}
                       placeholder="+63 912 345 6789"
+                      autoComplete="tel"
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
                     />
                   </div>
@@ -399,8 +439,11 @@ function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
                   <input
                     type="text"
+                    id="profile-department"
+                    name="department"
                     value={user?.department}
                     disabled
+                    autoComplete="off"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
                   />
                 </div>
@@ -408,6 +451,8 @@ function Profile() {
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Bio / About</label>
                 <textarea
+                  id="profile-bio"
+                  name="bio"
                   value={formData.bio}
                   onChange={(e) => setFormData({...formData, bio: e.target.value})}
                   disabled={!isEditing}
@@ -431,10 +476,13 @@ function Profile() {
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      id="current-password"
+                      name="currentPassword"
                       value={formData.currentPassword}
                       onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       placeholder="Enter current password"
+                      autoComplete="current-password"
                     />
                     <button
                       type="button"
@@ -450,28 +498,36 @@ function Profile() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                     <input
                       type="password"
+                      id="new-password"
+                      name="newPassword"
                       value={formData.newPassword}
                       onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       placeholder="Enter new password"
+                      autoComplete="new-password"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
                     <input
                       type="password"
+                      id="confirm-password"
+                      name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       placeholder="Confirm new password"
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
-                <button 
+                <button
+                  type="button"
                   onClick={handlePasswordChange}
-                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition-colors"
+                  disabled={isChangingPassword}
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
-                  Update Password
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </div>

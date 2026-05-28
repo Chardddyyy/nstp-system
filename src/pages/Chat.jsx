@@ -1,4 +1,5 @@
 import { useAuth } from '../App';
+import { callsAPI } from '../services/api';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare, 
   LogOut, User, ChevronLeft, ChevronRight, Send, Search,
@@ -61,7 +62,10 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
 };
 
 function Chat() {
-  const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations, editMessage, deleteMessage, addReaction, clearMessages } = useAuth();
+  const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations,
+          editMessage, deleteMessage, addReaction, clearMessages,
+          incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
+          answerIncomingCall, declineIncomingCall } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const messagesEndRef = useRef(null);
@@ -87,6 +91,7 @@ function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const recordingIntervalRef = useRef(null);
+  const recordingDurationRef = useRef(0);
   const fileInputRef = useRef(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesContainerRef = useRef(null);
@@ -148,7 +153,7 @@ function Chat() {
       // Default group avatar
       const groupName = conversation.groupName || conversation.group_name || conversation.name || 'G';
       return (
-        <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
           {groupName.charAt(0).toUpperCase()}
         </div>
       );
@@ -156,36 +161,33 @@ function Chat() {
 
     // Show combined avatars for group chats - display up to 3 avatars in a cluster
     return (
-      <div className="w-10 h-10 relative flex items-center justify-center">
+      <div className="w-14 h-14 relative flex items-center justify-center">
         {participantUsers.slice(0, 3).map((participant, index) => {
-          // Position avatars in a triangular/cluster formation
           const positions = [
-            { top: '0px', left: '2px' },    // top left
-            { top: '0px', right: '2px' },   // top right  
-            { bottom: '0px', left: '50%', transform: 'translateX(-50%)' } // bottom center
+            { top: '0px', left: '3px' },
+            { top: '0px', right: '3px' },
+            { bottom: '0px', left: '50%', transform: 'translateX(-50%)' }
           ];
           const pos = positions[index] || { top: '0px', left: '0px' };
-          
-          // Check if participant has profile picture
+
           if (participant?.profilePicture) {
             return (
               <img
                 key={participant?.id || index}
                 src={participant.profilePicture}
                 alt={participant?.name || 'User'}
-                className="absolute w-5 h-5 rounded-full border border-white shadow-sm object-cover"
+                className="absolute w-7 h-7 rounded-full border-2 border-white shadow-sm object-cover"
                 style={pos}
                 title={participant?.name || 'User'}
               />
             );
           }
-          
-          // Fallback to colored avatar with icon
+
           const avatar = AVATAR_OPTIONS[participant?.avatar || 'default'] || AVATAR_OPTIONS.default;
           return (
             <div
               key={participant?.id || index}
-              className={`absolute w-5 h-5 ${avatar.color} rounded-full flex items-center justify-center text-[10px] border border-white shadow-sm`}
+              className={`absolute w-7 h-7 ${avatar.color} rounded-full flex items-center justify-center text-xs border-2 border-white shadow-sm`}
               style={pos}
               title={participant?.name || 'User'}
             >
@@ -194,7 +196,7 @@ function Chat() {
           );
         })}
         {(conversation.participants?.length > 3 || conversation.participantDetails?.length > 3) && (
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center text-[9px] text-white border border-white shadow-sm">
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center text-[9px] text-white border border-white shadow-sm">
             +{(conversation.participants?.length || conversation.participantDetails?.length || 0) - 3}
           </div>
         )}
@@ -228,10 +230,10 @@ function Chat() {
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file && activeConversation) {
-      // Limit file size to 50MB for server compatibility
-      const maxSize = 50 * 1024 * 1024; // 50MB
+      // 150MB client limit (base64 adds ~33% → ~200MB on wire, matches server limit)
+      const maxSize = 150 * 1024 * 1024;
       if (file.size > maxSize) {
-        addNotification('File too large. Maximum 50MB allowed.', 'error');
+        addNotification('File too large. Maximum 150MB allowed.', 'error');
         e.target.value = '';
         return;
       }
@@ -275,31 +277,24 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const imageData = event.target.result;
-          
-          // Compress image before sending
-          addNotification('Compressing image...', 'info');
-          const compressedImage = await compressImage(imageData, 800, 800, 0.7);
-          
-          await sendMessage(activeConversation.id, {
-            sender: 'me',
-            text: '📸 Photo',
-            type: 'image',
-            imageUrl: compressedImage,
-            created_at: new Date().toISOString(),
-            timestamp: new Date().toISOString()
-          });
-          addNotification('Photo sent!', 'success');
-        };
-        reader.onerror = () => {
-          addNotification('Failed to read image', 'error');
-        };
-        reader.readAsDataURL(file);
+        addNotification('Compressing image...', 'info');
+        const imageData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target.result);
+          reader.onerror = () => reject(new Error('Failed to read image'));
+          reader.readAsDataURL(file);
+        });
+        const compressedImage = await compressImage(imageData, 800, 800, 0.7);
+        await sendMessage(activeConversation.id, {
+          sender: 'me',
+          text: '📸 Photo',
+          type: 'image',
+          imageUrl: compressedImage,
+        });
+        addNotification('Photo sent!', 'success');
       } catch (error) {
-        console.error('Image compression error:', error);
-        addNotification('Failed to compress image', 'error');
+        console.error('Gallery image send error:', error);
+        addNotification('Failed to send image. Please try again.', 'error');
       }
     }
     e.target.value = '';
@@ -370,26 +365,24 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const imageData = event.target.result;
-          
-          // Compress image before sending
-          addNotification('Compressing photo...', 'info');
-          const compressedImage = await compressImage(imageData, 800, 800, 0.7);
-          
-          await sendMessage(activeConversation.id, {
-            sender: 'me',
-            text: '📸 Camera Photo',
-            type: 'image',
-            imageUrl: compressedImage
-          });
-          addNotification('Photo sent!', 'success');
-        };
-        reader.readAsDataURL(file);
+        addNotification('Compressing photo...', 'info');
+        const imageData = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target.result);
+          reader.onerror = () => reject(new Error('Failed to read photo'));
+          reader.readAsDataURL(file);
+        });
+        const compressedImage = await compressImage(imageData, 800, 800, 0.7);
+        await sendMessage(activeConversation.id, {
+          sender: 'me',
+          text: '📸 Camera Photo',
+          type: 'image',
+          imageUrl: compressedImage
+        });
+        addNotification('Photo sent!', 'success');
       } catch (error) {
-        console.error('Camera capture compression error:', error);
-        addNotification('Failed to compress photo', 'error');
+        console.error('Camera capture send error:', error);
+        addNotification('Failed to send photo. Please try again.', 'error');
       }
     }
     e.target.value = '';
@@ -400,9 +393,9 @@ function Chat() {
       addNotification('You cannot send voice messages while this user is blocked.', 'error');
       return;
     }
-    
+
     if (isRecording) {
-      // Stop recording
+      // Stop recording — onstop will auto-send
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
@@ -412,17 +405,17 @@ function Chat() {
       // Start recording
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Try to use a supported MIME type
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
-          ? 'audio/webm' 
-          : 'audio/mp4';
-        
+
+        // Pick best supported MIME type (iOS needs mp4, Chrome prefers webm)
+        const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+          .find(t => MediaRecorder.isTypeSupported(t)) || '';
+
         const mediaRecorder = new MediaRecorder(stream, { mimeType });
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
-        
-        let recordingDuration = 0;
+
+        // Use a ref so onstop always reads the latest duration regardless of re-renders
+        recordingDurationRef.current = 0;
 
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) {
@@ -431,126 +424,129 @@ function Chat() {
         };
 
         mediaRecorder.onstop = () => {
-          // Get the final duration
-          const finalDuration = recordingDuration;
-          
-          // Create blob from chunks
+          const finalDuration = recordingDurationRef.current;
           const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-          
-          // Auto-send voice message if we recorded something
+
           if (activeConversation && finalDuration > 0) {
-            // Convert blob to base64 for persistence
             const reader = new FileReader();
             reader.onloadend = () => {
-              const base64Audio = reader.result; // This is a data URL (e.g., data:audio/webm;base64,...)
-              
-              // Convert duration to readable format
-              const formattedDuration = finalDuration < 60 
-                ? `${finalDuration}s` 
+              const base64Audio = reader.result;
+              const formattedDuration = finalDuration < 60
+                ? `${finalDuration}s`
                 : `${Math.floor(finalDuration / 60)}:${(finalDuration % 60).toString().padStart(2, '0')}`;
-              
               sendMessage(activeConversation.id, {
                 sender: 'me',
                 text: `🎤 Voice message (${formattedDuration})`,
                 type: 'voice',
                 duration: formattedDuration,
-                audioUrl: base64Audio, // Store as base64 data URL for persistence
-                audioBlob: audioBlob // Keep blob reference for compatibility
+                audioUrl: base64Audio,
               });
-              
               addNotification('Voice message sent!', 'success');
             };
             reader.readAsDataURL(audioBlob);
           }
-          
-          // Stop all tracks
+
           stream.getTracks().forEach(track => track.stop());
           setRecordingTime(0);
         };
 
-        // Start recording with 100ms timeslice to capture data
-        mediaRecorder.start(100);
+        // Use 250ms timeslice — large enough to avoid excessive events, small enough for responsiveness
+        mediaRecorder.start(250);
         setIsRecording(true);
         setRecordingTime(0);
-        recordingDuration = 0;
-        
+        recordingDurationRef.current = 0;
+
         recordingIntervalRef.current = setInterval(() => {
-          setRecordingTime(prev => {
-            recordingDuration = prev + 1;
-            return recordingDuration;
-          });
+          recordingDurationRef.current += 1;
+          setRecordingTime(recordingDurationRef.current);
         }, 1000);
       } catch (err) {
-        alert('Could not access microphone. Please allow microphone access.');
+        addNotification('Could not access microphone. Please allow microphone access.', 'error');
         console.error('Error accessing microphone:', err);
       }
     }
   };
 
+  // Tracks blob URLs we created so we can revoke them to free memory
+  const audioBlobUrlRef = useRef(null);
+
   const handlePlayVoice = (message) => {
-    // Get audio URL from various possible field names
-    let audioUrl = message.audioUrl || message.audio_url;
-    
+    const audioUrl = message.audioUrl || message.audio_url;
+
     if (!audioUrl) {
       addNotification('Voice message not available', 'error');
       return;
     }
-    
-    // Check if it's a blob URL that might have expired
-    if (audioUrl.startsWith('blob:')) {
-      console.warn('Blob URL may have expired, trying to use data URL instead');
-      // Try to find alternative audio source or notify user
-      addNotification('Voice message expired (blob URL)', 'error');
-      return;
-    }
-    
-    // For data URLs, we can use them directly
-    // For other URLs, try to use as-is
-    const playableUrl = audioUrl;
-    
+
     if (isPlaying === message.id) {
       // Stop playing
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
         audioPlayerRef.current = null;
       }
+      if (audioBlobUrlRef.current) {
+        URL.revokeObjectURL(audioBlobUrlRef.current);
+        audioBlobUrlRef.current = null;
+      }
       setIsPlaying(null);
-    } else {
-      // Start playing
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.pause();
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current = null;
+    }
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current);
+      audioBlobUrlRef.current = null;
+    }
+
+    try {
+      // Convert base64 data URL → Blob URL so the browser can stream it
+      // instead of decoding the entire string up-front (which causes buffering pauses)
+      let playbackUrl = audioUrl;
+      if (audioUrl.startsWith('data:')) {
+        const [header, base64Data] = audioUrl.split(',');
+        const mimeMatch = header.match(/:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'audio/webm';
+        const binary = atob(base64Data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mimeType });
+        playbackUrl = URL.createObjectURL(blob);
+        audioBlobUrlRef.current = playbackUrl;
       }
-      try {
-        const audio = new Audio(playableUrl);
-        audioPlayerRef.current = audio;
-        
-        // Handle errors
-        audio.onerror = (e) => {
-          console.error('Audio error:', e);
-          addNotification('Voice message format not supported', 'error');
-          setIsPlaying(null);
-          audioPlayerRef.current = null;
-        };
-        
-        // Try to play
-        audio.play().then(() => {
-          console.log('Voice message playing');
-        }).catch(err => {
-          console.error('Failed to play voice message:', err);
-          addNotification('Cannot play voice message', 'error');
-          setIsPlaying(null);
-          audioPlayerRef.current = null;
-        });
-        
-        setIsPlaying(message.id);
-        audio.onended = () => {
-          setIsPlaying(null);
-          audioPlayerRef.current = null;
-        };
-      } catch (err) {
-        console.error('Error creating audio player:', err);
-        addNotification('Voice message unavailable', 'error');
-      }
+
+      const audio = new Audio(playbackUrl);
+      audioPlayerRef.current = audio;
+
+      audio.onerror = () => {
+        addNotification('Voice message format not supported', 'error');
+        setIsPlaying(null);
+        audioPlayerRef.current = null;
+      };
+
+      audio.onended = () => {
+        setIsPlaying(null);
+        audioPlayerRef.current = null;
+        if (audioBlobUrlRef.current) {
+          URL.revokeObjectURL(audioBlobUrlRef.current);
+          audioBlobUrlRef.current = null;
+        }
+      };
+
+      audio.play().catch(err => {
+        console.error('Failed to play voice message:', err);
+        addNotification('Cannot play voice message', 'error');
+        setIsPlaying(null);
+        audioPlayerRef.current = null;
+      });
+
+      setIsPlaying(message.id);
+    } catch (err) {
+      console.error('Error creating audio player:', err);
+      addNotification('Voice message unavailable', 'error');
     }
   };
 
@@ -565,6 +561,14 @@ function Chat() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
+  const peerConnectionRef = useRef(null);
+  const currentCallIdRef = useRef(null);
+  const callConversationIdRef = useRef(null); // conversation the call belongs to
+  const callTypeRef = useRef(null);
+  const isCallerRef = useRef(false);
+  const audioCtxRef = useRef(null);
+  const callDurationIntervalRef = useRef(null);
+  const [callTimerTick, setCallTimerTick] = useState(0);
 
   // Image viewer and editor state
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -594,187 +598,218 @@ function Chat() {
     isDanger: false
   });
 
-  const handleCall = async () => {
-    if (isBlocked) {
-      addNotification('You cannot call this user while they are blocked.', 'error');
-      return;
-    }
-    
+  // ── Ringtone ──────────────────────────────────────────────────────
+  const startRingtone = () => {
     try {
-      // Show outgoing call modal
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      let active = true;
+      const ring = () => {
+        if (!active || !audioCtxRef.current) return;
+        const ctx = audioCtxRef.current;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 440; osc.type = 'sine';
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+        osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.9);
+        setTimeout(ring, 1600);
+      };
+      audioCtxRef.current._stop = () => { active = false; };
+      ring();
+    } catch (e) { /* ignore */ }
+  };
+
+  const stopRingtone = () => {
+    if (audioCtxRef.current) {
+      try { if (audioCtxRef.current._stop) audioCtxRef.current._stop(); audioCtxRef.current.close(); } catch (e) {}
+      audioCtxRef.current = null;
+    }
+  };
+
+  // ── WebRTC helpers ─────────────────────────────────────────────────
+  const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+  const waitForIceDone = (pc) => new Promise(resolve => {
+    if (pc.iceGatheringState === 'complete') { resolve(pc.localDescription); return; }
+    const fn = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', fn); resolve(pc.localDescription); } };
+    pc.addEventListener('icegatheringstatechange', fn);
+    setTimeout(() => { pc.removeEventListener('icegatheringstatechange', fn); resolve(pc.localDescription); }, 8000);
+  });
+
+  const startWebRTC = async (callId, isCaller, callType) => {
+    try {
+      const pc = new RTCPeerConnection(RTC_CONFIG);
+      peerConnectionRef.current = pc;
+      const constraints = callType === 'video' ? { audio: true, video: true } : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints).catch(() => null);
+      if (!stream) { addNotification('Could not access ' + (callType === 'video' ? 'camera/microphone' : 'microphone'), 'error'); return false; }
+      setLocalStream(stream);
+      stream.getTracks().forEach(t => pc.addTrack(t, stream));
+      if (callType === 'video' && localVideoRef.current) localVideoRef.current.srcObject = stream;
+      pc.ontrack = (e) => { if (remoteVideoRef.current && e.streams[0]) remoteVideoRef.current.srcObject = e.streams[0]; };
+
+      if (isCaller) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        const finalOffer = await waitForIceDone(pc);
+        await callsAPI.sendCallOffer(callId, finalOffer.sdp);
+        let tries = 0;
+        const pollAns = setInterval(async () => {
+          if (++tries > 30 || !peerConnectionRef.current) { clearInterval(pollAns); return; }
+          try {
+            const sig = await callsAPI.getCallWebRTCSignaling(callId);
+            if (sig.sdp_answer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
+              clearInterval(pollAns);
+              await peerConnectionRef.current.setRemoteDescription({ type: 'answer', sdp: sig.sdp_answer });
+            }
+          } catch (e) {}
+        }, 2000);
+      } else {
+        let tries = 0;
+        const waitOffer = setInterval(async () => {
+          if (++tries > 15 || !peerConnectionRef.current) { clearInterval(waitOffer); return; }
+          try {
+            const sig = await callsAPI.getCallWebRTCSignaling(callId);
+            if (sig.sdp_offer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
+              clearInterval(waitOffer);
+              await peerConnectionRef.current.setRemoteDescription({ type: 'offer', sdp: sig.sdp_offer });
+              const answer = await peerConnectionRef.current.createAnswer();
+              await peerConnectionRef.current.setLocalDescription(answer);
+              const finalAns = await waitForIceDone(peerConnectionRef.current);
+              await callsAPI.sendCallAnswer(callId, finalAns.sdp);
+            }
+          } catch (e) {}
+        }, 2000);
+      }
+      return true;
+    } catch (e) { console.error('WebRTC error:', e); return false; }
+  };
+
+  const cleanupCall = (shouldClearOutgoing = true) => {
+    stopRingtone();
+    if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); }
+    setLocalStream(null);
+    if (callDurationIntervalRef.current) { clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
+    if (shouldClearOutgoing) clearOutgoingCall();
+    currentCallIdRef.current = null;
+  };
+
+  // ── Voice call ─────────────────────────────────────────────────────
+  const handleCall = async () => {
+    if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
+    try {
+      const callData = await callsAPI.initiate(activeConversation.id, 'voice');
+      currentCallIdRef.current = callData.id;
+      callConversationIdRef.current = activeConversation.id;
+      callTypeRef.current = 'voice';
+      isCallerRef.current = true;
+      registerOutgoingCall(callData.id);
       setShowCallModal(true);
       setCallStatus('calling');
-      addNotification(`Calling ${activeConversation?.with}...`, 'call');
-      
-      // Play ringing sound - krruuuu kruuuu kruuu style using Web Audio API
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
-      const playRingTone = () => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        oscillator.frequency.value = 440; // A4 note
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.6);
-      };
-      
-      // Ring pattern: krruuuu (long) - pause - kruuuu (medium) - pause - kruuuu (medium)
-      let ringCount = 0;
-      const ringPattern = [600, 800, 500, 800, 500]; // durations in ms
-      
-      const scheduleRing = () => {
-        if (!showCallModal || callStatus !== 'calling') return;
-        if (ringCount >= ringPattern.length) ringCount = 0;
-        
-        if (ringCount % 2 === 0) {
-          // Play tone
-          playRingTone();
-        }
-        
-        setTimeout(() => {
-          ringCount++;
-          scheduleRing();
-        }, ringPattern[ringCount]);
-      };
-      
-      // Start the ringing pattern
-      scheduleRing();
-      
-      // Simulate waiting for answer (in real app, this would be socket event)
-      // For demo, auto-answer after 5 seconds
-      setTimeout(async () => {
-        // Stop ringing
-        audioContext.close();
-        
-        // Only proceed if call is still active (not declined/ended)
-        if (!showCallModal || callStatus !== 'calling') return;
-        
-        // Simulate other person answered
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          setLocalStream(stream);
-          setCallStatus('connected');
-          const callStartTime = Date.now();
-          setActiveCallStartTime(callStartTime); // Set activeCallStartTime
-          addNotification('Call connected!', 'success');
-          
-          // Store call start time for duration calculation
-          setActiveCallStartTime(callStartTime);
-        } catch (err) {
-          addNotification('Could not access microphone', 'error');
-          setShowCallModal(false);
-        }
-      }, 5000);
+      startRingtone();
+      addNotification(`Calling ${activeConversation?.with}...`, 'info');
     } catch (err) {
       addNotification('Could not start call', 'error');
     }
   };
 
-  const handleEndCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
+  const handleEndCall = async () => {
+    const callId = currentCallIdRef.current;
+    const convId = callConversationIdRef.current || activeConversation?.id;
+    const wasConnected = callStatus === 'connected';
+    const duration = wasConnected && activeCallStartTime ? Math.floor((Date.now() - activeCallStartTime) / 1000) : 0;
+    cleanupCall(isCallerRef.current);
     setShowCallModal(false);
     setCallStatus('ended');
-    
-    // Send missed call or call duration message
-    if (activeConversation && callStatus === 'calling') {
-      // Missed call - not answered
-      sendMessage(activeConversation.id, {
-        sender: 'me',
-        text: '📞 Missed call',
-        type: 'system',
-        callType: 'voice',
-        answered: false
-      });
-    } else if (activeConversation && callStatus === 'connected' && activeCallStartTime) {
-      // Call ended - show duration
-      const duration = Math.floor((Date.now() - activeCallStartTime) / 1000);
-      const minutes = Math.floor(duration / 60);
-      const seconds = duration % 60;
-      const durationText = minutes > 0 
-        ? `${minutes}:${seconds.toString().padStart(2, '0')} min` 
-        : `${seconds} sec`;
-      
-      sendMessage(activeConversation.id, {
-        sender: 'me',
-        text: `📞 Call ended • ${durationText}`,
-        type: 'system',
-        callType: 'voice',
-        answered: true,
-        duration: durationText
-      });
-    }
-    
-    setLocalStream(null);
     setActiveCallStartTime(null);
+    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch (e) {} }
+    if (convId) {
+      if (!wasConnected) {
+        sendMessage(convId, { sender: 'me', text: '📞 No answer', type: 'system', callType: 'voice', answered: false });
+      } else {
+        const m = Math.floor(duration / 60), s = duration % 60;
+        const dur = m > 0 ? `${m}:${s.toString().padStart(2,'0')} min` : `${s} sec`;
+        sendMessage(convId, { sender: 'me', text: `📞 Call ended • ${dur}`, type: 'system', callType: 'voice', answered: true, duration: dur });
+      }
+    }
   };
 
+  // ── Video call ─────────────────────────────────────────────────────
   const handleVideoCall = async () => {
-    if (isBlocked) {
-      addNotification('You cannot video call this user while they are blocked.', 'error');
-      return;
-    }
-    
+    if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
     try {
-      // Show outgoing video call modal
+      const callData = await callsAPI.initiate(activeConversation.id, 'video');
+      currentCallIdRef.current = callData.id;
+      callConversationIdRef.current = activeConversation.id;
+      callTypeRef.current = 'video';
+      isCallerRef.current = true;
+      registerOutgoingCall(callData.id);
       setShowVideoCallModal(true);
       setVideoCallStatus('calling');
-      addNotification(`Video calling ${activeConversation?.with}...`, 'call');
-      
-      // Get local video stream immediately so user can see themselves while ringing
+      startRingtone();
+      addNotification(`Video calling ${activeConversation?.with}...`, 'info');
+      // Show self-preview immediately
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       } catch (err) {
         addNotification('Could not access camera/microphone', 'error');
+        cleanupCall(true);
         setShowVideoCallModal(false);
-        return;
+        try { await callsAPI.end(callData.id, 'ended'); } catch (_) {}
       }
-      
-      // Play ringing sound
-      const ringtone = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-      ringtone.loop = true;
-      ringtone.volume = 0.3;
-      ringtone.play().catch(err => console.log('Audio play failed:', err));
-      
-      // Simulate waiting for answer (in real app, this would be socket event)
-      // For demo, auto-answer after 5 seconds
-      setTimeout(async () => {
-        // Stop ringing
-        ringtone.pause();
-        ringtone.currentTime = 0;
-        
-        // Only proceed if video call is still active (not declined/ended)
-        if (!showVideoCallModal || videoCallStatus !== 'calling') return;
-        
-        setVideoCallStatus('connected');
-        addNotification('Video call connected!', 'success');
-      }, 5000);
     } catch (err) {
       addNotification('Could not start video call', 'error');
     }
   };
 
-  const handleEndVideoCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
+  const handleEndVideoCall = async () => {
+    const callId = currentCallIdRef.current;
+    const convId = callConversationIdRef.current;
+    const wasConnected = videoCallStatus === 'connected';
+    const duration = wasConnected && activeCallStartTime ? Math.floor((Date.now() - activeCallStartTime) / 1000) : 0;
+    cleanupCall(isCallerRef.current);
     setShowVideoCallModal(false);
     setVideoCallStatus('ended');
-    setLocalStream(null);
+    setActiveCallStartTime(null);
+    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch (e) {} }
+    if (convId) {
+      if (wasConnected) {
+        const m = Math.floor(duration / 60), s = duration % 60;
+        const dur = m > 0 ? `${m}:${s.toString().padStart(2,'0')} min` : `${s} sec`;
+        sendMessage(convId, { sender: 'me', text: `📹 Video call ended • ${dur}`, type: 'system', callType: 'video', answered: true, duration: dur });
+      } else {
+        sendMessage(convId, { sender: 'me', text: '📹 No answer', type: 'system', callType: 'video', answered: false });
+      }
+    }
   };
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const chatMenuRef = useRef(null);
+  const emojiPickerRef = useRef(null);
   const emojiList = ['😊', '👍', '❤️', '😂', '🎉', '👏', '🔥', '✅', '🙏', '😎', '🤔', '👋', '🌟', '💪', '✨', '🎵', '📸', '🎁', '🍕', '☕', '🌈', '🌺', '🌞', '💯', '🆗', '🎊', '🎈', '🎀', '🎄', '🎃', '🎅', '🤶', '🦃', '🐰', '🐣', '🌸', '🌼', '🌻', '🌹', '🌷', '🌱', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🦋', '🐛', '🐝', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🐘', '🦛', '🐪', '🐫', '🦙', '🦒', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'];
   const [selectedEmoji, setSelectedEmoji] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showChatMenu && chatMenuRef.current && !chatMenuRef.current.contains(e.target)) {
+        setShowChatMenu(false);
+      }
+      if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+      if (showMessageMenu && !e.target.closest('[data-message-menu]')) {
+        setShowMessageMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showChatMenu, showEmojiPicker, showMessageMenu]);
 
   const handleEmojiSelect = (emoji) => {
     setMessageText(prev => prev + emoji);
@@ -829,12 +864,57 @@ function Chat() {
     setIsNearBottom(isBottom);
   };
 
-  // Set camera stream to video element when modal opens
+  // Keep a ref to cameraStream so the callback ref on the video element always reads the latest value
+  const cameraStreamRef = useRef(null);
+  cameraStreamRef.current = cameraStream;
+
+  // Watch outgoing call status polled from App.jsx
   useEffect(() => {
-    if (showCameraModal && videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
+    if (!outgoingCallStatus) return;
+    const callId = currentCallIdRef.current;
+    const type = callTypeRef.current;
+    if (outgoingCallStatus === 'connected') {
+      stopRingtone();
+      const now = Date.now();
+      setActiveCallStartTime(now);
+      if (type === 'video') setVideoCallStatus('connected');
+      else setCallStatus('connected');
+      addNotification('Call connected!', 'success');
+      if (callId) startWebRTC(callId, true, type);
+      callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
+    } else if (outgoingCallStatus === 'declined') {
+      stopRingtone();
+      addNotification('Call was declined', 'info');
+      if (type === 'video') { setShowVideoCallModal(false); setVideoCallStatus('ended'); }
+      else { setShowCallModal(false); setCallStatus('ended'); }
+      cleanupCall(true);
+      const convId = callConversationIdRef.current;
+      if (convId) {
+        const icon = type === 'video' ? '📹' : '📞';
+        sendMessage(convId, { sender: 'me', text: `${icon} Call declined`, type: 'system', callType: type, answered: false });
+      }
+    } else if (outgoingCallStatus === 'missed') {
+      stopRingtone();
+      addNotification('Call was not answered', 'info');
+      if (type === 'video') { setShowVideoCallModal(false); setVideoCallStatus('ended'); }
+      else { setShowCallModal(false); setCallStatus('ended'); }
+      cleanupCall(true);
+      const convId = callConversationIdRef.current;
+      if (convId) {
+        const icon = type === 'video' ? '📹' : '📞';
+        sendMessage(convId, { sender: 'me', text: `${icon} No answer`, type: 'system', callType: type, answered: false });
+      }
     }
-  }, [showCameraModal, cameraStream]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outgoingCallStatus]);
+
+  // Show incoming call UI when App.jsx detects a new call for this user
+  useEffect(() => {
+    if (!incomingCall) { setShowIncomingCall(false); return; }
+    setShowIncomingCall(true);
+    setIncomingCallType(incomingCall.call_type || 'voice');
+    setCallerInfo(incomingCall);
+  }, [incomingCall]);
 
   // Save active conversation ID to localStorage whenever it changes
   useEffect(() => {
@@ -1071,21 +1151,16 @@ function Chat() {
 
   useEffect(() => {
     return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
+      // Stop camera tracks on unmount only (not on every cameraStream change)
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(track => track.stop());
       }
       if (audioPlayerRef.current) {
         audioPlayerRef.current.pause();
       }
     };
-  }, [cameraStream]);
-
-  // Set camera stream to video element when modal opens
-  useEffect(() => {
-    if (showCameraModal && videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [showCameraModal, cameraStream]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Save active conversation ID to localStorage whenever it changes
   useEffect(() => {
@@ -1174,16 +1249,16 @@ function Chat() {
   const getUserAvatar = (u) => {
     if (u?.profilePicture) {
       return (
-        <img 
-          src={u.profilePicture} 
-          alt="Profile" 
-          className="w-10 h-10 object-cover rounded-full"
+        <img
+          src={u.profilePicture}
+          alt="Profile"
+          className="w-14 h-14 object-cover rounded-full"
         />
       );
     }
     const avatar = AVATAR_OPTIONS[u?.avatar || 'default'] || AVATAR_OPTIONS.default;
     return (
-      <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
+      <div className={`w-14 h-14 ${avatar.color} rounded-full flex items-center justify-center text-2xl`}>
         {avatar.icon}
       </div>
     );
@@ -1196,7 +1271,7 @@ function Chat() {
         {notifications.map(n => (
           <div 
             key={n.id} 
-            className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm min-w-[300px] max-w-[400px] ${
+            className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm w-[min(20rem,90vw)] ${
               n.type === 'success' ? 'bg-green-500' : 
               n.type === 'error' ? 'bg-red-500' : 'bg-gray-800'
             }`}
@@ -1214,21 +1289,6 @@ function Chat() {
         ))}
       </div>
       
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-green-800 text-white p-3 flex items-center justify-between sticky top-0 z-30">
-        <div className="flex items-center space-x-2">
-          <button 
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-green-700 rounded-lg transition-colors touch-manipulation"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <MessageSquare className="w-5 h-5" />
-          <span className="font-bold text-sm">Messages</span>
-        </div>
-      </div>
-
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -1259,47 +1319,47 @@ function Chat() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard')}
+          <button
+            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') || 
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard') 
+              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
+              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
               ? 'bg-green-700' : 'hover:bg-green-700/50'
             }`}
           >
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button 
-            onClick={() => navigate('/students')}
+          <button
+            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button 
-            onClick={() => navigate('/reports')}
+          <button
+            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button 
-            onClick={() => navigate('/chat')}
+          <button
+            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button 
-            onClick={() => navigate('/calendar')}
+          <button
+            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button 
-            onClick={() => navigate('/profile')}
+          <button
+            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <User className="w-5 h-5" />
@@ -1321,7 +1381,7 @@ function Chat() {
       {/* Main Content */}
       <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-screen flex flex-col lg:flex-row`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
-        <div className={`${showConversations ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 bg-white border-r border-gray-200 flex-col h-[calc(100vh-48px)] lg:h-screen`}>
+        <div className={`${showConversations ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 bg-white border-r border-gray-200 flex-col h-screen`}>
           <div className="p-3 lg:p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -1354,16 +1414,16 @@ function Chat() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
 
                 {filteredConversations.length === 0 ? (
-                  <motion.div className="text-center py-8 text-gray-500 px-4">
+                  <div className="text-center py-8 text-gray-500 px-4">
                     <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>No conversations yet</p>
                     {(user?.role === 'admin' || user?.role === 'instructor') && (
                       <p className="mt-2 text-sm text-gray-400">The All Instructors group will appear here when available.</p>
                     )}
-                  </motion.div>
+                  </div>
                 ) : (
                   filteredConversations.map((conversation) => {
                     const partner = getConversationPartner(conversation);
@@ -1389,7 +1449,7 @@ function Chat() {
                           e.stopPropagation();
                           handleSetActiveConversation(conversation.id);
                         }}
-                        className={`w-full p-3 lg:p-4 flex items-center space-x-3 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${activeConversationId === conversation.id ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
+                        className={`w-full p-4 lg:p-5 flex items-center space-x-4 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${activeConversationId === conversation.id ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
                       >
                         <div className="relative">
                           {isGroupConversation(conversation) ? getGroupAvatar(conversation) : getUserAvatar(partner)}
@@ -1400,16 +1460,22 @@ function Chat() {
                         </div>
                         <div className="flex-1 text-left min-w-0">
                           <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-gray-800 text-sm lg:text-base truncate">
+                            <h3 className="font-semibold text-gray-800 text-base lg:text-lg truncate">
                               {getConversationPartnerName(conversation)}
                             </h3>
-                            <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{conversation.time}</span>
+                            <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                              {(conversation.last_message_time || conversation.time)
+                                ? new Date(conversation.last_message_time || conversation.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                : ''}
+                            </span>
                           </div>
-                          <p className="text-xs lg:text-sm text-gray-500 truncate">{conversation.lastMessage || 'No messages yet'}</p>
+                          <p className="text-sm text-gray-500 truncate">
+                            {conversation.last_message || conversation.lastMessage || 'No messages yet'}
+                          </p>
                         </div>
                         {/* Show unread count badge */}
                         {hasNewMessages && (
-                          <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
                             {unreadCount > 9 ? '9+' : unreadCount}
                           </span>
                         )}
@@ -1421,16 +1487,17 @@ function Chat() {
         </div>
 
         {/* Chat Area - Full width on mobile when active */}
-        <div className={`${!showConversations ? 'flex' : 'hidden'} lg:flex flex flex-1 flex-col bg-gray-50 w-full`}>
+        <div className={`${!showConversations ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-50 w-full`}>
           {activeConversation ? (
             <>
               {/* Chat Header */}
               <div className="bg-white p-2 lg:p-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
-                  {/* Back button */}
-                  <button 
+                  {/* Back button - only needed on mobile; both panels are always visible on desktop */}
+                  <button
+                    type="button"
                     onClick={handleBackToConversations}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
+                    className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
                     aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -1481,8 +1548,8 @@ function Chat() {
                       </button>
                     </>
                   )}
-                  <div className="relative">
-                    <button 
+                  <div className="relative" ref={chatMenuRef}>
+                    <button
                       onClick={() => setShowChatMenu(!showChatMenu)}
                       className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                       title="More Options"
@@ -1529,13 +1596,14 @@ function Chat() {
                   </div>
                 </div>
               )}
-              <div 
+              <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 space-y-4"
+                className="flex-1 overflow-y-auto p-4 overscroll-contain"
               >
+              <div className="max-w-4xl mx-auto space-y-4">
                 {currentMessages.map((message) => {
-                  const isOwn = message.senderId === user?.id;
+                  const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
                   const deletedForEveryone = isMessageDeletedForEveryone(message);
                   const deletedForMe = isMessageDeletedForMe(message) || deletedForEveryone;
                   
@@ -1548,7 +1616,7 @@ function Chat() {
                             {getUserAvatar(allUsers.find(u => u.id === message.senderId))}
                           </div>
                         )}
-                        <div className={`max-w-[70%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-gray-200 text-gray-500' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
                           <p className="italic text-sm">Message deleted</p>
                         </div>
                         {/* Avatar for own deleted messages */}
@@ -1574,14 +1642,34 @@ function Chat() {
                     );
                   }
 
+                  // ── Call log system messages: centred pill, not a bubble ──────────
+                  const isSystemCall = message.type === 'system' || message.message_type === 'system';
+                  if (isSystemCall) {
+                    const answered = message.answered === true || message.answered === 1;
+                    const callText = message.text || '';
+                    return (
+                      <div key={message.id} className="flex justify-center my-1">
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm
+                          ${answered
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-red-50 text-red-600 border border-red-200'
+                          }`}>
+                          <span>{callText}</span>
+                          <span className="text-gray-400 text-[10px]">
+                            {message.created_at ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div key={message.id} 
+                    <div key={message.id}
                          data-is-own={isOwn}
-                         className={`flex w-full items-end gap-2 ${isOwn ? 'flex-row' : 'flex-row-reverse'}`}>
+                         className={`flex w-full items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                       {/* Avatar */}
                       <div className="flex-shrink-0 self-end mb-1">
                         {isOwn ? (
-                          // Own avatar on LEFT
                           (() => {
                             const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
                             return user?.profilePicture ? (
@@ -1597,7 +1685,6 @@ function Chat() {
                             );
                           })()
                         ) : (
-                          // Other's avatar on RIGHT
                           (() => {
                             const senderUser = allUsers.find(u => u.id === message.senderId) || 
                                                allUsers.find(u => u.id === message.sender_id) ||
@@ -1623,8 +1710,8 @@ function Chat() {
                         )}
                       </div>
                       
-                      {/* Message Content - LEFT for own, RIGHT for others */}
-                      <div className={`group relative max-w-[70%] ${isOwn ? 'mr-auto' : 'ml-auto'}`}>
+                      {/* Message Content */}
+                      <div className="group relative max-w-[85%] sm:max-w-[70%]">
                         {/* Sender name - only for others */}
                         {!isOwn && (
                           <span className="text-xs font-medium text-gray-500 block mb-1 ml-1">
@@ -1633,32 +1720,32 @@ function Chat() {
                         )}
                         
                         <div
-                          className={`px-4 py-2 rounded-2xl ${
-                            isOwn
-                              ? 'bg-white text-gray-800 border border-gray-200 rounded-br-none shadow-sm'
-                              : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                          className={`rounded-2xl ${
+                            (message.type === 'image' || message.message_type === 'image') && (message.imageUrl || message.image_url || message.file_url)
+                              ? `overflow-hidden ${isOwn ? 'rounded-br-none' : 'rounded-bl-none'}`
+                              : `px-4 py-2 ${isOwn ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`
                           }`}
                         >
                           {editingMessage?.id === message.id ? (
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 px-4 py-2">
                               <input
                                 type="text"
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
                                 className="flex-1 px-2 py-1 text-sm bg-white text-gray-800 rounded border"
-                                onKeyPress={(e) => e.key === 'Enter' && handleSaveEdit()}
+                                onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); } }}
                               />
-                              <button onClick={handleSaveEdit} className="text-green-600 hover:text-green-700 font-bold">✓</button>
-                              <button onClick={handleCancelEdit} className="text-red-500 hover:text-red-600 font-bold">✕</button>
+                              <button type="button" onClick={handleSaveEdit} className="text-green-600 hover:text-green-700 font-bold">✓</button>
+                              <button type="button" onClick={handleCancelEdit} className="text-red-500 hover:text-red-600 font-bold">✕</button>
                             </div>
                           ) : (
                             <>
-                              {/* Image Messages - Gallery/Camera/Edited */}
+                              {/* Image Messages - no bubble, just the image with matching rounded corners */}
                               {(message.type === 'image' || message.message_type === 'image') && (message.imageUrl || message.image_url || message.file_url) ? (
-                                <img 
-                                  src={message.imageUrl || message.image_url || message.file_url} 
-                                  alt="Shared" 
-                                  className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-90"
+                                <img
+                                  src={message.imageUrl || message.image_url || message.file_url}
+                                  alt="Shared"
+                                  className="max-w-full max-h-64 block cursor-pointer hover:opacity-90"
                                   onClick={() => handleImageClick(message.imageUrl || message.image_url || message.file_url)}
                                 />
                               ) : (message.type === 'file' || message.message_type === 'file') && (message.fileName || message.file_name) ? (
@@ -1744,14 +1831,14 @@ function Chat() {
                                   )}
                                 </button>
                               ) : (
-                                <p className="text-gray-800">{message.text || message.content || ''}</p>
+                                <p>{message.text || message.content || ''}</p>
                               )}
                             </>
                           )}
                         </div>
                         
                         {/* Time outside bubble */}
-                        <div className={`text-xs text-gray-400 mt-1 ${isOwn ? 'text-right mr-1' : 'ml-1'}`}>
+                        <div className={`text-xs mt-1 ${isOwn ? 'text-right mr-1 text-gray-400' : 'ml-1 text-gray-400'}`}>
                           {(() => {
                               // Format the time for display
                               const messageTime = message.created_at ? formatDate(message.created_at) : 
@@ -1785,8 +1872,8 @@ function Chat() {
 
                         {/* Message Menu */}
                         {editingMessage?.id !== message.id && (
-                          <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            <button 
+                          <div data-message-menu className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity`}>
+                            <button
                               onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
                               className="p-1 text-gray-400 hover:text-gray-600"
                             >
@@ -1797,7 +1884,7 @@ function Chat() {
 
                         {/* Message Options Menu */}
                         {showMessageMenu === message.id && (
-                          <div className={`absolute top-6 ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]`}>
+                          <div data-message-menu className={`absolute top-6 ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]`}>
                             {/* Emoji Reactions */}
                             <div className="flex gap-1 px-2 py-1 border-b border-gray-100">
                               {EMOJI_LIST.map(emoji => (
@@ -1853,6 +1940,7 @@ function Chat() {
                 })}
                 <div ref={messagesEndRef} />
               </div>
+              </div>
 
               {/* Input Area */}
               <div className="bg-white p-2 lg:p-3 border-t border-gray-200">
@@ -1861,7 +1949,7 @@ function Chat() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.mp3,.mp4,.avi,.mov,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.tiff,.ico"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,.xml,.html,.htm,.rtf,.odt,.ods,.odp,.zip,.rar,.7z,.tar,.gz,.mp3,.mp4,.avi,.mov,.mkv,.wmv,.flv,.webm,.m4v,.wav,.flac,.aac,.ogg,.m4a,.wma,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.tiff,.tif,.ico,.heic,.heif,.psd,.ai,.eps"
                   className="hidden"
                 />
                 <input
@@ -1880,8 +1968,8 @@ function Chat() {
                   className="hidden"
                 />
                 
-                <div className="flex items-center space-x-1 lg:space-x-2">
-                  <button 
+                <div className="max-w-4xl mx-auto flex items-center space-x-1 lg:space-x-2">
+                  <button
                     type="button"
                     onClick={handleFileAttach}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
@@ -1943,11 +2031,12 @@ function Chat() {
                   
                   {/* Emoji Picker */}
                   {showEmojiPicker && (
-                    <div className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
+                    <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
                       <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
                         {emojiList.map((emoji, index) => (
                           <button
                             key={index}
+                            type="button"
                             onClick={() => handleEmojiSelect(emoji)}
                             className="text-lg lg:text-xl hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation"
                           >
@@ -1955,7 +2044,8 @@ function Chat() {
                           </button>
                         ))}
                       </div>
-                      <button 
+                      <button
+                        type="button"
                         onClick={() => setShowEmojiPicker(false)}
                         className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 py-2 touch-manipulation"
                       >
@@ -2069,7 +2159,7 @@ function Chat() {
                       onChange={(e) => setEditorText(e.target.value)}
                       placeholder="Enter text to add..."
                       className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 text-sm"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddTextToCanvas()}
+                      onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTextToCanvas(); } }}
                     />
                     <button 
                       onClick={handleAddTextToCanvas}
@@ -2127,37 +2217,28 @@ function Chat() {
                   </p>
                 </div>
                 <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
-                  <button 
+                  <button
                     onClick={async () => {
-                      // Answer call
+                      const call = callerInfo || incomingCall;
+                      if (!call) return;
+                      await answerIncomingCall(call);
                       setShowIncomingCall(false);
-                      if (incomingCallType === 'voice') {
-                        setShowCallModal(true);
-                        setCallStatus('connected');
-                        try {
-                          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                          setLocalStream(stream);
-                          addNotification('Call connected!', 'success');
-                        } catch (err) {
-                          addNotification('Could not access microphone', 'error');
-                          setShowCallModal(false);
-                        }
-                      } else {
+                      currentCallIdRef.current = call.id;
+                      callConversationIdRef.current = call.conversation_id;
+                      callTypeRef.current = call.call_type || 'voice';
+                      isCallerRef.current = false;
+                      const now = Date.now();
+                      setActiveCallStartTime(now);
+                      if (call.call_type === 'video') {
                         setShowVideoCallModal(true);
                         setVideoCallStatus('connected');
-                        try {
-                          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                          setLocalStream(stream);
-                          if (localVideoRef.current) {
-                            localVideoRef.current.srcObject = stream;
-                          }
-                          addNotification('Video call connected!', 'success');
-                        } catch (err) {
-                          addNotification('Could not access camera/microphone', 'error');
-                          setShowVideoCallModal(false);
-                        }
+                      } else {
+                        setShowCallModal(true);
+                        setCallStatus('connected');
                       }
-                      setIncomingCallType(null);
+                      addNotification('Call connected!', 'success');
+                      callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
+                      startWebRTC(call.id, false, call.call_type || 'voice');
                       setCallerInfo(null);
                     }}
                     className="px-4 py-2 sm:px-6 sm:py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium flex items-center gap-2 touch-manipulation"
@@ -2165,12 +2246,18 @@ function Chat() {
                     <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-sm sm:text-base">Answer</span>
                   </button>
-                  <button 
-                    onClick={() => {
+                  <button
+                    onClick={async () => {
+                      const call = callerInfo || incomingCall;
+                      if (call) {
+                        await declineIncomingCall(call.id);
+                        // Send "Call declined" message so both sides see it
+                        const icon = call.call_type === 'video' ? '📹' : '📞';
+                        sendMessage(call.conversation_id, { sender: 'me', text: `${icon} Call declined`, type: 'system', callType: call.call_type || 'voice', answered: false });
+                      }
                       setShowIncomingCall(false);
-                      setIncomingCallType(null);
                       setCallerInfo(null);
-                      addNotification('Call declined', 'error');
+                      addNotification('Call declined', 'info');
                     }}
                     className="px-4 py-2 sm:px-6 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-medium flex items-center gap-2 touch-manipulation"
                   >
@@ -2447,9 +2534,15 @@ function Chat() {
                 
                 <div className="flex-1 relative bg-black rounded-xl overflow-hidden flex items-center justify-center" style={{ minHeight: '50vh', maxHeight: '70vh' }}>
                   {!capturedPhoto ? (
-                    <video 
-                      ref={videoRef}
-                      autoPlay 
+                    <video
+                      ref={(el) => {
+                        videoRef.current = el;
+                        // Re-apply srcObject every time the element mounts/re-mounts
+                        if (el && cameraStreamRef.current) {
+                          el.srcObject = cameraStreamRef.current;
+                        }
+                      }}
+                      autoPlay
                       playsInline
                       muted
                       className="w-full h-full object-cover"

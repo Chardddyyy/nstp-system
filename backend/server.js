@@ -5,12 +5,43 @@ var jwt = require('jsonwebtoken');
 var pool = require('./config/database');
 var { getDbConfig } = require('./config/dbEnv');
 
+var bcrypt = require('bcryptjs');
 var app = express();
 var PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Restrict CORS to localhost origins only — rejects cross-origin requests from
+// external sites so attackers cannot use their own pages to call this API.
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow same-origin (no origin header) and any localhost / 127.0.0.1 port
+    if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS policy: origin not allowed'));
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
+
+// ── In-memory login rate limiter ──────────────────────────────────────────────
+// Max 10 failed attempts per IP per 15 minutes before lockout.
+var loginAttempts = new Map();
+function checkLoginRateLimit(ip) {
+  var now = Date.now();
+  var entry = loginAttempts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { count: 0, resetAt: now + 15 * 60 * 1000 };
+  }
+  if (entry.count >= 10) return false; // locked out
+  entry.count++;
+  loginAttempts.set(ip, entry);
+  return true;
+}
+function resetLoginAttempts(ip) {
+  loginAttempts.delete(ip);
+}
 
 // Middleware to verify JWT
 function authenticateToken(req, res, next) {
@@ -27,7 +58,7 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  jwt.verify(token, 'your-secret-key', function(err, user) {
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', function(err, user) {
     if (err) {
       return res.status(403).json({ message: 'Invalid token' });
     }
@@ -45,6 +76,111 @@ async function ensureMessageRestoreColumns() {
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* exists */ }
+  }
+}
+
+var userColumnsMigrated = false;
+async function ensureUserColumns() {
+  if (userColumnsMigrated) return;
+  var alters = [
+    'ALTER TABLE users ADD COLUMN profilePicture TEXT',
+    'ALTER TABLE users ADD COLUMN phone VARCHAR(50)',
+    'ALTER TABLE users ADD COLUMN bio TEXT',
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
+  }
+  userColumnsMigrated = true;
+}
+
+async function ensureStudentColumns() {
+  var alters = [
+    'ALTER TABLE students ADD COLUMN birthMonth VARCHAR(2)',
+    'ALTER TABLE students ADD COLUMN birthDay VARCHAR(2)',
+    'ALTER TABLE students ADD COLUMN birthYear VARCHAR(4)',
+    'ALTER TABLE students ADD COLUMN age VARCHAR(10)',
+    'ALTER TABLE students ADD COLUMN civilStatus VARCHAR(50)',
+    'ALTER TABLE students ADD COLUMN height VARCHAR(10)',
+    'ALTER TABLE students ADD COLUMN weight VARCHAR(10)',
+    'ALTER TABLE students ADD COLUMN facebookAccount VARCHAR(255)',
+    'ALTER TABLE students ADD COLUMN bloodType VARCHAR(10)',
+    'ALTER TABLE students ADD COLUMN emergencyNumber VARCHAR(50)',
+    'ALTER TABLE students ADD COLUMN program VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN section VARCHAR(50)',
+    'ALTER TABLE students ADD COLUMN profilePicture TEXT',
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
+  }
+}
+
+var enrollmentColumnsMigrated = false;
+async function ensureEnrollmentColumns() {
+  if (enrollmentColumnsMigrated) return;
+  var alters = [
+    'ALTER TABLE enrollments ADD COLUMN firstName VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN lastName VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN middleName VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN homeAddress TEXT',
+    'ALTER TABLE enrollments ADD COLUMN address TEXT',
+    'ALTER TABLE enrollments ADD COLUMN contactNumber VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN birthDate DATE NULL',
+    'ALTER TABLE enrollments ADD COLUMN birthMonth VARCHAR(2)',
+    'ALTER TABLE enrollments ADD COLUMN birthDay VARCHAR(2)',
+    'ALTER TABLE enrollments ADD COLUMN birthYear VARCHAR(4)',
+    'ALTER TABLE enrollments ADD COLUMN age VARCHAR(10)',
+    'ALTER TABLE enrollments ADD COLUMN civilStatus VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN gender VARCHAR(20)',
+    'ALTER TABLE enrollments ADD COLUMN height VARCHAR(10)',
+    'ALTER TABLE enrollments ADD COLUMN weight VARCHAR(10)',
+    'ALTER TABLE enrollments ADD COLUMN facebookAccount VARCHAR(255)',
+    'ALTER TABLE enrollments ADD COLUMN bloodType VARCHAR(10)',
+    'ALTER TABLE enrollments ADD COLUMN course VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN program VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN section VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN yearLevel VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN emergencyContact VARCHAR(255)',
+    'ALTER TABLE enrollments ADD COLUMN emergencyNumber VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN studentId VARCHAR(50)',
+    'ALTER TABLE enrollments ADD COLUMN reviewed_by INT NULL',
+    'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
+  }
+  enrollmentColumnsMigrated = true;
+}
+
+async function ensureReportsDeptColumn() {
+  try {
+    await pool.execute('ALTER TABLE reports MODIFY COLUMN department VARCHAR(50)');
+  } catch (e) { /* ignore */ }
+  try {
+    await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_data LONGTEXT NULL');
+  } catch (e) { /* exists */ }
+  try {
+    await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_name VARCHAR(255) NULL');
+  } catch (e) { /* exists */ }
+}
+
+async function ensureReportsBatchYear() {
+  // Add batch_year column so every report is tied to a specific batch
+  try {
+    await pool.execute('ALTER TABLE reports ADD COLUMN batch_year INT NULL');
+  } catch (e) { /* column already exists */ }
+  // Backfill existing rows: use YEAR(created_at) as best approximation
+  try {
+    await pool.execute('UPDATE reports SET batch_year = YEAR(created_at) WHERE batch_year IS NULL');
+  } catch (e) { console.warn('batch_year backfill warning:', e.message); }
+}
+
+async function ensureConversationLastSender() {
+  var alters = [
+    'ALTER TABLE conversations ADD COLUMN last_sender_id INT NULL',
+    'ALTER TABLE conversations ADD COLUMN last_sender_name VARCHAR(255) NULL',
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
   }
 }
 
@@ -69,6 +205,10 @@ async function getCallForUser(callId, userId) {
 }
 
 async function appendCallIce(callId, column, candidate) {
+  // Whitelist the column name — never interpolate raw user-influenced values into SQL.
+  if (column !== 'caller_ice' && column !== 'receiver_ice') {
+    throw new Error('Invalid ICE column');
+  }
   const [rows] = await pool.execute(
     'SELECT caller_ice, receiver_ice FROM calls WHERE id = ?',
     [callId]
@@ -85,10 +225,11 @@ async function appendCallIce(callId, column, candidate) {
     }
   }
   list.push(candidate);
-  await pool.execute(
-    'UPDATE calls SET ' + column + ' = ? WHERE id = ?',
-    [JSON.stringify(list), callId]
-  );
+  // Safe: column is already whitelisted above.
+  var sql = column === 'caller_ice'
+    ? 'UPDATE calls SET caller_ice = ? WHERE id = ?'
+    : 'UPDATE calls SET receiver_ice = ? WHERE id = ?';
+  await pool.execute(sql, [JSON.stringify(list), callId]);
 }
 
 async function ensureConversationSchema() {
@@ -152,12 +293,20 @@ async function userCanAccessConversation(conversationId, userId) {
 
 // Login
 app.post('/api/auth/login', async function(req, res) {
+  // Rate-limit by IP to block brute-force attacks
+  var ip = req.ip || (req.connection && req.connection.remoteAddress) || 'unknown';
+  if (!checkLoginRateLimit(ip)) {
+    return res.status(429).json({ message: 'Too many failed attempts. Try again in 15 minutes.' });
+  }
+
   try {
     var email = req.body.email;
     var password = req.body.password;
-    
-    console.log('Received login request:', { email: email, passwordLength: password ? password.length : 0, body: req.body });
-    
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     var result = await pool.execute(
       'SELECT * FROM users WHERE email = ?',
       [email]
@@ -169,26 +318,36 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var user = users[0];
-    
     var providedPassword = String(password).trim();
     var storedPassword = String(user.password).trim();
-    
-    console.log('Login attempt:', { 
-      email: email, 
-      providedPassword: providedPassword, 
-      storedPassword: storedPassword,
-      match: providedPassword === storedPassword
-    });
-    
-    if (providedPassword !== storedPassword) {
-      console.log('Password mismatch');
+
+    // Support both bcrypt-hashed and legacy plaintext passwords.
+    // If stored value looks like a bcrypt hash ($2a$...) use bcrypt.compare,
+    // otherwise fall back to plaintext and rehash on success.
+    var passwordMatch = false;
+    var isBcryptHash = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
+    if (isBcryptHash) {
+      passwordMatch = await bcrypt.compare(providedPassword, storedPassword);
+    } else {
+      passwordMatch = (providedPassword === storedPassword);
+      if (passwordMatch) {
+        // Transparently upgrade plaintext → bcrypt on first login
+        var hashed = await bcrypt.hash(providedPassword, 12);
+        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, user.id]);
+      }
+    }
+
+    if (!passwordMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    // Clear rate-limit counter on successful login
+    resetLoginAttempts(ip);
+
     var token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      'your-secret-key',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET || 'nstp-fallback-secret',
+      { expiresIn: '30d' }
     );
 
     res.json({
@@ -228,19 +387,20 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
 // Get current user
 app.get('/api/users/me', authenticateToken, async (req, res) => {
+  await ensureUserColumns().catch(() => {});
   try {
     const [users] = await pool.execute(
       'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio FROM users WHERE id = ?',
       [req.user.id]
     );
-    
+
     if (users.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     res.json(users[0]);
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('Get user error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -274,21 +434,21 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Change password - stores as plain text (no hashing)
+// Change password
 app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
-    
+
     if (parseInt(id) !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized' });
     }
+    if (!newPassword || String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
 
-    // Store password as plain text (no hashing)
-    await pool.execute(
-      'UPDATE users SET password = ? WHERE id = ?',
-      [newPassword, id]
-    );
+    const hashed = await bcrypt.hash(String(newPassword), 12);
+    await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, id]);
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -313,47 +473,34 @@ app.get('/api/students', authenticateToken, async (req, res) => {
 // Add student
 app.post('/api/students', authenticateToken, async (req, res) => {
   try {
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
-    
+    const { studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
+
     // Validate required fields
     if (!studentId || !name || !department) {
       return res.status(400).json({ message: 'Missing required fields: studentId, name, department' });
     }
-    
+
+    const n = (v) => v !== undefined ? v : null;
     // Build birthDate from separate fields if not provided directly
-    let safeBirthDate = birthDate;
+    let safeBirthDate = n(birthDate);
     if (!safeBirthDate && birthMonth && birthDay && birthYear) {
       safeBirthDate = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
     }
-    const safeEmail = email !== undefined ? email : null;
-    const safeSection = section !== undefined ? section : null;
-    const safeSemester = semester !== undefined ? semester : null;
-    const safeSchoolYear = schoolYear !== undefined ? schoolYear : null;
-    const safeProgram = program !== undefined ? program : null;
-    const safeYear = year !== undefined ? year : null;
-    const safeContactNumber = contactNumber !== undefined ? contactNumber : null;
-    const safeAddress = address !== undefined ? address : null;
-    const safeGender = gender !== undefined ? gender : null;
-    // safeBirthDate already declared above
-    const safeAge = age !== undefined ? age : null;
-    const safeCivilStatus = civilStatus !== undefined ? civilStatus : null;
-    const safeBloodType = bloodType !== undefined ? bloodType : null;
-    const safeHeight = height !== undefined ? height : null;
-    const safeWeight = weight !== undefined ? weight : null;
-    const safeFacebookAccount = facebookAccount !== undefined ? facebookAccount : null;
-    const safeEmergencyName = emergencyName !== undefined ? emergencyName : null;
-    const safeEmergencyNumber = emergencyNumber !== undefined ? emergencyNumber : null;
-    
+
     const [result] = await pool.execute(
-      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress, safeGender, safeBirthDate, safeAge, safeCivilStatus, safeBloodType, safeHeight, safeWeight, safeFacebookAccount, safeEmergencyName, safeEmergencyNumber]
+      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(course), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber)]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
     res.status(201).json(students[0]);
   } catch (error) {
     console.error('Add student error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message, sql: error.sql });
+    // Duplicate studentId → ER_DUP_ENTRY (MySQL errno 1062)
+    if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
+      return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
+    }
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -361,38 +508,24 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
-    
-    // Convert undefined to null for optional fields
-    const safeEmail = email !== undefined ? email : null;
-    const safeSection = section !== undefined ? section : null;
-    const safeSemester = semester !== undefined ? semester : null;
-    const safeSchoolYear = schoolYear !== undefined ? schoolYear : null;
-    const safeProgram = program !== undefined ? program : null;
-    const safeYear = year !== undefined ? year : null;
-    const safeContactNumber = contactNumber !== undefined ? contactNumber : null;
-    const safeAddress = address !== undefined ? address : null;
-    const safeGender = gender !== undefined ? gender : null;
-    const safeBirthDate = birthDate !== undefined ? birthDate : null;
-    const safeAge = age !== undefined ? age : null;
-    const safeCivilStatus = civilStatus !== undefined ? civilStatus : null;
-    const safeBloodType = bloodType !== undefined ? bloodType : null;
-    const safeHeight = height !== undefined ? height : null;
-    const safeWeight = weight !== undefined ? weight : null;
-    const safeFacebookAccount = facebookAccount !== undefined ? facebookAccount : null;
-    const safeEmergencyName = emergencyName !== undefined ? emergencyName : null;
-    const safeEmergencyNumber = emergencyNumber !== undefined ? emergencyNumber : null;
-    
+    const { studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
+
+    const n = (v) => v !== undefined ? v : null;
+    let safeBirthDate = n(birthDate);
+    if (!safeBirthDate && birthMonth && birthDay && birthYear) {
+      safeBirthDate = `${birthYear}-${birthMonth.toString().padStart(2, '0')}-${birthDay.toString().padStart(2, '0')}`;
+    }
+
     await pool.execute(
-      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
-      [studentId, name, safeEmail, department, safeSection, safeSemester, safeSchoolYear, safeProgram, safeYear, safeContactNumber, safeAddress, safeGender, safeBirthDate, safeAge, safeCivilStatus, safeBloodType, safeHeight, safeWeight, safeFacebookAccount, safeEmergencyName, safeEmergencyNumber, id]
+      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, course = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
+      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(course), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber), id]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);
     res.json(students[0]);
   } catch (error) {
     console.error('Update student error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -467,11 +600,17 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     // Convert undefined to null for optional fields
     const safeDescription = description !== undefined ? description : null;
     
-    console.log('Adding report:', { title, department, due_date: safeDueDate, userId: req.user.id });
-    
+    const { reference_file_data, reference_file_name } = req.body;
+    const safeRefData = reference_file_data || null;
+    const safeRefName = reference_file_name || null;
+
+    // Stamp the report with the current active batch year
+    const [batchRows] = await pool.execute('SELECT year FROM current_batch WHERE id = 1');
+    const batchYear = batchRows.length > 0 ? batchRows[0].year : new Date().getFullYear();
+
     const [result] = await pool.execute(
-      'INSERT INTO reports (title, description, department, due_date, created_by) VALUES (?, ?, ?, ?, ?)',
-      [title, safeDescription, department, safeDueDate, req.user.id]
+      'INSERT INTO reports (title, description, department, due_date, created_by, reference_file_data, reference_file_name, batch_year) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, safeDescription, department, safeDueDate, req.user.id, safeRefData, safeRefName, batchYear]
     );
 
     const [reports] = await pool.execute('SELECT * FROM reports WHERE id = ?', [result.insertId]);
@@ -479,7 +618,7 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     res.status(201).json(reports[0]);
   } catch (error) {
     console.error('Add report error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -560,25 +699,29 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
   try {
     // Get one-on-one conversations
     const [directConversations] = await pool.execute(`
-      SELECT c.*, 
+      SELECT c.*,
         u1.name as participant_1_name, u1.profilePicture as participant_1_picture,
         u2.name as participant_2_name, u2.profilePicture as participant_2_picture,
+        ls.name as last_sender_name,
         FALSE as is_group
       FROM conversations c
       JOIN users u1 ON c.participant_1_id = u1.id
       JOIN users u2 ON c.participant_2_id = u2.id
+      LEFT JOIN users ls ON c.last_sender_id = ls.id
       WHERE (c.participant_1_id = ? OR c.participant_2_id = ?) AND (c.is_group = FALSE OR c.is_group IS NULL)
       ORDER BY c.last_message_time DESC
     `, [req.user.id, req.user.id]);
 
     // Get group conversations where user is a participant
     const [groupConversations] = await pool.execute(`
-      SELECT c.*, 
+      SELECT c.*,
         NULL as participant_1_name, NULL as participant_1_picture,
         NULL as participant_2_name, NULL as participant_2_picture,
+        ls.name as last_sender_name,
         c.is_group, c.group_name
       FROM conversations c
       JOIN conversation_participants cp ON c.id = cp.conversation_id
+      LEFT JOIN users ls ON c.last_sender_id = ls.id
       WHERE cp.user_id = ? AND c.is_group = TRUE
       ORDER BY c.last_message_time DESC
     `, [req.user.id]);
@@ -631,8 +774,10 @@ app.post('/api/conversations', authenticateToken, async (req, res) => {
   try {
     const { withUserId } = req.body;
     
-    // Create conversation ID from both user IDs (sorted)
-    const ids = [req.user.id, withUserId].sort();
+    // Create conversation ID from both user IDs sorted numerically.
+    // Must use a numeric comparator — the default sort() is lexicographic
+    // and would mis-sort IDs like [2, 12] → "12-2" ≠ "2-12".
+    const ids = [Number(req.user.id), Number(withUserId)].sort(function(a, b) { return a - b; });
     const conversationId = ids.join('-');
     
     // Check if conversation exists
@@ -724,7 +869,7 @@ app.post('/api/conversations/group', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Create group conversation error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -764,18 +909,24 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
       return res.status(403).json({ message: 'Not authorized to view this conversation' });
     }
     
+    const limit = Math.min(parseInt(req.query.limit) || 100, 200);
+
     const [messages] = await pool.execute(`
-      SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
-      FROM messages m
-      JOIN users u ON m.sender_id = u.id
-      WHERE m.conversation_id = ?
-      ORDER BY m.created_at ASC
-    `, [conversationId]);
+      SELECT * FROM (
+        SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = ?
+        ORDER BY m.created_at DESC
+        LIMIT ?
+      ) latest
+      ORDER BY latest.created_at ASC
+    `, [conversationId, limit]);
 
     res.json(messages);
   } catch (error) {
     console.error('Get messages error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -831,7 +982,7 @@ app.put('/api/conversations/:conversationId/messages/:messageId', authenticateTo
     res.json(updated[0]);
   } catch (error) {
     console.error('Edit message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -898,7 +1049,7 @@ app.post('/api/conversations/:conversationId/messages/:messageId/reactions', aut
     res.json({ reactions });
   } catch (error) {
     console.error('Reaction error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -958,10 +1109,17 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
        safeType === 'file' ? `📎 ${safeFileName || 'File'}` : 
        safeType === 'voice' ? '🎤 Voice message' : 'Message');
     
-    await pool.execute(
-      'UPDATE conversations SET last_message = ?, last_message_time = NOW() WHERE id = ?',
-      [lastMessagePreview, id]
-    );
+    try {
+      await pool.execute(
+        'UPDATE conversations SET last_message = ?, last_message_time = NOW(), last_sender_id = ? WHERE id = ?',
+        [lastMessagePreview, req.user.id, id]
+      );
+    } catch (e) {
+      await pool.execute(
+        'UPDATE conversations SET last_message = ?, last_message_time = NOW() WHERE id = ?',
+        [lastMessagePreview, id]
+      );
+    }
     
     const [messages] = await pool.execute(`
       SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
@@ -973,7 +1131,7 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
     res.status(201).json(messages[0]);
   } catch (error) {
     console.error('Send message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1082,7 +1240,7 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
     }
   } catch (error) {
     console.error('Delete message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1176,7 +1334,7 @@ app.put('/api/conversations/:conversationId/messages/:messageId/restore', authen
     res.json(restored[0]);
   } catch (error) {
     console.error('Restore message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1212,23 +1370,20 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
 
 // ===== CALL MANAGEMENT =====
 
-// Get call status (caller/receiver polling)
-app.get('/api/calls/:id', authenticateToken, async (req, res) => {
+// Get incoming calls for current user (must be before /:id route)
+app.get('/api/calls/incoming', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
     const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name
+      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id
        FROM calls c
        JOIN users u ON c.caller_id = u.id
-       WHERE c.id = ? AND (c.caller_id = ? OR c.receiver_id = ?)`,
-      [id, req.user.id, req.user.id]
+       JOIN conversations conv ON c.conversation_id = conv.id
+       WHERE c.receiver_id = ? AND c.status = 'ringing' AND c.ended_at IS NULL`,
+      [req.user.id]
     );
-    if (calls.length === 0) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    res.json(calls[0]);
+    res.json(calls);
   } catch (error) {
-    console.error('Get call error:', error);
+    console.error('Get incoming calls error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -1282,7 +1437,7 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
     const caller_name = callers[0]?.name || 'Unknown';
     
     res.status(201).json({
-      call_id: result.insertId,
+      id: result.insertId,
       conversation_id,
       caller_id,
       receiver_id,
@@ -1292,25 +1447,28 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Initiate call error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get incoming calls for current user
-app.get('/api/calls/incoming', authenticateToken, async (req, res) => {
+// Get call status (caller/receiver polling)
+app.get('/api/calls/:id', authenticateToken, async (req, res) => {
   try {
+    const { id } = req.params;
     const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id
+      `SELECT c.*, u.name as caller_name
        FROM calls c
        JOIN users u ON c.caller_id = u.id
-       JOIN conversations conv ON c.conversation_id = conv.id
-       WHERE c.receiver_id = ? AND c.status = 'ringing' AND c.ended_at IS NULL`,
-      [req.user.id]
+       WHERE c.id = ? AND (c.caller_id = ? OR c.receiver_id = ?)`,
+      [id, req.user.id, req.user.id]
     );
-    res.json(calls);
+    if (calls.length === 0) {
+      return res.status(404).json({ message: 'Call not found' });
+    }
+    res.json(calls[0]);
   } catch (error) {
-    console.error('Get incoming calls error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Get call error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1337,7 +1495,7 @@ app.put('/api/calls/:id/answer', authenticateToken, async (req, res) => {
     res.json({ message: 'Call connected', call_id: id });
   } catch (error) {
     console.error('Answer call error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1414,7 +1572,7 @@ app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('End call error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1597,6 +1755,7 @@ app.post('/api/clear-batch', authenticateToken, async (req, res) => {
 
 // Get all enrollments
 app.get('/api/enrollments', authenticateToken, async (req, res) => {
+  await ensureEnrollmentColumns().catch(() => {});
   try {
     const [enrollments] = await pool.execute(`
       SELECT e.*, u.name as reviewed_by_name
@@ -1623,13 +1782,10 @@ app.get('/api/enrollments', authenticateToken, async (req, res) => {
 
 // Submit enrollment
 app.post('/api/enrollments', async (req, res) => {
+  // Ensure all required columns exist (runs once, then cached)
+  await ensureEnrollmentColumns().catch(() => {});
   try {
-    console.log('📥 Enrollment request received:', {
-      body: req.body,
-      timestamp: new Date().toISOString()
-    });
-
-    const { 
+    const {
       firstName, lastName, middleName, fullName,
       studentId, email, contactNumber,
       birthDate, birthMonth, birthDay, birthYear,
@@ -1640,17 +1796,10 @@ app.post('/api/enrollments', async (req, res) => {
       emergencyContact, emergencyNumber, emergencyName
     } = req.body;
     
-    console.log('✅ Fields extracted successfully');
-    
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
     const finalAddress = homeAddress || address;
     const finalEmergencyContact = emergencyName || emergencyContact;
-    
-    console.log('Executing database insert with:', {
-      name, firstName, lastName, middleName, email, nstpComponent, studentId, contactNumber,
-      birthDate, program, section, yearLevel
-    });
     
     const [result] = await pool.execute(
       `INSERT INTO enrollments 
@@ -1667,16 +1816,12 @@ app.post('/api/enrollments', async (req, res) => {
       ]
     );
 
-    console.log('✅ Insert successful, ID:', result.insertId);
-
     const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
-    console.log('✅ Enrollment fetched:', enrollments[0]);
-    
     res.status(201).json(enrollments[0]);
   } catch (error) {
-    console.error('❌ Submit enrollment error:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('❌ Submit enrollment error:', error.message);
+    // Include the real DB error so the frontend can show it
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1685,8 +1830,6 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
-    console.log('Approving enrollment:', { id, status });
     
     await pool.execute(
       'UPDATE enrollments SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
@@ -1698,8 +1841,6 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
       const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
       const enrollment = enrollments[0];
       
-      console.log('Creating student from enrollment:', enrollment);
-      
       try {
         // Check if student with this ID already exists
         const [existingStudents] = await pool.execute(
@@ -1707,9 +1848,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
           [enrollment.studentId]
         );
         
-        if (existingStudents.length > 0) {
-          console.log('Student with ID ' + enrollment.studentId + ' already exists, skipping creation');
-        } else {
+        if (existingStudents.length === 0) {
           // Build birthdate from separate fields if available
           let birthDate = enrollment.birthDate;
           if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
@@ -1738,7 +1877,6 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               enrollment.emergencyNumber || null
             ]
           );
-          console.log('Student created successfully with full demographic data');
         }
       } catch (insertError) {
         console.error('Error inserting student:', insertError);
@@ -1750,7 +1888,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
     res.json(updated[0]);
   } catch (error) {
     console.error('Update enrollment error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message, sql: error.sql });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1759,7 +1897,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
 // MESSAGES ENDPOINTS
 
 // GET all messages
-app.get('/api/messages', async (req, res) => {
+app.get('/api/messages', authenticateToken, async (req, res) => {
   try {
     const [messages] = await pool.execute(
       'SELECT * FROM messages ORDER BY date_sent DESC'
@@ -1767,12 +1905,12 @@ app.get('/api/messages', async (req, res) => {
     res.json(messages);
   } catch (error) {
     console.error('Get messages error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // POST add new message
-app.post('/api/messages', async (req, res) => {
+app.post('/api/messages', authenticateToken, async (req, res) => {
   try {
     const { sender_name, receiver_name, message_content } = req.body;
     
@@ -1796,12 +1934,12 @@ app.post('/api/messages', async (req, res) => {
     res.status(201).json(messages[0]);
   } catch (error) {
     console.error('Add message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // PUT update message
-app.put('/api/messages/:id', async (req, res) => {
+app.put('/api/messages/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { sender_name, receiver_name, message_content } = req.body;
@@ -1830,14 +1968,14 @@ app.put('/api/messages/:id', async (req, res) => {
     res.json(messages[0]);
   } catch (error) {
     console.error('Update message error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // ENROLLMENT ENDPOINTS
 
 // GET all enrollment records
-app.get('/api/enrollment', async (req, res) => {
+app.get('/api/enrollment', authenticateToken, async (req, res) => {
   try {
     const [enrollment] = await pool.execute(
       'SELECT * FROM enrollment ORDER BY enrollment_date DESC'
@@ -1845,12 +1983,12 @@ app.get('/api/enrollment', async (req, res) => {
     res.json(enrollment);
   } catch (error) {
     console.error('Get enrollment error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // POST add new enrollment
-app.post('/api/enrollment', async (req, res) => {
+app.post('/api/enrollment', authenticateToken, async (req, res) => {
   try {
     const { student_name, course, year_level } = req.body;
     
@@ -1874,12 +2012,12 @@ app.post('/api/enrollment', async (req, res) => {
     res.status(201).json(enrollment[0]);
   } catch (error) {
     console.error('Add enrollment error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // PUT update enrollment
-app.put('/api/enrollment/:id', async (req, res) => {
+app.put('/api/enrollment/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { student_name, course, year_level } = req.body;
@@ -1908,7 +2046,7 @@ app.put('/api/enrollment/:id', async (req, res) => {
     res.json(enrollment[0]);
   } catch (error) {
     console.error('Update enrollment error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1920,13 +2058,19 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
     const [archives] = await pool.execute(
       'SELECT * FROM archived_years ORDER BY year DESC'
     );
-    res.json(archives.map(archive => ({
-      ...archive,
-      data: archive.data ? JSON.parse(archive.data) : null
-    })));
+    res.json(archives.map(archive => {
+      var parsedData = null;
+      if (archive.data) {
+        try { parsedData = JSON.parse(archive.data); } catch (e) { parsedData = null; }
+      }
+      return {
+        ...archive,
+        data: parsedData
+      };
+    }));
   } catch (error) {
     console.error('Get archives error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1946,40 +2090,57 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
     }
     
     const archive = archives[0];
-    
-    // Get students for this batch
+    const parsedData = archive.data ? JSON.parse(archive.data) : null;
+
+    // Use the stored snapshot if it exists and has report records
+    if (parsedData && Array.isArray(parsedData.reportData)) {
+      return res.json({
+        ...archive,
+        data: parsedData,
+        studentData: parsedData.studentData || [],
+        reportData: parsedData.reportData || []
+      });
+    }
+
+    // No snapshot yet — query live tables using batch_year (preferred) or YEAR(created_at) fallback
     const [students] = await pool.execute(
-      `SELECT s.*, 
-        (SELECT COUNT(*) FROM report_submissions rs 
-         JOIN reports r ON rs.report_id = r.id 
-         WHERE r.department = s.department) as submissions
-      FROM students s 
-      WHERE s.schoolYear LIKE ?
-      ORDER BY s.name`,
+      `SELECT s.* FROM students s WHERE s.schoolYear LIKE ? ORDER BY s.name`,
       [`${year}%`]
     );
-    
-    // Get reports for this batch
+
     const [reports] = await pool.execute(
-      `SELECT r.*, 
+      `SELECT r.*,
         (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count,
         u.name as created_by_name
-      FROM reports r
-      LEFT JOIN users u ON r.created_by = u.id
-      WHERE r.created_at >= ? AND r.created_at <= ?
-      ORDER BY r.created_at DESC`,
-      [`${year}-01-01`, `${year}-12-31`]
+       FROM reports r
+       LEFT JOIN users u ON r.created_by = u.id
+       WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
+       ORDER BY r.created_at DESC`,
+      [year, year]
     );
-    
+
+    // Auto-save snapshot so future views don't need the live tables
+    try {
+      const newData = {
+        ...(parsedData || {}),
+        studentData: students,
+        reportData: reports
+      };
+      await pool.execute(
+        'UPDATE archived_years SET data = ? WHERE year = ?',
+        [JSON.stringify(newData), year]
+      );
+    } catch (e) { /* non-fatal */ }
+
     res.json({
       ...archive,
-      data: archive.data ? JSON.parse(archive.data) : null,
+      data: parsedData,
       studentData: students,
       reportData: reports
     });
   } catch (error) {
     console.error('Get archive error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1992,35 +2153,54 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     }
     
     const { year } = req.body;
-    
+
     // Get current stats
     const [studentCount] = await pool.execute(
       'SELECT COUNT(*) as count, department FROM students WHERE status != "Inactive" GROUP BY department'
     );
-    
+
     const [reportCount] = await pool.execute(
       'SELECT COUNT(*) as count FROM reports WHERE YEAR(created_at) = ?',
       [year]
     );
-    
+
+    // Snapshot full student records for this batch
+    const [studentData] = await pool.execute(
+      `SELECT * FROM students WHERE status != "Inactive" ORDER BY name`
+    );
+
+    // Snapshot full report records — match by batch_year first, fall back to YEAR(created_at)
+    const [reportData] = await pool.execute(
+      `SELECT r.*, u.name as created_by_name,
+        (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
+       FROM reports r
+       LEFT JOIN users u ON r.created_by = u.id
+       WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
+       ORDER BY r.created_at DESC`,
+      [year, year]
+    );
+
     const totalStudents = studentCount.reduce((sum, row) => sum + row.count, 0);
     const cwts = studentCount.find(r => r.department === 'CWTS')?.count || 0;
     const lts = studentCount.find(r => r.department === 'LTS')?.count || 0;
     const rotc = studentCount.find(r => r.department === 'ROTC')?.count || 0;
-    
-    // Insert or update archive
+
+    // Insert or update archive — includes full snapshots so data survives batch clearing
     await pool.execute(
-      `INSERT INTO archived_years (year, students, reports, data) 
+      `INSERT INTO archived_years (year, students, reports, data)
        VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE 
-       students = VALUES(students), 
-       reports = VALUES(reports), 
+       ON DUPLICATE KEY UPDATE
+       students = VALUES(students),
+       reports = VALUES(reports),
        data = VALUES(data)`,
       [
         year,
         totalStudents,
         reportCount[0].count,
-        JSON.stringify({ year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count })
+        JSON.stringify({
+          year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
+          studentData, reportData
+        })
       ]
     );
     
@@ -2039,7 +2219,7 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Archive batch error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -2057,7 +2237,7 @@ app.delete('/api/archives/:year', authenticateToken, async (req, res) => {
     res.json({ message: `Batch ${year} deleted from archives` });
   } catch (error) {
     console.error('Delete archive error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -2073,7 +2253,7 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
     res.json(batches[0]);
   } catch (error) {
     console.error('Get current batch error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -2083,27 +2263,41 @@ app.get('/api/health', async (req, res) => {
     await pool.execute('SELECT 1');
     res.json({ status: 'OK', database: 'Connected' });
   } catch (error) {
-    res.status(500).json({ status: 'Error', database: 'Not connected', error: error.message });
+    res.status(500).json({ status: 'Error', database: 'Not connected' });
   }
 });
 
-Promise.all([
-  ensureMessageRestoreColumns(),
-  ensureConversationSchema(),
-  ensureWebRTCColumns()
-]).catch(function(err) {
-  console.warn('Schema migration:', err.message);
-});
-
-app.listen(PORT, async function() {
+async function startServer() {
   var db = getDbConfig();
-  console.log('Server running on port ' + PORT);
-  console.log('API available at http://localhost:' + PORT + '/api');
   try {
     await pool.execute('SELECT 1');
     console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
   } catch (err) {
     console.error('Database NOT connected:', err.message);
     console.error('Start XAMPP MySQL, then run: cd backend && npm run setup-db');
+    process.exit(1);
   }
-});
+
+  console.log('Running schema migrations...');
+  await Promise.all([
+    ensureMessageRestoreColumns(),
+    ensureConversationSchema(),
+    ensureWebRTCColumns(),
+    ensureUserColumns(),
+    ensureStudentColumns(),
+    ensureEnrollmentColumns(),
+    ensureReportsDeptColumn(),
+    ensureReportsBatchYear(),
+    ensureConversationLastSender()
+  ]).catch(function(err) {
+    console.warn('Schema migration warning:', err.message);
+  });
+  console.log('Migrations complete.');
+
+  app.listen(PORT, function() {
+    console.log('Server running on port ' + PORT);
+    console.log('API available at http://localhost:' + PORT + '/api');
+  });
+}
+
+startServer();

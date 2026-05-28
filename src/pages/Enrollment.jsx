@@ -1,10 +1,9 @@
-import { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
-import { GraduationCap, ArrowLeft, CheckCircle, X, FileText, Shield, Eye } from 'lucide-react';
+import { GraduationCap, ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle } from 'lucide-react';
 
 function Enrollment() {
-  const navigate = useNavigate();
   const { submitEnrollment } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,9 +39,14 @@ function Enrollment() {
   const [errors, setErrors] = useState({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [toast, setToast] = useState(null);
 
   // Refs for auto-focus functionality
   const fieldRefs = useRef({});
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -110,7 +114,6 @@ function Enrollment() {
     // Auto-focus to first field with error
     if (Object.keys(newErrors).length > 0) {
       const firstErrorField = Object.keys(newErrors)[0];
-      console.log('First error field:', firstErrorField);
       if (fieldRefs.current[firstErrorField]) {
         setTimeout(() => {
           fieldRefs.current[firstErrorField]?.focus();
@@ -170,28 +173,16 @@ function Enrollment() {
     e.preventDefault();
     
     // Prevent multiple submissions
-    if (isSubmitting) {
-      console.log('⏳ Already submitting, please wait...');
-      return;
-    }
-    
-    console.log('=== FORM SUBMIT TRIGGERED ===');
-    console.log('Form data:', formData);
-    console.log('Agreed to terms:', agreedToTerms);
-    
+    if (isSubmitting) return;
+
     const validationErrors = validateForm();
-    console.log('Validation errors:', validationErrors);
-    console.log('Has errors:', Object.keys(validationErrors).length > 0);
-    
     if (Object.keys(validationErrors).length > 0) {
-      console.log('❌ Validation failed');
-      alert('Please fill in all required fields. Check the red highlighted fields above.');
+      showToast('Please fill in all required fields.', 'error');
       return;
     }
-    
-    console.log('✅ Validation passed, preparing to submit...');
+
     setIsSubmitting(true);
-    
+
     try {
       const enrollmentData = {
         ...formData,
@@ -199,22 +190,12 @@ function Enrollment() {
         birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
         status: 'Pending',
       };
-      
-      console.log('📤 Sending enrollment data:', enrollmentData);
-      console.log('Calling submitEnrollment...');
-      
-      const result = await submitEnrollment(enrollmentData);
-      
-      console.log('✅ Enrollment submitted successfully:', result);
-      alert('✅ Enrollment submitted successfully! Redirecting to home page...');
+
+      await submitEnrollment(enrollmentData);
+      showToast('Enrollment submitted successfully! Redirecting...', 'success');
       
       setSubmitted(true);
       localStorage.removeItem('enrollmentFormData');
-      
-      // Redirect to landing page after 3 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
       
     } catch (error) {
       console.error('❌ Enrollment submission failed:', error);
@@ -223,7 +204,7 @@ function Enrollment() {
         status: error.status,
         stack: error.stack
       });
-      alert(`Failed to submit enrollment: ${error.message}`);
+      showToast(`Failed to submit: ${error.message}`, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -235,11 +216,8 @@ function Enrollment() {
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
           <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Enrollment Submitted!</h2>
-          <p className="text-gray-600 mb-2">
-            Your enrollment application has been received.
-          </p>
-          <p className="text-gray-500 text-sm mb-6">
-            Redirecting to home page in 5 seconds...
+          <p className="text-gray-600 mb-6">
+            Your enrollment application has been received. You will be notified once it is reviewed.
           </p>
           <Link
             to="/"
@@ -254,23 +232,36 @@ function Enrollment() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+
+      {/* Centered toast notification */}
+      {toast && (
+        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
+          <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-xs w-full mx-4 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+            {toast.type === 'success'
+              ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            <span className="flex-1">{toast.message}</span>
+            <button type="button" onClick={() => setToast(null)} className="text-white/80 hover:text-white flex-shrink-0 ml-1">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-green-800 text-white py-4 px-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between relative">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center space-x-1 text-green-200 hover:text-white transition-colors -ml-2"
+            className="flex items-center space-x-1 text-green-200 hover:text-white transition-colors shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
+            <span className="hidden sm:inline">Back</span>
           </Link>
-          <div className="flex items-center space-x-3 absolute left-1/2 transform -translate-x-1/2">
-            <div>
-              <h1 className="text-xl font-bold">Cavite State University - Naic Campus</h1>
-              <p className="text-green-200 text-sm">National Service Training Program Student Enrollment</p>
-            </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-base sm:text-xl font-bold">Cavite State University - Naic Campus</h1>
+            <p className="text-green-200 text-xs sm:text-sm hidden sm:block">National Service Training Program Student Enrollment</p>
           </div>
-          <div className="w-16"></div>
         </div>
       </header>
 
@@ -281,7 +272,7 @@ function Enrollment() {
             Student Enrollment Form
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} className="space-y-6">
             {/* Personal Information */}
             <div className="border-b pb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Personal Information</h3>
@@ -498,7 +489,7 @@ function Enrollment() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
                   <input
@@ -695,16 +686,16 @@ function Enrollment() {
             </div>
 
             {/* Submit */}
-            <div className="flex items-center justify-between pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 gap-4">
               <p className="text-sm text-gray-500">
                 Please review your information before submitting.
               </p>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`font-bold px-8 py-3 rounded-lg transition-colors ${
-                  isSubmitting 
-                    ? 'bg-yellow-600 text-white cursor-wait opacity-75' 
+                className={`font-bold px-8 py-3 rounded-lg transition-colors w-full sm:w-auto ${
+                  isSubmitting
+                    ? 'bg-yellow-600 text-white cursor-wait opacity-75'
                     : 'bg-green-700 hover:bg-green-800 active:bg-green-900 text-white'
                 }`}
               >
@@ -724,6 +715,7 @@ function Enrollment() {
                 <h3 className="text-lg font-bold">Terms and Privacy Policy</h3>
               </div>
               <button
+                type="button"
                 onClick={() => setShowTermsModal(false)}
                 className="p-1 hover:bg-green-700 rounded-lg transition-colors"
               >
@@ -803,6 +795,7 @@ function Enrollment() {
 
             <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
               <button
+                type="button"
                 onClick={() => setShowTermsModal(false)}
                 className="bg-green-700 hover:bg-green-800 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
               >

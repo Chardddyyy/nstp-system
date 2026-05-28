@@ -16,22 +16,16 @@ function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
-    console.log('Login form submitted:', email);
 
     try {
       const result = await login(email, password);
-      console.log('Login result:', result);
-      
       if (result.success) {
-        console.log('Login success, navigating to dashboard...');
         if (result.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
           navigate('/instructor/dashboard');
         }
       } else {
-        console.log('Login failed:', result.message);
         setError(result.message || 'Invalid email or password');
         // Clear password field on error
         setPassword('');
@@ -56,7 +50,7 @@ function Login() {
 
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <img src="/cvsu.png" alt="CvSU Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
+          <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
           <h1 className="text-xl font-bold">Cavite State University Naic</h1>
           <p className="text-gray-600">NSTP Record & Report Management</p>
         </div>
@@ -77,10 +71,13 @@ function Login() {
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="email"
+                id="email"
+                name="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                 placeholder="Enter your email"
+                autoComplete="email"
                 required
               />
             </div>
@@ -94,10 +91,13 @@ function Login() {
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 required
               />
               <button

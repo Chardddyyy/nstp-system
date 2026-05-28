@@ -1,7 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import React, { useState, createContext, useContext, useEffect, useRef, useCallback } from 'react';
 
-const BASE_PATH = import.meta.env.BASE_URL || '/';
+// Dynamically determine basename based on current pathname
+const BASE_PATH = (() => {
+  const pathname = window.location.pathname;
+  if (pathname.startsWith('/nstp-system/')) {
+    return '/nstp-system/';
+  }
+  return import.meta.env.BASE_URL || '/';
+})();
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
 import { hasAllInstructorsGroup, ensureAllInstructorsGroup } from './utils/ensureGroupChat';
@@ -23,6 +30,45 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
+// Defined OUTSIDE App so its function reference never changes between App re-renders.
+// If it were inside App, every polling update would create a new ProtectedRoute reference,
+// causing React to unmount+remount all page children and reset every modal/form state.
+function ProtectedRoute(props) {
+  var children = props.children;
+  var allowedRoles = props.allowedRoles;
+  var auth = useContext(AuthContext);
+  var loading = auth.loading;
+  var user = auth.user;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" />;
+
+  if (allowedRoles) {
+    var hasRole = false;
+    for (var i = 0; i < allowedRoles.length; i++) {
+      if (allowedRoles[i] === user.role) {
+        hasRole = true;
+        break;
+      }
+    }
+    if (!hasRole) {
+      return <Navigate to="/" />;
+    }
+  }
+
+  return children;
+}
+
 function App() {
   var [user, setUser] = useState(null);
   var [users, setUsers] = useState([]);
@@ -33,6 +79,8 @@ function App() {
   var [messages, setMessages] = useState({});
   var [archivedYears, setArchivedYears] = useState([]);
   var [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
+  var [viewingArchive, setViewingArchive] = useState(false);
+  var [archiveViewData, setArchiveViewData] = useState(null);
   var [loading, setLoading] = useState(true);
   var [notifications, setNotifications] = useState([]);
   var [toasts, setToasts] = useState([]);
@@ -46,7 +94,7 @@ function App() {
   var seenSubmissionKeys = useRef(new Set());
   var seenReportIds = useRef(new Set());
   var seenConvLastMessageTime = useRef({});
-  var POLL_INTERVAL_MS = 5000;
+  var POLL_INTERVAL_MS = 8000;
 
   function getNotificationStorageKey(role) {
     return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
@@ -189,32 +237,55 @@ function App() {
       var prevTime = seenConvLastMessageTime.current[conv.id];
 
       if (currTime && prevTime && currTime !== prevTime) {
+        var lastMsg = conv.last_message || '';
+        var isOwnMessage = conv.last_sender_id === currentUser.id;
+
+        if (!isOwnMessage && lastMsg) {
+          var senderName = conv.last_sender_name || conv.with || 'Someone';
+          var preview = lastMsg.startsWith('data:') ? 'Sent a file'
+                      : lastMsg.startsWith('📸') ? 'Sent a photo'
+                      : lastMsg.startsWith('🎤') ? 'Sent a voice message'
+                      : lastMsg.startsWith('📎') ? 'Sent a file'
+                      : lastMsg;
+          if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+          pushNotification({
+            title: 'New Message',
+            message: senderName + ': ' + preview,
+            type: 'message',
+            link: '/chat'
+          });
+        }
+
         try {
           var msgs = await conversationsAPI.getMessages(conv.id);
           if (msgs.length > 0) {
-            var latest = msgs[msgs.length - 1];
-            if (latest.sender_id !== currentUser.id) {
-              var senderName = latest.sender_name || 'Someone';
-              var preview = latest.text || (latest.type === 'image' ? 'Sent an image' : 'Sent a message');
-              if (preview.length > 80) preview = preview.slice(0, 80) + '…';
-              pushNotification({
-                title: 'New Message',
-                message: senderName + ': ' + preview,
-                type: 'message',
-                link: '/chat'
+            // Capture convId and fetchedMsgs in block scope so the setMessages
+            // callback always closes over THIS iteration's values, not whichever
+            // value `conv`/`msgs` (var-scoped) end up with after the loop advances.
+            (function(convId, fetchedMsgs) {
+              setMessages(function(prev) {
+                var next = {};
+                for (var key in prev) {
+                  next[key] = prev[key];
+                }
+                // Merge polled messages with any locally-added messages that
+                // haven't been confirmed by the server yet (sent in the last 10s).
+                // This prevents a polling cycle from temporarily removing a just-sent
+                // message from the UI before the next poll includes it.
+                var local = prev[convId] || [];
+                var fetchedIds = new Set(fetchedMsgs.map(function(m) { return String(m.id); }));
+                var cutoff = Date.now() - 10000; // keep local-only msgs < 10s old
+                var localOnly = local.filter(function(m) {
+                  return !fetchedIds.has(String(m.id)) &&
+                    new Date(m.created_at || 0).getTime() > cutoff;
+                });
+                next[convId] = fetchedMsgs.concat(localOnly);
+                return next;
               });
-            }
-            setMessages(function(prev) {
-              var next = {};
-              for (var key in prev) {
-                next[key] = prev[key];
-              }
-              next[conv.id] = msgs;
-              return next;
-            });
+            })(conv.id, msgs);
           }
         } catch (e) {
-          console.warn('Failed to poll messages for conversation', conv.id);
+          console.warn('Failed to refresh messages for conversation', conv.id);
         }
       }
 
@@ -252,7 +323,7 @@ function App() {
   }
 
   async function refreshLiveData() {
-    if (!user) return;
+    if (!user || window.__nstp_session_expired__) return;
     try {
       var reportsData = await reportsAPI.getAll();
       setReports(reportsData);
@@ -382,6 +453,37 @@ function App() {
     }
   }
 
+  // Handle session expiry: api.js dispatches this event instead of hard-reloading the page.
+  // This lets React Router navigate to login smoothly without destroying any open form.
+  useEffect(function() {
+    function onSessionExpired() {
+      window.__nstp_session_expired__ = true;
+      // Show a visible banner so the user knows why they were redirected,
+      // instead of silently "going back" with no explanation.
+      var banner = document.createElement('div');
+      banner.id = 'session-expired-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+        'background:#dc2626', 'color:#fff', 'text-align:center',
+        'padding:14px 16px', 'font-size:15px', 'font-weight:600',
+        'box-shadow:0 2px 8px rgba(0,0,0,.35)'
+      ].join(';');
+      banner.textContent = 'Your session has expired. Please log in again.';
+      document.body.appendChild(banner);
+      setTimeout(function() {
+        var el = document.getElementById('session-expired-banner');
+        if (el) el.remove();
+      }, 5000);
+      setUser(null);
+      setLoading(false);
+      // ProtectedRoute will redirect to /login automatically when user becomes null.
+    }
+    window.addEventListener('nstp-session-expired', onSessionExpired);
+    return function() {
+      window.removeEventListener('nstp-session-expired', onSessionExpired);
+    };
+  }, []);
+
   // Load user from token on mount
   useEffect(function() {
     var token = localStorage.getItem('nstp_token');
@@ -400,38 +502,37 @@ function App() {
       await loadAllData(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
-      localStorage.removeItem('nstp_token');
+      // api.js handles 401/403 (dispatches nstp-session-expired event + clears token).
+      // Only set loading=false here; do NOT clear the token for 500/network errors.
       setLoading(false);
     }
   }
 
-  // Load all data from API - sequential, not parallel
+  // Load all data from API — fire independent requests in parallel then wait
   async function loadAllData(currentUser) {
     try {
-      var usersData = await usersAPI.getAll();
-      var studentsData = await studentsAPI.getAll();
-      var reportsData = await reportsAPI.getAll();
-      var enrollmentsData = await enrollmentsAPI.getAll();
-      var conversationsData = await conversationsAPI.getAll();
-      
-      var archivesData = [];
-      try {
-        archivesData = await archivesAPI.getAll();
-      } catch (e) {
-        archivesData = [];
-      }
-      
-      var batchData = { year: new Date().getFullYear() };
-      try {
-        batchData = await archivesAPI.getCurrentBatch();
-      } catch (e) {
-        batchData = { year: new Date().getFullYear() };
-      }
+      // All six requests fire at the same time instead of waiting one by one.
+      var results = await Promise.all([
+        usersAPI.getAll(),
+        studentsAPI.getAll(),
+        reportsAPI.getAll(),
+        enrollmentsAPI.getAll(),
+        conversationsAPI.getAll(),
+        archivesAPI.getAll().catch(function() { return []; }),
+        archivesAPI.getCurrentBatch().catch(function() { return { year: new Date().getFullYear() }; })
+      ]);
+      var usersData        = results[0];
+      var studentsData     = results[1];
+      var reportsData      = results[2];
+      var enrollmentsData  = results[3];
+      var conversationsData = results[4];
+      var archivesData     = results[5];
+      var batchData        = results[6];
 
       setUsers(usersData);
       setStudents(studentsData);
       setReports(reportsData);
-      
+
       var pending = [];
       for (var i = 0; i < enrollmentsData.length; i++) {
         if (enrollmentsData[i].status === 'Pending') {
@@ -446,15 +547,16 @@ function App() {
       setArchivedYears(archivesData);
       setCurrentBatch(batchData.year.toString());
 
-      // Load messages for each conversation
+      // Load messages for all conversations in parallel (not one by one)
+      var messagePromises = conversationsData.map(function(conv) {
+        return conversationsAPI.getMessages(conv.id)
+          .then(function(msgs) { return { id: conv.id, msgs: msgs }; })
+          .catch(function() { return { id: conv.id, msgs: [] }; });
+      });
+      var messageResults = await Promise.all(messagePromises);
       var messagesData = {};
-      for (var p = 0; p < conversationsData.length; p++) {
-        try {
-          var convMessages = await conversationsAPI.getMessages(conversationsData[p].id);
-          messagesData[conversationsData[p].id] = convMessages;
-        } catch (err) {
-          messagesData[conversationsData[p].id] = [];
-        }
+      for (var p = 0; p < messageResults.length; p++) {
+        messagesData[messageResults[p].id] = messageResults[p].msgs;
       }
       setMessages(messagesData);
 
@@ -471,14 +573,11 @@ function App() {
 
   async function login(email, password) {
     try {
-      console.log('Login attempt:', email);
       var response = await authAPI.login(email, password);
-      console.log('Login response:', response);
-      
       if (response.token) {
+        window.__nstp_session_expired__ = false; // reset flag for new session
         localStorage.setItem('nstp_token', response.token);
         setUser(response.user);
-        console.log('User set after login:', response.user, 'Role:', response.user ? response.user.role : undefined);
         await loadAllData(response.user);
         return { success: true, role: response.user.role };
       } else {
@@ -532,9 +631,7 @@ function App() {
   // Student management
   async function addStudentFunc(student) {
     try {
-      console.log('Adding student:', student);
       var newStudent = await studentsAPI.add(student);
-      console.log('Student added successfully:', newStudent);
       var studentsData = await studentsAPI.getAll();
       setStudents(studentsData);
       return newStudent;
@@ -644,9 +741,7 @@ function App() {
   // Report management
   async function addReportFunc(report) {
     try {
-      console.log('Adding report:', report);
       var newReport = await reportsAPI.add(report);
-      console.log('Report added successfully:', newReport);
       var reportsData = await reportsAPI.getAll();
       setReports(reportsData);
       return newReport;
@@ -869,7 +964,6 @@ function App() {
   }
 
   async function addReportCommentFunc(reportId, comment) {
-    console.log('Add report comment not yet implemented in API');
   }
 
   // Chat functions
@@ -943,7 +1037,6 @@ function App() {
 
   async function sendMessageFunc(conversationId, message) {
     try {
-      console.log('Sending message to conversation:', conversationId, 'Message:', message);
       var msgType = message.type ? message.type : 'text';
       var newMsg = await conversationsAPI.sendMessage(conversationId, {
         text: message.text,
@@ -954,8 +1047,6 @@ function App() {
         audio_url: message.audioUrl,
         duration: message.duration
       });
-      console.log('Message sent successfully:', newMsg);
-
       var msgWithTime = {};
       for (var prop in newMsg) {
         msgWithTime[prop] = newMsg[prop];
@@ -986,6 +1077,16 @@ function App() {
       });
 
       setConversations(function(prev) {
+        // Build the same preview text the backend uses so the sidebar
+        // updates immediately for the sender without waiting for a poll.
+        var msgType = message.type || 'text';
+        var preview = message.text;
+        if (!preview || preview.trim() === '') {
+          if (msgType === 'image') preview = '📸 Photo';
+          else if (msgType === 'file') preview = '📎 ' + (message.fileName || 'File');
+          else if (msgType === 'voice') preview = '🎤 Voice message';
+          else preview = 'Message';
+        }
         var newArr = [];
         for (var i = 0; i < prev.length; i++) {
           if (prev[i].id === conversationId) {
@@ -993,7 +1094,7 @@ function App() {
             for (var prop in prev[i]) {
               copied[prop] = prev[i][prop];
             }
-            copied.last_message = message.text;
+            copied.last_message = preview;
             copied.last_message_time = new Date().toISOString();
             newArr.push(copied);
           } else {
@@ -1076,46 +1177,12 @@ function App() {
     }
   }
 
-  function ProtectedRoute(props) {
-    var children = props.children;
-    var allowedRoles = props.allowedRoles;
-    
-    if (loading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      );
-    }
-    
-    if (!user) return <Navigate to="/login" />;
-    
-    console.log('ProtectedRoute check:', { userRole: user ? user.role : null, allowedRoles: allowedRoles, hasRole: user && allowedRoles ? allowedRoles.indexOf(user.role) >= 0 : false });
-    
-    if (allowedRoles) {
-      var hasRole = false;
-      for (var i = 0; i < allowedRoles.length; i++) {
-        if (allowedRoles[i] === user.role) {
-          hasRole = true;
-          break;
-        }
-      }
-      if (!hasRole) {
-        console.log('Role mismatch - redirecting to home');
-        return <Navigate to="/" />;
-      }
-    }
-    
-    return children;
-  }
-
   var contextValue = {
     user: user, login: login, logout: logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
     students: students, reports: reports, conversations: getUserConversations(), messages: messages, pendingEnrollments: pendingEnrollments,
     archivedYears: archivedYears, currentBatch: currentBatch,
+    viewingArchive: viewingArchive, archiveViewData: archiveViewData,
+    setViewingArchive: setViewingArchive, setArchiveViewData: setArchiveViewData,
     addStudent: addStudentFunc, updateStudent: updateStudentFunc, deleteStudent: deleteStudentFunc,
     addReport: addReportFunc, updateReport: updateReportFunc, deleteReport: deleteReportFunc, submitReport: submitReportFunc, addReportComment: addReportCommentFunc,
     startConversation: startConversationFunc, createGroupChat: createGroupChatFunc, sendMessage: sendMessageFunc, getUserConversations: getUserConversations, editMessage: editMessageFunc, addReaction: addReactionFunc, deleteMessage: deleteMessageFunc, restoreMessage: restoreMessageFunc,
