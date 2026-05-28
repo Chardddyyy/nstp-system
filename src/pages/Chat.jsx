@@ -56,7 +56,7 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
       const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
       resolve(compressedDataUrl);
     };
-    img.onerror = reject;
+    img.onerror = () => reject(new Error('Image failed to load — file may be corrupted or an unsupported format.'));
     img.src = dataUrl;
   });
 };
