@@ -3,10 +3,11 @@ import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, Calendar, Plus, Search, Filter,
   Edit, Trash2, Eye, Download, GraduationCap, Shield, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 
 function StudentManagement() {
   const { user, logout, allUsers, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
@@ -53,6 +54,91 @@ function StudentManagement() {
 
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToExcel = () => {
+    setIsExporting(true);
+    try {
+      const list = viewingArchive && archiveViewData?.studentData
+        ? archiveViewData.studentData
+        : students;
+
+      if (!list || list.length === 0) {
+        setNotification({ type: 'error', message: 'No student records to export.' });
+        setTimeout(() => setNotification(null), 3000);
+        setIsExporting(false);
+        return;
+      }
+
+      const mapRow = (s) => ({
+        'Student ID':           s.studentId       || '',
+        'Last Name':            (s.name || '').split(',')[0]?.trim() || s.name || '',
+        'First Name':           (s.name || '').split(',')[1]?.trim() || '',
+        'Full Name':            s.name            || '',
+        'Email':                s.email           || '',
+        'NSTP Component':       s.department      || '',
+        'Program':              s.program         || '',
+        'Year Level':           s.year            || '',
+        'Section':              s.section         || '',
+        'Status':               s.status          || 'Active',
+        'Contact Number':       s.contactNumber   || '',
+        'Address':              s.address || s.homeAddress || '',
+        'Birth Month':          s.birthMonth      || '',
+        'Birth Day':            s.birthDay        || '',
+        'Birth Year':           s.birthYear       || '',
+        'Age':                  s.age             || '',
+        'Civil Status':         s.civilStatus     || '',
+        'Sex/Gender':           s.gender          || '',
+        'Blood Type':           s.bloodType       || '',
+        'Height (cm)':          s.height          || '',
+        'Weight (kg)':          s.weight          || '',
+        'Facebook Account':     s.facebookAccount || '',
+        'Emergency Contact':    s.emergencyContact || s.emergencyName || '',
+        'Emergency Number':     s.emergencyNumber || '',
+        'Date Added':           s.created_at ? new Date(s.created_at).toLocaleDateString() : '',
+      });
+
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: All students
+      const allRows = list.map(mapRow);
+      const wsAll = XLSX.utils.json_to_sheet(allRows);
+      applyColumnWidths(wsAll, allRows);
+      XLSX.utils.book_append_sheet(wb, wsAll, 'All Students');
+
+      // Sheets 2-4: per department
+      ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
+        const rows = list.filter(s => s.department === dept).map(mapRow);
+        if (rows.length > 0) {
+          const ws = XLSX.utils.json_to_sheet(rows);
+          applyColumnWidths(ws, rows);
+          XLSX.utils.book_append_sheet(wb, ws, dept);
+        }
+      });
+
+      const batchLabel = viewingArchive && archiveViewData ? `Batch${archiveViewData.year}` : 'Current';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `NSTP_Students_${batchLabel}_${dateStr}.xlsx`);
+
+      setNotification({ type: 'success', message: `Exported ${list.length} student record(s) to Excel.` });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Export failed. Please try again.' });
+      setTimeout(() => setNotification(null), 3000);
+    }
+    setIsExporting(false);
+  };
+
+  function applyColumnWidths(ws, rows) {
+    if (!rows.length) return;
+    const keys = Object.keys(rows[0]);
+    ws['!cols'] = keys.map(k => ({
+      wch: Math.min(
+        40,
+        Math.max(k.length + 2, ...rows.map(r => String(r[k] || '').length))
+      )
+    }));
+  }
 
   const handleAddStudent = async () => {
     const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'address', 'emergencyName', 'emergencyNumber'];
@@ -419,18 +505,30 @@ function StudentManagement() {
               <p className="text-gray-600">{isAdmin ? 'Manage all Cavite State University Naic students' : 'View your department students'}</p>
             </div>
           </div>
-          {isAdmin && (
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => !viewingArchive && setShowAddModal(true)}
-              disabled={viewingArchive}
-              title={viewingArchive ? 'Exit archive view to add students' : ''}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white ${viewingArchive ? 'bg-green-700/40 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
+              onClick={exportToExcel}
+              disabled={isExporting}
+              title="Download all students as Excel file"
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait"
             >
-              <Plus className="w-5 h-5" />
-              <span>Add Student</span>
+              <FileSpreadsheet className="w-5 h-5" />
+              <span>{isExporting ? 'Exporting...' : 'Download Excel'}</span>
             </button>
-          )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => !viewingArchive && setShowAddModal(true)}
+                disabled={viewingArchive}
+                title={viewingArchive ? 'Exit archive view to add students' : ''}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white ${viewingArchive ? 'bg-green-700/40 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add Student</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
