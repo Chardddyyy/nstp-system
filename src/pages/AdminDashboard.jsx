@@ -2,7 +2,7 @@ import { useAuth } from '../App';
 import { archivesAPI } from '../services/api';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, TrendingUp,
+  LogOut, User, TrendingUp, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square, CircleCheckBig,
   BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
