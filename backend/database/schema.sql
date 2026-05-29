@@ -201,12 +201,12 @@ CREATE TABLE IF NOT EXISTS current_batch (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Default users
+-- Default users (passwords are bcrypt hashed: admin123 / cwts123 / lts123 / rotc123)
 INSERT INTO users (id, email, password, role, name, department, avatar) VALUES
-(1, 'admin@cvsu.edu.ph', 'admin123', 'admin', 'Admin User', 'NSTP Office', 'default'),
-(2, 'cwts@cvsu.edu.ph', 'cwts123', 'instructor', 'CWTS Instructor', 'CWTS', 'default'),
-(3, 'lts@cvsu.edu.ph', 'lts123', 'instructor', 'LTS Instructor', 'LTS', 'default'),
-(4, 'rotc@cvsu.edu.ph', 'rotc123', 'instructor', 'ROTC Instructor', 'ROTC', 'default')
+(1, 'admin@cvsu.edu.ph', '$2a$12$hT9P3bPCgpnBV./hlnO8Fuj8syXl1PI0KZULNb89t20hW5p0g5Qf2', 'admin', 'Admin User', 'NSTP Office', 'default'),
+(2, 'cwts@cvsu.edu.ph', '$2a$12$Czsx0PgIyJHdNNsoN4hwPeMnj1nu6QmI1KVnoBabE0mmsda1VL/KO', 'instructor', 'CWTS Instructor', 'CWTS', 'default'),
+(3, 'lts@cvsu.edu.ph', '$2a$12$E/wGMewwF28hVNG6yg23.uD8e.ck9KbqAkrGJkFoZmIGESBhM5eMG', 'instructor', 'LTS Instructor', 'LTS', 'default'),
+(4, 'rotc@cvsu.edu.ph', '$2a$12$ke.4ad4ZeY0nyzD6W56.RuMEAPdW27yiPZye1m1YEvmKye77wWMT6', 'instructor', 'ROTC Instructor', 'ROTC', 'default')
 ON DUPLICATE KEY UPDATE id=id;
 
 -- Default batch year

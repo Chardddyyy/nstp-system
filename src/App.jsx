@@ -85,6 +85,7 @@ function App() {
   var [notifications, setNotifications] = useState([]);
   var [toasts, setToasts] = useState([]);
   var [incomingCall, setIncomingCall] = useState(null);
+  var [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
   var [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
   var outgoingCallIdRef = useRef(null);
   var ringAudioContextRef = useRef(null);
@@ -447,6 +448,7 @@ function App() {
     try {
       await callsAPI.answer(call.id);
       setIncomingCall(null);
+      setPendingAnsweredCall(call);
       window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
     } catch (e) {
       console.error('Answer call failed:', e);
@@ -1192,6 +1194,7 @@ function App() {
     notifications: notifications, setNotifications: setNotifications, pushNotification: pushNotification,
     toasts: toasts, dismissToast: dismissToast,
     incomingCall: incomingCall, outgoingCallStatus: outgoingCallStatus,
+    pendingAnsweredCall: pendingAnsweredCall, setPendingAnsweredCall: setPendingAnsweredCall,
     registerOutgoingCall: registerOutgoingCall, clearOutgoingCall: clearOutgoingCall,
     answerIncomingCall: answerIncomingCall, declineIncomingCall: declineIncomingCall
   };

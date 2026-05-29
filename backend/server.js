@@ -529,13 +529,13 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Change password
+// Change password (own account) or admin reset (any account)
 app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
 
-    if (parseInt(id) !== req.user.id) {
+    if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }
     if (!newPassword || String(newPassword).length < 8) {
@@ -571,7 +571,7 @@ app.get('/api/students', authenticateToken, async (req, res) => {
 // Add student
 app.post('/api/students', authenticateToken, async (req, res) => {
   try {
-    const { studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
+    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
 
     // Validate required fields
     if (!studentId || !name || !department) {
@@ -591,8 +591,8 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(course), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber)]
+      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber)]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
@@ -610,7 +610,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { studentId, name, email, department, section, semester, schoolYear, course, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
+    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
 
     // Convert undefined OR empty string to null (empty string breaks DATE columns in MySQL strict mode)
     const n = (v) => (v === undefined || v === null || v === '') ? null : v;
@@ -627,8 +627,8 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     }
 
     await pool.execute(
-      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, course = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
-      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(course), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber), id]
+      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
+      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber), id]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);
@@ -1576,6 +1576,35 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
       ? conversation.participant_2_id
       : conversation.participant_1_id;
 
+    // Auto-clean stale calls: ringing > 2 min or connected > 3 hours are considered abandoned
+    await pool.execute(
+      `UPDATE calls SET status='ended', ended_at=NOW()
+       WHERE ended_at IS NULL AND (
+         (status='ringing'   AND started_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)) OR
+         (status='connected' AND started_at < DATE_SUB(NOW(), INTERVAL 3 HOUR))
+       )`
+    );
+
+    // Check if caller is already in a live call (ringing ≤ 2 min or connected ≤ 3 h)
+    const [callerBusy] = await pool.execute(
+      `SELECT id FROM calls WHERE status IN ('connected','ringing') AND ended_at IS NULL
+       AND (caller_id = ? OR receiver_id = ?) LIMIT 1`,
+      [caller_id, caller_id]
+    );
+    if (callerBusy.length > 0) {
+      return res.status(409).json({ message: 'You are already in a call.' });
+    }
+
+    // Check if receiver is already in a live call
+    const [receiverBusy] = await pool.execute(
+      `SELECT id FROM calls WHERE status IN ('connected','ringing') AND ended_at IS NULL
+       AND (caller_id = ? OR receiver_id = ?) LIMIT 1`,
+      [receiver_id, receiver_id]
+    );
+    if (receiverBusy.length > 0) {
+      return res.status(409).json({ message: 'User is currently busy on another call.' });
+    }
+
     await pool.execute(
       `UPDATE calls SET status = 'ended', ended_at = NOW()
        WHERE status = 'ringing' AND ended_at IS NULL
@@ -1681,7 +1710,21 @@ app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
       'UPDATE calls SET status = ?, ended_at = NOW(), duration = ? WHERE id = ?',
       [status || 'ended', duration, id]
     );
-    
+
+    // Group call: if only 1 participant remains connected, they are alone — end their call too
+    if (call.group_call_id) {
+      const [remaining] = await pool.execute(
+        `SELECT id FROM calls WHERE group_call_id = ? AND status = 'connected' AND id != ?`,
+        [call.group_call_id, id]
+      );
+      if (remaining.length === 1) {
+        await pool.execute(
+          `UPDATE calls SET status = 'ended', ended_at = NOW() WHERE id = ?`,
+          [remaining[0].id]
+        );
+      }
+    }
+
     // Send system message about call result
     const finalStatus = status || 'ended';
     let messageText = '';
@@ -1762,7 +1805,7 @@ app.put('/api/calls/:id/webrtc/offer', authenticateToken, async (req, res) => {
     }
     await pool.execute(
       'UPDATE calls SET offer_sdp = ? WHERE id = ?',
-      [JSON.stringify(req.body.sdp), req.params.id]
+      [req.body.sdp, req.params.id]
     );
     res.json({ message: 'Offer saved' });
   } catch (error) {
@@ -1782,7 +1825,7 @@ app.put('/api/calls/:id/webrtc/answer', authenticateToken, async (req, res) => {
     }
     await pool.execute(
       'UPDATE calls SET answer_sdp = ? WHERE id = ?',
-      [JSON.stringify(req.body.sdp), req.params.id]
+      [req.body.sdp, req.params.id]
     );
     res.json({ message: 'Answer saved' });
   } catch (error) {
@@ -2505,6 +2548,21 @@ async function startServer() {
     console.warn('Schema migration warning:', err.message);
   });
   console.log('Migrations complete.');
+
+  // Hash any plain-text passwords left in the users table
+  try {
+    const [allUsers] = await pool.execute('SELECT id, password FROM users');
+    for (const u of allUsers) {
+      const pw = String(u.password || '');
+      if (!pw.startsWith('$2a$') && !pw.startsWith('$2b$') && !pw.startsWith('$2y$')) {
+        const hashed = await bcrypt.hash(pw, 12);
+        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, u.id]);
+        console.log(`Hashed plain-text password for user id=${u.id}`);
+      }
+    }
+  } catch (e) {
+    console.warn('Password hash migration warning:', e.message);
+  }
 
   app.listen(PORT, function() {
     console.log('Server running on port ' + PORT);

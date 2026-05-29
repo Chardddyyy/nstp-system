@@ -38,7 +38,9 @@ async function apiCall(endpoint, options) {
         window.dispatchEvent(new CustomEvent('nstp-session-expired'));
       }
     }
-    throw new Error(error.message || 'API request failed');
+    var apiErr = new Error(error.message || 'API request failed');
+    apiErr.status = response.status;
+    throw apiErr;
   }
 
   return response.json();

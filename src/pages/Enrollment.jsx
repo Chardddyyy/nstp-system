@@ -40,9 +40,38 @@ function Enrollment() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [errorBanner, setErrorBanner] = useState([]);
+  const errorTimerRef = useRef(null);
+
+  // True when there is saved progress from a previous session
+  const hasSavedData = !!localStorage.getItem('enrollmentFormData');
+
+  const handleStartFresh = () => {
+    localStorage.removeItem('enrollmentFormData');
+    setFormData({
+      lastName: '', firstName: '', middleName: '', studentId: '', homeAddress: '',
+      program: '', yearLevel: '', section: '', nstpComponent: 'CWTS',
+      birthMonth: '', birthDay: '', birthYear: '', age: '', civilStatus: '', sex: '',
+      height: '', weight: '', bloodType: '', contactNumber: '', email: '',
+      facebookAccount: '', emergencyContact: '', emergencyNumber: ''
+    });
+    setErrors({});
+    setAgreedToTerms(false);
+  };
 
   // Refs for auto-focus functionality
   const fieldRefs = useRef({});
+
+  useEffect(() => {
+    return () => { if (errorTimerRef.current) clearTimeout(errorTimerRef.current); };
+  }, []);
+
+  const showErrorBanner = (errorMap) => {
+    const msgs = Object.values(errorMap).filter(Boolean);
+    setErrorBanner(msgs);
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    errorTimerRef.current = setTimeout(() => setErrorBanner([]), 5000);
+  };
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
@@ -74,9 +103,9 @@ function Enrollment() {
         : `Student ID is too long — ${idLen} digit${idLen !== 1 ? 's' : ''} entered, need exactly 9`;
     }
 
-    // Email - must contain @
-    if (formData.email && !formData.email.includes('@')) {
-      newErrors.email = 'Invalid email — must contain "@" (e.g. student@cvsu.edu.ph)';
+    // Email - must match full format e.g. student@cvsu.edu.ph
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email — must be in the format student@cvsu.edu.ph';
     }
 
     // Contact Number - exactly 11 digits
@@ -166,15 +195,25 @@ function Enrollment() {
     } else if (name === 'birthYear') {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
+    } else if (name === 'emergencyContact') {
+      // Only letters, spaces, periods, hyphens, apostrophes
+      newValue = value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '');
     }
 
     const updatedFormData = { ...formData, [name]: newValue };
     setFormData(updatedFormData);
     localStorage.setItem('enrollmentFormData', JSON.stringify(updatedFormData));
 
-    // Clear error when user types
+    // Clear error when user types and update the top banner
     if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
+      const newErrors = { ...errors, [name]: '' };
+      setErrors(newErrors);
+      const remaining = Object.values(newErrors).filter(Boolean);
+      setErrorBanner(remaining);
+      if (remaining.length === 0 && errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = null;
+      }
     }
   };
 
@@ -186,7 +225,7 @@ function Enrollment() {
 
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
-      showToast('Please fill in all required fields.', 'error');
+      showErrorBanner(validationErrors);
       return;
     }
 
@@ -283,6 +322,40 @@ function Enrollment() {
       {/* Form */}
       <main className="max-w-4xl mx-auto py-8 px-4">
         <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+          {hasSavedData && (
+            <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-5 flex items-center justify-between gap-3">
+              <p className="text-blue-700 text-sm">Continuing from a previous session. Your progress was saved.</p>
+              <button
+                type="button"
+                onClick={handleStartFresh}
+                className="shrink-0 text-xs font-semibold text-blue-700 border border-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Start Fresh
+              </button>
+            </div>
+          )}
+          {errorBanner.length > 0 && (
+            <div className="bg-red-50 border border-red-400 rounded-lg p-4 mb-6 animate-pulse-once">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-red-700 font-semibold text-sm mb-1">Please fix the following before submitting:</p>
+                  <ul className="space-y-0.5">
+                    {errorBanner.map((msg, i) => (
+                      <li key={i} className="text-red-600 text-sm">• {msg}</li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setErrorBanner([]); if (errorTimerRef.current) clearTimeout(errorTimerRef.current); }}
+                  className="text-red-400 hover:text-red-600 flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
             Student Enrollment Form
           </h2>
@@ -351,7 +424,9 @@ function Enrollment() {
                     ref={el => fieldRefs.current.homeAddress = el}
                     type="text"
                     name="homeAddress"
+                    id="homeAddress"
                     required
+                    autoComplete="off"
                     placeholder="Blk 1 Lot 2, Mahogany Street, Green Village, Naic, Cavite"
                     value={formData.homeAddress}
                     onChange={handleChange}

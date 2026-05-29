@@ -1,8 +1,10 @@
 import { Phone, Video, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 
 function IncomingCallOverlay() {
   const { incomingCall, answerIncomingCall, declineIncomingCall } = useAuth();
+  const navigate = useNavigate();
 
   if (!incomingCall) return null;
 
@@ -39,7 +41,10 @@ function IncomingCallOverlay() {
         <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
           <button
             type="button"
-            onClick={() => answerIncomingCall(incomingCall)}
+            onClick={async () => {
+              await answerIncomingCall(incomingCall);
+              navigate('/chat');
+            }}
             className="px-4 py-2 sm:px-6 sm:py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium flex items-center gap-2"
           >
             {isVideo ? <Video className="w-4 h-4 sm:w-5 sm:h-5" /> : <Phone className="w-4 h-4 sm:w-5 sm:h-5" />}

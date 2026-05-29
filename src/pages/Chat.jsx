@@ -65,7 +65,8 @@ function Chat() {
   const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations,
           editMessage, deleteMessage, addReaction, clearMessages,
           incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
-          answerIncomingCall, declineIncomingCall } = useAuth();
+          answerIncomingCall, declineIncomingCall,
+          pendingAnsweredCall, setPendingAnsweredCall } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const messagesEndRef = useRef(null);
@@ -103,6 +104,21 @@ function Chat() {
   const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+
+  // Drawing board state
+  const [showDrawModal, setShowDrawModal] = useState(false);
+  const drawCanvasRef = useRef(null);
+  const [isDrawingCanvas, setIsDrawingCanvas] = useState(false);
+  const [drawColor, setDrawColor] = useState('#1a1a1a');
+  const [drawBrushSize, setDrawBrushSize] = useState(4);
+  const [drawTool, setDrawTool] = useState('pen');
+  const drawHistoryRef = useRef([]);
+  const [drawHistoryLen, setDrawHistoryLen] = useState(0);
+  const drawLastPos = useRef(null);
+  const [drawText, setDrawText] = useState('');
+  const [drawTextPos, setDrawTextPos] = useState(null);
+  const [drawSelectedEmoji, setDrawSelectedEmoji] = useState('😊');
+  const [showDrawEmojiPicker, setShowDrawEmojiPicker] = useState(false);
 
   // Voice recording refs and state
   const mediaRecorderRef = useRef(null);
@@ -277,24 +293,29 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        addNotification('Compressing image...', 'info');
+        addNotification('Sending image...', 'info');
         const imageData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (evt) => resolve(evt.target.result);
           reader.onerror = () => reject(new Error('Failed to read image'));
           reader.readAsDataURL(file);
         });
-        const compressedImage = await compressImage(imageData, 800, 800, 0.7);
+        let finalImage = imageData;
+        try {
+          finalImage = await compressImage(imageData, 800, 800, 0.7);
+        } catch {
+          // unsupported format (e.g. HEIC) — send original data as-is
+        }
         await sendMessage(activeConversation.id, {
           sender: 'me',
           text: '📸 Photo',
           type: 'image',
-          imageUrl: compressedImage,
+          imageUrl: finalImage,
         });
         addNotification('Photo sent!', 'success');
       } catch (error) {
         console.error('Gallery image send error:', error);
-        addNotification('Failed to send image. Please try again.', 'error');
+        addNotification('Failed to send image. Please try a different format (JPG, PNG, WEBP).', 'error');
       }
     }
     e.target.value = '';
@@ -322,30 +343,41 @@ function Chat() {
 
   const handleCapturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
-    
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
+    const ctx = canvas.getContext('2d');
+    // Mirror-flip to match the scaleX(-1) preview
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
     const photoData = canvas.toDataURL('image/png');
+    // Reset draw state — image will be loaded onto drawCanvasRef via useEffect after re-render
+    drawHistoryRef.current = [];
+    setDrawHistoryLen(0);
+    setDrawTool('pen');
+    setDrawColor('#ff0000');
+    setDrawBrushSize(4);
+    setDrawText('');
+    setDrawTextPos(null);
     setCapturedPhoto(photoData);
   };
 
   const handleRetakePhoto = () => {
     setCapturedPhoto(null);
+    drawHistoryRef.current = [];
+    setDrawHistoryLen(0);
+    setDrawText('');
+    setDrawTextPos(null);
   };
 
   const handleSendPhoto = async () => {
     if (!capturedPhoto || !activeConversation) return;
-    
     try {
       addNotification('Sending photo...', 'info');
-      
-      // Send without compression - just use the captured photo directly
       await sendMessage(activeConversation.id, {
         sender: 'me',
         text: '📸 Camera Photo',
@@ -357,8 +389,144 @@ function Chat() {
       console.error('Photo send error:', error);
       addNotification('Failed to send photo', 'error');
     }
-    
     handleCloseCamera();
+  };
+
+  // ── Drawing board ──────────────────────────────────────────
+  const openDrawModal = () => {
+    setShowDrawModal(true);
+    setDrawTool('pen');
+    setDrawColor('#1a1a1a');
+    setDrawBrushSize(4);
+    drawHistoryRef.current = [];
+    setDrawHistoryLen(0);
+    setDrawText('');
+    setDrawTextPos(null);
+    setShowDrawEmojiPicker(false);
+    setTimeout(() => {
+      const canvas = drawCanvasRef.current;
+      if (!canvas) return;
+      canvas.width = 800;
+      canvas.height = 560;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }, 60);
+  };
+
+  const getDrawPos = (e, canvas) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * scaleX,
+      y: (src.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const saveDrawSnapshot = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    drawHistoryRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    setDrawHistoryLen(drawHistoryRef.current.length);
+  };
+
+  const handleDrawUndo = () => {
+    if (drawHistoryRef.current.length === 0) return;
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.putImageData(drawHistoryRef.current.pop(), 0, 0);
+    setDrawHistoryLen(drawHistoryRef.current.length);
+  };
+
+  const handleDrawClear = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    saveDrawSnapshot();
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleDrawPointerDown = (e) => {
+    e.preventDefault();
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const pos = getDrawPos(e, canvas);
+    if (drawTool === 'pen' || drawTool === 'eraser') {
+      saveDrawSnapshot();
+      setIsDrawingCanvas(true);
+      drawLastPos.current = pos;
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, drawBrushSize / 2, 0, Math.PI * 2);
+      ctx.fillStyle = drawTool === 'eraser' ? '#ffffff' : drawColor;
+      ctx.fill();
+    } else if (drawTool === 'text') {
+      setDrawTextPos(pos);
+    } else if (drawTool === 'emoji') {
+      saveDrawSnapshot();
+      const ctx = canvas.getContext('2d');
+      const fontSize = drawBrushSize * 7 + 14;
+      ctx.font = `${fontSize}px serif`;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(drawSelectedEmoji, pos.x, pos.y);
+    }
+  };
+
+  const handleDrawPointerMove = (e) => {
+    e.preventDefault();
+    if (!isDrawingCanvas || (drawTool !== 'pen' && drawTool !== 'eraser')) return;
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !drawLastPos.current) return;
+    const ctx = canvas.getContext('2d');
+    const pos = getDrawPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(drawLastPos.current.x, drawLastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = drawTool === 'eraser' ? '#ffffff' : drawColor;
+    ctx.lineWidth = drawBrushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    drawLastPos.current = pos;
+  };
+
+  const handleDrawPointerUp = () => setIsDrawingCanvas(false);
+
+  const commitDrawText = () => {
+    if (!drawText.trim() || !drawTextPos) return;
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    saveDrawSnapshot();
+    const ctx = canvas.getContext('2d');
+    const fontSize = drawBrushSize * 4 + 14;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.fillStyle = drawColor;
+    ctx.textBaseline = 'top';
+    ctx.fillText(drawText, drawTextPos.x, drawTextPos.y);
+    setDrawText('');
+    setDrawTextPos(null);
+  };
+
+  const handleDrawSend = async () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || !activeConversation) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    setShowDrawModal(false);
+    try {
+      await sendMessage(activeConversation.id, {
+        sender: 'me',
+        text: '🎨 Drawing',
+        type: 'image',
+        imageUrl: dataUrl,
+      });
+    } catch {
+      addNotification('Failed to send drawing.', 'error');
+    }
   };
 
   const handleCameraCapture = async (e) => {
@@ -561,6 +729,8 @@ function Chat() {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
+  const localStreamRef = useRef(null); // always current, safe in closures
+  const [remoteStream, setRemoteStream] = useState(null);
   const peerConnectionRef = useRef(null);
   const currentCallIdRef = useRef(null);
   const callConversationIdRef = useRef(null); // conversation the call belongs to
@@ -569,6 +739,7 @@ function Chat() {
   const audioCtxRef = useRef(null);
   const callDurationIntervalRef = useRef(null);
   const [callTimerTick, setCallTimerTick] = useState(0);
+  const callEndPollRef = useRef(null);
 
   // Image viewer and editor state
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -637,17 +808,28 @@ function Chat() {
     setTimeout(() => { pc.removeEventListener('icegatheringstatechange', fn); resolve(pc.localDescription); }, 8000);
   });
 
+  const stopLocalStream = () => {
+    const s = localStreamRef.current;
+    if (s) { s.getTracks().forEach(t => t.stop()); }
+    localStreamRef.current = null;
+    setLocalStream(null);
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+  };
+
   const startWebRTC = async (callId, isCaller, callType) => {
     try {
       const pc = new RTCPeerConnection(RTC_CONFIG);
       peerConnectionRef.current = pc;
       const constraints = callType === 'video' ? { audio: true, video: true } : { audio: true };
+      // Stop the preview stream before creating the WebRTC stream
+      stopLocalStream();
       const stream = await navigator.mediaDevices.getUserMedia(constraints).catch(() => null);
       if (!stream) { addNotification('Could not access ' + (callType === 'video' ? 'camera/microphone' : 'microphone'), 'error'); return false; }
+      localStreamRef.current = stream;
       setLocalStream(stream);
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
       if (callType === 'video' && localVideoRef.current) localVideoRef.current.srcObject = stream;
-      pc.ontrack = (e) => { if (remoteVideoRef.current && e.streams[0]) remoteVideoRef.current.srcObject = e.streams[0]; };
+      pc.ontrack = (e) => { if (e.streams[0]) setRemoteStream(e.streams[0]); };
 
       if (isCaller) {
         const offer = await pc.createOffer();
@@ -659,9 +841,9 @@ function Chat() {
           if (++tries > 30 || !peerConnectionRef.current) { clearInterval(pollAns); return; }
           try {
             const sig = await callsAPI.getCallWebRTCSignaling(callId);
-            if (sig.sdp_answer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
+            if (sig.answer_sdp && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
               clearInterval(pollAns);
-              await peerConnectionRef.current.setRemoteDescription({ type: 'answer', sdp: sig.sdp_answer });
+              await peerConnectionRef.current.setRemoteDescription({ type: 'answer', sdp: sig.answer_sdp });
             }
           } catch (e) {}
         }, 2000);
@@ -671,9 +853,9 @@ function Chat() {
           if (++tries > 15 || !peerConnectionRef.current) { clearInterval(waitOffer); return; }
           try {
             const sig = await callsAPI.getCallWebRTCSignaling(callId);
-            if (sig.sdp_offer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
+            if (sig.offer_sdp && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
               clearInterval(waitOffer);
-              await peerConnectionRef.current.setRemoteDescription({ type: 'offer', sdp: sig.sdp_offer });
+              await peerConnectionRef.current.setRemoteDescription({ type: 'offer', sdp: sig.offer_sdp });
               const answer = await peerConnectionRef.current.createAnswer();
               await peerConnectionRef.current.setLocalDescription(answer);
               const finalAns = await waitForIceDone(peerConnectionRef.current);
@@ -686,12 +868,44 @@ function Chat() {
     } catch (e) { console.error('WebRTC error:', e); return false; }
   };
 
+  const startCallEndPoll = (callId, type) => {
+    if (callEndPollRef.current) clearInterval(callEndPollRef.current);
+    callEndPollRef.current = setInterval(async () => {
+      try {
+        const call = await callsAPI.getById(callId);
+        const done = !call || call.status === 'ended' || call.status === 'missed' || call.status === 'declined';
+        if (done) {
+          clearInterval(callEndPollRef.current);
+          callEndPollRef.current = null;
+          cleanupCall(false);
+          if (type === 'video') { setShowVideoCallModal(false); setVideoCallStatus('ended'); }
+          else { setShowCallModal(false); setCallStatus('ended'); }
+          setActiveCallStartTime(null);
+          addNotification('Call ended.', 'info');
+        }
+      } catch (err) {
+        if (err?.status === 404) {
+          clearInterval(callEndPollRef.current);
+          callEndPollRef.current = null;
+          cleanupCall(false);
+          if (type === 'video') { setShowVideoCallModal(false); setVideoCallStatus('ended'); }
+          else { setShowCallModal(false); setCallStatus('ended'); }
+          setActiveCallStartTime(null);
+          addNotification('Call ended.', 'info');
+        }
+      }
+    }, 1500);
+  };
+
   const cleanupCall = (shouldClearOutgoing = true) => {
     stopRingtone();
     if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); }
-    setLocalStream(null);
+    // Use ref (not state) so the correct stream is always stopped even in stale closures
+    stopLocalStream();
+    setRemoteStream(null);
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     if (callDurationIntervalRef.current) { clearInterval(callDurationIntervalRef.current); callDurationIntervalRef.current = null; }
+    if (callEndPollRef.current) { clearInterval(callEndPollRef.current); callEndPollRef.current = null; }
     if (shouldClearOutgoing) clearOutgoingCall();
     currentCallIdRef.current = null;
   };
@@ -730,7 +944,12 @@ function Chat() {
       startRingtone();
       addNotification(`Calling ${activeConversation?.with}...`, 'info');
     } catch (err) {
-      addNotification('Could not start call', 'error');
+      const msg = err?.message || '';
+      if (msg.includes('busy') || msg.includes('already in a call')) {
+        addNotification(msg, 'error');
+      } else {
+        addNotification('Could not start call. Please try again.', 'error');
+      }
     }
   };
 
@@ -760,6 +979,7 @@ function Chat() {
     if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
     try {
       const callData = await callsAPI.initiate(activeConversation.id, 'video');
+
       currentCallIdRef.current = callData.id;
       callConversationIdRef.current = activeConversation.id;
       callTypeRef.current = 'video';
@@ -772,6 +992,7 @@ function Chat() {
       // Show self-preview immediately
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStreamRef.current = stream;
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
       } catch (err) {
@@ -781,7 +1002,12 @@ function Chat() {
         try { await callsAPI.end(callData.id, 'ended'); } catch (_) {}
       }
     } catch (err) {
-      addNotification('Could not start video call', 'error');
+      const msg = err?.message || '';
+      if (msg.includes('busy') || msg.includes('already in a call')) {
+        addNotification(msg, 'error');
+      } else {
+        addNotification('Could not start video call. Please try again.', 'error');
+      }
     }
   };
 
@@ -865,7 +1091,13 @@ function Chat() {
   };
 
   const isMessageDeletedForMe = (message) => {
-    return message.deletedFor?.includes(user?.id);
+    if (message.deletedForMe) return true;
+    const raw = message.deleted_for ?? message.deletedFor;
+    if (!raw || !user?.id) return false;
+    try {
+      const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(arr) && arr.includes(user.id);
+    } catch { return false; }
   };
 
   const isMessageDeletedForEveryone = (message) => {
@@ -883,9 +1115,51 @@ function Chat() {
     setIsNearBottom(isBottom);
   };
 
-  // Keep a ref to cameraStream so the callback ref on the video element always reads the latest value
+  // Keep a ref to cameraStream so cleanup can always access latest value
   const cameraStreamRef = useRef(null);
   cameraStreamRef.current = cameraStream;
+
+  // Set srcObject via effect (not inline callback ref) to prevent blinking on re-renders
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
+  // Attach local stream to local video element (self-preview / PIP)
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, videoCallStatus]);
+
+  // Attach remote stream to remote video element (other person's camera)
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, videoCallStatus]);
+
+  // After capturedPhoto state is set, the drawCanvasRef is now in the DOM — load the photo onto it
+  useEffect(() => {
+    if (!capturedPhoto) return;
+    const tryLoad = (attempts = 0) => {
+      const drawCanvas = drawCanvasRef.current;
+      if (!drawCanvas) {
+        // Canvas not mounted yet — retry on next frame
+        if (attempts < 20) requestAnimationFrame(() => tryLoad(attempts + 1));
+        return;
+      }
+      const img = new window.Image();
+      img.onload = () => {
+        drawCanvas.width = img.naturalWidth;
+        drawCanvas.height = img.naturalHeight;
+        drawCanvas.getContext('2d').drawImage(img, 0, 0);
+      };
+      img.src = capturedPhoto;
+    };
+    tryLoad();
+  }, [capturedPhoto]);
 
   // Watch outgoing call status polled from App.jsx
   useEffect(() => {
@@ -899,7 +1173,10 @@ function Chat() {
       if (type === 'video') setVideoCallStatus('connected');
       else setCallStatus('connected');
       addNotification('Call connected!', 'success');
-      if (callId) startWebRTC(callId, true, type);
+      if (callId) {
+        startWebRTC(callId, true, type);
+        startCallEndPoll(callId, type);
+      }
       callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
     } else if (outgoingCallStatus === 'declined') {
       stopRingtone();
@@ -934,6 +1211,30 @@ function Chat() {
     setIncomingCallType(incomingCall.call_type || 'voice');
     setCallerInfo(incomingCall);
   }, [incomingCall]);
+
+  // Handle call answered from IncomingCallOverlay (user was on a different page)
+  useEffect(() => {
+    if (!pendingAnsweredCall) return;
+    const call = pendingAnsweredCall;
+    setPendingAnsweredCall(null);
+    setShowIncomingCall(false);
+    currentCallIdRef.current = call.id;
+    callConversationIdRef.current = call.conversation_id;
+    callTypeRef.current = call.call_type || 'voice';
+    isCallerRef.current = false;
+    setActiveCallStartTime(Date.now());
+    callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
+    startCallEndPoll(call.id, call.call_type || 'voice');
+    if (call.call_type === 'video') {
+      setShowVideoCallModal(true);
+      setVideoCallStatus('connected');
+    } else {
+      setShowCallModal(true);
+      setCallStatus('connected');
+    }
+    startWebRTC(call.id, false, call.call_type || 'voice');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAnsweredCall]);
 
   // Save active conversation ID to localStorage whenever it changes
   useEffect(() => {
@@ -1367,7 +1668,6 @@ function Chat() {
             onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
-            <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
           <button
@@ -1626,35 +1926,37 @@ function Chat() {
                   
                   if (deletedForMe) {
                     return (
-                      <div key={message.id} className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end gap-2`}>
-                        {/* Avatar for other user's deleted messages */}
-                        {!isOwn && (
-                          <div className="flex-shrink-0 self-end mb-1">
-                            {getUserAvatar(allUsers.find(u => u.id === message.senderId))}
-                          </div>
-                        )}
-                        <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
-                          <p className="italic text-sm">Message deleted</p>
-                        </div>
-                        {/* Avatar for own deleted messages */}
-                        {isOwn && (
-                          <div className="flex-shrink-0 self-end mb-1">
-                            {(() => {
+                      <div key={message.id} className={`flex w-full items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                        {/* Avatar always first in DOM — flex-row-reverse keeps it on the right for own messages */}
+                        <div className="flex-shrink-0 self-end mb-1">
+                          {isOwn ? (
+                            (() => {
                               const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
                               return user?.profilePicture ? (
-                                <img 
-                                  src={user.profilePicture} 
-                                  alt="Me" 
-                                  className="w-10 h-10 object-cover rounded-full"
-                                />
+                                <img src={user.profilePicture} alt="Me" className="w-10 h-10 object-cover rounded-full" />
                               ) : (
                                 <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
                                   {avatar.icon}
                                 </div>
                               );
-                            })()}
-                          </div>
-                        )}
+                            })()
+                          ) : (
+                            (() => {
+                              const senderUser = allUsers.find(u => u.id === message.senderId) || allUsers.find(u => u.id === message.sender_id);
+                              if (!senderUser) return <div className="w-10 h-10 bg-gray-300 rounded-full" />;
+                              return senderUser.profilePicture ? (
+                                <img src={senderUser.profilePicture} alt={senderUser.name} className="w-10 h-10 object-cover rounded-full" />
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center text-lg">
+                                  {(senderUser.name || '?').charAt(0).toUpperCase()}
+                                </div>
+                              );
+                            })()
+                          )}
+                        </div>
+                        <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
+                          <p className="italic text-sm">Message deleted</p>
+                        </div>
                       </div>
                     );
                   }
@@ -2004,7 +2306,7 @@ function Chat() {
                   >
                     <Image className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={handleCamera}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
@@ -2013,7 +2315,7 @@ function Chat() {
                   >
                     <Camera className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={handleVoiceToggle}
                     className={`p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
@@ -2255,6 +2557,7 @@ function Chat() {
                       }
                       addNotification('Call connected!', 'success');
                       callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
+                      startCallEndPoll(call.id, call.call_type || 'voice');
                       startWebRTC(call.id, false, call.call_type || 'voice');
                       setCallerInfo(null);
                     }}
@@ -2449,25 +2752,43 @@ function Chat() {
                 
                 {/* Video Display Area */}
                 <div className="relative bg-black rounded-lg overflow-hidden mb-4" style={{ height: '50vh', minHeight: '300px' }}>
-                  {/* Main video - show local video while ringing/calling, remote when connected */}
-                  <video 
-                    ref={localVideoRef}
-                    autoPlay 
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                  
-                  {/* Self view picture-in-picture when connected */}
+                  {/* Main area: other person's camera when connected, own camera while calling */}
+                  {videoCallStatus === 'connected' ? (
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                  )}
+
+                  {/* Self view PIP — own camera, small, bottom-right */}
                   {videoCallStatus === 'connected' && (
-                    <div className="absolute bottom-4 right-4 w-32 h-24 sm:w-48 sm:h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-white">
-                      <video 
+                    <div className="absolute bottom-4 right-4 w-32 h-24 sm:w-40 sm:h-32 bg-gray-800 rounded-lg overflow-hidden border-2 border-white shadow-lg">
+                      <video
                         ref={localVideoRef}
-                        autoPlay 
+                        autoPlay
                         playsInline
                         muted
                         className="w-full h-full object-cover"
+                        style={{ transform: 'scaleX(-1)' }}
                       />
+                    </div>
+                  )}
+
+                  {/* Waiting for remote video overlay */}
+                  {videoCallStatus === 'connected' && !remoteStream && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                      <p className="text-white text-sm animate-pulse">Connecting video...</p>
                     </div>
                   )}
                 </div>
@@ -2551,55 +2872,25 @@ function Chat() {
                 
                 <div className="flex-1 relative bg-black rounded-xl overflow-hidden flex items-center justify-center" style={{ minHeight: '50vh', maxHeight: '70vh' }}>
                   {!capturedPhoto ? (
-                    <video
-                      ref={(el) => {
-                        videoRef.current = el;
-                        // Re-apply srcObject every time the element mounts/re-mounts
-                        if (el && cameraStreamRef.current) {
-                          el.srcObject = cameraStreamRef.current;
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                      style={{ maxHeight: '70vh' }}
-                    />
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ maxHeight: '70vh', transform: 'scaleX(-1)' }} />
                   ) : (
-                    <img 
-                      src={capturedPhoto} 
-                      alt="Captured" 
-                      className="w-full h-full object-contain"
-                      style={{ maxHeight: '70vh' }}
-                    />
+                    <img src={capturedPhoto} alt="Captured" className="w-full h-full object-contain" style={{ maxHeight: '70vh' }} />
                   )}
                   <canvas ref={canvasRef} className="hidden" />
                 </div>
-                
+
                 <div className="flex justify-center items-center gap-4 mt-4 sm:mt-6">
                   {!capturedPhoto ? (
-                    <button 
-                      onClick={handleCapturePhoto}
-                      className="p-4 sm:p-5 bg-white rounded-full touch-manipulation hover:bg-gray-200 transition-colors"
-                      title="Take Photo"
-                    >
+                    <button onClick={handleCapturePhoto} className="p-4 sm:p-5 bg-white rounded-full touch-manipulation hover:bg-gray-200 transition-colors" title="Take Photo">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-4 border-gray-800 bg-white"></div>
                     </button>
                   ) : (
                     <>
-                      <button 
-                        onClick={handleRetakePhoto}
-                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2"
-                      >
-                        <X className="w-5 h-5" />
-                        Retake
+                      <button onClick={handleRetakePhoto} className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
+                        <X className="w-5 h-5" /> Retake
                       </button>
-                      <button 
-                        onClick={handleSendPhoto}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2"
-                      >
-                        <Send className="w-5 h-5" />
-                        Send Photo
+                      <button onClick={handleSendPhoto} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
+                        <Send className="w-5 h-5" /> Send Photo
                       </button>
                     </>
                   )}
@@ -2607,6 +2898,140 @@ function Chat() {
               </div>
             </div>
           )}
+          {/* Drawing Board Modal */}
+          {showDrawModal && (
+            <div className="fixed inset-0 bg-black/80 flex flex-col z-50">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
+                <span className="font-semibold text-sm">🎨 Drawing Board</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={handleDrawUndo} disabled={drawHistoryLen === 0}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-30 transition-colors">
+                    ↩ Undo
+                  </button>
+                  <button type="button" onClick={handleDrawClear}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700 hover:bg-gray-600 transition-colors">
+                    Clear
+                  </button>
+                  <button type="button" onClick={() => setShowDrawModal(false)}
+                    className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Canvas */}
+              <div className="flex-1 overflow-hidden bg-gray-800 flex items-center justify-center p-2">
+                <canvas
+                  ref={drawCanvasRef}
+                  className="rounded-lg touch-none"
+                  style={{ maxWidth: '100%', maxHeight: '100%', cursor: drawTool === 'text' ? 'text' : drawTool === 'emoji' ? 'crosshair' : 'crosshair', background: '#fff' }}
+                  onMouseDown={handleDrawPointerDown}
+                  onMouseMove={handleDrawPointerMove}
+                  onMouseUp={handleDrawPointerUp}
+                  onMouseLeave={handleDrawPointerUp}
+                  onTouchStart={handleDrawPointerDown}
+                  onTouchMove={handleDrawPointerMove}
+                  onTouchEnd={handleDrawPointerUp}
+                />
+              </div>
+
+              {/* Controls */}
+              <div className="bg-gray-900 text-white px-4 py-3 space-y-3 flex-shrink-0">
+
+                {/* Tool row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-10">Tool</span>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'pen', label: '✏️ Draw' },
+                      { id: 'eraser', label: '🧹 Erase' },
+                      { id: 'text', label: '🔤 Text' },
+                      { id: 'emoji', label: '😊 Emoji' },
+                    ].map(t => (
+                      <button key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); setShowDrawEmojiPicker(false); }}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${drawTool === t.id ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-10">Color</span>
+                  <div className="flex gap-2 flex-wrap">
+                    {['#1a1a1a', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#ffffff'].map(c => (
+                      <button key={c} type="button" onClick={() => setDrawColor(c)}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${drawColor === c ? 'border-white scale-110' : 'border-gray-600'}`}
+                        style={{ background: c }} />
+                    ))}
+                    <label className="w-7 h-7 rounded-full border-2 border-gray-600 overflow-hidden cursor-pointer" title="Custom color">
+                      <input type="color" value={drawColor} onChange={e => setDrawColor(e.target.value)} className="w-full h-full opacity-0 cursor-pointer" />
+                      <div className="w-full h-full -mt-7 flex items-center justify-center text-xs">🎨</div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Size row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 w-10">Size</span>
+                  <div className="flex gap-2">
+                    {[{ v: 2, label: 'S' }, { v: 4, label: 'M' }, { v: 8, label: 'L' }, { v: 16, label: 'XL' }].map(s => (
+                      <button key={s.v} type="button" onClick={() => setDrawBrushSize(s.v)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${drawBrushSize === s.v ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Text tool input */}
+                {drawTool === 'text' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-10 flex-shrink-0">{drawTextPos ? '📍 Set' : '📍 Tap'}</span>
+                    <input
+                      type="text"
+                      value={drawText}
+                      onChange={e => setDrawText(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && commitDrawText()}
+                      placeholder={drawTextPos ? 'Type then press Place...' : 'Tap on canvas first...'}
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm outline-none border border-gray-600 focus:border-green-500"
+                    />
+                    <button type="button" onClick={commitDrawText} disabled={!drawText.trim() || !drawTextPos}
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-30 rounded-lg text-xs font-semibold transition-colors">
+                      Place
+                    </button>
+                  </div>
+                )}
+
+                {/* Emoji tool */}
+                {drawTool === 'emoji' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-10 flex-shrink-0">Pick</span>
+                    <div className="flex gap-1 flex-wrap">
+                      {['😊', '😂', '❤️', '👍', '🔥', '🎉', '😎', '🙏', '✨', '💯', '👋', '🌟', '🤔', '😍', '🎨', '⭐'].map(em => (
+                        <button key={em} type="button" onClick={() => setDrawSelectedEmoji(em)}
+                          className={`text-lg w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${drawSelectedEmoji === em ? 'bg-green-600' : 'hover:bg-gray-700'}`}>
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                    <span className="text-2xl ml-1">{drawSelectedEmoji}</span>
+                  </div>
+                )}
+
+                {/* Send button */}
+                <div className="flex justify-end">
+                  <button type="button" onClick={handleDrawSend}
+                    className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-sm">
+                    <Send className="w-4 h-4" /> Send Drawing
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Confirm Modal */}
           {showConfirmModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">

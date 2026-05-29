@@ -1081,7 +1081,7 @@ function StudentManagement() {
                       <input
                         type="text"
                         value={formData.emergencyName || ''}
-                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value})}
+                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '')})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                         placeholder="Parent/Guardian name"
                         required
@@ -1244,7 +1244,9 @@ function StudentManagement() {
                   <input
                     type="text"
                     value={formData.studentId}
-                    onChange={(e) => setFormData({...formData, studentId: e.target.value})}
+                    onChange={(e) => setFormData({...formData, studentId: e.target.value.replace(/\D/g, '').slice(0, 9)})}
+                    maxLength={9}
+                    placeholder="9 digits only"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                   />
                 </div>
@@ -1507,7 +1509,7 @@ function StudentManagement() {
                       <input
                         type="text"
                         value={formData.emergencyName}
-                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value})}
+                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '')})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                       />
                     </div>

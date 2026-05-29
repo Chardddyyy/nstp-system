@@ -1,7 +1,7 @@
 import { useAuth } from '../App';
 import { 
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, CircleCheckBig, TrendingUp, Shield
+  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, Shield
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -338,19 +338,13 @@ function InstructorDashboard() {
                         title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                         className="text-gray-400 hover:text-green-600 transition-colors"
                       >
-                        <CircleCheckBig className={`w-5 h-5 ${selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'text-green-600' : ''}`} />
+                        {selectedNotifications.length === (notifications || []).length && notifications.length > 0
+                          ? <CheckSquare className="w-5 h-5 text-green-600" />
+                          : <Square className="w-5 h-5" />}
                       </button>
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={handleMarkAllRead}
-                        className="text-sm text-blue-600 hover:text-blue-700"
-                        title="Mark all as read"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
                       <button
                         type="button"
                         onClick={handleDeleteSelected}

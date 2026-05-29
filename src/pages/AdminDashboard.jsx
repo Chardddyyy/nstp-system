@@ -3,7 +3,7 @@ import { archivesAPI } from '../services/api';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, TrendingUp, Shield,
-  BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square, CircleCheckBig,
+  BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
   BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -171,15 +171,21 @@ function AdminDashboard() {
   const previousYearData = useMemo(() => archivedYears.find(y => y.year === currentYear - 1) || archivedYears[archivedYears.length - 1], [archivedYears, currentYear]);
   
   // Use archived stats when viewing archive, otherwise use current stats
-  const displayStats = viewingArchive && archiveViewData ? {
-    totalStudents: archiveViewData.students,
-    cwtsStudents: archiveViewData.cwts,
-    ltsStudents: archiveViewData.lts,
-    rotcStudents: archiveViewData.rotc,
-    totalInstructors: 0, // Not stored in archive
-    pendingReports: 0,
-    unreadMessages: 0
-  } : stats;
+  const displayStats = viewingArchive && archiveViewData ? (() => {
+    const sd = archiveViewData.studentData || [];
+    const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
+    const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
+    const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
+    return {
+      totalStudents: archiveViewData.students || sd.length,
+      cwtsStudents: cwts,
+      ltsStudents: lts,
+      rotcStudents: rotc,
+      totalInstructors: 0,
+      pendingReports: 0,
+      unreadMessages: 0
+    };
+  })() : stats;
   
   const currentStats = useMemo(() => ({
     total: displayStats.totalStudents,
@@ -507,19 +513,13 @@ function AdminDashboard() {
                         title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                         className="text-gray-400 hover:text-green-600 transition-colors"
                       >
-                        <CircleCheckBig className={`w-5 h-5 ${selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'text-green-600' : ''}`} />
+                        {selectedNotifications.length === (notifications || []).length && notifications.length > 0
+                          ? <CheckSquare className="w-5 h-5 text-green-600" />
+                          : <Square className="w-5 h-5" />}
                       </button>
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={handleMarkAllRead}
-                        className="text-blue-600 hover:text-blue-700"
-                        title="Mark all as read"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
                       <button
                         type="button"
                         onClick={handleDeleteSelected}
