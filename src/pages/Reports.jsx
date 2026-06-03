@@ -14,7 +14,6 @@ function Reports() {
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
-  const validDepartments = ['ROTC', 'LTS', 'CWTS'];
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
@@ -32,7 +31,7 @@ function Reports() {
   const [itemsPerPage] = useState(5);
   
   // Calendar state
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [showCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -231,7 +230,7 @@ function Reports() {
       setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
       setNotification({ type: 'success', message: 'Report assignment created!' });
       setTimeout(() => setNotification(null), 3000);
-    } catch (error) {
+    } catch (_error) {
       setNotification({ type: 'error', message: 'Failed to create report. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
@@ -266,7 +265,7 @@ function Reports() {
       setSelectedReport(null);
       setNotification({ type: 'success', message: 'Report submitted successfully!' });
       setTimeout(() => setNotification(null), 3000);
-    } catch (error) {
+    } catch (_error) {
       setNotification({ type: 'error', message: 'Failed to submit report. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
@@ -285,33 +284,32 @@ function Reports() {
     reader.readAsDataURL(file);
   };
 
-  // Handle file selection for instructor submission
+  // Handle file selection for instructor submission — read as base64 so it can be saved
   const handleAttachmentChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setSubmitForm({ ...submitForm, attachment: { name: file.name, size: file.size, type: file.type } });
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setSubmitForm(prev => ({ ...prev, attachment: { name: file.name, size: file.size, type: file.type, data: evt.target.result } }));
+    };
+    reader.readAsDataURL(file);
   };
 
   // Add comment/reply
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim()) return;
-    
-    const comment = {
-      user: user?.name,
-      role: user?.role,
-      department: user?.department,
-      text: newComment
-    };
-    
-    addReportComment(selectedReport.id, comment);
-    
-    setSelectedReport({
-      ...selectedReport,
-      comments: [...selectedReport.comments, { ...comment, id: Date.now(), time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }]
-    });
-    
+    const text = newComment.trim();
     setNewComment('');
+    try {
+      const saved = await addReportComment(selectedReport.id, { text });
+      setSelectedReport(prev => ({
+        ...prev,
+        comments: [...(prev.comments || []), saved]
+      }));
+    } catch {
+      setNotification({ type: 'error', message: 'Failed to post comment.' });
+      setTimeout(() => setNotification(null), 3000);
+    }
   };
 
   // Admin deletes report assignment
@@ -325,7 +323,7 @@ function Reports() {
 
   // Check if instructor already submitted
   const hasSubmitted = (report) => {
-    return report.submissions.some(s => s.instructor === user?.name);
+    return (report.submissions || []).some(s => (s.instructor_name || s.instructor) === user?.name);
   };
 
   // Use archived report data when in archive view, otherwise live data
@@ -439,7 +437,7 @@ function Reports() {
 
   const openSubmitModal = (report) => {
     setSelectedReport(report);
-    setSubmitForm({ content: '' });
+    setSubmitForm({ content: '', attachment: null });
     setShowSubmitModal(true);
   };
 
@@ -553,7 +551,7 @@ function Reports() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Archive Banner */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
@@ -591,7 +589,7 @@ function Reports() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -672,7 +670,7 @@ function Reports() {
         {/* Reports List */}
         <div className="space-y-4">
           {currentReports.map((report) => (
-            <div key={report.id} className="bg-white rounded-xl shadow-md p-6">
+            <div key={report.id} className="bg-white rounded-xl shadow-md p-3 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -808,8 +806,8 @@ function Reports() {
 
         {/* Create Report Assignment Modal (Admin) */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCreateModal(false)}>
+            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
               <h3 className="text-xl font-bold text-gray-800 mb-4">Create Report Assignment</h3>
               <div className="space-y-4">
                 <div>
@@ -934,8 +932,8 @@ function Reports() {
 
         {/* Submit Report Modal (Instructor) */}
         {showSubmitModal && selectedReport && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSubmitModal(false)}>
+            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Submit Report</h3>
               <p className="text-gray-600 mb-4">{selectedReport.title}</p>
               
@@ -1033,8 +1031,8 @@ function Reports() {
 
         {/* View Report Modal with Comments/Replies */}
         {showViewModal && selectedReport && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowViewModal(false)}>
+            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800">{selectedReport.title}</h3>
@@ -1086,12 +1084,25 @@ function Reports() {
                       <div key={idx} className="bg-green-50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-800">{sub.instructor}</span>
+                            <span className="font-medium text-gray-800">{sub.instructor_name || sub.instructor}</span>
                             <span className={`px-2 py-0.5 rounded text-xs ${getDeptColor(sub.department)}`}>{sub.department}</span>
                           </div>
-                          <span className="text-sm text-gray-500">{sub.submittedAt}</span>
+                          <span className="text-sm text-gray-500">
+                            {sub.submitted_at
+                              ? new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : sub.submittedAt}
+                          </span>
                         </div>
-                        <p className="text-gray-700 whitespace-pre-wrap">{sub.content}</p>
+                        {sub.content && <p className="text-gray-700 whitespace-pre-wrap">{sub.content}</p>}
+                        {(sub.file_data || sub.attachment?.data) && (
+                          <a
+                            href={sub.file_data || sub.attachment?.data}
+                            download={sub.file_name || sub.attachment?.name || 'attachment'}
+                            className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors"
+                          >
+                            📎 {sub.file_name || sub.attachment?.name || 'Download attachment'}
+                          </a>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1109,10 +1120,14 @@ function Reports() {
                     <div key={comment.id} className={`rounded-lg p-3 ${comment.role === 'admin' ? 'bg-blue-50' : 'bg-gray-50'}`}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center space-x-2">
-                          <span className="font-medium text-sm text-gray-800">{comment.user}</span>
-                          <span className="text-xs text-gray-500">({comment.role === 'admin' ? 'Admin' : comment.department})</span>
+                          <span className="font-medium text-sm text-gray-800">{comment.user_name || comment.user}</span>
+                          <span className="text-xs text-gray-500">({comment.role === 'admin' ? 'Admin' : (comment.department || '')})</span>
                         </div>
-                        <span className="text-xs text-gray-400">{comment.time}</span>
+                        <span className="text-xs text-gray-400">
+                          {comment.created_at
+                            ? new Date(comment.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                            : comment.time}
+                        </span>
                       </div>
                       <p className="text-sm text-gray-600">{comment.text}</p>
                     </div>
@@ -1147,7 +1162,7 @@ function Reports() {
 
         {/* Calendar Component */}
         {showCalendar && (
-          <div className="mt-8 bg-white rounded-xl shadow-md p-6">
+          <div className="mt-8 bg-white rounded-xl shadow-md p-3 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-800">
                 {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -1272,8 +1287,8 @@ function Reports() {
 
         {/* Add Event Modal */}
         {showAddEventModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddEventModal(false)}>
+            <div className="bg-white rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-gray-800 mb-4">Add Event</h3>
               <div className="space-y-4">
                 <div>

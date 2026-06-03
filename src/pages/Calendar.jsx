@@ -1,11 +1,11 @@
 import { useAuth } from '../App';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, ChevronLeft, Calendar as CalendarIcon, Plus, X,
-  ChevronRight, ChevronLeft as ChevronLeftIcon, Menu, CheckCircle, AlertCircle
+  LogOut, User, Calendar as CalendarIcon, Plus, X,
+  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 
 // Avatar options for display
 const AVATAR_OPTIONS = {
@@ -32,7 +32,7 @@ function Calendar() {
     const saved = localStorage.getItem('nstp_calendar_events');
     return saved ? JSON.parse(saved) : [];
   });
-  const [newEvent, setNewEvent] = useState({ title: '', date: '' });
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '' });
   const [notification, setNotification] = useState(null);
   
   // Philippine Holidays 2024-2030
@@ -173,6 +173,14 @@ function Calendar() {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
+  const todayStr = formatDate(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+  const isPastDay = (day) => {
+    if (!day) return false;
+    const dateStr = formatDate(currentDate.getFullYear(), currentDate.getMonth(), day);
+    return dateStr < todayStr;
+  };
+
   const getEventsForDate = (date) => {
     const dateStr = formatDate(currentDate.getFullYear(), currentDate.getMonth(), date);
     const holidays = philippineHolidays.filter(h => h.date === dateStr);
@@ -192,13 +200,14 @@ function Calendar() {
       id: Date.now(),
       title: newEvent.title,
       date: newEvent.date,
+      description: newEvent.description.trim(),
       type: 'event',
       createdBy: user?.name
     };
-    
+
     setEvents([...events, event]);
     localStorage.setItem('nstp_calendar_events', JSON.stringify([...events, event]));
-    setNewEvent({ title: '', date: '' });
+    setNewEvent({ title: '', date: '', description: '' });
     setShowAddEventModal(false);
     setNotification({ type: 'success', message: 'Event added successfully!' });
     setTimeout(() => setNotification(null), 3000);
@@ -217,30 +226,12 @@ function Calendar() {
   };
 
   // Get user avatar display
-  const getUserAvatar = () => {
-    if (user?.profilePicture) {
-      return (
-        <img 
-          src={user.profilePicture} 
-          alt="Profile" 
-          className="w-10 h-10 object-cover rounded-full"
-        />
-      );
-    }
-    const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
-    return (
-      <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
-        {avatar.icon}
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
 
       {/* Sidebar Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
@@ -325,7 +316,7 @@ function Calendar() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
@@ -342,8 +333,8 @@ function Calendar() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
-          <div className="flex items-start gap-2">
+        <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -353,8 +344,8 @@ function Calendar() {
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">Calendar</h1>
-              <p className="text-gray-600">
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-800">Calendar</h1>
+              <p className="text-gray-500 text-sm">
                 {isAdmin ? 'Manage events and holidays' : 'View calendar and events'}
               </p>
             </div>
@@ -363,27 +354,27 @@ function Calendar() {
             <button
               type="button"
               onClick={() => setShowAddEventModal(true)}
-              className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
+              className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               <span>Add Event</span>
             </button>
           )}
         </div>
 
-        {/* Calendar Component */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-800">
+        {/* Calendar Component — fills remaining viewport height */}
+        <div className="flex-1 bg-white rounded-xl shadow-md p-3 lg:p-5 flex flex-col overflow-hidden min-h-0">
+          <div className="flex-shrink-0 flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-800">
               {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </h2>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
               <button
                 type="button"
                 onClick={() => changeMonth(-1)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ChevronLeftIcon className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 type="button"
@@ -395,7 +386,10 @@ function Calendar() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
+          <div
+            className="flex-1 min-h-0"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'auto repeat(6, 1fr)', gap: '3px' }}
+          >
             {[
               { full: 'Sun', short: 'S' },
               { full: 'Mon', short: 'M' },
@@ -405,7 +399,7 @@ function Calendar() {
               { full: 'Fri', short: 'F' },
               { full: 'Sat', short: 'S' },
             ].map(day => (
-              <div key={day.full} className="text-center font-medium text-gray-600 text-xs sm:text-sm py-2">
+              <div key={day.full} className="text-center font-medium text-gray-500 text-xs py-1">
                 <span className="sm:hidden">{day.short}</span>
                 <span className="hidden sm:inline">{day.full}</span>
               </div>
@@ -416,25 +410,26 @@ function Calendar() {
               const isToday = day === new Date().getDate() &&
                              currentDate.getMonth() === new Date().getMonth() &&
                              currentDate.getFullYear() === new Date().getFullYear();
+              const past = isPastDay(day);
 
               return (
                 <div
                   key={index}
-                  className={`min-h-[36px] sm:min-h-[80px] md:min-h-[100px] p-0.5 sm:p-2 border rounded sm:rounded-lg cursor-pointer transition-colors ${
-                    day ? 'hover:bg-gray-50' : ''
-                  } ${isToday ? 'bg-blue-50 border-blue-300' : 'border-gray-200'}`}
-                  onClick={() => day && setSelectedDate(day)}
+                  className={`p-1 sm:p-1.5 border rounded transition-colors overflow-hidden ${
+                    !day ? 'border-transparent' : past ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'hover:bg-gray-50 cursor-pointer border-gray-200'
+                  } ${isToday ? '!bg-blue-50 !border-blue-300' : ''}`}
+                  onClick={() => day && !past && setSelectedDate(day)}
                 >
                   {day && (
                     <>
-                      <div className={`text-xs sm:text-sm font-medium mb-0 sm:mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                      <div className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
                         {day}
                       </div>
                       <div className="space-y-0.5 hidden sm:block">
                         {dayEvents.slice(0, 2).map((event, idx) => (
                           <div
                             key={idx}
-                            className={`text-xs p-0.5 sm:p-1 rounded truncate cursor-pointer hover:opacity-80 ${
+                            className={`text-[10px] px-1 py-0.5 rounded truncate ${
                               event.type === 'holiday'
                                 ? 'bg-red-100 text-red-700'
                                 : 'bg-green-100 text-green-700'
@@ -445,7 +440,7 @@ function Calendar() {
                           </div>
                         ))}
                         {dayEvents.length > 2 && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-[10px] text-gray-400">
                             +{dayEvents.length - 2} more
                           </div>
                         )}
@@ -469,49 +464,101 @@ function Calendar() {
             })}
           </div>
 
-          {/* Selected Date Events */}
-          {selectedDate && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-medium text-gray-800 mb-3">
-                Events for {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} {selectedDate}
-              </h3>
-              <div className="space-y-2">
-                {getEventsForDate(selectedDate).map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        event.type === 'holiday' ? 'bg-red-500' : 'bg-green-500'
-                      }`}></div>
-                      <div>
-                        <span className="text-sm font-medium">{event.title}</span>
-                        {event.createdBy && (
-                          <span className="text-xs text-gray-500 block">by {event.createdBy}</span>
-                        )}
+        </div>
+
+        {/* Day Events Modal */}
+        {selectedDate && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setSelectedDate(null)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800">
+                    {currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).replace(/\d+,/, `${selectedDate},`)}
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {getEventsForDate(selectedDate).length === 0
+                      ? 'No events'
+                      : `${getEventsForDate(selectedDate).length} event${getEventsForDate(selectedDate).length !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Event list */}
+              <div className="overflow-y-auto flex-1 px-5 py-3 space-y-3">
+                {getEventsForDate(selectedDate).length === 0 ? (
+                  <p className="text-gray-500 text-sm text-center py-6">No events on this day.</p>
+                ) : (
+                  getEventsForDate(selectedDate).map((event, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${event.type === 'holiday' ? 'bg-red-500' : 'bg-green-500'}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-800">{event.title}</p>
+                          {event.description && (
+                            <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{event.description}</p>
+                          )}
+                          {event.createdBy && (
+                            <p className="text-xs text-gray-400 mt-1">Added by {event.createdBy}</p>
+                          )}
+                        </div>
                       </div>
+                      {event.createdBy && isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete event"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
-                    {event.createdBy && isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteEvent(event.id)}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {getEventsForDate(selectedDate).length === 0 && (
-                  <p className="text-gray-500 text-sm">No events for this date.</p>
+                  ))
                 )}
               </div>
+
+              {/* Footer — admin can add event for this date */}
+              {isAdmin && (
+                <div className="px-5 py-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    disabled={isPastDay(selectedDate)}
+                    onClick={() => {
+                      const pad = (n) => String(n).padStart(2, '0');
+                      const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(selectedDate)}`;
+                      setNewEvent({ title: '', date: dateStr, description: '' });
+                      setSelectedDate(null);
+                      setShowAddEventModal(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {isPastDay(selectedDate) ? 'Cannot Add Event to Past Date' : 'Add Event for this Day'}
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Add Event Modal */}
         {showAddEventModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddEventModal(false)}>
+            <div className="bg-white rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-800">Add Event</h3>
                 <button
@@ -543,8 +590,22 @@ function Calendar() {
                     id="event-date"
                     name="eventDate"
                     value={newEvent.date}
+                    min={todayStr}
                     onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <textarea
+                    id="event-description"
+                    name="eventDescription"
+                    value={newEvent.description}
+                    onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                    rows={3}
+                    autoComplete="off"
+                    placeholder="Add details or notes about this event..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
                   />
                 </div>
               </div>

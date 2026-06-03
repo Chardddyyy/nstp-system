@@ -9,7 +9,7 @@ import {
   Volume2, VolumeX
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 // Avatar options for display
 const AVATAR_OPTIONS = {
@@ -27,7 +27,7 @@ const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '�
 // Image compression utility
 const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
-    const img = new window.Image();
+    const img = document.createElement('img');
     img.onload = () => {
       const canvas = document.createElement('canvas');
       let width = img.width;
@@ -71,11 +71,7 @@ function Chat() {
   const location = useLocation();
   const messagesEndRef = useRef(null);
 
-  const [activeConversationId, setActiveConversationId] = useState(() => {
-    // Initialize from localStorage if available
-    const saved = localStorage.getItem('nstp_active_chat');
-    return saved ? saved : null;
-  });
+  const [activeConversationId, setActiveConversationId] = useState(null);
   const [readConversations, setReadConversations] = useState(() => {
     // Load read state from localStorage
     const saved = localStorage.getItem('nstp_read_conversations');
@@ -108,6 +104,8 @@ function Chat() {
   // Drawing board state
   const [showDrawModal, setShowDrawModal] = useState(false);
   const drawCanvasRef = useRef(null);
+  const drawCanvasWrapRef = useRef(null); // wrapper div for overlay positioning
+  const drawBgImageRef = useRef(null);
   const [isDrawingCanvas, setIsDrawingCanvas] = useState(false);
   const [drawColor, setDrawColor] = useState('#1a1a1a');
   const [drawBrushSize, setDrawBrushSize] = useState(4);
@@ -118,12 +116,13 @@ function Chat() {
   const [drawText, setDrawText] = useState('');
   const [drawTextPos, setDrawTextPos] = useState(null);
   const [drawSelectedEmoji, setDrawSelectedEmoji] = useState('😊');
-  const [showDrawEmojiPicker, setShowDrawEmojiPicker] = useState(false);
+  // Movable text layers — not burned into canvas until send
+  const [textLayers, setTextLayers] = useState([]);
+  const draggingTextRef = useRef(null); // { id, startMouseX, startMouseY, origCanvasX, origCanvasY }
 
   // Voice recording refs and state
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const [audioBlob, setAudioBlob] = useState(null);
   const [isPlaying, setIsPlaying] = useState(null); // message id being played
   const audioPlayerRef = useRef(null);
 
@@ -293,7 +292,7 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        addNotification('Sending image...', 'info');
+        addNotification('Opening image...', 'info');
         const imageData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (evt) => resolve(evt.target.result);
@@ -304,18 +303,18 @@ function Chat() {
         try {
           finalImage = await compressImage(imageData, 800, 800, 0.7);
         } catch {
-          // unsupported format (e.g. HEIC) — send original data as-is
+          // unsupported format — use original
         }
         await sendMessage(activeConversation.id, {
           sender: 'me',
-          text: '📸 Photo',
+          text: '',
           type: 'image',
-          imageUrl: finalImage,
+          imageUrl: finalImage
         });
-        addNotification('Photo sent!', 'success');
+        addNotification('Image sent!', 'success');
       } catch (error) {
-        console.error('Gallery image send error:', error);
-        addNotification('Failed to send image. Please try a different format (JPG, PNG, WEBP).', 'error');
+        console.error('Gallery image load error:', error);
+        addNotification('Failed to send image. Please try a different format.', 'error');
       }
     }
     e.target.value = '';
@@ -393,7 +392,8 @@ function Chat() {
   };
 
   // ── Drawing board ──────────────────────────────────────────
-  const openDrawModal = () => {
+  const _openDrawModal = (bgImage = null) => {
+    drawBgImageRef.current = bgImage;
     setShowDrawModal(true);
     setDrawTool('pen');
     setDrawColor('#1a1a1a');
@@ -402,16 +402,7 @@ function Chat() {
     setDrawHistoryLen(0);
     setDrawText('');
     setDrawTextPos(null);
-    setShowDrawEmojiPicker(false);
-    setTimeout(() => {
-      const canvas = drawCanvasRef.current;
-      if (!canvas) return;
-      canvas.width = 800;
-      canvas.height = 560;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }, 60);
+    setTextLayers([]);
   };
 
   const getDrawPos = (e, canvas) => {
@@ -434,6 +425,11 @@ function Chat() {
   };
 
   const handleDrawUndo = () => {
+    // First undo: remove last text layer if any
+    if (textLayers.length > 0) {
+      setTextLayers(prev => prev.slice(0, -1));
+      return;
+    }
     if (drawHistoryRef.current.length === 0) return;
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
@@ -446,6 +442,7 @@ function Chat() {
     const canvas = drawCanvasRef.current;
     if (!canvas) return;
     saveDrawSnapshot();
+    setTextLayers([]);
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -499,22 +496,66 @@ function Chat() {
 
   const commitDrawText = () => {
     if (!drawText.trim() || !drawTextPos) return;
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return;
-    saveDrawSnapshot();
-    const ctx = canvas.getContext('2d');
     const fontSize = drawBrushSize * 4 + 14;
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.fillStyle = drawColor;
-    ctx.textBaseline = 'top';
-    ctx.fillText(drawText, drawTextPos.x, drawTextPos.y);
+    setTextLayers(prev => [...prev, {
+      id: Date.now(),
+      text: drawText,
+      color: drawColor,
+      fontSize,
+      canvasX: drawTextPos.x,
+      canvasY: drawTextPos.y,
+    }]);
     setDrawText('');
     setDrawTextPos(null);
+  };
+
+  // Flatten all text layers onto the canvas (called before sending or clearing)
+  const flattenTextLayers = () => {
+    const canvas = drawCanvasRef.current;
+    if (!canvas || textLayers.length === 0) return;
+    const ctx = canvas.getContext('2d');
+    textLayers.forEach(layer => {
+      ctx.font = `bold ${layer.fontSize}px sans-serif`;
+      ctx.fillStyle = layer.color;
+      ctx.textBaseline = 'top';
+      ctx.fillText(layer.text, layer.canvasX, layer.canvasY);
+    });
+    setTextLayers([]);
+  };
+
+  // Text layer drag handlers
+  const startDragText = (e, id) => {
+    e.stopPropagation();
+    const src = e.touches ? e.touches[0] : e;
+    const layer = textLayers.find(l => l.id === id);
+    if (!layer) return;
+    draggingTextRef.current = { id, startMouseX: src.clientX, startMouseY: src.clientY, origX: layer.canvasX, origY: layer.canvasY };
+  };
+
+  const onDragTextMove = (e) => {
+    if (!draggingTextRef.current) return;
+    const src = e.touches ? e.touches[0] : e;
+    const canvas = drawCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const { id, startMouseX, startMouseY, origX, origY } = draggingTextRef.current;
+    const dx = (src.clientX - startMouseX) * scaleX;
+    const dy = (src.clientY - startMouseY) * scaleY;
+    setTextLayers(prev => prev.map(l => l.id === id ? { ...l, canvasX: origX + dx, canvasY: origY + dy } : l));
+  };
+
+  const onDragTextEnd = () => { draggingTextRef.current = null; };
+
+  const resizeTextLayer = (id, delta) => {
+    setTextLayers(prev => prev.map(l => l.id === id ? { ...l, fontSize: Math.max(10, Math.min(120, l.fontSize + delta)) } : l));
   };
 
   const handleDrawSend = async () => {
     const canvas = drawCanvasRef.current;
     if (!canvas || !activeConversation) return;
+    flattenTextLayers(); // burn movable text onto canvas before export
     const dataUrl = canvas.toDataURL('image/png');
     setShowDrawModal(false);
     try {
@@ -738,23 +779,22 @@ function Chat() {
   const isCallerRef = useRef(false);
   const audioCtxRef = useRef(null);
   const callDurationIntervalRef = useRef(null);
-  const [callTimerTick, setCallTimerTick] = useState(0);
+  const [_callTimerTick, setCallTimerTick] = useState(0);
   const callEndPollRef = useRef(null);
 
   // Image viewer and editor state
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
   const [showImageEditor, setShowImageEditor] = useState(false);
-  const [isViewerEditing, setIsViewerEditing] = useState(false);
+  const [_isViewerEditing, setIsViewerEditing] = useState(false);
   const imageEditorCanvasRef = useRef(null);
-  const viewerCanvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [editorTool, setEditorTool] = useState('draw'); // 'draw', 'text'
   const [editorColor, setEditorColor] = useState('#000000');
   const [editorText, setEditorText] = useState('');
   const [textPosition, setTextPosition] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
-  const [blockedBy, setBlockedBy] = useState(null);
+  const [_blockedBy, setBlockedBy] = useState(null);
   const [showIncomingCall, setShowIncomingCall] = useState(false);
   const [incomingCallType, setIncomingCallType] = useState(null); // 'voice' or 'video'
   const [callerInfo, setCallerInfo] = useState(null);
@@ -788,12 +828,12 @@ function Chat() {
       };
       audioCtxRef.current._stop = () => { active = false; };
       ring();
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   };
 
   const stopRingtone = () => {
     if (audioCtxRef.current) {
-      try { if (audioCtxRef.current._stop) audioCtxRef.current._stop(); audioCtxRef.current.close(); } catch (e) {}
+      try { if (audioCtxRef.current._stop) audioCtxRef.current._stop(); audioCtxRef.current.close(); } catch {}
       audioCtxRef.current = null;
     }
   };
@@ -845,7 +885,7 @@ function Chat() {
               clearInterval(pollAns);
               await peerConnectionRef.current.setRemoteDescription({ type: 'answer', sdp: sig.answer_sdp });
             }
-          } catch (e) {}
+          } catch {}
         }, 2000);
       } else {
         let tries = 0;
@@ -861,7 +901,7 @@ function Chat() {
               const finalAns = await waitForIceDone(peerConnectionRef.current);
               await callsAPI.sendCallAnswer(callId, finalAns.sdp);
             }
-          } catch (e) {}
+          } catch {}
         }, 2000);
       }
       return true;
@@ -962,7 +1002,7 @@ function Chat() {
     setShowCallModal(false);
     setCallStatus('ended');
     setActiveCallStartTime(null);
-    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch (e) {} }
+    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch {} }
     if (convId) {
       if (!wasConnected) {
         sendMessage(convId, { sender: 'me', text: '📞 No answer', type: 'system', callType: 'voice', answered: false });
@@ -995,7 +1035,7 @@ function Chat() {
         localStreamRef.current = stream;
         setLocalStream(stream);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      } catch (err) {
+      } catch {
         addNotification('Could not access camera/microphone', 'error');
         cleanupCall(true);
         setShowVideoCallModal(false);
@@ -1020,7 +1060,7 @@ function Chat() {
     setShowVideoCallModal(false);
     setVideoCallStatus('ended');
     setActiveCallStartTime(null);
-    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch (e) {} }
+    if (callId) { try { await callsAPI.end(callId, wasConnected ? 'ended' : 'missed'); } catch {} }
     if (convId) {
       if (wasConnected) {
         const m = Math.floor(duration / 60), s = duration % 60;
@@ -1036,7 +1076,6 @@ function Chat() {
   const chatMenuRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const emojiList = ['😊', '👍', '❤️', '😂', '🎉', '👏', '🔥', '✅', '🙏', '😎', '🤔', '👋', '🌟', '💪', '✨', '🎵', '📸', '🎁', '🍕', '☕', '🌈', '🌺', '🌞', '💯', '🆗', '🎊', '🎈', '🎀', '🎄', '🎃', '🎅', '🤶', '🦃', '🐰', '🐣', '🌸', '🌼', '🌻', '🌹', '🌷', '🌱', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🦋', '🐛', '🐝', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🐘', '🦛', '🐪', '🐫', '🦙', '🦒', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'];
-  const [selectedEmoji, setSelectedEmoji] = useState(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -1087,7 +1126,7 @@ function Chat() {
 
   const handleReaction = (messageId, emoji) => {
     addReaction(activeConversation.id, messageId, emoji);
-    setShowEmojiPicker(null);
+    setShowEmojiPicker(false);
   };
 
   const isMessageDeletedForMe = (message) => {
@@ -1102,10 +1141,6 @@ function Chat() {
 
   const isMessageDeletedForEveryone = (message) => {
     return message.deleted_for_everyone === true || message.deleted_for_everyone === 1 || message.type === 'deleted';
-  };
-
-  const scrollToBottom = (behavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   const handleScroll = () => {
@@ -1125,6 +1160,36 @@ function Chat() {
       videoRef.current.srcObject = cameraStream;
     }
   }, [cameraStream]);
+
+  // Initialise the drawing canvas when the modal opens — load background image if provided
+  useEffect(() => {
+    if (!showDrawModal) return;
+    const tryInit = (attempts = 0) => {
+      const canvas = drawCanvasRef.current;
+      if (!canvas) {
+        if (attempts < 25) requestAnimationFrame(() => tryInit(attempts + 1));
+        return;
+      }
+      const bg = drawBgImageRef.current;
+      if (bg) {
+        const img = document.createElement('img');
+        img.onload = () => {
+          canvas.width = img.naturalWidth || 800;
+          canvas.height = img.naturalHeight || 560;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+        };
+        img.src = bg;
+      } else {
+        canvas.width = 800;
+        canvas.height = 560;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+    // Small delay to let the modal render first
+    setTimeout(() => tryInit(), 50);
+  }, [showDrawModal]);
 
   // Attach local stream to local video element (self-preview / PIP)
   useEffect(() => {
@@ -1150,7 +1215,7 @@ function Chat() {
         if (attempts < 20) requestAnimationFrame(() => tryLoad(attempts + 1));
         return;
       }
-      const img = new window.Image();
+      const img = document.createElement('img');
       img.onload = () => {
         drawCanvas.width = img.naturalWidth;
         drawCanvas.height = img.naturalHeight;
@@ -1330,7 +1395,7 @@ function Chat() {
       const canvas = imageEditorCanvasRef.current;
       if (!canvas || !selectedImageUrl) return;
       const ctx = canvas.getContext('2d');
-      const img = new Image();
+      const img = document.createElement('img');
       img.onload = () => {
         // Set canvas size to match image
         canvas.width = img.width;
@@ -1479,7 +1544,6 @@ function Chat() {
         audioPlayerRef.current.pause();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save active conversation ID to localStorage whenever it changes
@@ -1510,14 +1574,6 @@ function Chat() {
     return lastSeenTimes[userId] || 'recently';
   };
 
-  const getAvatarColor = (dept) => {
-    switch(dept) {
-      case 'ROTC': return 'bg-red-500';
-      case 'LTS': return 'bg-purple-500';
-      case 'CWTS': return 'bg-green-500';
-      default: return 'bg-blue-500';
-    }
-  };
 
   // Simple notification system
   const addNotification = (message, type = 'info') => {
@@ -1698,9 +1754,9 @@ function Chat() {
       </aside>
 
       {/* Main Content */}
-      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-screen flex flex-col lg:flex-row`}>
+      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
-        <div className={`${showConversations ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 bg-white border-r border-gray-200 flex-col h-screen`}>
+        <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white border-r border-gray-200 flex-col h-full overflow-hidden`}>
           <div className="p-3 lg:p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -1733,7 +1789,7 @@ function Chat() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
 
                 {filteredConversations.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 px-4">
@@ -1806,7 +1862,7 @@ function Chat() {
         </div>
 
         {/* Chat Area - Full width on mobile when active */}
-        <div className={`${!showConversations ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-50 w-full`}>
+        <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full min-h-0 overflow-hidden`}>
           {activeConversation ? (
             <>
               {/* Chat Header */}
@@ -1816,7 +1872,7 @@ function Chat() {
                   <button
                     type="button"
                     onClick={handleBackToConversations}
-                    className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
                     aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -1863,6 +1919,7 @@ function Chat() {
                   >
                     <Video className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
+                  {!isGroupConversation(activeConversation) && (
                   <div className="relative" ref={chatMenuRef}>
                     <button
                       onClick={() => setShowChatMenu(!showChatMenu)}
@@ -1893,6 +1950,7 @@ function Chat() {
                       </div>
                     )}
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -1916,9 +1974,9 @@ function Chat() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 overscroll-contain"
+                className="flex-1 min-h-0 overflow-y-auto px-2 py-4 overscroll-contain"
               >
-              <div className="max-w-4xl mx-auto space-y-4">
+              <div className="space-y-4">
                 {currentMessages.map((message) => {
                   const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
                   const deletedForEveryone = isMessageDeletedForEveryone(message);
@@ -1954,7 +2012,7 @@ function Chat() {
                             })()
                           )}
                         </div>
-                        <div className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
+                        <div className={`max-w-[85%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
                           <p className="italic text-sm">Message deleted</p>
                         </div>
                       </div>
@@ -2030,7 +2088,7 @@ function Chat() {
                       </div>
                       
                       {/* Message Content */}
-                      <div className="group relative max-w-[85%] sm:max-w-[70%]">
+                      <div className="group relative max-w-[85%]">
                         {/* Sender name - only for others */}
                         {!isOwn && (
                           <span className="text-xs font-medium text-gray-500 block mb-1 ml-1">
@@ -2262,7 +2320,7 @@ function Chat() {
               </div>
 
               {/* Input Area */}
-              <div className="bg-white p-2 lg:p-3 border-t border-gray-200">
+              <div className="bg-white p-2 lg:p-3 border-t border-gray-200 flex-shrink-0">
                 {/* Hidden File Inputs */}
                 <input
                   type="file"
@@ -2287,7 +2345,7 @@ function Chat() {
                   className="hidden"
                 />
                 
-                <div className="max-w-4xl mx-auto flex items-center space-x-1 lg:space-x-2">
+                <div className="flex items-center space-x-1 lg:space-x-2">
                   <button
                     type="button"
                     onClick={handleFileAttach}
@@ -2905,7 +2963,7 @@ function Chat() {
               <div className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white flex-shrink-0">
                 <span className="font-semibold text-sm">🎨 Drawing Board</span>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={handleDrawUndo} disabled={drawHistoryLen === 0}
+                  <button type="button" onClick={handleDrawUndo} disabled={drawHistoryLen === 0 && textLayers.length === 0}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700 hover:bg-gray-600 disabled:opacity-30 transition-colors">
                     ↩ Undo
                   </button>
@@ -2920,20 +2978,62 @@ function Chat() {
                 </div>
               </div>
 
-              {/* Canvas */}
-              <div className="flex-1 overflow-hidden bg-gray-800 flex items-center justify-center p-2">
-                <canvas
-                  ref={drawCanvasRef}
-                  className="rounded-lg touch-none"
-                  style={{ maxWidth: '100%', maxHeight: '100%', cursor: drawTool === 'text' ? 'text' : drawTool === 'emoji' ? 'crosshair' : 'crosshair', background: '#fff' }}
-                  onMouseDown={handleDrawPointerDown}
-                  onMouseMove={handleDrawPointerMove}
-                  onMouseUp={handleDrawPointerUp}
-                  onMouseLeave={handleDrawPointerUp}
-                  onTouchStart={handleDrawPointerDown}
-                  onTouchMove={handleDrawPointerMove}
-                  onTouchEnd={handleDrawPointerUp}
-                />
+              {/* Canvas + text overlays */}
+              <div className="flex-1 overflow-hidden bg-gray-800 flex items-center justify-center p-2"
+                onMouseMove={onDragTextMove} onMouseUp={onDragTextEnd}
+                onTouchMove={onDragTextMove} onTouchEnd={onDragTextEnd}>
+                <div ref={drawCanvasWrapRef} style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', maxHeight: '100%' }}>
+                  <canvas
+                    ref={drawCanvasRef}
+                    className="rounded-lg touch-none block"
+                    style={{ maxWidth: '100%', maxHeight: '100%', cursor: drawTool === 'text' ? 'text' : 'crosshair', background: '#fff' }}
+                    onMouseDown={handleDrawPointerDown}
+                    onMouseMove={handleDrawPointerMove}
+                    onMouseUp={handleDrawPointerUp}
+                    onMouseLeave={handleDrawPointerUp}
+                    onTouchStart={handleDrawPointerDown}
+                    onTouchMove={handleDrawPointerMove}
+                    onTouchEnd={handleDrawPointerUp}
+                  />
+                  {/* Movable text overlays */}
+                  {textLayers.map(layer => {
+                    const canvas = drawCanvasRef.current;
+                    const rect = canvas ? canvas.getBoundingClientRect() : null;
+                    const scaleX = rect && canvas ? rect.width / canvas.width : 1;
+                    const scaleY = rect && canvas ? rect.height / canvas.height : 1;
+                    const cssX = layer.canvasX * scaleX;
+                    const cssY = layer.canvasY * scaleY;
+                    const cssFontSize = Math.max(8, layer.fontSize * scaleY);
+                    return (
+                      <div key={layer.id} style={{
+                        position: 'absolute', left: cssX, top: cssY,
+                        color: layer.color, fontSize: cssFontSize,
+                        fontWeight: 'bold', fontFamily: 'sans-serif',
+                        whiteSpace: 'nowrap', userSelect: 'none', touchAction: 'none',
+                        cursor: 'move', lineHeight: 1,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                        display: 'flex', alignItems: 'flex-start', gap: 2,
+                      }}
+                        onMouseDown={(e) => startDragText(e, layer.id)}
+                        onTouchStart={(e) => startDragText(e, layer.id)}
+                      >
+                        <span>{layer.text}</span>
+                        {/* Resize and delete controls */}
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 1, marginLeft: 2 }}>
+                          <button type="button"
+                            style={{ fontSize: 9, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', padding: '1px 3px', lineHeight: 1 }}
+                            onMouseDown={e => e.stopPropagation()} onClick={() => resizeTextLayer(layer.id, 4)}>+</button>
+                          <button type="button"
+                            style={{ fontSize: 9, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', padding: '1px 3px', lineHeight: 1 }}
+                            onMouseDown={e => e.stopPropagation()} onClick={() => resizeTextLayer(layer.id, -4)}>−</button>
+                          <button type="button"
+                            style={{ fontSize: 9, background: 'rgba(200,0,0,0.7)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', padding: '1px 3px', lineHeight: 1 }}
+                            onMouseDown={e => e.stopPropagation()} onClick={() => setTextLayers(prev => prev.filter(l => l.id !== layer.id))}>✕</button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Controls */}
@@ -2949,7 +3049,7 @@ function Chat() {
                       { id: 'text', label: '🔤 Text' },
                       { id: 'emoji', label: '😊 Emoji' },
                     ].map(t => (
-                      <button key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); setShowDrawEmojiPicker(false); }}
+                      <button key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); }}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${drawTool === t.id ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         {t.label}
                       </button>

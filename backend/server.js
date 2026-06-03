@@ -227,6 +227,7 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN studentId VARCHAR(50)',
     'ALTER TABLE enrollments ADD COLUMN reviewed_by INT NULL',
     'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
+    'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -241,6 +242,24 @@ async function ensureReportsDeptColumn() {
   try { await pool.execute("ALTER TABLE reports CHANGE COLUMN department department VARCHAR(50) NULL"); } catch (_) {}
   try { await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_data LONGTEXT NULL'); } catch (_) {}
   try { await pool.execute('ALTER TABLE reports ADD COLUMN reference_file_name VARCHAR(255) NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE report_submissions ADD COLUMN file_data LONGTEXT NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE report_submissions ADD COLUMN file_name VARCHAR(255) NULL'); } catch (_) {}
+}
+
+async function ensureReportComments() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS report_comments (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        report_id INT NOT NULL,
+        user_id INT NOT NULL,
+        text TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+  } catch (_) {}
 }
 
 async function ensureReportsBatchYear() {
@@ -483,6 +502,57 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
+// Create instructor account (admin only)
+app.post('/api/users', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    const { name, email, password, department, role } = req.body;
+    const assignedRole = role === 'admin' ? 'admin' : 'instructor';
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required.' });
+    }
+    if (assignedRole === 'instructor' && !['CWTS', 'LTS', 'ROTC'].includes(department)) {
+      return res.status(400).json({ message: 'Department must be CWTS, LTS, or ROTC for instructors.' });
+    }
+    const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: 'An account with this email already exists.' });
+    }
+    const hashed = await bcrypt.hash(String(password), 12);
+    const assignedDept = assignedRole === 'admin' ? null : department;
+    const [result] = await pool.execute(
+      'INSERT INTO users (name, email, password, role, department) VALUES (?, ?, ?, ?, ?)',
+      [name, email, hashed, assignedRole, assignedDept]
+    );
+    res.status(201).json({ id: result.insertId, name, email, role: assignedRole, department: assignedDept });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete instructor account (admin only, cannot delete self or other admins)
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    const { id } = req.params;
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ message: 'You cannot delete your own account.' });
+    }
+    const [target] = await pool.execute('SELECT id, role FROM users WHERE id = ?', [id]);
+    if (target.length === 0) return res.status(404).json({ message: 'User not found.' });
+    await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+    res.json({ message: 'Instructor deleted successfully.' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Update user profile
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   try {
@@ -682,8 +752,17 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
         WHERE rs.report_id = ?
       `, [report.id]);
       report.submissions = submissions;
+
+      const [comments] = await pool.execute(`
+        SELECT rc.*, u.name as user_name, u.role, u.department
+        FROM report_comments rc
+        JOIN users u ON rc.user_id = u.id
+        WHERE rc.report_id = ?
+        ORDER BY rc.created_at ASC
+      `, [report.id]);
+      report.comments = comments;
     }
-    
+
     res.json(reports);
   } catch (error) {
     console.error('Get reports error:', error);
@@ -704,15 +783,9 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     // Validate date format if provided
     let safeDueDate = null;
     if (due_date && due_date !== '') {
-      // Check if date is valid (YYYY-MM-DD format)
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(due_date)) {
         return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
-      }
-      // Validate the date is reasonable (between 2020 and 3000)
-      const year = parseInt(due_date.split('-')[0]);
-      if (year < 2020 || year > 3000) {
-        return res.status(400).json({ message: 'Invalid year. Year must be between 2020 and 3000' });
       }
       safeDueDate = due_date;
     }
@@ -742,8 +815,8 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
   }
 });
 
-// Update report
-app.put('/api/reports/:id', authenticateToken, async (req, res) => {
+// Update report (admin only)
+app.put('/api/reports/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, department, due_date, status } = req.body;
@@ -773,17 +846,18 @@ app.post('/api/reports/:id/submit', authenticateToken, async (req, res) => {
       [id, req.user.id]
     );
     
+    const { file_data, file_name } = req.body;
     if (existing.length > 0) {
       // Update existing submission
       await pool.execute(
-        'UPDATE report_submissions SET content = ? WHERE report_id = ? AND instructor_id = ?',
-        [content, id, req.user.id]
+        'UPDATE report_submissions SET content = ?, file_data = ?, file_name = ? WHERE report_id = ? AND instructor_id = ?',
+        [content, file_data || null, file_name || null, id, req.user.id]
       );
     } else {
       // Create new submission
       await pool.execute(
-        'INSERT INTO report_submissions (report_id, instructor_id, content) VALUES (?, ?, ?)',
-        [id, req.user.id, content]
+        'INSERT INTO report_submissions (report_id, instructor_id, content, file_data, file_name) VALUES (?, ?, ?, ?, ?)',
+        [id, req.user.id, content, file_data || null, file_name || null]
       );
     }
     
@@ -800,14 +874,40 @@ app.post('/api/reports/:id/submit', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete report
-app.delete('/api/reports/:id', authenticateToken, async (req, res) => {
+// Delete report (admin only)
+app.delete('/api/reports/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await pool.execute('DELETE FROM reports WHERE id = ?', [id]);
     res.json({ message: 'Report deleted' });
   } catch (error) {
     console.error('Delete report error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add comment to report
+app.post('/api/reports/:id/comments', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: 'Comment text is required' });
+    }
+    const [result] = await pool.execute(
+      'INSERT INTO report_comments (report_id, user_id, text) VALUES (?, ?, ?)',
+      [id, req.user.id, text.trim()]
+    );
+    const [rows] = await pool.execute(
+      `SELECT rc.*, u.name as user_name, u.role, u.department
+       FROM report_comments rc
+       JOIN users u ON rc.user_id = u.id
+       WHERE rc.id = ?`,
+      [result.insertId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    console.error('Add comment error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -1055,14 +1155,20 @@ app.put('/api/conversations/:conversationId/messages/:messageId', authenticateTo
   try {
     const { conversationId, messageId } = req.params;
     const { text } = req.body;
-    
-    // Verify user is part of this conversation
-    const [conversations] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-      [conversationId, req.user.id, req.user.id]
-    );
-    
-    if (conversations.length === 0) {
+
+    // Verify user is part of this conversation (supports both DMs and group chats)
+    const [convRows] = await pool.execute('SELECT is_group FROM conversations WHERE id = ?', [conversationId]);
+    if (convRows.length === 0) return res.status(404).json({ message: 'Conversation not found' });
+    let isAuthorized = false;
+    if (convRows[0].is_group) {
+      const [p] = await pool.execute('SELECT 1 FROM conversation_participants WHERE conversation_id = ? AND user_id = ?', [conversationId, req.user.id]);
+      isAuthorized = p.length > 0;
+    } else {
+      const [d] = await pool.execute('SELECT 1 FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)', [conversationId, req.user.id, req.user.id]);
+      isAuthorized = d.length > 0;
+    }
+
+    if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
@@ -1250,8 +1356,11 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
 
     res.status(201).json(messages[0]);
   } catch (error) {
-    console.error('Send message error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Send message error:', error.sqlMessage || error.message, error.code);
+    if (error.code === 'ER_NET_PACKET_TOO_LARGE' || (error.message && error.message.includes('packet'))) {
+      return res.status(413).json({ message: 'Image is too large. Please send a smaller image.' });
+    }
+    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
   }
 });
 
@@ -1536,8 +1645,11 @@ app.post('/api/calls', authenticateToken, async (req, res) => {
       // Ensure group_call_id column exists
       try { await pool.execute('ALTER TABLE calls ADD COLUMN group_call_id VARCHAR(36) NULL'); } catch (_) {}
 
-      const participants = JSON.parse(conversation.participants || '[]');
-      const others = participants.filter(id => id !== caller_id);
+      const [participantRows] = await pool.execute(
+        'SELECT user_id FROM conversation_participants WHERE conversation_id = ?',
+        [conversation_id]
+      );
+      const others = participantRows.map(r => r.user_id).filter(id => id !== caller_id);
       if (others.length === 0) {
         return res.status(400).json({ message: 'No other participants in group.' });
       }
@@ -1924,8 +2036,8 @@ app.put('/api/current-batch', authenticateToken, async (req, res) => {
   }
 });
 
-// Clear all students and reports (for new batch)
-app.post('/api/clear-batch', authenticateToken, async (req, res) => {
+// Clear all students and reports (admin only)
+app.post('/api/clear-batch', authenticateToken, requireAdmin, async (req, res) => {
   try {
     // Archive current data first
     const [students] = await pool.execute('SELECT * FROM students');
@@ -2021,28 +2133,37 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       height, weight, facebookAccount, bloodType,
       homeAddress, address,
       program, section, yearLevel, nstpComponent,
-      emergencyContact, emergencyNumber, emergencyName
+      emergencyContact, emergencyNumber, emergencyName,
+      registrationPhoto
     } = req.body;
-    
+
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
     const finalAddress = homeAddress || address;
     const finalEmergencyContact = emergencyName || emergencyContact;
-    
-    const [result] = await pool.execute(
-      `INSERT INTO enrollments 
-       (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber, 
-        birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-        gender, height, weight, facebookAccount, bloodType, address, 
-        program, section, yearLevel, emergencyContact, emergencyNumber, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name, firstName, lastName, middleName, email, nstpComponent || 'CWTS', studentId, contactNumber, 
-        birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-        finalGender, height, weight, facebookAccount, bloodType, finalAddress, 
-        program, section, yearLevel, finalEmergencyContact, emergencyNumber, 'Pending'
-      ]
-    );
+    const photo = registrationPhoto || null;
+
+    const conn = await pool.getConnection();
+    let result;
+    try {
+      await conn.execute('SET SESSION max_allowed_packet = 67108864');
+      [result] = await conn.execute(
+        `INSERT INTO enrollments
+         (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
+          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
+          gender, height, weight, facebookAccount, bloodType, address,
+          program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name, firstName, lastName, middleName, email, nstpComponent || 'CWTS', studentId, contactNumber,
+          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
+          finalGender, height, weight, facebookAccount, bloodType, finalAddress,
+          program, section, yearLevel, finalEmergencyContact, emergencyNumber, 'Pending', photo
+        ]
+      );
+    } finally {
+      conn.release();
+    }
 
     const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
     res.status(201).json(enrollments[0]);
@@ -2422,31 +2543,36 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     const lts = studentCount.find(r => r.department === 'LTS')?.count || 0;
     const rotc = studentCount.find(r => r.department === 'ROTC')?.count || 0;
 
-    // Insert or update archive — includes full snapshots so data survives batch clearing
-    await pool.execute(
-      `INSERT INTO archived_years (year, students, reports, data)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-       students = VALUES(students),
-       reports = VALUES(reports),
-       data = VALUES(data)`,
-      [
-        year,
-        totalStudents,
-        reportCount[0].count,
-        JSON.stringify({
-          year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
-          studentData, reportData
-        })
-      ]
-    );
-    
-    // Update current batch
-    await pool.execute(
-      `INSERT INTO current_batch (id, year) VALUES (1, ?)
-       ON DUPLICATE KEY UPDATE year = ?`,
-      [year + 1, year + 1]
-    );
+    // Insert or update archive — use a dedicated connection so we can raise max_allowed_packet
+    // for large snapshots (student JSON can exceed the 1MB default)
+    const conn = await pool.getConnection();
+    try {
+      await conn.execute('SET SESSION max_allowed_packet = 67108864'); // 64 MB
+      await conn.execute(
+        `INSERT INTO archived_years (year, students, reports, data)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         students = VALUES(students),
+         reports = VALUES(reports),
+         data = VALUES(data)`,
+        [
+          year,
+          totalStudents,
+          reportCount[0].count,
+          JSON.stringify({
+            year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
+            studentData, reportData
+          })
+        ]
+      );
+      await conn.execute(
+        `INSERT INTO current_batch (id, year) VALUES (1, ?)
+         ON DUPLICATE KEY UPDATE year = ?`,
+        [year + 1, year + 1]
+      );
+    } finally {
+      conn.release();
+    }
     
     res.json({ 
       message: `Batch ${year} archived successfully`, 
@@ -2527,6 +2653,8 @@ async function startServer() {
   try {
     await pool.execute('SELECT 1');
     console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
+    // Raise packet limit so base64 images/files fit (64 MB)
+    try { await pool.execute('SET GLOBAL max_allowed_packet = 67108864'); } catch (_) {}
   } catch (err) {
     console.error('Database NOT connected:', err.message);
     console.error('Start XAMPP MySQL, then run: cd backend && npm run setup-db');
@@ -2543,6 +2671,7 @@ async function startServer() {
     ensureEnrollmentColumns(),
     ensureReportsDeptColumn(),
     ensureReportsBatchYear(),
+    ensureReportComments(),
     ensureConversationLastSender()
   ]).catch(function(err) {
     console.warn('Schema migration warning:', err.message);

@@ -20,7 +20,6 @@ function InstructorDashboard() {
   const { user, logout, students, reports, conversations, messages, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
@@ -99,13 +98,6 @@ function InstructorDashboard() {
   }
   
   // Mark all as read
-  function handleMarkAllRead() {
-    const newNotifications = notifications.map(n => {
-      return { ...n, read: true };
-    });
-    setNotifications(newNotifications);
-  }
-  
   // Handle notification click
   function handleNotificationItemClick(notification) {
     // Mark as read
@@ -290,9 +282,9 @@ function InstructorDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -423,58 +415,58 @@ function InstructorDashboard() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-md">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Total Students</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.totalStudents}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.totalStudents}</p>
               </div>
-              <div className={`w-12 h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
-                <Users className={`w-6 h-6 ${colors.text}`} />
+              <div className={`w-9 h-9 sm:w-12 sm:h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
+                <Users className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
               </div>
             </div>
-            <div className="mt-4 flex items-center text-sm text-green-600">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-green-600 flex items-center">
               <TrendingUp className="w-4 h-4 mr-1" />
               <span>+8 new this month</span>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-md">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Pending Messages</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.pendingMessages}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.pendingMessages}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-blue-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-blue-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-blue-500">
               <span>{stats.pendingMessages > 0 ? 'You have unread messages' : 'No unread messages'}</span>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-md">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Pending Reports</p>
-                <p className="text-3xl font-bold text-gray-800">{stats.pendingReports}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.pendingReports}</p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6 text-orange-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-red-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-red-500">
               <span>Needs attention</span>
             </div>
           </div>
         </div>
 
         {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
           {/* My Students */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <Users className="w-5 h-5 mr-2 text-green-600" />
@@ -512,7 +504,7 @@ function InstructorDashboard() {
           </div>
 
           {/* Recent Reports */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <FileText className="w-5 h-5 mr-2 text-blue-600" />

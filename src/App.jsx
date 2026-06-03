@@ -22,7 +22,7 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch } from './services/api';
 
 export var AuthContext = createContext(null);
 
@@ -88,7 +88,6 @@ function App() {
   var [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
   var [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
   var outgoingCallIdRef = useRef(null);
-  var ringAudioContextRef = useRef(null);
 
   var baselineReady = useRef(false);
   var seenEnrollmentIds = useRef(new Set());
@@ -131,7 +130,7 @@ function App() {
     if (typeof window !== 'undefined' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try {
         new Notification(item.title, { body: item.message });
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }
 
     setTimeout(function() {
@@ -285,7 +284,7 @@ function App() {
               });
             })(conv.id, msgs);
           }
-        } catch (e) {
+        } catch {
           console.warn('Failed to refresh messages for conversation', conv.id);
         }
       }
@@ -369,7 +368,7 @@ function App() {
     if (saved) {
       try {
         setNotifications(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         setNotifications([]);
       }
     } else {
@@ -413,7 +412,7 @@ function App() {
           var outgoing = await callsAPI.getById(outgoingCallIdRef.current);
           setOutgoingCallStatus(outgoing.status);
         }
-      } catch (e) {
+      } catch {
         /* ignore poll errors */
       }
     }
@@ -794,7 +793,7 @@ function App() {
 
   async function submitReportFunc(reportId, submission) {
     try {
-      await reportsAPI.submit(reportId, submission.content);
+      await reportsAPI.submit(reportId, submission.content, submission.attachment?.data, submission.attachment?.name);
       var reportsData = await reportsAPI.getAll();
       setReports(reportsData);
     } catch (error) {
@@ -868,7 +867,7 @@ function App() {
                       deletedFor = typeof copied.deleted_for === 'string'
                         ? JSON.parse(copied.deleted_for)
                         : copied.deleted_for;
-                    } catch (e) {
+                    } catch {
                       deletedFor = [];
                     }
                   }
@@ -966,6 +965,19 @@ function App() {
   }
 
   async function addReportCommentFunc(reportId, comment) {
+    try {
+      const saved = await reportsAPI.addComment(reportId, comment.text);
+      setReports(function(prev) {
+        return prev.map(function(r) {
+          if (r.id !== reportId) return r;
+          return { ...r, comments: [...(r.comments || []), saved] };
+        });
+      });
+      return saved;
+    } catch (error) {
+      console.error('Add comment error:', error);
+      throw error;
+    }
   }
 
   // Chat functions
@@ -1171,12 +1183,9 @@ function App() {
   }
 
   async function clearBatchData() {
-    for (var i = 0; i < students.length; i++) {
-      await deleteStudentFunc(students[i].id);
-    }
-    for (var j = 0; j < reports.length; j++) {
-      await deleteReportFunc(reports[j].id);
-    }
+    await clearBatch();
+    setStudents([]);
+    setReports([]);
   }
 
   var contextValue = {

@@ -30,7 +30,6 @@ async function apiCall(endpoint, options) {
     var error = await response.json().catch(function() { return {}; });
     if ((response.status === 403 || response.status === 401) && token) {
       localStorage.removeItem('nstp_token');
-      localStorage.removeItem('nstp_user');
       // Dispatch event so App.jsx handles logout via React Router (no hard page reload).
       // The flag prevents multiple polls from firing this more than once per session.
       if (!window.__nstp_session_expired__) {
@@ -77,6 +76,17 @@ export function changePassword(id, newPassword) {
   });
 }
 
+export function createInstructor(data) {
+  return apiCall('/users', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export function deleteUser(id) {
+  return apiCall('/users/' + id, { method: 'DELETE' });
+}
+
 // Students
 export function getStudents() {
   return apiCall('/students');
@@ -121,16 +131,23 @@ export function updateReport(id, data) {
   });
 }
 
-export function submitReport(id, content) {
+export function submitReport(id, content, fileData, fileName) {
   return apiCall('/reports/' + id + '/submit', {
     method: 'POST',
-    body: JSON.stringify({ content: content })
+    body: JSON.stringify({ content: content, file_data: fileData || null, file_name: fileName || null })
   });
 }
 
 export function deleteReport(id) {
   return apiCall('/reports/' + id, {
     method: 'DELETE'
+  });
+}
+
+export function addReportComment(reportId, text) {
+  return apiCall('/reports/' + reportId + '/comments', {
+    method: 'POST',
+    body: JSON.stringify({ text })
   });
 }
 
@@ -245,6 +262,10 @@ export function getCurrentBatch() {
   return apiCall('/current-batch');
 }
 
+export function clearBatch() {
+  return apiCall('/clear-batch', { method: 'POST' });
+}
+
 // Calls
 export function initiateCall(conversationId, callType) {
   return apiCall('/calls', {
@@ -308,7 +329,9 @@ export const usersAPI = {
   getAll: getUsers,
   getMe: getMe,
   update: updateUser,
-  changePassword: changePassword
+  changePassword: changePassword,
+  createInstructor: createInstructor,
+  delete: deleteUser
 };
 
 export const studentsAPI = {
@@ -323,7 +346,8 @@ export const reportsAPI = {
   add: addReport,
   update: updateReport,
   submit: submitReport,
-  delete: deleteReport
+  delete: deleteReport,
+  addComment: addReportComment
 };
 
 export const conversationsAPI = {

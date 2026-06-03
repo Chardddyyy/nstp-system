@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera } from 'lucide-react';
 
 function Enrollment() {
   const { submitEnrollment } = useAuth();
@@ -42,6 +42,102 @@ function Enrollment() {
   const [toast, setToast] = useState(null);
   const [errorBanner, setErrorBanner] = useState([]);
   const errorTimerRef = useRef(null);
+
+  const [registrationPhoto, setRegistrationPhoto] = useState(null);
+  const photoInputRef = useRef(null);
+
+  // Camera state
+  const [showCamera, setShowCamera]       = useState(false);
+  const [cameraStream, setCameraStream]   = useState(null);
+  const [facingMode, setFacingMode]       = useState('environment');
+  const [capturedFrame, setCapturedFrame] = useState(null);
+  const videoRef  = useRef(null);
+  const boxRef    = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream) videoRef.current.srcObject = cameraStream;
+  }, [cameraStream]);
+
+  useEffect(() => () => stopCamera(), []); // cleanup on unmount
+
+  const stopCamera = () => {
+    const s = streamRef.current;
+    if (s) { s.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    setCameraStream(null);
+  };
+
+  const openCamera = async (mode) => {
+    const fm = mode || facingMode;
+    setCapturedFrame(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: fm, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false
+      });
+      streamRef.current = stream;
+      setCameraStream(stream);
+      setShowCamera(true);
+    } catch {
+      setToast({ message: 'Camera access denied. Please allow camera permission in your browser.', type: 'error' });
+    }
+  };
+
+  const flipCamera = async () => {
+    const next = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(next);
+    stopCamera();
+    await openCamera(next);
+  };
+
+  // Crop the video frame to exactly what's inside the guide box
+  const captureToBox = () => {
+    const video = videoRef.current;
+    const box   = boxRef.current;
+    if (!video || !box || !video.videoWidth) return;
+
+    const vRect = video.getBoundingClientRect();
+    const bRect = box.getBoundingClientRect();
+
+    // Box position relative to the displayed video (0–1)
+    const relX = (bRect.left - vRect.left) / vRect.width;
+    const relY = (bRect.top  - vRect.top)  / vRect.height;
+    const relW = bRect.width  / vRect.width;
+    const relH = bRect.height / vRect.height;
+
+    // Map to actual video pixel coordinates
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const cropX = Math.max(0, Math.round(relX * vw));
+    const cropY = Math.max(0, Math.round(relY * vh));
+    const cropW = Math.min(vw - cropX, Math.round(relW * vw));
+    const cropH = Math.min(vh - cropY, Math.round(relH * vh));
+
+    // Draw full frame then extract the box region
+    const full = document.createElement('canvas');
+    full.width = vw; full.height = vh;
+    full.getContext('2d').drawImage(video, 0, 0);
+
+    const out = document.createElement('canvas');
+    out.width = cropW; out.height = cropH;
+    out.getContext('2d').drawImage(full, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    stopCamera();
+    setCapturedFrame(out.toDataURL('image/jpeg', 0.94));
+  };
+
+  const confirmCapturedPhoto = () => {
+    if (!capturedFrame) return;
+    setRegistrationPhoto(capturedFrame);
+    if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+    setCapturedFrame(null);
+    setShowCamera(false);
+  };
+
+  const closeCamera = () => {
+    stopCamera();
+    setCapturedFrame(null);
+    setShowCamera(false);
+  };
 
   // True when there is saved progress from a previous session
   const hasSavedData = !!localStorage.getItem('enrollmentFormData');
@@ -141,6 +237,11 @@ function Enrollment() {
       }
     }
 
+    // Registration photo required
+    if (!registrationPhoto) {
+      newErrors.registrationPhoto = 'Please upload a photo of your registration form';
+    }
+
     // Terms and Privacy Policy agreement required
     if (!agreedToTerms) {
       newErrors.terms = 'You must agree to the Terms and Privacy Policy to submit';
@@ -161,6 +262,29 @@ function Enrollment() {
 
     // Return the errors object (not relying on state)
     return newErrors;
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.82));
+        if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleChange = (e) => {
@@ -237,6 +361,7 @@ function Enrollment() {
         fullName: `${formData.lastName}, ${formData.firstName} ${formData.middleName}`.trim(),
         birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
         status: 'Pending',
+        registrationPhoto,
       };
 
       await submitEnrollment(enrollmentData);
@@ -740,6 +865,85 @@ function Enrollment() {
               </div>
             </div>
 
+            {/* Registration Form Photo */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-1">Registration Form Photo <span className="text-red-500">*</span></h3>
+              <p className="text-sm text-gray-500 mb-4">Upload a clear photo of your CvSU registration form to verify that you are enrolled in NSTP.</p>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="hidden"
+              />
+
+              {!registrationPhoto ? (
+                <div
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${errors.registrationPhoto ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-green-400 bg-gray-50'}`}
+                >
+                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-700 mb-1">Upload your registration form</p>
+                  <p className="text-xs text-gray-400 mb-4">Take a clear photo or upload from your gallery</p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current.click()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Choose from Gallery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCamera()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Open Camera
+                    </button>
+                  </div>
+                  {errors.registrationPhoto && (
+                    <p className="text-red-500 text-xs mt-3">{errors.registrationPhoto}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={registrationPhoto}
+                    alt="Registration form"
+                    className="w-full max-h-80 object-contain rounded-xl border border-gray-200 bg-gray-50"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current.click()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Replace from Gallery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCamera()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Camera className="w-4 h-4" />
+                      Retake Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegistrationPhoto(null)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Terms and Privacy Policy */}
             <div className="border-b pb-6">
               <div className="flex items-start space-x-3">
@@ -797,8 +1001,8 @@ function Enrollment() {
       </main>
       {/* Terms and Privacy Policy Modal */}
       {showTermsModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowTermsModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
               <div className="flex items-center space-x-2">
                 <FileText className="w-6 h-6" />
@@ -893,6 +1097,136 @@ function Enrollment() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Camera Modal — fixed guide box */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
+
+          {!capturedFrame ? (
+            <>
+              {/* Live camera */}
+              <div className="flex-1 relative overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay playsInline muted
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+
+                {/* Guide box — dark mask outside, clear inside via box-shadow */}
+                <div
+                  ref={boxRef}
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: '50%', left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '88%',
+                    aspectRatio: '1 / 1.41',
+                    maxHeight: '78%',
+                    /* Giant box-shadow creates the dark vignette around the box */
+                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
+                    borderRadius: 4,
+                  }}
+                >
+                  {/* White border */}
+                  <div className="absolute inset-0 border-2 border-white/80" style={{ borderRadius: 4 }} />
+
+                  {/* Green corner brackets */}
+                  {[
+                    'top-0 left-0 border-t-[4px] border-l-[4px]',
+                    'top-0 right-0 border-t-[4px] border-r-[4px]',
+                    'bottom-0 left-0 border-b-[4px] border-l-[4px]',
+                    'bottom-0 right-0 border-b-[4px] border-r-[4px]',
+                  ].map(cls => (
+                    <div key={cls} className={`absolute w-10 h-10 border-green-400 ${cls}`} />
+                  ))}
+                </div>
+
+                {/* Instruction label below box */}
+                <div className="absolute bottom-28 left-0 right-0 flex justify-center pointer-events-none">
+                  <span className="bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
+                    Align the registration form inside the box
+                  </span>
+                </div>
+
+                {/* X button — top right, always visible */}
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors z-10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Bottom controls */}
+              <div className="flex-shrink-0 bg-black px-6 py-5 flex items-center justify-between gap-4">
+                {/* Flip camera */}
+                <button
+                  type="button"
+                  onClick={flipCamera}
+                  className="flex flex-col items-center gap-1 text-white transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-colors">
+                    <SwitchCamera className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] text-white/70">Flip</span>
+                </button>
+
+                {/* Shutter */}
+                <button
+                  type="button"
+                  onClick={captureToBox}
+                  className="w-[72px] h-[72px] rounded-full border-4 border-white bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                >
+                  <div className="w-14 h-14 bg-white rounded-full" />
+                </button>
+
+                {/* Gallery fallback */}
+                <button
+                  type="button"
+                  onClick={() => { closeCamera(); photoInputRef.current.click(); }}
+                  className="flex flex-col items-center gap-1 text-white transition-colors"
+                >
+                  <div className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center transition-colors">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <span className="text-[11px] text-white/70">Gallery</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Preview of cropped result */}
+              <div className="flex-1 bg-black flex items-center justify-center overflow-hidden p-4 relative">
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white z-10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <img src={capturedFrame} alt="Scanned" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+              </div>
+              <div className="flex-shrink-0 bg-black px-6 py-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setCapturedFrame(null); openCamera(facingMode); }}
+                  className="flex-1 py-3 rounded-xl bg-white/15 hover:bg-white/25 text-white font-medium text-sm transition-colors"
+                >
+                  Retake
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmCapturedPhoto}
+                  className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm transition-colors"
+                >
+                  Use This Photo
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

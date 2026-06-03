@@ -5,18 +5,19 @@ import {
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
 function StudentManagement() {
-  const { user, logout, allUsers, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDept, setFilterDept] = useState('All');
+  const [filterCourse, setFilterCourse] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -56,6 +57,7 @@ function StudentManagement() {
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportDept, setExportDept] = useState('All');
+  const [exportCourse, setExportCourse] = useState('All');
 
   // Parse birth date from either individual fields or the combined birthDate column
   function parseBirthFields(s) {
@@ -111,9 +113,17 @@ function StudentManagement() {
         ? archiveViewData.studentData
         : students;
 
-      const list = exportDept === 'All'
-        ? allStudents
-        : allStudents.filter(s => s.department === exportDept);
+      // Instructors can only download their own department
+      const effectiveDept = !isAdmin ? (user?.department || 'CWTS') : exportDept;
+      const effectiveCourse = isAdmin ? exportCourse : 'All';
+
+      const matchesCourse = (s) =>
+        effectiveCourse === 'All' || (s.program || '').toUpperCase() === effectiveCourse;
+
+      const byDept = (s) =>
+        effectiveDept === 'All' || s.department === effectiveDept;
+
+      const list = allStudents.filter(s => byDept(s) && matchesCourse(s));
 
       if (!list || list.length === 0) {
         setNotification({ type: 'error', message: 'No student records found for the selected filter.' });
@@ -123,7 +133,7 @@ function StudentManagement() {
 
       const wb = XLSX.utils.book_new();
 
-      if (exportDept === 'All') {
+      if (effectiveDept === 'All' && effectiveCourse === 'All') {
         // Sheet per department + one combined sheet
         const allRows = list.map(mapStudentRow);
         const wsAll = XLSX.utils.json_to_sheet(allRows);
@@ -138,18 +148,35 @@ function StudentManagement() {
             XLSX.utils.book_append_sheet(wb, ws, dept);
           }
         });
+      } else if (effectiveDept === 'All' && effectiveCourse !== 'All') {
+        // Course selected across all depts — one sheet per dept
+        const allRows = list.map(mapStudentRow);
+        const wsAll = XLSX.utils.json_to_sheet(allRows);
+        applyColumnWidths(wsAll, allRows);
+        XLSX.utils.book_append_sheet(wb, wsAll, `All-${effectiveCourse}`);
+
+        ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
+          const rows = list.filter(s => s.department === dept).map(mapStudentRow);
+          if (rows.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(rows);
+            applyColumnWidths(ws, rows);
+            XLSX.utils.book_append_sheet(wb, ws, `${dept}-${effectiveCourse}`);
+          }
+        });
       } else {
-        // Single sheet for the selected department
+        // Single sheet — dept + course combo
+        const sheetName = effectiveCourse === 'All' ? effectiveDept : `${effectiveDept}-${effectiveCourse}`;
         const rows = list.map(mapStudentRow);
         const ws = XLSX.utils.json_to_sheet(rows);
         applyColumnWidths(ws, rows);
-        XLSX.utils.book_append_sheet(wb, ws, exportDept);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
       }
 
-      const batchLabel = viewingArchive && archiveViewData ? `Batch${archiveViewData.year}` : 'Current';
-      const deptLabel  = exportDept === 'All' ? 'AllDepts' : exportDept;
-      const dateStr    = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `NSTP_Students_${deptLabel}_${batchLabel}_${dateStr}.xlsx`);
+      const batchLabel  = viewingArchive && archiveViewData ? `Batch${archiveViewData.year}` : 'Current';
+      const deptLabel   = effectiveDept === 'All' ? 'AllDepts' : effectiveDept;
+      const courseLabel = effectiveCourse === 'All' ? 'AllCourses' : effectiveCourse;
+      const dateStr     = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `NSTP_Students_${deptLabel}_${courseLabel}_${batchLabel}_${dateStr}.xlsx`);
 
       setNotification({ type: 'success', message: `Downloaded ${list.length} student record(s) as Excel.` });
       setTimeout(() => setNotification(null), 3000);
@@ -172,12 +199,12 @@ function StudentManagement() {
   }
 
   const handleAddStudent = async () => {
-    const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'address', 'emergencyName', 'emergencyNumber'];
+    const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'emergencyName', 'emergencyNumber'];
     const fieldLabels = {
       studentId: 'Student ID', name: 'Full Name', email: 'Email', department: 'Department',
       year: 'Year Level', program: 'Program', section: 'Section', gender: 'Sex',
       birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year', age: 'Age',
-      civilStatus: 'Civil Status', contactNumber: 'Contact Number', address: 'Address',
+      civilStatus: 'Civil Status', contactNumber: 'Contact Number',
       emergencyName: 'Emergency Contact Name', emergencyNumber: 'Emergency Contact Number'
     };
 
@@ -247,22 +274,23 @@ function StudentManagement() {
     ? archiveViewData.studentData
     : students;
 
-  // Filter students based on search and department - memoized for performance
+  // Filter students based on search, department, and course - memoized for performance
   const filteredStudents = useMemo(() => {
     return sourceStudents.filter(student => {
       if (!student || !student.name || !student.studentId) return false;
       const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesDept = filterDept === 'All' || student.department === filterDept;
+      const matchesCourse = filterCourse === 'All' || (student.program || '').toUpperCase() === filterCourse;
 
       // Instructors only see their department students
       if (!isAdmin && user?.department) {
-        return matchesSearch && student.department === user.department;
+        return matchesSearch && student.department === user.department && matchesCourse;
       }
 
-      return matchesSearch && matchesDept;
+      return matchesSearch && matchesDept && matchesCourse;
     });
-  }, [sourceStudents, searchTerm, filterDept, isAdmin, user?.department]);
+  }, [sourceStudents, searchTerm, filterDept, filterCourse, isAdmin, user?.department]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
@@ -273,7 +301,7 @@ function StudentManagement() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDept]);
+  }, [searchTerm, filterDept, filterCourse]);
 
   const handleEditStudent = async () => {
     setIsEditingStudent(true);
@@ -369,15 +397,6 @@ function StudentManagement() {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'Active': return 'bg-green-100 text-green-700';
-      case 'Completed': return 'bg-blue-100 text-blue-700';
-      case 'Inactive': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar Overlay */}
@@ -467,7 +486,7 @@ function StudentManagement() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Archive Banner */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
@@ -521,7 +540,7 @@ function StudentManagement() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -539,8 +558,8 @@ function StudentManagement() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => setShowExportModal(true)}
-              title="Download students as Excel file"
+              onClick={() => { if (isAdmin) { setExportDept('All'); setExportCourse('All'); setShowExportModal(true); } else runExport(); }}
+              title={isAdmin ? 'Download students as Excel file' : `Download ${user?.department} students as Excel`}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700"
             >
               <FileSpreadsheet className="w-5 h-5" />
@@ -596,6 +615,24 @@ function StudentManagement() {
                 </select>
               </div>
             )}
+            <div className="flex items-center space-x-2">
+              <select
+                id="filter-course"
+                name="filterCourse"
+                value={filterCourse}
+                onChange={(e) => setFilterCourse(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              >
+                <option value="All">All Courses</option>
+                <option value="BSIT">BSIT</option>
+                <option value="BSCS">BSCS</option>
+                <option value="FASD">FASD</option>
+                <option value="BSBA">BSBA</option>
+                <option value="BSED">BSEd</option>
+                <option value="BEED">BEED</option>
+                <option value="BSHM">BSHM</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -701,8 +738,8 @@ function StudentManagement() {
 
         {/* Export Modal */}
         {showExportModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowExportModal(false)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
                   <FileSpreadsheet className="w-6 h-6 text-blue-600" />
@@ -715,7 +752,7 @@ function StudentManagement() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Department</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
                   <div className="grid grid-cols-2 gap-2">
                     {['All', 'CWTS', 'LTS', 'ROTC'].map(dept => {
                       const colors = {
@@ -737,17 +774,41 @@ function StudentManagement() {
                           onClick={() => setExportDept(dept)}
                           className={`px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all ${exportDept === dept ? selected[dept] : colors[dept]}`}
                         >
-                          {dept === 'All' ? '📋 All Departments' : dept === 'CWTS' ? '🔵 CWTS' : dept === 'LTS' ? '🟣 LTS' : '🔴 ROTC'}
+                          {dept === 'All' ? 'All Departments' : dept === 'CWTS' ? 'CWTS' : dept === 'LTS' ? 'LTS' : 'ROTC'}
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Course / Program</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => (
+                      <button
+                        key={course}
+                        type="button"
+                        onClick={() => setExportCourse(course)}
+                        className={`px-2 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
+                          exportCourse === course
+                            ? 'bg-green-700 border-green-700 text-white'
+                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {course === 'All' ? 'All Courses' : course === 'BSED' ? 'BSEd' : course}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                  {exportDept === 'All'
+                  {exportDept === 'All' && exportCourse === 'All'
                     ? <>Will create <strong>4 sheets</strong>: All Students + one sheet per department.</>
-                    : <>Will create a single <strong>{exportDept}</strong> sheet with all {exportDept} student records.</>
+                    : exportDept === 'All'
+                    ? <>Will create sheets per department, filtered to <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong>.</>
+                    : exportCourse === 'All'
+                    ? <>Will create a single <strong>{exportDept}</strong> sheet with all {exportDept} student records.</>
+                    : <>Will create a single sheet: <strong>{exportDept} — {exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students.</>
                   }
                 </div>
               </div>
@@ -766,9 +827,9 @@ function StudentManagement() {
 
         {/* Add Student Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
             <div
-              className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain"
+              className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
@@ -900,7 +961,7 @@ function StudentManagement() {
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Personal Information</h4>
                   
                   {/* Birth Date */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month *</label>
                       <input
@@ -948,7 +1009,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Age, Civil Status, Sex */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Age *</label>
                       <input
@@ -1000,7 +1061,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Weight, Facebook */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
                       <input
@@ -1061,16 +1122,6 @@ function StudentManagement() {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Address <span className="text-red-500">*</span></label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-20 resize-none"
-                    placeholder="Complete address..."
-                    required
-                  />
-                </div>
 
                 {/* Emergency Contact */}
                 <div className="border-t pt-4 mt-4">
@@ -1128,7 +1179,7 @@ function StudentManagement() {
 
         {/* View Student Modal */}
         {showViewModal && viewStudent && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeViewModal}>
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
               <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
@@ -1141,7 +1192,7 @@ function StudentManagement() {
                 </button>
               </div>
               
-              <div className="p-6 space-y-6">
+              <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
                 {/* Personal Information Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
@@ -1220,9 +1271,9 @@ function StudentManagement() {
           </div>
         )}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEditModal(false)}>
             <div
-              className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain"
+              className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
@@ -1343,7 +1394,7 @@ function StudentManagement() {
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Personal Information</h4>
                   
                   {/* Birth Date - Separate Fields */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month (1-12)</label>
                       <input
@@ -1388,7 +1439,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Age, Civil Status, Sex, Height */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
                       <input

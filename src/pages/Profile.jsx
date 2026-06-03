@@ -1,12 +1,14 @@
 import { useAuth } from '../App';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, ChevronLeft, Camera, Mail, Phone,
+  LogOut, User, Camera, Mail, Phone,
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
-  Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera
+  Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
+  UserPlus, Trash2
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { usersAPI } from '../services/api';
 
 const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
@@ -60,7 +62,6 @@ function Profile() {
   const [selectedEmoji, setSelectedEmoji] = useState('😊');
   const [history, setHistory] = useState([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [textPosition, setTextPosition] = useState(null);
   const videoRef = useRef(null);
   const editorCanvasRef = useRef(null);
   const drawLastPos = useRef(null);
@@ -258,7 +259,7 @@ function Profile() {
       setShowAvatarSelector(false);
       setNotification({ type: 'success', message: 'Profile updated successfully!' });
       setTimeout(() => setNotification(null), 3000);
-    } catch (error) {
+    } catch (_error) {
       setNotification({ type: 'error', message: 'Failed to save profile. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
@@ -332,6 +333,75 @@ function Profile() {
 
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // Instructor management (admin only)
+  const [instructors, setInstructors] = useState([]);
+  const [showAddInstructor, setShowAddInstructor] = useState(false);
+  const [instructorForm, setInstructorForm] = useState({ name: '', email: '', role: 'instructor', department: 'CWTS', password: '', confirmPassword: '' });
+  const [showInstructorPassword, setShowInstructorPassword] = useState(false);
+  const [isAddingInstructor, setIsAddingInstructor] = useState(false);
+  const [deletingInstructorId, setDeletingInstructorId] = useState(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    usersAPI.getAll().then(users => {
+      setInstructors(users.filter(u => u.id !== user?.id));
+    }).catch(() => {});
+  }, [isAdmin, user?.id]);
+
+  const handleAddInstructor = async () => {
+    if (!instructorForm.name.trim() || !instructorForm.email.trim() || !instructorForm.password) {
+      setNotification({ type: 'error', message: 'Name, email, and password are required.' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    if (instructorForm.password !== instructorForm.confirmPassword) {
+      setNotification({ type: 'error', message: 'Passwords do not match.' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    if (instructorForm.password.length < 6) {
+      setNotification({ type: 'error', message: 'Password must be at least 6 characters.' });
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    setIsAddingInstructor(true);
+    try {
+      const created = await usersAPI.createInstructor({
+        name: instructorForm.name.trim(),
+        email: instructorForm.email.trim(),
+        password: instructorForm.password,
+        role: instructorForm.role,
+        department: instructorForm.role === 'instructor' ? instructorForm.department : undefined
+      });
+      setInstructors(prev => [...prev, created]);
+      setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
+      setShowAddInstructor(false);
+      setNotification({ type: 'success', message: `Instructor "${created.name}" added successfully.` });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: error?.message || 'Failed to add instructor.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setIsAddingInstructor(false);
+    }
+  };
+
+  const handleDeleteInstructor = async (id, name) => {
+    if (!window.confirm(`Delete instructor "${name}"? This cannot be undone.`)) return;
+    setDeletingInstructorId(id);
+    try {
+      await usersAPI.delete(id);
+      setInstructors(prev => prev.filter(i => i.id !== id));
+      setNotification({ type: 'success', message: `Instructor "${name}" deleted.` });
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      setNotification({ type: 'error', message: error?.message || 'Failed to delete instructor.' });
+      setTimeout(() => setNotification(null), 3000);
+    } finally {
+      setDeletingInstructorId(null);
+    }
+  };
+
   const handlePasswordChange = async () => {
     if (formData.newPassword !== formData.confirmPassword) {
       setNotification({ type: 'error', message: 'Passwords do not match!' });
@@ -349,7 +419,7 @@ function Profile() {
       setNotification({ type: 'success', message: 'Password changed successfully!' });
       setTimeout(() => setNotification(null), 3000);
       setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
+    } catch (_error) {
       setNotification({ type: 'error', message: 'Failed to change password. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
@@ -456,7 +526,7 @@ function Profile() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
@@ -473,7 +543,7 @@ function Profile() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -499,11 +569,11 @@ function Profile() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
           {/* Profile Card */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
-              <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 text-center">
+              <div className="bg-gradient-to-br from-green-600 to-green-800 p-3 sm:p-6 text-center">
                 <div className="relative inline-block">
                   <div className="w-32 h-32 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg">
                     {getAvatarDisplay()}
@@ -570,7 +640,7 @@ function Profile() {
                 </div>
               )}
               
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3">
                     <Mail className="w-5 h-5 text-gray-400" />
@@ -592,9 +662,9 @@ function Profile() {
           </div>
 
           {/* Edit Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-5">
             {/* Personal Information */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -667,8 +737,69 @@ function Profile() {
               </div>
             </div>
 
+            {/* Instructor Accounts — admin only */}
+            {isAdmin && (
+              <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Instructor Accounts
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => { setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' }); setShowAddInstructor(true); }}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Instructor
+                  </button>
+                </div>
+
+                {instructors.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No instructor accounts yet.</p>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {instructors.map(inst => {
+                      const deptColors = { CWTS: 'bg-blue-100 text-blue-700', LTS: 'bg-purple-100 text-purple-700', ROTC: 'bg-red-100 text-red-700' };
+                      return (
+                        <div key={inst.id} className="flex items-center justify-between py-3 gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 flex-shrink-0 text-sm font-bold">
+                              {inst.name?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
+                              <p className="text-xs text-gray-400 truncate">{inst.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {inst.role === 'admin' ? (
+                              <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">Admin</span>
+                            ) : (
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'}`}>
+                                {inst.department}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteInstructor(inst.id, inst.name)}
+                              disabled={deletingInstructorId === inst.id}
+                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
+                              title="Delete instructor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Change Password */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center">
                   <Lock className="w-5 h-5 mr-2" />
@@ -740,10 +871,149 @@ function Profile() {
         </div>
       </main>
 
+      {/* Add Instructor Modal */}
+      {showAddInstructor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddInstructor(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-green-700" />
+                Add New {instructorForm.role === 'admin' ? 'Admin' : 'Instructor'}
+              </h3>
+              <button type="button" onClick={() => setShowAddInstructor(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'instructor', label: 'Instructor' },
+                    { value: 'admin', label: 'Admin' },
+                  ].map(r => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setInstructorForm(f => ({ ...f, role: r.value }))}
+                      className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${
+                        instructorForm.role === r.value
+                          ? 'bg-green-700 border-green-700 text-white'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  id="inst-name"
+                  name="instructorName"
+                  value={instructorForm.name}
+                  onChange={e => setInstructorForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="e.g. Juan dela Cruz"
+                  autoComplete="off"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  id="inst-email"
+                  name="instructorEmail"
+                  value={instructorForm.email}
+                  onChange={e => setInstructorForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="e.g. juan@cvsu.edu.ph"
+                  autoComplete="off"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                />
+              </div>
+              {instructorForm.role === 'instructor' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['CWTS', 'LTS', 'ROTC'].map(dept => {
+                      const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
+                      const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
+                      return (
+                        <button
+                          key={dept}
+                          type="button"
+                          onClick={() => setInstructorForm(f => ({ ...f, department: dept }))}
+                          className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${instructorForm.department === dept ? active[dept] : idle[dept]}`}
+                        >
+                          {dept}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div className="relative">
+                  <input
+                    type={showInstructorPassword ? 'text' : 'password'}
+                    id="inst-password"
+                    name="instructorPassword"
+                    value={instructorForm.password}
+                    onChange={e => setInstructorForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="At least 6 characters"
+                    autoComplete="new-password"
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowInstructorPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  >
+                    {showInstructorPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <input
+                  type="password"
+                  id="inst-confirm-password"
+                  name="instructorConfirmPassword"
+                  value={instructorForm.confirmPassword}
+                  onChange={e => setInstructorForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  placeholder="Re-enter password"
+                  autoComplete="new-password"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddInstructor}
+                disabled={isAddingInstructor}
+                className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
+              >
+                <UserPlus className="w-4 h-4" />
+                {isAddingInstructor ? 'Adding...' : `Add ${instructorForm.role === 'admin' ? 'Admin' : 'Instructor'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Camera / Photo Editor Modal */}
       {showCameraModal && (
-        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[9999] p-2">
-          <div className="bg-gray-900 rounded-2xl overflow-hidden w-full max-w-md">
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[9999] p-2" onClick={closeCameraModal}>
+          <div className="bg-gray-900 rounded-2xl overflow-hidden w-full max-w-md" onClick={(e) => e.stopPropagation()}>
 
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-gray-800">

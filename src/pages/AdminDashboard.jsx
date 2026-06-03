@@ -2,7 +2,7 @@ import { useAuth } from '../App';
 import { archivesAPI } from '../services/api';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, TrendingUp, Shield,
+  LogOut, User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
   BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu
 } from 'lucide-react';
@@ -20,10 +20,9 @@ const AVATAR_OPTIONS = {
 };
 
 function AdminDashboard() {
-  const { user, logout, clearBatchData, students, reports, allUsers, messages, conversations, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, clearBatchData, students, reports, allUsers, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
@@ -47,7 +46,6 @@ function AdminDashboard() {
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(null);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
@@ -64,7 +62,40 @@ function AdminDashboard() {
     setConfirmDialog({ message, onConfirm });
   };
   
-  // Check if user is loaded - after all hooks
+  // All hooks must be called before any early return
+  // Calculate statistics from actual data
+  const stats = useMemo(() => ({
+    totalStudents: students.length,
+    cwtsStudents: students.filter(s => s.department === 'CWTS').length,
+    ltsStudents: students.filter(s => s.department === 'LTS').length,
+    rotcStudents: students.filter(s => s.department === 'ROTC').length,
+    totalInstructors: allUsers.filter(u => u.role === 'instructor').length,
+    pendingReports: reports.filter(r => !r.submissions || r.submissions.length === 0).length,
+    unreadMessages: (notifications || []).filter(n => n.type === 'message' && !n.read).length
+  }), [students, allUsers, reports, notifications]);
+
+
+  const displayStats = viewingArchive && archiveViewData ? (() => {
+    const sd = archiveViewData.studentData || [];
+    const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
+    const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
+    const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
+    return {
+      totalStudents: archiveViewData.students || sd.length,
+      cwtsStudents: cwts, ltsStudents: lts, rotcStudents: rotc,
+      totalInstructors: 0, pendingReports: 0, unreadMessages: 0
+    };
+  })() : stats;
+
+  const currentStats = useMemo(() => ({
+    total: displayStats.totalStudents,
+    cwts: displayStats.cwtsStudents,
+    lts: displayStats.ltsStudents,
+    rotc: displayStats.rotcStudents,
+    completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
+  }), [displayStats, viewingArchive, archiveViewData, students]);
+
+  // Show loading while user context resolves
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -122,13 +153,6 @@ function AdminDashboard() {
   }
 
   // Mark all as read
-  function handleMarkAllRead() {
-    const newNotifications = (notifications || []).map(n => {
-      return { ...n, read: true };
-    });
-    setNotifications(newNotifications);
-  }
-  
   // Handle notification click
   function handleNotificationItemClick(notification) {
     // Mark as read
@@ -154,53 +178,6 @@ function AdminDashboard() {
     navigate('/login');
   };
 
-  // Calculate statistics from actual data - memoized for performance
-  const stats = useMemo(() => ({
-    totalStudents: students.length,
-    cwtsStudents: students.filter(s => s.department === 'CWTS').length,
-    ltsStudents: students.filter(s => s.department === 'LTS').length,
-    rotcStudents: students.filter(s => s.department === 'ROTC').length,
-    totalInstructors: allUsers.filter(u => u.role === 'instructor').length,
-    // Pending reports = reports created by admin that don't have submissions yet
-    pendingReports: reports.filter(r => !r.submissions || r.submissions.length === 0).length,
-    unreadMessages: (notifications || []).filter(n => n.type === 'message' && !n.read).length
-  }), [students, allUsers, reports, notifications]);
-
-  // Calculate current year stats for comparison (after stats is defined)
-  const currentYear = new Date().getFullYear();
-  const previousYearData = useMemo(() => archivedYears.find(y => y.year === currentYear - 1) || archivedYears[archivedYears.length - 1], [archivedYears, currentYear]);
-  
-  // Use archived stats when viewing archive, otherwise use current stats
-  const displayStats = viewingArchive && archiveViewData ? (() => {
-    const sd = archiveViewData.studentData || [];
-    const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
-    const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
-    const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
-    return {
-      totalStudents: archiveViewData.students || sd.length,
-      cwtsStudents: cwts,
-      ltsStudents: lts,
-      rotcStudents: rotc,
-      totalInstructors: 0,
-      pendingReports: 0,
-      unreadMessages: 0
-    };
-  })() : stats;
-  
-  const currentStats = useMemo(() => ({
-    total: displayStats.totalStudents,
-    cwts: displayStats.cwtsStudents,
-    lts: displayStats.ltsStudents,
-    rotc: displayStats.rotcStudents,
-    completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
-  }), [displayStats, viewingArchive, archiveViewData, students]);
-  
-  const yearOverYearChange = useMemo(() => ({
-    total: currentStats.total - (previousYearData?.students || 0),
-    cwts: currentStats.cwts - (previousYearData?.cwts || 0),
-    lts: currentStats.lts - (previousYearData?.lts || 0),
-    rotc: currentStats.rotc - (previousYearData?.rotc || 0)
-  }), [currentStats, previousYearData]);
   
   // Archive current year and start new batch
   const handleNewBatch = () => {
@@ -247,7 +224,7 @@ function AdminDashboard() {
         studentData: detailed.studentData || [],
         reportData: detailed.reportData || []
       });
-    } catch (e) {
+    } catch {
       setArchiveViewData({ ...yearData, studentData: [], reportData: [] });
     }
     setViewingArchive(true);
@@ -278,8 +255,6 @@ function AdminDashboard() {
 
 
   // Empty activities and messages
-  const recentActivities = [];
-  const recentMessages = [];
 
   // Get user avatar display
   const getUserAvatar = () => {
@@ -438,7 +413,7 @@ function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ease-in-out p-4 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 ease-in-out p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
@@ -463,7 +438,7 @@ function AdminDashboard() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
             <button
               type="button"
@@ -604,102 +579,102 @@ function AdminDashboard() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className={`p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Total Students</p>
-                <p className="text-3xl font-bold text-gray-800">{displayStats.totalStudents}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.totalStudents}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
               <span>{viewingArchive ? 'Archived total' : 'Total enrolled students'}</span>
             </div>
           </div>
 
-          <div className={`p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">CWTS Students</p>
-                <p className="text-3xl font-bold text-gray-800">{displayStats.cwtsStudents}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.cwtsStudents}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-green-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
               <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.cwtsStudents/displayStats.totalStudents*100) : 0}% of total</span>
             </div>
           </div>
 
-          <div className={`p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">LTS Students</p>
-                <p className="text-3xl font-bold text-gray-800">{displayStats.ltsStudents}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.ltsStudents}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-purple-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
               <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.ltsStudents/displayStats.totalStudents*100) : 0}% of total</span>
             </div>
           </div>
 
-          <div className={`p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">ROTC Students</p>
-                <p className="text-3xl font-bold text-gray-800">{displayStats.rotcStudents}</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.rotcStudents}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-6 h-6 text-red-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
               </div>
             </div>
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
               <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.rotcStudents/displayStats.totalStudents*100) : 0}% of total</span>
             </div>
           </div>
         </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 rounded-xl shadow-md text-white">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6" />
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6 rounded-xl shadow-md text-white">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <p className="text-green-100 text-sm">Total Instructors</p>
-                <p className="text-2xl font-bold">{stats.totalInstructors}</p>
+                <p className="text-lg sm:text-2xl font-bold">{stats.totalInstructors}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-6 rounded-xl shadow-md text-white">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <FileText className="w-6 h-6" />
+          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-3 sm:p-6 rounded-xl shadow-md text-white">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <p className="text-yellow-100 text-sm">Pending Reports</p>
-                <p className="text-2xl font-bold">{stats.pendingReports}</p>
+                <p className="text-lg sm:text-2xl font-bold">{stats.pendingReports}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl shadow-md text-white">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-6 h-6" />
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 sm:p-6 rounded-xl shadow-md text-white">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <p className="text-blue-100 text-sm">Unread Messages</p>
-                <p className="text-2xl font-bold">{stats.unreadMessages}</p>
+                <p className="text-lg sm:text-2xl font-bold">{stats.unreadMessages}</p>
               </div>
             </div>
           </div>
@@ -707,7 +682,7 @@ function AdminDashboard() {
 
         {/* Pending Enrollments Section */}
         {!viewingArchive && (
-          <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <Users className="w-5 h-5 mr-2 text-yellow-600" />
@@ -715,69 +690,120 @@ function AdminDashboard() {
               </h3>
             </div>
             {pendingEnrollments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program (ROTC/LTS/CWTS)</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingEnrollments.map((enrollment) => (
-                      <tr 
-                        key={enrollment.id} 
-                        className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors"
+              <>
+                {/* ── Mobile: card list ── */}
+                <div className="sm:hidden divide-y divide-gray-100">
+                  {pendingEnrollments.map((enrollment) => {
+                    const deptColor =
+                      enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
+                      enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
+                      enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-700';
+                    return (
+                      <div
+                        key={enrollment.id}
+                        className="p-3 hover:bg-green-50 cursor-pointer transition-colors"
                         onClick={() => setSelectedEnrollment(enrollment)}
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{enrollment.fullName}</p>
-                            <p className="text-sm text-gray-500">{enrollment.email}</p>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{enrollment.fullName}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{enrollment.studentId} · {enrollment.yearLevel} · Sec {enrollment.section || '-'}</p>
+                            <p className="text-xs text-gray-400 truncate">{enrollment.email}</p>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{enrollment.section || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{enrollment.yearLevel}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
-                            enrollment.nstpComponent === 'LTS' ? 'bg-purple-100 text-purple-700' :
-                            enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {enrollment.nstpComponent || 'Not Set'}
+                          <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${deptColor}`}>
+                            {enrollment.nstpComponent || '—'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={async () => { try { await approveEnrollment(enrollment.id); } catch (e) {} }}
-                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => { try { await declineEnrollment(enrollment.id); } catch (e) {} }}
-                              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm font-medium transition-colors flex items-center"
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Decline
-                            </button>
-                          </div>
-                        </td>
+                        </div>
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" /> Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                          >
+                            <X className="w-3.5 h-3.5" /> Decline
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedEnrollment(enrollment)}
+                            className="px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Desktop: table ── */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name / Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NSTP</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {pendingEnrollments.map((enrollment) => (
+                        <tr
+                          key={enrollment.id}
+                          className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors"
+                          onClick={() => setSelectedEnrollment(enrollment)}
+                        >
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-medium text-gray-900">{enrollment.fullName}</p>
+                            <p className="text-xs text-gray-500">{enrollment.email}</p>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.section || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.yearLevel}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                              enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
+                              enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
+                              enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {enrollment.nstpComponent || '—'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                              >
+                                <X className="w-3.5 h-3.5" /> Decline
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -787,7 +813,7 @@ function AdminDashboard() {
             )}
           </div>
         )}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-800 flex items-center">
               <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
@@ -910,7 +936,6 @@ function AdminDashboard() {
                       })), 
                         { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
                       ].sort((a, b) => b.year - a.year).map((data) => {
-                        const total = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
                         const maxComponent = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0);
                         const highest = data.cwts === maxComponent ? 'CWTS' : data.lts === maxComponent ? 'LTS' : 'ROTC';
                         return (
@@ -942,7 +967,7 @@ function AdminDashboard() {
 
         {/* Batch Management - Hide when viewing archive */}
         {!viewingArchive && (
-          <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-xl shadow-md p-6 mb-8 text-white">
+          <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5 text-white">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
@@ -983,8 +1008,8 @@ function AdminDashboard() {
 
         {/* Archive Modal - Simple List View */}
         {showArchiveModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchiveModal(false)}>
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
                   <History className="w-6 h-6 mr-2 text-green-600" />
@@ -1048,7 +1073,7 @@ function AdminDashboard() {
         {/* New Batch Confirmation Modal */}
         {showNewBatchConfirm && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-3 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
                   <Archive className="w-6 h-6 mr-2 text-red-600" />
@@ -1111,114 +1136,151 @@ function AdminDashboard() {
         )}
         {/* Enrollment Detail Modal */}
         {selectedEnrollment && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
-                <h3 className="text-lg font-bold flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  Student Enrollment Details
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setSelectedEnrollment(null)}
-                  className="p-1 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6" />
+          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => setSelectedEnrollment(null)}>
+            <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-green-800 text-white rounded-t-2xl sm:rounded-t-xl flex-shrink-0">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold truncate">{selectedEnrollment.fullName}</h3>
+                  <p className="text-xs text-green-200 mt-0.5">{selectedEnrollment.studentId} · {selectedEnrollment.nstpComponent}</p>
+                </div>
+                <button type="button" onClick={() => setSelectedEnrollment(null)} className="p-1.5 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0 ml-2">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              
-              <div className="p-6 space-y-6">
-                {/* Personal Information */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Student ID:</span> <span className="font-medium">{selectedEnrollment.studentId}</span></div>
-                    <div><span className="text-gray-500">Full Name:</span> <span className="font-medium">{selectedEnrollment.fullName}</span></div>
-                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{selectedEnrollment.email}</span></div>
-                    <div><span className="text-gray-500">Contact:</span> <span className="font-medium">{selectedEnrollment.contactNumber}</span></div>
-                    <div><span className="text-gray-500">Address:</span> <span className="font-medium">{selectedEnrollment.address}</span></div>
-                    <div><span className="text-gray-500">Facebook:</span> <span className="font-medium">{selectedEnrollment.facebookAccount || 'N/A'}</span></div>
-                  </div>
-                </div>
 
-                {/* Academic Information */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Academic Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Program:</span> <span className="font-medium">{selectedEnrollment.program}</span></div>
-                    <div><span className="text-gray-500">Section:</span> <span className="font-medium">{selectedEnrollment.section}</span></div>
-                    <div><span className="text-gray-500">Year Level:</span> <span className="font-medium">{selectedEnrollment.yearLevel}</span></div>
-                    <div><span className="text-gray-500">NSTP Component:</span> <span className="font-medium">{selectedEnrollment.nstpComponent}</span></div>
-                  </div>
-                </div>
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto overscroll-contain">
 
-                {/* Demographic Information */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '-'}</span></div>
-                    <div><span className="text-gray-500">Age:</span> <span className="font-medium">{selectedEnrollment.age}</span></div>
-                    <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{selectedEnrollment.gender}</span></div>
-                    <div><span className="text-gray-500">Civil Status:</span> <span className="font-medium">{selectedEnrollment.civilStatus}</span></div>
-                    <div><span className="text-gray-500">Height:</span> <span className="font-medium">{selectedEnrollment.height || 'N/A'}</span></div>
-                    <div><span className="text-gray-500">Weight:</span> <span className="font-medium">{selectedEnrollment.weight || 'N/A'}</span></div>
-                    <div><span className="text-gray-500">Blood Type:</span> <span className="font-medium">{selectedEnrollment.bloodType || 'N/A'}</span></div>
-                  </div>
-                </div>
-
-                {/* Emergency Contact */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Emergency Contact</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Contact Person:</span> <span className="font-medium">{selectedEnrollment.emergencyContact}</span></div>
-                    <div><span className="text-gray-500">Contact Number:</span> <span className="font-medium">{selectedEnrollment.emergencyNumber}</span></div>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
+                {/* Registration Photo — full width, top */}
+                <div className="p-3 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-green-800 mb-2 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5" /> Registration Form Photo
+                  </p>
+                  {selectedEnrollment.registration_photo ? (
                     <div>
-                      <span className="text-gray-500 text-sm">Status:</span>
-                      <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-sm font-medium">
-                        {selectedEnrollment.status || 'Pending'}
-                      </span>
+                      <img
+                        src={selectedEnrollment.registration_photo}
+                        alt="Registration form"
+                        className="w-full max-h-64 sm:max-h-80 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in"
+                        onClick={() => window.open(selectedEnrollment.registration_photo, '_blank')}
+                      />
+                      <p className="text-xs text-gray-400 mt-1 text-center">Tap to open full size</p>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      Submitted: {new Date(selectedEnrollment.submitted_at).toLocaleDateString()}
+                  ) : (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                      <p className="text-xs font-medium text-amber-700">No registration form photo submitted</p>
                     </div>
+                  )}
+                </div>
+
+                {/* Details — label/value rows, compact */}
+                <div className="p-3 space-y-4">
+
+                  {/* Personal */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</p>
+                    <div className="space-y-1.5">
+                      {[
+                        ['Full Name', selectedEnrollment.fullName],
+                        ['Student ID', selectedEnrollment.studentId],
+                        ['Email', selectedEnrollment.email],
+                        ['Contact', selectedEnrollment.contactNumber],
+                        ['Address', selectedEnrollment.address],
+                        ['Facebook', selectedEnrollment.facebookAccount || '—'],
+                      ].map(([label, val]) => (
+                        <div key={label} className="flex justify-between items-start gap-3 text-sm">
+                          <span className="text-gray-400 text-xs flex-shrink-0 w-20">{label}</span>
+                          <span className="font-medium text-gray-800 text-xs text-right break-all">{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Academic */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Academic</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        ['Program', selectedEnrollment.program],
+                        ['Section', selectedEnrollment.section || '—'],
+                        ['Year Level', selectedEnrollment.yearLevel],
+                        ['NSTP', selectedEnrollment.nstpComponent],
+                      ].map(([label, val]) => (
+                        <div key={label} className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Demographic */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Demographic</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        ['Birth Date', selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '—'],
+                        ['Age', selectedEnrollment.age || '—'],
+                        ['Gender', selectedEnrollment.gender || '—'],
+                        ['Civil Status', selectedEnrollment.civilStatus || '—'],
+                        ['Height', selectedEnrollment.height ? `${selectedEnrollment.height} cm` : '—'],
+                        ['Weight', selectedEnrollment.weight ? `${selectedEnrollment.weight} kg` : '—'],
+                        ['Blood Type', selectedEnrollment.bloodType || '—'],
+                      ].map(([label, val]) => (
+                        <div key={label} className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Emergency Contact</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        ['Name', selectedEnrollment.emergencyContact],
+                        ['Number', selectedEnrollment.emergencyNumber],
+                      ].map(([label, val]) => (
+                        <div key={label} className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
+                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Status + date */}
+                  <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs">
+                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold">{selectedEnrollment.status || 'Pending'}</span>
+                    <span className="text-gray-400">Submitted {new Date(selectedEnrollment.submitted_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="sticky bottom-0 bg-white p-4 border-t flex space-x-3">
+              {/* Sticky action buttons */}
+              <div className="flex-shrink-0 border-t bg-white p-3 grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={async () => {
-                    try { await approveEnrollment(selectedEnrollment.id); } catch (e) {}
-                    setSelectedEnrollment(null);
-                  }}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
+                  onClick={async () => { try { await approveEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
+                  className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Approve
+                  <CheckCircle className="w-4 h-4" /> Approve
                 </button>
                 <button
                   type="button"
-                  onClick={async () => {
-                    try { await declineEnrollment(selectedEnrollment.id); } catch (e) {}
-                    setSelectedEnrollment(null);
-                  }}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
+                  onClick={async () => { try { await declineEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
+                  className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
-                  <X className="w-5 h-5 mr-2" />
-                  Decline
+                  <X className="w-4 h-4" /> Decline
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedEnrollment(null)}
-                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
+                  className="col-span-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                 >
                   Close
                 </button>
@@ -1228,8 +1290,8 @@ function AdminDashboard() {
         )}
         {/* Archive Detail View Modal */}
         {showArchiveDetails && archiveViewData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchiveDetails(false)}>
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
                 <h3 className="text-lg font-bold flex items-center">
                   <Archive className="w-5 h-5 mr-2" />
@@ -1244,25 +1306,25 @@ function AdminDashboard() {
                 </button>
               </div>
               
-              <div className="p-6 space-y-6">
+              <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
                 {/* Archive Summary */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <h4 className="text-lg font-semibold text-amber-800 mb-3">Archive Summary</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                     <div className="bg-white rounded-lg p-3">
-                      <p className="text-2xl font-bold text-blue-600">{archiveViewData.students || 0}</p>
+                      <p className="text-lg sm:text-2xl font-bold text-blue-600">{archiveViewData.students || 0}</p>
                       <p className="text-sm text-gray-600">Total Students</p>
                     </div>
                     <div className="bg-white rounded-lg p-3">
-                      <p className="text-2xl font-bold text-green-600">{archiveViewData.cwts || 0}</p>
+                      <p className="text-lg sm:text-2xl font-bold text-green-600">{archiveViewData.cwts || 0}</p>
                       <p className="text-sm text-gray-600">CWTS</p>
                     </div>
                     <div className="bg-white rounded-lg p-3">
-                      <p className="text-2xl font-bold text-purple-600">{archiveViewData.lts || 0}</p>
+                      <p className="text-lg sm:text-2xl font-bold text-purple-600">{archiveViewData.lts || 0}</p>
                       <p className="text-sm text-gray-600">LTS</p>
                     </div>
                     <div className="bg-white rounded-lg p-3">
-                      <p className="text-2xl font-bold text-red-600">{archiveViewData.rotc || 0}</p>
+                      <p className="text-lg sm:text-2xl font-bold text-red-600">{archiveViewData.rotc || 0}</p>
                       <p className="text-sm text-gray-600">ROTC</p>
                     </div>
                   </div>
