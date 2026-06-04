@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { usersAPI } from '../services/api';
+import { usersAPI, getAllInstructorsGroup } from '../services/api';
 
 const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
@@ -374,9 +374,11 @@ function Profile() {
         department: instructorForm.role === 'instructor' ? instructorForm.department : undefined
       });
       setInstructors(prev => [...prev, created]);
+      // Ensure the All Instructors group exists — creates it if not yet, which also adds the new user
+      getAllInstructorsGroup().catch(() => {});
       setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
-      setNotification({ type: 'success', message: `Instructor "${created.name}" added successfully.` });
+      setNotification({ type: 'success', message: `"${created.name}" added and joined the All Instructors group.` });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       setNotification({ type: 'error', message: error?.message || 'Failed to add instructor.' });

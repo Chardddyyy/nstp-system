@@ -163,6 +163,17 @@ export function createConversation(withUserId) {
   });
 }
 
+export function getAllInstructorsGroup() {
+  return apiCall('/conversations/all-instructors-group');
+}
+
+export function addGroupParticipant(conversationId, userId) {
+  return apiCall('/conversations/' + conversationId + '/add-participant', {
+    method: 'POST',
+    body: JSON.stringify({ userId })
+  });
+}
+
 export function createGroup(name, participants) {
   return apiCall('/conversations/group', {
     method: 'POST',

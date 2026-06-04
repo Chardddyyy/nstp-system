@@ -11,7 +11,7 @@ const BASE_PATH = (() => {
 })();
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
-import { hasAllInstructorsGroup, ensureAllInstructorsGroup } from './utils/ensureGroupChat';
+// ensureGroupChat removed — group is now managed server-side
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -295,33 +295,6 @@ function App() {
     }
   }
 
-  async function mergeAllInstructorsGroup(usersData, conversationsData, currentUser) {
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'instructor')) {
-      return conversationsData;
-    }
-    if (hasAllInstructorsGroup(conversationsData)) {
-      return conversationsData;
-    }
-    var groupChat = await ensureAllInstructorsGroup(usersData, currentUser);
-    if (!groupChat) return conversationsData;
-    var merged = [groupChat];
-    for (var i = 0; i < conversationsData.length; i++) {
-      merged.push(conversationsData[i]);
-    }
-    setConversations(merged);
-    setMessages(function(prev) {
-      var next = {};
-      for (var key in prev) {
-        next[key] = prev[key];
-      }
-      if (!next[groupChat.id]) {
-        next[groupChat.id] = [];
-      }
-      return next;
-    });
-    return merged;
-  }
-
   async function refreshLiveData() {
     if (!user || window.__nstp_session_expired__) return;
     try {
@@ -335,7 +308,7 @@ function App() {
       }
 
       var conversationsData = await conversationsAPI.getAll();
-      conversationsData = await mergeAllInstructorsGroup(usersData, conversationsData, user);
+      // group management is server-side; just use the loaded conversations
       setConversations(conversationsData);
 
       var pending = pendingEnrollments;
@@ -543,7 +516,6 @@ function App() {
       setPendingEnrollments(pending);
 
       var activeUser = currentUser || user;
-      conversationsData = await mergeAllInstructorsGroup(usersData, conversationsData, activeUser);
       setConversations(conversationsData);
       setArchivedYears(archivesData);
       setCurrentBatch(batchData.year.toString());

@@ -155,7 +155,8 @@ async function ensureMessageRestoreColumns() {
     'ALTER TABLE messages ADD COLUMN deleted_snapshot JSON NULL',
     'ALTER TABLE messages ADD COLUMN deleted_at TIMESTAMP NULL',
     'ALTER TABLE messages ADD COLUMN deleted_for JSON NULL',
-    'ALTER TABLE messages ADD COLUMN deleted_for_everyone BOOLEAN DEFAULT FALSE'
+    'ALTER TABLE messages ADD COLUMN deleted_for_everyone BOOLEAN DEFAULT FALSE',
+    "ALTER TABLE messages ADD COLUMN type VARCHAR(20) DEFAULT 'text'"
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* exists */ }
@@ -526,7 +527,29 @@ app.post('/api/users', authenticateToken, async (req, res) => {
       'INSERT INTO users (name, email, password, role, department) VALUES (?, ?, ?, ?, ?)',
       [name, email, hashed, assignedRole, assignedDept]
     );
-    res.status(201).json({ id: result.insertId, name, email, role: assignedRole, department: assignedDept });
+    const newUserId = result.insertId;
+
+    // Auto-add to the "All Instructors" group if it exists
+    try {
+      const [grp] = await pool.execute(
+        "SELECT id FROM conversations WHERE is_group = TRUE AND group_name = 'All Instructors' LIMIT 1"
+      );
+      if (grp.length > 0) {
+        const groupId = grp[0].id;
+        await pool.execute(
+          'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
+          [groupId, newUserId]
+        );
+        const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+        await pool.execute(
+          `INSERT INTO messages (id, conversation_id, sender_id, text, type, created_at)
+           VALUES (?, ?, ?, ?, 'system', NOW())`,
+          [msgId, groupId, newUserId, `${name} joined the group`]
+        );
+      }
+    } catch (_) { /* non-fatal */ }
+
+    res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept });
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -1089,6 +1112,74 @@ app.post('/api/conversations/group', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Create group conversation error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get or create the stable "All Instructors" group (idempotent)
+app.get('/api/conversations/all-instructors-group', authenticateToken, async (req, res) => {
+  try {
+    // Find existing group
+    const [rows] = await pool.execute(
+      "SELECT id, group_name FROM conversations WHERE is_group = TRUE AND group_name = 'All Instructors' LIMIT 1"
+    );
+    if (rows.length > 0) return res.json({ id: rows[0].id, groupName: rows[0].group_name });
+
+    // None found — create it with all current admins + instructors
+    const [staff] = await pool.execute("SELECT id FROM users WHERE role IN ('admin','instructor')");
+    if (staff.length < 1) return res.status(404).json({ message: 'No staff found' });
+
+    const groupId = `group-all-instructors-${Date.now()}`;
+    await pool.execute(
+      'INSERT INTO conversations (id, is_group, group_name, created_by) VALUES (?, TRUE, ?, ?)',
+      [groupId, 'All Instructors', req.user.id]
+    );
+    for (const s of staff) {
+      await pool.execute(
+        'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
+        [groupId, s.id]
+      );
+    }
+    res.status(201).json({ id: groupId, groupName: 'All Instructors' });
+  } catch (error) {
+    console.error('Get/create All Instructors group error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Add a user to an existing group conversation + post a system "joined" message
+app.post('/api/conversations/:id/add-participant', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required' });
+    const { id } = req.params;
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: 'userId required' });
+
+    // Verify group exists
+    const [conv] = await pool.execute('SELECT id, group_name FROM conversations WHERE id = ? AND is_group = TRUE', [id]);
+    if (conv.length === 0) return res.status(404).json({ message: 'Group not found' });
+
+    // Add participant (ignore if already a member)
+    await pool.execute(
+      'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
+      [id, userId]
+    );
+
+    // Get the new user's name for the system message
+    const [userRows] = await pool.execute('SELECT name FROM users WHERE id = ?', [userId]);
+    const userName = userRows[0]?.name || 'Someone';
+
+    // Post a system message so everyone in the group sees the "joined" notification
+    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    await pool.execute(
+      `INSERT INTO messages (id, conversation_id, sender_id, text, type, created_at)
+       VALUES (?, ?, ?, ?, 'system', NOW())`,
+      [msgId, id, userId, `${userName} joined the group`]
+    );
+
+    res.json({ message: 'Participant added', conversationId: id, userId });
+  } catch (error) {
+    console.error('Add participant error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
