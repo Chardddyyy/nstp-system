@@ -50,6 +50,7 @@ function AdminDashboard() {
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [photoViewer, setPhotoViewer] = useState(null);
   const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
 
@@ -1164,9 +1165,9 @@ function AdminDashboard() {
                         src={selectedEnrollment.registration_photo}
                         alt="Registration form"
                         className="w-full max-h-64 sm:max-h-80 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in"
-                        onClick={() => window.open(selectedEnrollment.registration_photo, '_blank')}
+                        onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
                       />
-                      <p className="text-xs text-gray-400 mt-1 text-center">Tap to open full size</p>
+                      <p className="text-xs text-gray-400 mt-1 text-center">Tap to view full size</p>
                     </div>
                   ) : (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
@@ -1288,6 +1289,33 @@ function AdminDashboard() {
             </div>
           </div>
         )}
+        {/* Full-screen photo lightbox */}
+        {photoViewer && (
+          <div
+            className="fixed inset-0 bg-black z-[9999] flex flex-col"
+            onClick={() => setPhotoViewer(null)}
+          >
+            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-black/70">
+              <span className="text-white text-sm font-medium">Registration Form</span>
+              <button
+                type="button"
+                onClick={() => setPhotoViewer(null)}
+                className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center overflow-auto p-2" onClick={e => e.stopPropagation()}>
+              <img
+                src={photoViewer}
+                alt="Registration form"
+                className="max-w-full max-h-full object-contain rounded"
+                style={{ touchAction: 'pinch-zoom' }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Archive Detail View Modal */}
         {showArchiveDetails && archiveViewData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchiveDetails(false)}>

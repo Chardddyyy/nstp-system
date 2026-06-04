@@ -872,143 +872,133 @@ function Profile() {
       </main>
 
       {/* Add Instructor Modal */}
-      {showAddInstructor && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddInstructor(false)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-green-700" />
-                Add New {instructorForm.role === 'admin' ? 'Admin' : 'Instructor'}
-              </h3>
-              <button type="button" onClick={() => setShowAddInstructor(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {showAddInstructor && (() => {
+        const f = instructorForm;
+        const nameOk    = f.name.trim().length > 0;
+        const emailOk   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim());
+        const pwOk      = f.password.length >= 6;
+        const confirmOk = f.password === f.confirmPassword && f.confirmPassword.length > 0;
+        const deptOk    = f.role === 'admin' || !!f.department;
+        const canSubmit = nameOk && emailOk && pwOk && confirmOk && deptOk;
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'instructor', label: 'Instructor' },
-                    { value: 'admin', label: 'Admin' },
-                  ].map(r => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setInstructorForm(f => ({ ...f, role: r.value }))}
-                      className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${
-                        instructorForm.role === r.value
-                          ? 'bg-green-700 border-green-700 text-white'
-                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddInstructor(false)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-green-700" />
+                  Add New {f.role === 'admin' ? 'Admin' : 'Instructor'}
+                </h3>
+                <button type="button" onClick={() => setShowAddInstructor(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  id="inst-name"
-                  name="instructorName"
-                  value={instructorForm.name}
-                  onChange={e => setInstructorForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Juan dela Cruz"
-                  autoComplete="off"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  id="inst-email"
-                  name="instructorEmail"
-                  value={instructorForm.email}
-                  onChange={e => setInstructorForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="e.g. juan@cvsu.edu.ph"
-                  autoComplete="off"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
-              </div>
-              {instructorForm.role === 'instructor' && (
+
+              <div className="space-y-3">
+                {/* Role */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['CWTS', 'LTS', 'ROTC'].map(dept => {
-                      const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
-                      const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
-                      return (
-                        <button
-                          key={dept}
-                          type="button"
-                          onClick={() => setInstructorForm(f => ({ ...f, department: dept }))}
-                          className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${instructorForm.department === dept ? active[dept] : idle[dept]}`}
-                        >
-                          {dept}
-                        </button>
-                      );
-                    })}
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[{ value: 'instructor', label: 'Instructor' }, { value: 'admin', label: 'Admin' }].map(r => (
+                      <button key={r.value} type="button"
+                        onClick={() => setInstructorForm(prev => ({ ...prev, role: r.value }))}
+                        className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.role === r.value ? 'bg-green-700 border-green-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+                      >{r.label}</button>
+                    ))}
                   </div>
                 </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <input
-                    type={showInstructorPassword ? 'text' : 'password'}
-                    id="inst-password"
-                    name="instructorPassword"
-                    value={instructorForm.password}
-                    onChange={e => setInstructorForm(f => ({ ...f, password: e.target.value }))}
-                    placeholder="At least 6 characters"
-                    autoComplete="new-password"
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+
+                {/* Full Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <input type="text" id="inst-name" name="instructorName" value={f.name}
+                    onChange={e => setInstructorForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Juan dela Cruz" autoComplete="off"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${!nameOk && f.name.length > 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowInstructorPassword(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  >
-                    {showInstructorPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  {!nameOk && f.name.length > 0 && <p className="text-red-500 text-xs mt-0.5">Name is required</p>}
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Email Address <span className="text-red-500">*</span></label>
+                  <input type="email" id="inst-email" name="instructorEmail" value={f.email}
+                    onChange={e => setInstructorForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="e.g. juan@cvsu.edu.ph" autoComplete="off"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.email.length > 0 && !emailOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                  />
+                  {f.email.length > 0 && !emailOk && <p className="text-red-500 text-xs mt-0.5">Enter a valid email address</p>}
+                </div>
+
+                {/* Department (instructor only) */}
+                {f.role === 'instructor' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Department <span className="text-red-500">*</span></label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['CWTS', 'LTS', 'ROTC'].map(dept => {
+                        const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
+                        const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
+                        return (
+                          <button key={dept} type="button"
+                            onClick={() => setInstructorForm(prev => ({ ...prev, department: dept }))}
+                            className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.department === dept ? active[dept] : idle[dept]}`}
+                          >{dept}</button>
+                        );
+                      })}
+                    </div>
+                    {!f.department && <p className="text-red-500 text-xs mt-0.5">Select a department</p>}
+                  </div>
+                )}
+
+                {/* Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input type={showInstructorPassword ? 'text' : 'password'} id="inst-password" name="instructorPassword"
+                      value={f.password}
+                      onChange={e => setInstructorForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="At least 6 characters" autoComplete="new-password"
+                      className={`w-full px-3 py-2 pr-9 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.password.length > 0 && !pwOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                    />
+                    <button type="button" onClick={() => setShowInstructorPassword(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                      {showInstructorPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {f.password.length > 0 && !pwOk && <p className="text-red-500 text-xs mt-0.5">Password must be at least 6 characters</p>}
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Confirm Password <span className="text-red-500">*</span></label>
+                  <input type="password" id="inst-confirm-password" name="instructorConfirmPassword"
+                    value={f.confirmPassword}
+                    onChange={e => setInstructorForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="Re-enter password" autoComplete="new-password"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.confirmPassword.length > 0 && !confirmOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                  />
+                  {f.confirmPassword.length > 0 && !confirmOk && <p className="text-red-500 text-xs mt-0.5">Passwords do not match</p>}
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-                <input
-                  type="password"
-                  id="inst-confirm-password"
-                  name="instructorConfirmPassword"
-                  value={instructorForm.confirmPassword}
-                  onChange={e => setInstructorForm(f => ({ ...f, confirmPassword: e.target.value }))}
-                  placeholder="Re-enter password"
-                  autoComplete="new-password"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                />
+
+              <div className="flex gap-3 mt-5">
+                <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddInstructor}
+                  disabled={isAddingInstructor || !canSubmit}
+                  title={canSubmit ? '' : 'Please fill in all required fields correctly'}
+                  className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {isAddingInstructor ? 'Adding...' : `Add ${f.role === 'admin' ? 'Admin' : 'Instructor'}`}
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-3 mt-6">
-              <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddInstructor}
-                disabled={isAddingInstructor}
-                className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-wait"
-              >
-                <UserPlus className="w-4 h-4" />
-                {isAddingInstructor ? 'Adding...' : `Add ${instructorForm.role === 'admin' ? 'Admin' : 'Instructor'}`}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Camera / Photo Editor Modal */}
       {showCameraModal && (
