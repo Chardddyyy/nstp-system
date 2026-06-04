@@ -2143,33 +2143,25 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     const finalEmergencyContact = emergencyName || emergencyContact;
     const photo = registrationPhoto || null;
 
-    const conn = await pool.getConnection();
-    let result;
-    try {
-      await conn.execute('SET SESSION max_allowed_packet = 67108864');
-      [result] = await conn.execute(
-        `INSERT INTO enrollments
-         (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
-          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-          gender, height, weight, facebookAccount, bloodType, address,
-          program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          name, firstName, lastName, middleName, email, nstpComponent || 'CWTS', studentId, contactNumber,
-          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-          finalGender, height, weight, facebookAccount, bloodType, finalAddress,
-          program, section, yearLevel, finalEmergencyContact, emergencyNumber, 'Pending', photo
-        ]
-      );
-    } finally {
-      conn.release();
-    }
+    const [result] = await pool.execute(
+      `INSERT INTO enrollments
+       (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
+        birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
+        gender, height, weight, facebookAccount, bloodType, address,
+        program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
+        birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
+        finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
+        program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo
+      ]
+    );
 
     const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
     res.status(201).json(enrollments[0]);
   } catch (error) {
-    console.error('❌ Submit enrollment error:', error.message);
-    // Include the real DB error so the frontend can show it
+    console.error('❌ Submit enrollment error:', error.message, error.code);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -2543,36 +2535,29 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     const lts = studentCount.find(r => r.department === 'LTS')?.count || 0;
     const rotc = studentCount.find(r => r.department === 'ROTC')?.count || 0;
 
-    // Insert or update archive — use a dedicated connection so we can raise max_allowed_packet
-    // for large snapshots (student JSON can exceed the 1MB default)
-    const conn = await pool.getConnection();
-    try {
-      await conn.execute('SET SESSION max_allowed_packet = 67108864'); // 64 MB
-      await conn.execute(
-        `INSERT INTO archived_years (year, students, reports, data)
-         VALUES (?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-         students = VALUES(students),
-         reports = VALUES(reports),
-         data = VALUES(data)`,
-        [
-          year,
-          totalStudents,
-          reportCount[0].count,
-          JSON.stringify({
-            year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
-            studentData, reportData
-          })
-        ]
-      );
-      await conn.execute(
-        `INSERT INTO current_batch (id, year) VALUES (1, ?)
-         ON DUPLICATE KEY UPDATE year = ?`,
-        [year + 1, year + 1]
-      );
-    } finally {
-      conn.release();
-    }
+    // Insert or update archive
+    await pool.execute(
+      `INSERT INTO archived_years (year, students, reports, data)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       students = VALUES(students),
+       reports = VALUES(reports),
+       data = VALUES(data)`,
+      [
+        year,
+        totalStudents,
+        reportCount[0].count,
+        JSON.stringify({
+          year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
+          studentData, reportData
+        })
+      ]
+    );
+    await pool.execute(
+      `INSERT INTO current_batch (id, year) VALUES (1, ?)
+       ON DUPLICATE KEY UPDATE year = ?`,
+      [year + 1, year + 1]
+    );
     
     res.json({ 
       message: `Batch ${year} archived successfully`, 
