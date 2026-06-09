@@ -1,17 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import React, { useState, createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { useState, createContext, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 
-// Dynamically determine basename based on current pathname
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;
-  if (pathname.startsWith('/nstp-system/')) {
-    return '/nstp-system/';
-  }
+  if (pathname.startsWith('/nstp-system/')) return '/nstp-system/';
   return import.meta.env.BASE_URL || '/';
 })();
+
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
-// ensureGroupChat removed — group is now managed server-side
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -24,21 +21,16 @@ import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch } from './services/api';
 
-export var AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function useAuth() {
   return useContext(AuthContext);
 }
 
-// Defined OUTSIDE App so its function reference never changes between App re-renders.
-// If it were inside App, every polling update would create a new ProtectedRoute reference,
-// causing React to unmount+remount all page children and reset every modal/form state.
-function ProtectedRoute(props) {
-  var children = props.children;
-  var allowedRoles = props.allowedRoles;
-  var auth = useContext(AuthContext);
-  var loading = auth.loading;
-  var user = auth.user;
+// Defined OUTSIDE App so its reference never changes between re-renders, preventing
+// React from unmounting+remounting page children on every polling tick.
+function ProtectedRoute({ children, allowedRoles }) {
+  const { loading, user } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -52,98 +44,67 @@ function ProtectedRoute(props) {
   }
 
   if (!user) return <Navigate to="/login" />;
-
-  if (allowedRoles) {
-    var hasRole = false;
-    for (var i = 0; i < allowedRoles.length; i++) {
-      if (allowedRoles[i] === user.role) {
-        hasRole = true;
-        break;
-      }
-    }
-    if (!hasRole) {
-      return <Navigate to="/" />;
-    }
-  }
-
+  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" />;
   return children;
 }
 
+const POLL_INTERVAL_MS = 8000;
+
+function getNotificationStorageKey(role) {
+  return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
+}
+
 function App() {
-  var [user, setUser] = useState(null);
-  var [users, setUsers] = useState([]);
-  var [students, setStudents] = useState([]);
-  var [pendingEnrollments, setPendingEnrollments] = useState([]);
-  var [reports, setReports] = useState([]);
-  var [conversations, setConversations] = useState([]);
-  var [messages, setMessages] = useState({});
-  var [archivedYears, setArchivedYears] = useState([]);
-  var [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
-  var [viewingArchive, setViewingArchive] = useState(false);
-  var [archiveViewData, setArchiveViewData] = useState(null);
-  var [loading, setLoading] = useState(true);
-  var [notifications, setNotifications] = useState([]);
-  var [toasts, setToasts] = useState([]);
-  var [incomingCall, setIncomingCall] = useState(null);
-  var [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
-  var [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
-  var outgoingCallIdRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [pendingEnrollments, setPendingEnrollments] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState({});
+  const [archivedYears, setArchivedYears] = useState([]);
+  const [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
+  const [viewingArchive, setViewingArchive] = useState(false);
+  const [archiveViewData, setArchiveViewData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [toasts, setToasts] = useState([]);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
+  const [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
+  const outgoingCallIdRef = useRef(null);
 
-  var baselineReady = useRef(false);
-  var seenEnrollmentIds = useRef(new Set());
-  var seenSubmissionKeys = useRef(new Set());
-  var seenReportIds = useRef(new Set());
-  var seenConvLastMessageTime = useRef({});
-  var POLL_INTERVAL_MS = 8000;
+  const baselineReady = useRef(false);
+  const seenEnrollmentIds = useRef(new Set());
+  const seenSubmissionKeys = useRef(new Set());
+  const seenReportIds = useRef(new Set());
+  const seenConvLastMessageTime = useRef({});
 
-  function getNotificationStorageKey(role) {
-    return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
-  }
-
-  var pushNotification = useCallback(function(notif) {
-    var item = {
-      id: Date.now() + '-' + Math.random().toString(36).slice(2, 11),
+  const pushNotification = useCallback((notif) => {
+    const item = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       time: 'Just now',
       read: false,
       title: notif.title,
       message: notif.message,
       type: notif.type || 'system',
-      link: notif.link || '#'
+      link: notif.link || '#',
     };
 
-    setNotifications(function(prev) {
-      var next = [item];
-      for (var i = 0; i < prev.length; i++) {
-        next.push(prev[i]);
-      }
-      return next.slice(0, 50);
-    });
+    setNotifications(prev => [item, ...prev].slice(0, 50));
+    setToasts(prev => [item, ...prev].slice(0, 5));
 
-    setToasts(function(prev) {
-      var next = [item];
-      for (var j = 0; j < prev.length; j++) {
-        next.push(prev[j]);
-      }
-      return next.slice(0, 5);
-    });
-
-    if (typeof window !== 'undefined' && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      try {
-        new Notification(item.title, { body: item.message });
-      } catch { /* ignore */ }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try { new Notification(item.title, { body: item.message }); } catch { /* ignore */ }
     }
 
-    setTimeout(function() {
-      setToasts(function(prev) {
-        return prev.filter(function(t) { return t.id !== item.id; });
-      });
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== item.id));
     }, 6000);
   }, []);
 
-  var dismissToast = useCallback(function(toastId) {
-    setToasts(function(prev) {
-      return prev.filter(function(t) { return t.id !== toastId; });
-    });
+  const dismissToast = useCallback((toastId) => {
+    setToasts(prev => prev.filter(t => t.id !== toastId));
   }, []);
 
   function resetRealtimeBaseline() {
@@ -155,24 +116,23 @@ function App() {
   }
 
   function seedRealtimeBaseline(pending, reportsList, convList, currentUser) {
-    for (var i = 0; i < pending.length; i++) {
-      seenEnrollmentIds.current.add(pending[i].id);
-    }
-    for (var r = 0; r < reportsList.length; r++) {
-      var report = reportsList[r];
+    pending.forEach(e => seenEnrollmentIds.current.add(e.id));
+
+    reportsList.forEach(report => {
       if (currentUser.role === 'instructor' && report.department === currentUser.department) {
         seenReportIds.current.add(report.id);
       }
-      var subs = report.submissions || [];
-      for (var s = 0; s < subs.length; s++) {
-        seenSubmissionKeys.current.add(report.id + '-' + subs[s].instructor_id + '-' + subs[s].id);
+      (report.submissions || []).forEach(sub => {
+        seenSubmissionKeys.current.add(`${report.id}-${sub.instructor_id}-${sub.id}`);
+      });
+    });
+
+    convList.forEach(conv => {
+      if (conv.last_message_time) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
       }
-    }
-    for (var c = 0; c < convList.length; c++) {
-      if (convList[c].last_message_time) {
-        seenConvLastMessageTime.current[convList[c].id] = String(convList[c].last_message_time);
-      }
-    }
+    });
+
     baselineReady.current = true;
   }
 
@@ -180,109 +140,91 @@ function App() {
     if (!baselineReady.current || !currentUser) return;
 
     if (currentUser.role === 'admin') {
-      for (var i = 0; i < pending.length; i++) {
-        var enrollment = pending[i];
+      pending.forEach(enrollment => {
         if (!seenEnrollmentIds.current.has(enrollment.id)) {
           seenEnrollmentIds.current.add(enrollment.id);
-          var enrollName = enrollment.student_name || enrollment.firstName || 'A student';
+          const enrollName = enrollment.student_name || enrollment.firstName || 'A student';
           pushNotification({
             title: 'New Enrollment',
-            message: enrollName + ' submitted an enrollment application',
+            message: `${enrollName} submitted an enrollment application`,
             type: 'enrollment',
-            link: '/admin/dashboard'
+            link: '/admin/dashboard',
           });
         }
-      }
+      });
 
-      for (var r = 0; r < reportsList.length; r++) {
-        var report = reportsList[r];
-        var subs = report.submissions || [];
-        for (var s = 0; s < subs.length; s++) {
-          var subKey = report.id + '-' + subs[s].instructor_id + '-' + subs[s].id;
+      reportsList.forEach(report => {
+        (report.submissions || []).forEach(sub => {
+          const subKey = `${report.id}-${sub.instructor_id}-${sub.id}`;
           if (!seenSubmissionKeys.current.has(subKey)) {
             seenSubmissionKeys.current.add(subKey);
             pushNotification({
               title: 'New Report Submission',
-              message: 'Report "' + (report.title || 'Untitled') + '" was submitted',
+              message: `Report "${report.title || 'Untitled'}" was submitted`,
               type: 'report',
-              link: '/reports'
+              link: '/reports',
             });
           }
-        }
-      }
+        });
+      });
     }
 
     if (currentUser.role === 'instructor') {
-      for (var ir = 0; ir < reportsList.length; ir++) {
-        var instReport = reportsList[ir];
-        if (instReport.department === currentUser.department && !seenReportIds.current.has(instReport.id)) {
-          seenReportIds.current.add(instReport.id);
+      reportsList.forEach(report => {
+        if (report.department === currentUser.department && !seenReportIds.current.has(report.id)) {
+          seenReportIds.current.add(report.id);
           pushNotification({
             title: 'New Report Assignment',
-            message: 'New report: ' + (instReport.title || 'Untitled'),
+            message: `New report: ${report.title || 'Untitled'}`,
             type: 'report',
-            link: '/reports'
+            link: '/reports',
           });
         }
-      }
+      });
     }
   }
 
   async function checkConversationMessages(convList, currentUser) {
     if (!baselineReady.current || !currentUser) return;
 
-    for (var i = 0; i < convList.length; i++) {
-      var conv = convList[i];
-      var currTime = conv.last_message_time ? String(conv.last_message_time) : null;
-      var prevTime = seenConvLastMessageTime.current[conv.id];
+    for (const conv of convList) {
+      const currTime = conv.last_message_time ? String(conv.last_message_time) : null;
+      const prevTime = seenConvLastMessageTime.current[conv.id];
 
       if (currTime && prevTime && currTime !== prevTime) {
-        var lastMsg = conv.last_message || '';
-        var isOwnMessage = conv.last_sender_id === currentUser.id;
+        const lastMsg = conv.last_message || '';
+        const isOwnMessage = conv.last_sender_id === currentUser.id;
 
         if (!isOwnMessage && lastMsg) {
-          var senderName = conv.last_sender_name || conv.with || 'Someone';
-          var preview = lastMsg.startsWith('data:') ? 'Sent a file'
-                      : lastMsg.startsWith('📸') ? 'Sent a photo'
-                      : lastMsg.startsWith('🎤') ? 'Sent a voice message'
-                      : lastMsg.startsWith('📎') ? 'Sent a file'
-                      : lastMsg;
+          const senderName = conv.last_sender_name || conv.with || 'Someone';
+          let preview = lastMsg.startsWith('data:') ? 'Sent a file'
+            : lastMsg.startsWith('📸') ? 'Sent a photo'
+            : lastMsg.startsWith('🎤') ? 'Sent a voice message'
+            : lastMsg.startsWith('📎') ? 'Sent a file'
+            : lastMsg;
           if (preview.length > 80) preview = preview.slice(0, 80) + '…';
           pushNotification({
             title: 'New Message',
-            message: senderName + ': ' + preview,
+            message: `${senderName}: ${preview}`,
             type: 'message',
-            link: '/chat'
+            link: '/chat',
           });
         }
 
         try {
-          var msgs = await conversationsAPI.getMessages(conv.id);
+          const msgs = await conversationsAPI.getMessages(conv.id);
           if (msgs.length > 0) {
-            // Capture convId and fetchedMsgs in block scope so the setMessages
-            // callback always closes over THIS iteration's values, not whichever
-            // value `conv`/`msgs` (var-scoped) end up with after the loop advances.
-            (function(convId, fetchedMsgs) {
-              setMessages(function(prev) {
-                var next = {};
-                for (var key in prev) {
-                  next[key] = prev[key];
-                }
-                // Merge polled messages with any locally-added messages that
-                // haven't been confirmed by the server yet (sent in the last 10s).
-                // This prevents a polling cycle from temporarily removing a just-sent
-                // message from the UI before the next poll includes it.
-                var local = prev[convId] || [];
-                var fetchedIds = new Set(fetchedMsgs.map(function(m) { return String(m.id); }));
-                var cutoff = Date.now() - 10000; // keep local-only msgs < 10s old
-                var localOnly = local.filter(function(m) {
-                  return !fetchedIds.has(String(m.id)) &&
-                    new Date(m.created_at || 0).getTime() > cutoff;
-                });
-                next[convId] = fetchedMsgs.concat(localOnly);
-                return next;
-              });
-            })(conv.id, msgs);
+            const convId = conv.id;
+            setMessages(prev => {
+              const local = prev[convId] || [];
+              const fetchedIds = new Set(msgs.map(m => String(m.id)));
+              const cutoff = Date.now() - 10000;
+              const localOnly = local.filter(m =>
+                !fetchedIds.has(String(m.id)) &&
+                new Date(m.created_at || 0).getTime() > cutoff
+              );
+              return { ...prev, [convId]: [...msgs, ...localOnly] };
+            });
           }
         } catch {
           console.warn('Failed to refresh messages for conversation', conv.id);
@@ -298,28 +240,22 @@ function App() {
   async function refreshLiveData() {
     if (!user || window.__nstp_session_expired__) return;
     try {
-      var reportsData = await reportsAPI.getAll();
+      const [reportsData, conversationsData] = await Promise.all([
+        reportsAPI.getAll(),
+        conversationsAPI.getAll(),
+      ]);
       setReports(reportsData);
+      setConversations(conversationsData);
 
-      var usersData = users;
-      if (!usersData.length) {
-        usersData = await usersAPI.getAll();
+      if (!users.length) {
+        const usersData = await usersAPI.getAll();
         setUsers(usersData);
       }
 
-      var conversationsData = await conversationsAPI.getAll();
-      // group management is server-side; just use the loaded conversations
-      setConversations(conversationsData);
-
-      var pending = pendingEnrollments;
+      let pending = pendingEnrollments;
       if (user.role === 'admin') {
-        var enrollmentsData = await enrollmentsAPI.getAll();
-        pending = [];
-        for (var i = 0; i < enrollmentsData.length; i++) {
-          if (enrollmentsData[i].status === 'Pending') {
-            pending.push(enrollmentsData[i]);
-          }
-        }
+        const enrollmentsData = await enrollmentsAPI.getAll();
+        pending = enrollmentsData.filter(e => e.status === 'Pending');
         setPendingEnrollments(pending);
       }
 
@@ -335,66 +271,51 @@ function App() {
   }
 
   // Load notifications from storage when user logs in
-  useEffect(function() {
+  useEffect(() => {
     if (!user) return;
-    var saved = localStorage.getItem(getNotificationStorageKey(user.role));
-    if (saved) {
-      try {
-        setNotifications(JSON.parse(saved));
-      } catch {
-        setNotifications([]);
-      }
-    } else {
+    const saved = localStorage.getItem(getNotificationStorageKey(user.role));
+    try {
+      setNotifications(saved ? JSON.parse(saved) : []);
+    } catch {
       setNotifications([]);
     }
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().catch(function() {});
+      Notification.requestPermission().catch(() => {});
     }
   }, [user]);
 
-  useEffect(function() {
+  useEffect(() => {
     if (!user) return;
     localStorage.setItem(getNotificationStorageKey(user.role), JSON.stringify(notifications));
   }, [notifications, user]);
 
   // Real-time polling while logged in
-  useEffect(function() {
+  useEffect(() => {
     if (!user || loading) return;
-
     refreshLiveData();
-    var interval = setInterval(refreshLiveData, POLL_INTERVAL_MS);
-    return function() {
-      clearInterval(interval);
-    };
+    const interval = setInterval(refreshLiveData, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, [user, loading]);
 
-  // Poll for incoming/outgoing calls
-  useEffect(function() {
+  // Poll for incoming/outgoing calls every 2 seconds
+  useEffect(() => {
     if (!user) return;
 
     async function pollCalls() {
       try {
-        var incomingList = await callsAPI.getIncoming();
-        if (incomingList.length > 0) {
-          setIncomingCall(incomingList[0]);
-        } else {
-          setIncomingCall(null);
-        }
+        const incomingList = await callsAPI.getIncoming();
+        setIncomingCall(incomingList.length > 0 ? incomingList[0] : null);
 
         if (outgoingCallIdRef.current) {
-          var outgoing = await callsAPI.getById(outgoingCallIdRef.current);
+          const outgoing = await callsAPI.getById(outgoingCallIdRef.current);
           setOutgoingCallStatus(outgoing.status);
         }
-      } catch {
-        /* ignore poll errors */
-      }
+      } catch { /* ignore poll errors */ }
     }
 
     pollCalls();
-    var callInterval = setInterval(pollCalls, 2000);
-    return function() {
-      clearInterval(callInterval);
-    };
+    const callInterval = setInterval(pollCalls, 2000);
+    return () => clearInterval(callInterval);
   }, [user]);
 
   function registerOutgoingCall(callId) {
@@ -427,40 +348,34 @@ function App() {
     }
   }
 
-  // Handle session expiry: api.js dispatches this event instead of hard-reloading the page.
-  // This lets React Router navigate to login smoothly without destroying any open form.
-  useEffect(function() {
+  // Handle session expiry — api.js dispatches this event so React Router can
+  // navigate to /login without a hard reload, preserving any open form state.
+  useEffect(() => {
     function onSessionExpired() {
       window.__nstp_session_expired__ = true;
-      // Show a visible banner so the user knows why they were redirected,
-      // instead of silently "going back" with no explanation.
-      var banner = document.createElement('div');
+      const banner = document.createElement('div');
       banner.id = 'session-expired-banner';
       banner.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
         'background:#dc2626', 'color:#fff', 'text-align:center',
         'padding:14px 16px', 'font-size:15px', 'font-weight:600',
-        'box-shadow:0 2px 8px rgba(0,0,0,.35)'
+        'box-shadow:0 2px 8px rgba(0,0,0,.35)',
       ].join(';');
       banner.textContent = 'Your session has expired. Please log in again.';
       document.body.appendChild(banner);
-      setTimeout(function() {
-        var el = document.getElementById('session-expired-banner');
-        if (el) el.remove();
+      setTimeout(() => {
+        document.getElementById('session-expired-banner')?.remove();
       }, 5000);
       setUser(null);
       setLoading(false);
-      // ProtectedRoute will redirect to /login automatically when user becomes null.
     }
     window.addEventListener('nstp-session-expired', onSessionExpired);
-    return function() {
-      window.removeEventListener('nstp-session-expired', onSessionExpired);
-    };
+    return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
 
-  // Load user from token on mount
-  useEffect(function() {
-    var token = localStorage.getItem('nstp_token');
+  // Restore session from stored token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('nstp_token');
     if (token) {
       loadCurrentUser();
     } else {
@@ -468,74 +383,59 @@ function App() {
     }
   }, []);
 
-  // Load current user data
   async function loadCurrentUser() {
     try {
-      var userData = await usersAPI.getMe();
+      const userData = await usersAPI.getMe();
       setUser(userData);
       await loadAllData(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
-      // api.js handles 401/403 (dispatches nstp-session-expired event + clears token).
-      // Only set loading=false here; do NOT clear the token for 500/network errors.
       setLoading(false);
     }
   }
 
-  // Load all data from API — fire independent requests in parallel then wait
   async function loadAllData(currentUser) {
     try {
-      // All six requests fire at the same time instead of waiting one by one.
-      var results = await Promise.all([
+      const [
+        usersData, studentsData, reportsData, enrollmentsData,
+        conversationsData, archivesData, batchData,
+      ] = await Promise.all([
         usersAPI.getAll(),
         studentsAPI.getAll(),
         reportsAPI.getAll(),
         enrollmentsAPI.getAll(),
         conversationsAPI.getAll(),
-        archivesAPI.getAll().catch(function() { return []; }),
-        archivesAPI.getCurrentBatch().catch(function() { return { year: new Date().getFullYear() }; })
+        archivesAPI.getAll().catch(() => []),
+        archivesAPI.getCurrentBatch().catch(() => ({ year: new Date().getFullYear() })),
       ]);
-      var usersData        = results[0];
-      var studentsData     = results[1];
-      var reportsData      = results[2];
-      var enrollmentsData  = results[3];
-      var conversationsData = results[4];
-      var archivesData     = results[5];
-      var batchData        = results[6];
 
       setUsers(usersData);
       setStudents(studentsData);
       setReports(reportsData);
-
-      var pending = [];
-      for (var i = 0; i < enrollmentsData.length; i++) {
-        if (enrollmentsData[i].status === 'Pending') {
-          pending.push(enrollmentsData[i]);
-        }
-      }
-      setPendingEnrollments(pending);
-
-      var activeUser = currentUser || user;
+      setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
       setConversations(conversationsData);
       setArchivedYears(archivesData);
       setCurrentBatch(batchData.year.toString());
 
-      // Load messages for all conversations in parallel (not one by one)
-      var messagePromises = conversationsData.map(function(conv) {
-        return conversationsAPI.getMessages(conv.id)
-          .then(function(msgs) { return { id: conv.id, msgs: msgs }; })
-          .catch(function() { return { id: conv.id, msgs: [] }; });
-      });
-      var messageResults = await Promise.all(messagePromises);
-      var messagesData = {};
-      for (var p = 0; p < messageResults.length; p++) {
-        messagesData[messageResults[p].id] = messageResults[p].msgs;
-      }
+      const messageResults = await Promise.all(
+        conversationsData.map(conv =>
+          conversationsAPI.getMessages(conv.id)
+            .then(msgs => ({ id: conv.id, msgs }))
+            .catch(() => ({ id: conv.id, msgs: [] }))
+        )
+      );
+      const messagesData = Object.fromEntries(messageResults.map(r => [r.id, r.msgs]));
       setMessages(messagesData);
 
+      const activeUser = currentUser || user;
       if (activeUser) {
         resetRealtimeBaseline();
-        seedRealtimeBaseline(pending, reportsData, conversationsData, activeUser);
+        seedRealtimeBaseline(
+          enrollmentsData.filter(e => e.status === 'Pending'),
+          reportsData,
+          conversationsData,
+          activeUser
+        );
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -546,16 +446,13 @@ function App() {
 
   async function login(email, password) {
     try {
-      var response = await authAPI.login(email, password);
-      if (response.token) {
-        window.__nstp_session_expired__ = false; // reset flag for new session
-        localStorage.setItem('nstp_token', response.token);
-        setUser(response.user);
-        await loadAllData(response.user);
-        return { success: true, role: response.user.role };
-      } else {
-        return { success: false, message: 'Invalid server response' };
-      }
+      const response = await authAPI.login(email, password);
+      if (!response.token) return { success: false, message: 'Invalid server response' };
+      window.__nstp_session_expired__ = false;
+      localStorage.setItem('nstp_token', response.token);
+      setUser(response.user);
+      await loadAllData(response.user);
+      return { success: true, role: response.user.role };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: error.message || 'Invalid email or password' };
@@ -579,580 +476,231 @@ function App() {
   }
 
   async function updateUserData(updatedData) {
-    try {
-      var updated = await usersAPI.update(user.id, updatedData);
-      setUser(updated);
-      var usersData = await usersAPI.getAll();
-      setUsers(usersData);
-      return updated;
-    } catch (error) {
-      console.error('Update user error:', error);
-      throw error;
-    }
+    const updated = await usersAPI.update(user.id, updatedData);
+    setUser(updated);
+    const usersData = await usersAPI.getAll();
+    setUsers(usersData);
+    return updated;
   }
 
   async function changeUserPassword(newPassword) {
-    try {
-      await usersAPI.changePassword(user.id, newPassword);
-      return true;
-    } catch (error) {
-      console.error('Change password error:', error);
-      throw error;
-    }
+    await usersAPI.changePassword(user.id, newPassword);
+    return true;
   }
 
-  // Student management
+  // ── Student management ────────────────────────────────────────────────────────
+
   async function addStudentFunc(student) {
-    try {
-      var newStudent = await studentsAPI.add(student);
-      var studentsData = await studentsAPI.getAll();
-      setStudents(studentsData);
-      return newStudent;
-    } catch (error) {
-      console.error('Add student error:', error);
-      throw error;
-    }
+    const newStudent = await studentsAPI.add(student);
+    const studentsData = await studentsAPI.getAll();
+    setStudents(studentsData);
+    return newStudent;
   }
 
   async function updateStudentFunc(id, data) {
-    try {
-      var updated = await studentsAPI.update(id, data);
-      setStudents(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id === id) {
-            newArr.push(updated);
-          } else {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-      return updated;
-    } catch (error) {
-      console.error('Update student error:', error);
-      throw error;
-    }
+    const updated = await studentsAPI.update(id, data);
+    setStudents(prev => prev.map(s => s.id === id ? updated : s));
+    return updated;
   }
 
   async function deleteStudentFunc(id) {
-    try {
-      await studentsAPI.delete(id);
-      setStudents(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id !== id) {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-    } catch (error) {
-      console.error('Delete student error:', error);
-      throw error;
-    }
+    await studentsAPI.delete(id);
+    setStudents(prev => prev.filter(s => s.id !== id));
   }
 
-  // Enrollment management
+  // ── Enrollment management ─────────────────────────────────────────────────────
+
   async function submitEnrollmentFunc(enrollment) {
-    try {
-      var newEnrollment = await enrollmentsAPI.submit(enrollment);
-      setPendingEnrollments(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          newArr.push(prev[i]);
-        }
-        newArr.push(newEnrollment);
-        return newArr;
-      });
-      return newEnrollment;
-    } catch (error) {
-      console.error('Submit enrollment error:', error);
-      throw error;
-    }
+    const newEnrollment = await enrollmentsAPI.submit(enrollment);
+    setPendingEnrollments(prev => [...prev, newEnrollment]);
+    return newEnrollment;
   }
 
   async function approveEnrollmentFunc(id) {
-    try {
-      var updated = await enrollmentsAPI.update(id, 'Approved');
-      setPendingEnrollments(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id !== id) {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-      var studentsData = await studentsAPI.getAll();
-      setStudents(studentsData);
-      return updated;
-    } catch (error) {
-      console.error('Approve enrollment error:', error);
-      throw error;
-    }
+    const updated = await enrollmentsAPI.update(id, 'Approved');
+    setPendingEnrollments(prev => prev.filter(e => e.id !== id));
+    const studentsData = await studentsAPI.getAll();
+    setStudents(studentsData);
+    return updated;
   }
 
   async function declineEnrollmentFunc(id) {
-    try {
-      await enrollmentsAPI.update(id, 'Declined');
-      setPendingEnrollments(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id !== id) {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-    } catch (error) {
-      console.error('Decline enrollment error:', error);
-      throw error;
-    }
+    await enrollmentsAPI.update(id, 'Declined');
+    setPendingEnrollments(prev => prev.filter(e => e.id !== id));
   }
 
-  // Report management
+  // ── Report management ─────────────────────────────────────────────────────────
+
   async function addReportFunc(report) {
-    try {
-      var newReport = await reportsAPI.add(report);
-      var reportsData = await reportsAPI.getAll();
-      setReports(reportsData);
-      return newReport;
-    } catch (error) {
-      console.error('Add report error:', error);
-      throw error;
-    }
+    const newReport = await reportsAPI.add(report);
+    const reportsData = await reportsAPI.getAll();
+    setReports(reportsData);
+    return newReport;
   }
 
   async function updateReportFunc(id, data) {
-    try {
-      var updated = await reportsAPI.update(id, data);
-      setReports(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id === id) {
-            newArr.push(updated);
-          } else {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-      return updated;
-    } catch (error) {
-      console.error('Update report error:', error);
-      throw error;
-    }
+    const updated = await reportsAPI.update(id, data);
+    setReports(prev => prev.map(r => r.id === id ? updated : r));
+    return updated;
   }
 
   async function deleteReportFunc(id) {
-    try {
-      await reportsAPI.delete(id);
-      setReports(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id !== id) {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-    } catch (error) {
-      console.error('Delete report error:', error);
-      throw error;
-    }
+    await reportsAPI.delete(id);
+    setReports(prev => prev.filter(r => r.id !== id));
   }
 
   async function submitReportFunc(reportId, submission) {
-    try {
-      await reportsAPI.submit(reportId, submission.content, submission.attachment?.data, submission.attachment?.name);
-      var reportsData = await reportsAPI.getAll();
-      setReports(reportsData);
-    } catch (error) {
-      console.error('Submit report error:', error);
-      throw error;
-    }
+    await reportsAPI.submit(
+      reportId,
+      submission.content,
+      submission.attachment?.data,
+      submission.attachment?.name
+    );
+    const reportsData = await reportsAPI.getAll();
+    setReports(reportsData);
+  }
+
+  // ── Message management ────────────────────────────────────────────────────────
+
+  function updateMessageInState(conversationId, messageId, updater) {
+    setMessages(prev => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || []).map(m =>
+        m.id === messageId ? updater(m) : m
+      ),
+    }));
   }
 
   async function editMessageFunc(conversationId, messageId, newText) {
-    try {
-      var updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
-      
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          if (key === conversationId) {
-            var newMsgs = [];
-            for (var i = 0; i < prev[key].length; i++) {
-              if (prev[key][i].id === messageId) {
-                var copied = {};
-                for (var prop in prev[key][i]) {
-                  copied[prop] = prev[key][i][prop];
-                }
-                copied.text = newText;
-                copied.edited = 1;
-                newMsgs.push(copied);
-              } else {
-                newMsgs.push(prev[key][i]);
-              }
-            }
-            newObj[key] = newMsgs;
-          } else {
-            newObj[key] = prev[key];
-          }
-        }
-        return newObj;
-      });
-      
-      return updated;
-    } catch (error) {
-      console.error('Edit message error:', error);
-      throw error;
-    }
+    const updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
+    updateMessageInState(conversationId, messageId, m => ({ ...m, text: newText, edited: 1 }));
+    return updated;
   }
 
-  async function deleteMessageFunc(conversationId, messageId, forEveryone) {
-    if (forEveryone === undefined) forEveryone = false;
-    try {
-      await conversationsAPI.deleteMessage(conversationId, messageId, forEveryone);
-      
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          if (key === conversationId) {
-            var newMsgs = [];
-            for (var i = 0; i < prev[key].length; i++) {
-              if (prev[key][i].id === messageId) {
-                var copied = {};
-                for (var prop in prev[key][i]) {
-                  copied[prop] = prev[key][i][prop];
-                }
-                copied.deleted_for_everyone = forEveryone;
-                copied.deletedForEveryone = forEveryone;
-                copied.type = forEveryone ? 'deleted' : copied.type;
-                if (forEveryone) {
-                  copied.text = '[deleted]';
-                } else {
-                  var deletedFor = [];
-                  if (copied.deleted_for) {
-                    try {
-                      deletedFor = typeof copied.deleted_for === 'string'
-                        ? JSON.parse(copied.deleted_for)
-                        : copied.deleted_for;
-                    } catch {
-                      deletedFor = [];
-                    }
-                  }
-                  if (user && deletedFor.indexOf(user.id) < 0) {
-                    deletedFor.push(user.id);
-                  }
-                  copied.deleted_for = JSON.stringify(deletedFor);
-                  copied.deletedForMe = true;
-                }
-                newMsgs.push(copied);
-              } else {
-                newMsgs.push(prev[key][i]);
-              }
-            }
-            newObj[key] = newMsgs;
-          } else {
-            newObj[key] = prev[key];
-          }
-        }
-        return newObj;
-      });
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Delete message error:', error);
-      throw error;
-    }
+  async function deleteMessageFunc(conversationId, messageId, forEveryone = false) {
+    await conversationsAPI.deleteMessage(conversationId, messageId, forEveryone);
+
+    updateMessageInState(conversationId, messageId, m => {
+      if (forEveryone) {
+        return { ...m, deleted_for_everyone: true, deletedForEveryone: true, type: 'deleted', text: '[deleted]' };
+      }
+      let deletedFor = [];
+      if (m.deleted_for) {
+        try {
+          deletedFor = typeof m.deleted_for === 'string' ? JSON.parse(m.deleted_for) : m.deleted_for;
+        } catch { deletedFor = []; }
+      }
+      if (user && !deletedFor.includes(user.id)) deletedFor.push(user.id);
+      return { ...m, deleted_for: JSON.stringify(deletedFor), deletedForMe: true };
+    });
+
+    return { success: true };
   }
 
   async function restoreMessageFunc(conversationId, messageId) {
-    try {
-      var restored = await conversationsAPI.restoreMessage(conversationId, messageId);
-
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          if (key === conversationId) {
-            var newMsgs = [];
-            for (var i = 0; i < prev[key].length; i++) {
-              if (prev[key][i].id === messageId) {
-                newMsgs.push(restored);
-              } else {
-                newMsgs.push(prev[key][i]);
-              }
-            }
-            newObj[key] = newMsgs;
-          } else {
-            newObj[key] = prev[key];
-          }
-        }
-        return newObj;
-      });
-
-      return restored;
-    } catch (error) {
-      console.error('Restore message error:', error);
-      throw error;
-    }
+    const restored = await conversationsAPI.restoreMessage(conversationId, messageId);
+    setMessages(prev => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || []).map(m => m.id === messageId ? restored : m),
+    }));
+    return restored;
   }
 
   async function addReactionFunc(conversationId, messageId, emoji) {
-    try {
-      var result = await conversationsAPI.addReaction(conversationId, messageId, emoji);
-      
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          if (key === conversationId) {
-            var newMsgs = [];
-            for (var i = 0; i < prev[key].length; i++) {
-              if (prev[key][i].id === messageId) {
-                var copied = {};
-                for (var prop in prev[key][i]) {
-                  copied[prop] = prev[key][i][prop];
-                }
-                copied.reactions = result.reactions;
-                newMsgs.push(copied);
-              } else {
-                newMsgs.push(prev[key][i]);
-              }
-            }
-            newObj[key] = newMsgs;
-          } else {
-            newObj[key] = prev[key];
-          }
-        }
-        return newObj;
-      });
-      
-      return result;
-    } catch (error) {
-      console.error('Add reaction error:', error);
-      throw error;
-    }
+    const result = await conversationsAPI.addReaction(conversationId, messageId, emoji);
+    updateMessageInState(conversationId, messageId, m => ({ ...m, reactions: result.reactions }));
+    return result;
   }
 
   async function addReportCommentFunc(reportId, comment) {
-    try {
-      const saved = await reportsAPI.addComment(reportId, comment.text);
-      setReports(function(prev) {
-        return prev.map(function(r) {
-          if (r.id !== reportId) return r;
-          return { ...r, comments: [...(r.comments || []), saved] };
-        });
-      });
-      return saved;
-    } catch (error) {
-      console.error('Add comment error:', error);
-      throw error;
-    }
+    const saved = await reportsAPI.addComment(reportId, comment.text);
+    setReports(prev =>
+      prev.map(r => r.id !== reportId ? r : { ...r, comments: [...(r.comments || []), saved] })
+    );
+    return saved;
   }
 
-  // Chat functions
+  // ── Chat management ───────────────────────────────────────────────────────────
+
   async function startConversationFunc(withUser) {
-    try {
-      var conversation = await conversationsAPI.create(withUser.id);
-      var exists = false;
-      for (var i = 0; i < conversations.length; i++) {
-        if (conversations[i].id === conversation.id) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists) {
-        setConversations(function(prev) {
-          var newArr = [conversation];
-          for (var j = 0; j < prev.length; j++) {
-            newArr.push(prev[j]);
-          }
-          return newArr;
-        });
-        setMessages(function(prev) {
-          var newObj = {};
-          for (var key in prev) {
-            newObj[key] = prev[key];
-          }
-          newObj[conversation.id] = [];
-          return newObj;
-        });
-      }
-      return conversation;
-    } catch (error) {
-      console.error('Start conversation error:', error);
-      throw error;
+    const conversation = await conversationsAPI.create(withUser.id);
+    if (!conversations.some(c => c.id === conversation.id)) {
+      setConversations(prev => [conversation, ...prev]);
+      setMessages(prev => ({ ...prev, [conversation.id]: [] }));
     }
+    return conversation;
   }
 
   async function createGroupChatFunc(name, participantIds) {
-    try {
-      var conversation = await conversationsAPI.createGroup(name, participantIds);
-      var exists = false;
-      for (var i = 0; i < conversations.length; i++) {
-        if (conversations[i].id === conversation.id) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists) {
-        setConversations(function(prev) {
-          var newArr = [conversation];
-          for (var j = 0; j < prev.length; j++) {
-            newArr.push(prev[j]);
-          }
-          return newArr;
-        });
-        setMessages(function(prev) {
-          var newObj = {};
-          for (var key in prev) {
-            newObj[key] = prev[key];
-          }
-          newObj[conversation.id] = [];
-          return newObj;
-        });
-      }
-      return conversation;
-    } catch (error) {
-      console.error('Create group chat error:', error);
-      throw error;
+    const conversation = await conversationsAPI.createGroup(name, participantIds);
+    if (!conversations.some(c => c.id === conversation.id)) {
+      setConversations(prev => [conversation, ...prev]);
+      setMessages(prev => ({ ...prev, [conversation.id]: [] }));
     }
+    return conversation;
   }
 
   async function sendMessageFunc(conversationId, message) {
-    try {
-      var msgType = message.type ? message.type : 'text';
-      var newMsg = await conversationsAPI.sendMessage(conversationId, {
-        text: message.text,
-        type: msgType,
-        image_url: message.imageUrl,
-        file_url: message.fileUrl,
-        file_name: message.fileName,
-        audio_url: message.audioUrl,
-        duration: message.duration
-      });
-      var msgWithTime = {};
-      for (var prop in newMsg) {
-        msgWithTime[prop] = newMsg[prop];
+    const msgType = message.type || 'text';
+    const newMsg = await conversationsAPI.sendMessage(conversationId, {
+      text: message.text,
+      type: msgType,
+      image_url: message.imageUrl,
+      file_url: message.fileUrl,
+      file_name: message.fileName,
+      audio_url: message.audioUrl,
+      duration: message.duration,
+    });
+
+    const msgWithTime = {
+      ...newMsg,
+      time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      senderId: newMsg.sender_id ?? user?.id,
+      sender_id: newMsg.sender_id ?? user?.id,
+    };
+
+    setMessages(prev => ({
+      ...prev,
+      [conversationId]: [...(prev[conversationId] || []), msgWithTime],
+    }));
+
+    setConversations(prev => prev.map(c => {
+      if (c.id !== conversationId) return c;
+      let preview = message.text;
+      if (!preview || !preview.trim()) {
+        if (msgType === 'image') preview = '📸 Photo';
+        else if (msgType === 'file') preview = `📎 ${message.fileName || 'File'}`;
+        else if (msgType === 'voice') preview = '🎤 Voice message';
+        else preview = 'Message';
       }
-      var date = new Date(newMsg.created_at);
-      msgWithTime.time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (newMsg.sender_id != null) {
-        msgWithTime.senderId = newMsg.sender_id;
-        msgWithTime.sender_id = newMsg.sender_id;
-      } else if (user) {
-        msgWithTime.senderId = user.id;
-        msgWithTime.sender_id = user.id;
-      }
+      return { ...c, last_message: preview, last_message_time: new Date().toISOString() };
+    }));
 
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          newObj[key] = prev[key];
-        }
-        var existing = prev[conversationId] ? prev[conversationId] : [];
-        var newArr = [];
-        for (var i = 0; i < existing.length; i++) {
-          newArr.push(existing[i]);
-        }
-        newArr.push(msgWithTime);
-        newObj[conversationId] = newArr;
-        return newObj;
-      });
-
-      setConversations(function(prev) {
-        // Build the same preview text the backend uses so the sidebar
-        // updates immediately for the sender without waiting for a poll.
-        var msgType = message.type || 'text';
-        var preview = message.text;
-        if (!preview || preview.trim() === '') {
-          if (msgType === 'image') preview = '📸 Photo';
-          else if (msgType === 'file') preview = '📎 ' + (message.fileName || 'File');
-          else if (msgType === 'voice') preview = '🎤 Voice message';
-          else preview = 'Message';
-        }
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id === conversationId) {
-            var copied = {};
-            for (var prop in prev[i]) {
-              copied[prop] = prev[i][prop];
-            }
-            copied.last_message = preview;
-            copied.last_message_time = new Date().toISOString();
-            newArr.push(copied);
-          } else {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-
-      return msgWithTime;
-    } catch (error) {
-      console.error('Send message error:', error);
-      throw error;
-    }
+    return msgWithTime;
   }
 
   async function deleteConversationFunc(conversationId) {
-    try {
-      await conversationsAPI.delete(conversationId);
-      setConversations(function(prev) {
-        var newArr = [];
-        for (var i = 0; i < prev.length; i++) {
-          if (prev[i].id !== conversationId) {
-            newArr.push(prev[i]);
-          }
-        }
-        return newArr;
-      });
-      setMessages(function(prev) {
-        var newObj = {};
-        for (var key in prev) {
-          if (key !== conversationId) {
-            newObj[key] = prev[key];
-          }
-        }
-        return newObj;
-      });
-    } catch (error) {
-      console.error('Delete conversation error:', error);
-      throw error;
-    }
-  }
-
-  function clearMessagesFunc(conversationId) {
-    setMessages(function(prev) {
-      var newObj = {};
-      for (var key in prev) {
-        newObj[key] = prev[key];
-      }
-      newObj[conversationId] = [];
-      return newObj;
+    await conversationsAPI.delete(conversationId);
+    setConversations(prev => prev.filter(c => c.id !== conversationId));
+    setMessages(prev => {
+      const next = { ...prev };
+      delete next[conversationId];
+      return next;
     });
   }
 
-  function getUserConversations() {
-    if (!user) return [];
-    var result = [];
-    for (var i = 0; i < conversations.length; i++) {
-      var c = conversations[i];
-      if (c.participant_1_id === user.id || c.participant_2_id === user.id) {
-        result.push(c);
-      } else if (c.isGroup && c.participants) {
-        for (var j = 0; j < c.participants.length; j++) {
-          if (c.participants[j] === user.id) {
-            result.push(c);
-            break;
-          }
-        }
-      }
-    }
-    return result;
+  function clearMessagesFunc(conversationId) {
+    setMessages(prev => ({ ...prev, [conversationId]: [] }));
   }
+
+  const getUserConversations = useCallback(() => {
+    if (!user) return [];
+    return conversations.filter(c => {
+      if (c.participant_1_id === user.id || c.participant_2_id === user.id) return true;
+      if (c.isGroup && Array.isArray(c.participants)) return c.participants.includes(user.id);
+      return false;
+    });
+  }, [conversations, user]);
 
   async function clearBatchData() {
     await clearBatch();
@@ -1160,24 +708,29 @@ function App() {
     setReports([]);
   }
 
-  var contextValue = {
-    user: user, login: login, logout: logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
-    students: students, reports: reports, conversations: getUserConversations(), messages: messages, pendingEnrollments: pendingEnrollments,
-    archivedYears: archivedYears, currentBatch: currentBatch,
-    viewingArchive: viewingArchive, archiveViewData: archiveViewData,
-    setViewingArchive: setViewingArchive, setArchiveViewData: setArchiveViewData,
+  const userConversations = useMemo(() => getUserConversations(), [getUserConversations]);
+
+  const contextValue = {
+    user, login, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
+    students, reports, conversations: userConversations, messages, pendingEnrollments,
+    archivedYears, currentBatch,
+    viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData,
     addStudent: addStudentFunc, updateStudent: updateStudentFunc, deleteStudent: deleteStudentFunc,
-    addReport: addReportFunc, updateReport: updateReportFunc, deleteReport: deleteReportFunc, submitReport: submitReportFunc, addReportComment: addReportCommentFunc,
-    startConversation: startConversationFunc, createGroupChat: createGroupChatFunc, sendMessage: sendMessageFunc, getUserConversations: getUserConversations, editMessage: editMessageFunc, addReaction: addReactionFunc, deleteMessage: deleteMessageFunc, restoreMessage: restoreMessageFunc,
+    addReport: addReportFunc, updateReport: updateReportFunc, deleteReport: deleteReportFunc,
+    submitReport: submitReportFunc, addReportComment: addReportCommentFunc,
+    startConversation: startConversationFunc, createGroupChat: createGroupChatFunc,
+    sendMessage: sendMessageFunc, getUserConversations, editMessage: editMessageFunc,
+    addReaction: addReactionFunc, deleteMessage: deleteMessageFunc, restoreMessage: restoreMessageFunc,
     deleteConversation: deleteConversationFunc, clearMessages: clearMessagesFunc,
-    clearBatchData: clearBatchData, submitEnrollment: submitEnrollmentFunc, approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
-    loading: loading, refreshData: loadAllData, refreshLiveData: refreshLiveData,
-    notifications: notifications, setNotifications: setNotifications, pushNotification: pushNotification,
-    toasts: toasts, dismissToast: dismissToast,
-    incomingCall: incomingCall, outgoingCallStatus: outgoingCallStatus,
-    pendingAnsweredCall: pendingAnsweredCall, setPendingAnsweredCall: setPendingAnsweredCall,
-    registerOutgoingCall: registerOutgoingCall, clearOutgoingCall: clearOutgoingCall,
-    answerIncomingCall: answerIncomingCall, declineIncomingCall: declineIncomingCall
+    clearBatchData, submitEnrollment: submitEnrollmentFunc,
+    approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
+    loading, refreshData: loadAllData, refreshLiveData,
+    notifications, setNotifications, pushNotification,
+    toasts, dismissToast,
+    incomingCall, outgoingCallStatus,
+    pendingAnsweredCall, setPendingAnsweredCall,
+    registerOutgoingCall, clearOutgoingCall,
+    answerIncomingCall, declineIncomingCall,
   };
 
   return (

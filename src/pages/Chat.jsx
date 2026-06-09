@@ -1358,6 +1358,12 @@ function Chat() {
 
   const filteredConversations = userConversations
     .filter(c => getConversationPartnerName(c).toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((c, idx, arr) => {
+      // Deduplicate group chats by name — keep only the first occurrence
+      if (!c.isGroup && !c.is_group) return true;
+      const name = c.groupName || c.group_name || c.name;
+      return arr.findIndex(x => (x.isGroup || x.is_group) && (x.groupName || x.group_name || x.name) === name) === idx;
+    })
     .sort((a, b) => {
       const aName = getConversationPartnerName(a);
       const bName = getConversationPartnerName(b);

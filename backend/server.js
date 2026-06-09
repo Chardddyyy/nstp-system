@@ -540,11 +540,10 @@ app.post('/api/users', authenticateToken, async (req, res) => {
           'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
           [groupId, newUserId]
         );
-        const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
         await pool.execute(
-          `INSERT INTO messages (id, conversation_id, sender_id, text, type, created_at)
-           VALUES (?, ?, ?, ?, 'system', NOW())`,
-          [msgId, groupId, newUserId, `${name} joined the group`]
+          `INSERT INTO messages (conversation_id, sender_id, text, type, created_at)
+           VALUES (?, ?, ?, 'system', NOW())`,
+          [groupId, newUserId, `${name} joined the group`]
         );
       }
     } catch (_) { /* non-fatal */ }
@@ -1170,11 +1169,10 @@ app.post('/api/conversations/:id/add-participant', authenticateToken, async (req
     const userName = userRows[0]?.name || 'Someone';
 
     // Post a system message so everyone in the group sees the "joined" notification
-    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     await pool.execute(
-      `INSERT INTO messages (id, conversation_id, sender_id, text, type, created_at)
-       VALUES (?, ?, ?, ?, 'system', NOW())`,
-      [msgId, id, userId, `${userName} joined the group`]
+      `INSERT INTO messages (conversation_id, sender_id, text, type, created_at)
+       VALUES (?, ?, ?, 'system', NOW())`,
+      [id, userId, `${userName} joined the group`]
     );
 
     res.json({ message: 'Participant added', conversationId: id, userId });
@@ -1310,16 +1308,11 @@ app.post('/api/conversations/:conversationId/messages/:messageId/reactions', aut
     const { emoji } = req.body;
     const userId = req.user.id;
     
-    // Verify user is part of this conversation
-    const [conversations] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-      [conversationId, userId, userId]
-    );
-    
-    if (conversations.length === 0) {
+    // Verify user is part of this conversation (DM or group)
+    if (!(await userCanAccessConversation(conversationId, userId))) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     // Get current reactions
     const [messages] = await pool.execute(
       'SELECT reactions FROM messages WHERE id = ? AND conversation_id = ?',
@@ -2333,164 +2326,6 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// ===== MESSAGE RECORD ENROLLMENT REPORT SYSTEM =====
-
-// MESSAGES ENDPOINTS
-
-// GET all messages
-app.get('/api/messages', authenticateToken, async (req, res) => {
-  try {
-    const [messages] = await pool.execute(
-      'SELECT * FROM messages ORDER BY date_sent DESC'
-    );
-    res.json(messages);
-  } catch (error) {
-    console.error('Get messages error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// POST add new message
-app.post('/api/messages', authenticateToken, async (req, res) => {
-  try {
-    const { sender_name, receiver_name, message_content } = req.body;
-    
-    // Validate input
-    if (!sender_name || !receiver_name || !message_content) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: sender_name, receiver_name, message_content' 
-      });
-    }
-    
-    const [result] = await pool.execute(
-      'INSERT INTO messages (sender_name, receiver_name, message_content) VALUES (?, ?, ?)',
-      [sender_name, receiver_name, message_content]
-    );
-
-    const [messages] = await pool.execute(
-      'SELECT * FROM messages WHERE id = ?', 
-      [result.insertId]
-    );
-    
-    res.status(201).json(messages[0]);
-  } catch (error) {
-    console.error('Add message error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// PUT update message
-app.put('/api/messages/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { sender_name, receiver_name, message_content } = req.body;
-    
-    // Validate input
-    if (!sender_name || !receiver_name || !message_content) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: sender_name, receiver_name, message_content' 
-      });
-    }
-    
-    await pool.execute(
-      'UPDATE messages SET sender_name = ?, receiver_name = ?, message_content = ? WHERE id = ?',
-      [sender_name, receiver_name, message_content, id]
-    );
-
-    const [messages] = await pool.execute(
-      'SELECT * FROM messages WHERE id = ?', 
-      [id]
-    );
-    
-    if (messages.length === 0) {
-      return res.status(404).json({ message: 'Message not found' });
-    }
-    
-    res.json(messages[0]);
-  } catch (error) {
-    console.error('Update message error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ENROLLMENT ENDPOINTS
-
-// GET all enrollment records
-app.get('/api/enrollment', authenticateToken, async (req, res) => {
-  try {
-    const [enrollment] = await pool.execute(
-      'SELECT * FROM enrollment ORDER BY enrollment_date DESC'
-    );
-    res.json(enrollment);
-  } catch (error) {
-    console.error('Get enrollment error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// POST add new enrollment
-app.post('/api/enrollment', authenticateToken, async (req, res) => {
-  try {
-    const { student_name, course, year_level } = req.body;
-    
-    // Validate input
-    if (!student_name || !course || !year_level) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: student_name, course, year_level' 
-      });
-    }
-    
-    const [result] = await pool.execute(
-      'INSERT INTO enrollment (student_name, course, year_level) VALUES (?, ?, ?)',
-      [student_name, course, year_level]
-    );
-
-    const [enrollment] = await pool.execute(
-      'SELECT * FROM enrollment WHERE id = ?', 
-      [result.insertId]
-    );
-    
-    res.status(201).json(enrollment[0]);
-  } catch (error) {
-    console.error('Add enrollment error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// PUT update enrollment
-app.put('/api/enrollment/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { student_name, course, year_level } = req.body;
-    
-    // Validate input
-    if (!student_name || !course || !year_level) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: student_name, course, year_level' 
-      });
-    }
-    
-    await pool.execute(
-      'UPDATE enrollment SET student_name = ?, course = ?, year_level = ? WHERE id = ?',
-      [student_name, course, year_level, id]
-    );
-
-    const [enrollment] = await pool.execute(
-      'SELECT * FROM enrollment WHERE id = ?', 
-      [id]
-    );
-    
-    if (enrollment.length === 0) {
-      return res.status(404).json({ message: 'Enrollment record not found' });
-    }
-    
-    res.json(enrollment[0]);
-  } catch (error) {
-    console.error('Update enrollment error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // ARCHIVE/BATCH MANAGEMENT ENDPOINTS
 
 // GET all archived years
@@ -2680,23 +2515,6 @@ app.delete('/api/archives/:year', authenticateToken, async (req, res) => {
   }
 });
 
-// GET current batch info
-app.get('/api/current-batch', authenticateToken, async (req, res) => {
-  try {
-    const [batches] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
-    
-    if (batches.length === 0) {
-      return res.json({ year: new Date().getFullYear() });
-    }
-    
-    res.json(batches[0]);
-  } catch (error) {
-    console.error('Get current batch error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Test database connection
 // Audit log viewer — admin only
 app.get('/api/audit-logs', authenticateToken, requireAdmin, async (req, res) => {
   try {
