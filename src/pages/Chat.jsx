@@ -63,7 +63,7 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
 
 function Chat() {
   const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations,
-          editMessage, deleteMessage, addReaction, clearMessages, startConversation,
+          editMessage, deleteMessage, addReaction, clearMessages, deleteConversation, startConversation,
           incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
           answerIncomingCall, declineIncomingCall,
           pendingAnsweredCall, setPendingAnsweredCall } = useAuth();
@@ -876,12 +876,12 @@ function Chat() {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         const finalOffer = await waitForIceDone(pc);
-        await callsAPI.sendCallOffer(callId, finalOffer.sdp);
+        await callsAPI.sendOffer(callId, finalOffer.sdp);
         let tries = 0;
         const pollAns = setInterval(async () => {
           if (++tries > 30 || !peerConnectionRef.current) { clearInterval(pollAns); return; }
           try {
-            const sig = await callsAPI.getCallWebRTCSignaling(callId);
+            const sig = await callsAPI.getWebRTCSignaling(callId);
             if (sig.answer_sdp && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
               clearInterval(pollAns);
               await peerConnectionRef.current.setRemoteDescription({ type: 'answer', sdp: sig.answer_sdp });
@@ -893,14 +893,14 @@ function Chat() {
         const waitOffer = setInterval(async () => {
           if (++tries > 15 || !peerConnectionRef.current) { clearInterval(waitOffer); return; }
           try {
-            const sig = await callsAPI.getCallWebRTCSignaling(callId);
+            const sig = await callsAPI.getWebRTCSignaling(callId);
             if (sig.offer_sdp && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
               clearInterval(waitOffer);
               await peerConnectionRef.current.setRemoteDescription({ type: 'offer', sdp: sig.offer_sdp });
               const answer = await peerConnectionRef.current.createAnswer();
               await peerConnectionRef.current.setLocalDescription(answer);
               const finalAns = await waitForIceDone(peerConnectionRef.current);
-              await callsAPI.sendCallAnswer(callId, finalAns.sdp);
+              await callsAPI.sendAnswer(callId, finalAns.sdp);
             }
           } catch {}
         }, 2000);
@@ -1283,6 +1283,8 @@ function Chat() {
     if (!pendingAnsweredCall) return;
     const call = pendingAnsweredCall;
     setPendingAnsweredCall(null);
+    // If inline handler already set up this call, skip to avoid double setup
+    if (currentCallIdRef.current === call.id) return;
     setShowIncomingCall(false);
     currentCallIdRef.current = call.id;
     callConversationIdRef.current = call.conversation_id;
@@ -1436,6 +1438,29 @@ function Chat() {
         setShowChatMenu(false);
         addNotification('Chat cleared', 'success');
         setShowConfirmModal(false);
+      }
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleDeleteConversation = () => {
+    if (!activeConversation) return;
+    setConfirmModalData({
+      title: 'Delete Conversation',
+      message: `Delete this conversation with ${activeConversation.with}? This removes it for both parties and cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await deleteConversation(activeConversation.id);
+          setActiveConversationId(null);
+          setShowChatMenu(false);
+          setShowConfirmModal(false);
+        } catch {
+          addNotification('Could not delete conversation.', 'error');
+          setShowConfirmModal(false);
+        }
       }
     });
     setShowConfirmModal(true);
@@ -1989,6 +2014,14 @@ function Chat() {
                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
                           >
                             Clear Chat
+                          </button>
+                        )}
+                        {!isGroupConversation(activeConversation) && (
+                          <button
+                            onClick={handleDeleteConversation}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                          >
+                            Delete Conversation
                           </button>
                         )}
                         {!isGroupConversation(activeConversation) && (

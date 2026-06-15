@@ -1,7 +1,8 @@
 import { useAuth } from '../App';
-import { 
+import ScrollToTopButton from '../components/ScrollToTopButton';
+import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, Shield
+  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, Shield, MailOpen
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -96,8 +97,24 @@ function InstructorDashboard() {
     });
     setSelectedNotifications([]);
   }
-  
-  // Mark all as read
+
+  function handleMarkAllRead(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    setNotifications(function(prev) {
+      return (prev || []).map(function(n) { return { ...n, read: true }; });
+    });
+  }
+
+  function handleMarkOneRead(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    setNotifications(function(prev) {
+      return (prev || []).map(function(n) {
+        return notificationIdsMatch(n.id, id) ? { ...n, read: true } : n;
+      });
+    });
+  }
+
   // Handle notification click
   function handleNotificationItemClick(notification) {
     // Mark as read
@@ -339,6 +356,15 @@ function InstructorDashboard() {
                     <div className="flex items-center space-x-2">
                       <button
                         type="button"
+                        onClick={handleMarkAllRead}
+                        disabled={(notifications || []).every(n => n.read)}
+                        className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
+                        title="Mark all as read"
+                      >
+                        <MailOpen className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={handleDeleteSelected}
                         disabled={selectedNotifications.length === 0}
                         className="text-sm text-red-600 hover:text-red-700 disabled:opacity-30"
@@ -388,7 +414,19 @@ function InstructorDashboard() {
                               <h4 className={`text-sm font-medium ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
                                 {notification.title}
                               </h4>
-                              <span className="text-xs text-gray-400">{notification.time}</span>
+                              <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                                {!notification.read && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleMarkOneRead(e, notification.id)}
+                                    className="text-blue-400 hover:text-blue-600 transition-colors"
+                                    title="Mark as read"
+                                  >
+                                    <MailOpen className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <span className="text-xs text-gray-400">{notification.time}</span>
+                              </div>
                             </div>
                             <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-gray-600'}`}>
                               {notification.message}
@@ -531,6 +569,7 @@ function InstructorDashboard() {
           </div>
         </div>
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

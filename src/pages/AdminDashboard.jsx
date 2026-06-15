@@ -1,10 +1,11 @@
 import { useAuth } from '../App';
 import { archivesAPI } from '../services/api';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu
+  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -96,6 +97,20 @@ function AdminDashboard() {
     completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
   }), [displayStats, viewingArchive, archiveViewData, students]);
 
+  const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
+
+  const programStats = useMemo(() => {
+    const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
+    const counts = {};
+    OFFICIAL_PROGRAMS.forEach(p => { counts[p] = 0; });
+    source.forEach(s => {
+      const prog = (s.program || '').trim();
+      const match = OFFICIAL_PROGRAMS.find(p => p.toLowerCase() === prog.toLowerCase());
+      if (match) counts[match]++;
+    });
+    return Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]);
+  }, [students, viewingArchive, archiveViewData]);
+
   // Show loading while user context resolves
   if (!user) {
     return (
@@ -153,7 +168,23 @@ function AdminDashboard() {
     setSelectedNotifications([]);
   }
 
-  // Mark all as read
+  function handleMarkAllRead(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    setNotifications(function(prev) {
+      return (prev || []).map(function(n) { return { ...n, read: true }; });
+    });
+  }
+
+  function handleMarkOneRead(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+    setNotifications(function(prev) {
+      return (prev || []).map(function(n) {
+        return notificationIdsMatch(n.id, id) ? { ...n, read: true } : n;
+      });
+    });
+  }
+
   // Handle notification click
   function handleNotificationItemClick(notification) {
     // Mark as read
@@ -498,6 +529,15 @@ function AdminDashboard() {
                     <div className="flex items-center space-x-2">
                       <button
                         type="button"
+                        onClick={handleMarkAllRead}
+                        disabled={(notifications || []).every(n => n.read)}
+                        className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
+                        title="Mark all as read"
+                      >
+                        <MailOpen className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={handleDeleteSelected}
                         disabled={selectedNotifications.length === 0}
                         className="text-red-600 hover:text-red-700 disabled:opacity-30"
@@ -547,7 +587,19 @@ function AdminDashboard() {
                               <h4 className={`text-sm font-medium ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
                                 {notification.title}
                               </h4>
-                              <span className="text-xs text-gray-400">{notification.time}</span>
+                              <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                                {!notification.read && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleMarkOneRead(e, notification.id)}
+                                    className="text-blue-400 hover:text-blue-600 transition-colors"
+                                    title="Mark as read"
+                                  >
+                                    <MailOpen className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <span className="text-xs text-gray-400">{notification.time}</span>
+                              </div>
                             </div>
                             <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-gray-600'}`}>
                               {notification.message}
@@ -641,6 +693,21 @@ function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Per Program Stats */}
+        {programStats.length > 0 && (
+          <div className={`rounded-xl shadow-md p-3 sm:p-5 mb-3 sm:mb-6 ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+            <p className="text-sm font-semibold text-gray-600 mb-3">Students per Department/Program</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {programStats.map(([prog, count]) => (
+                <div key={prog} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                  <span className="text-xs text-gray-500 truncate mr-2">{prog}</span>
+                  <span className="text-base font-bold text-gray-800 shrink-0">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Additional Stats */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
@@ -1474,6 +1541,7 @@ function AdminDashboard() {
           </div>
         )}
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

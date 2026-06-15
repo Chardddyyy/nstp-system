@@ -1,4 +1,5 @@
 import { useAuth } from '../App';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, Calendar, Plus, Search, Filter,
@@ -1602,6 +1603,7 @@ function StudentManagement() {
           </div>
         )}
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }

@@ -2368,26 +2368,30 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
     const archive = archives[0];
     const parsedData = archive.data ? JSON.parse(archive.data) : null;
 
-    // Use the stored snapshot if it exists and has report records
-    if (parsedData && Array.isArray(parsedData.reportData)) {
+    // Use the stored snapshot — handle both new format (reportData) and old format (reports array)
+    const snapshotReports = parsedData?.reportData || (Array.isArray(parsedData?.reports) ? parsedData.reports : null);
+    const snapshotStudents = parsedData?.studentData || (Array.isArray(parsedData?.students) ? parsedData.students : null);
+    if (snapshotReports !== null) {
       return res.json({
         ...archive,
         data: parsedData,
-        studentData: parsedData.studentData || [],
-        reportData: parsedData.reportData || []
+        studentData: snapshotStudents || [],
+        reportData: snapshotReports || []
       });
     }
 
     // No snapshot yet — query live tables using batch_year (preferred) or YEAR(created_at) fallback
     const [students] = await pool.execute(
-      `SELECT s.* FROM students s WHERE s.schoolYear LIKE ? ORDER BY s.name`,
+      `SELECT id, studentId, name, email, department, status, semester, schoolYear,
+              program, course, year, section, contactNumber, gender
+       FROM students WHERE schoolYear LIKE ? ORDER BY name`,
       [`${year}%`]
     );
 
     const [reports] = await pool.execute(
-      `SELECT r.*,
-        (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count,
-        u.name as created_by_name
+      `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
+              r.created_at, r.batch_year, u.name as created_by_name,
+              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
        WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
@@ -2440,15 +2444,18 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
       [year]
     );
 
-    // Snapshot full student records for this batch
+    // Snapshot student records — exclude large binary columns (profilePicture) to keep JSON small
     const [studentData] = await pool.execute(
-      `SELECT * FROM students WHERE status != "Inactive" ORDER BY name`
+      `SELECT id, studentId, name, email, department, status, semester, schoolYear,
+              program, course, year, section, contactNumber, gender
+       FROM students WHERE status != "Inactive" ORDER BY name`
     );
 
-    // Snapshot full report records — match by batch_year first, fall back to YEAR(created_at)
+    // Snapshot report records — exclude large binary columns (reference_file_data)
     const [reportData] = await pool.execute(
-      `SELECT r.*, u.name as created_by_name,
-        (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
+      `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
+              r.created_at, r.batch_year, u.name as created_by_name,
+              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
        WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)

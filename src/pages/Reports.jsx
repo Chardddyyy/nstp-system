@@ -1,8 +1,9 @@
 import { useAuth } from '../App';
+import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
   LogOut, User, ChevronLeft, ChevronRight, Plus, Search,
-  Send, MessageCircle, Eye, Calendar, CheckCircle, Clock,
+  Send, MessageCircle, Calendar, CheckCircle, Clock,
   Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle
 } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -670,7 +671,7 @@ function Reports() {
         {/* Reports List */}
         <div className="space-y-4">
           {currentReports.map((report) => (
-            <div key={report.id} className="bg-white rounded-xl shadow-md p-3 sm:p-5">
+            <div key={report.id} className="bg-white rounded-xl shadow-md p-3 sm:p-5 cursor-pointer" onClick={() => openViewModal(report)}>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -710,12 +711,12 @@ function Reports() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 shrink-0">
+                <div className="flex items-center space-x-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                   {/* Only instructors can submit reports */}
                   {isInstructor && !viewingArchive && !hasSubmitted(report) && (
                     <button
                       type="button"
-                      onClick={() => openSubmitModal(report)}
+                      onClick={(e) => { e.stopPropagation(); openSubmitModal(report); }}
                       className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
                     >
                       Submit
@@ -726,17 +727,10 @@ function Reports() {
                       {user?.name}
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => openViewModal(report)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
                   {isAdmin && !viewingArchive && (
                     <button
                       type="button"
-                      onClick={() => handleDeleteReport(report.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -1343,6 +1337,7 @@ function Reports() {
           </div>
         )}
       </main>
+      <ScrollToTopButton />
     </div>
   );
 }
