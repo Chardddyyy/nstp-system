@@ -2378,9 +2378,9 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
     );
 
     const [reports] = await pool.execute(
-      `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
-              r.batch_year, u.name as created_by_name,
-              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
+      `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
+              u.name AS created_by_name,
+              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) AS submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
        WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
@@ -2439,17 +2439,18 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     );
     const studentData = studentDataRaw;
 
-    // Snapshot minimal report fields — exclude all binary columns
-    const [reportData] = await pool.execute(
-      `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
-              r.batch_year, u.name as created_by_name,
-              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
+    // Snapshot minimal report fields — only what the archive view renders
+    const [reportDataRaw] = await pool.execute(
+      `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
+              u.name AS created_by_name,
+              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) AS submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
        WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
        ORDER BY r.created_at DESC`,
       [year, year]
     );
+    const reportData = reportDataRaw;
 
     const totalStudents = studentCount.reduce((sum, row) => sum + row.count, 0);
     const cwts = studentCount.find(r => r.department === 'CWTS')?.count || 0;
