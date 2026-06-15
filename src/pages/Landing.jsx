@@ -101,13 +101,13 @@ function Landing() {
         ))}
         
         {/* Carousel Controls */}
-        <button
+        <button type="button"
           onClick={prevSlide}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-colors"
         >
           <ChevronLeft className="w-8 h-8" />
         </button>
-        <button
+        <button type="button"
           onClick={nextSlide}
           className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white transition-colors"
         >
@@ -117,7 +117,7 @@ function Landing() {
         {/* Carousel Indicators */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
           {CAROUSEL_IMAGES.map((_, index) => (
-            <button
+            <button type="button"
               key={index}
               onClick={() => { setCurrentSlide(index); startTimer(); }}
               className={`w-3 h-3 rounded-full transition-colors ${

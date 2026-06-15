@@ -334,15 +334,15 @@ function AdminDashboard() {
               <p className="text-gray-800 text-sm font-medium">{confirmDialog.message}</p>
             </div>
             <div className="flex justify-end gap-3">
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => setConfirmDialog(null)}
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors"
               >
                 Cancel
               </button>
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors"
               >
@@ -371,8 +371,8 @@ function AdminDashboard() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/admin/dashboard'); setSidebarOpen(false); }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
@@ -383,8 +383,8 @@ function AdminDashboard() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'
@@ -393,8 +393,8 @@ function AdminDashboard() {
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'
@@ -403,8 +403,8 @@ function AdminDashboard() {
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -412,8 +412,8 @@ function AdminDashboard() {
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -421,8 +421,8 @@ function AdminDashboard() {
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -433,8 +433,8 @@ function AdminDashboard() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -457,8 +457,8 @@ function AdminDashboard() {
                   <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
                 </div>
               </div>
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={handleBackToCurrent}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
               >
@@ -472,8 +472,8 @@ function AdminDashboard() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
@@ -492,8 +492,8 @@ function AdminDashboard() {
           <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
             {/* Notification Bell */}
             <div className="relative notification-container">
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
@@ -514,8 +514,8 @@ function AdminDashboard() {
                 >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleSelectAll}
                         title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                         className="text-gray-400 hover:text-green-600 transition-colors"
@@ -527,8 +527,8 @@ function AdminDashboard() {
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleMarkAllRead}
                         disabled={(notifications || []).every(n => n.read)}
                         className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
@@ -536,8 +536,8 @@ function AdminDashboard() {
                       >
                         <MailOpen className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleDeleteSelected}
                         disabled={selectedNotifications.length === 0}
                         className="text-red-600 hover:text-red-700 disabled:opacity-30"
@@ -545,8 +545,8 @@ function AdminDashboard() {
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
                         className="text-gray-400 hover:text-gray-600"
                       >
@@ -565,8 +565,8 @@ function AdminDashboard() {
                             !notification.read ? 'bg-blue-50' : ''
                           }`}
                         >
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectNotification(notification.id);
@@ -589,8 +589,8 @@ function AdminDashboard() {
                               </h4>
                               <div className="flex items-center gap-1.5 ml-2 shrink-0">
                                 {!notification.read && (
-                                  <button
-                                    type="button"
+                                  <button type="button"
+                                    
                                     onClick={(e) => handleMarkOneRead(e, notification.id)}
                                     className="text-blue-400 hover:text-blue-600 transition-colors"
                                     title="Mark as read"
@@ -617,8 +617,8 @@ function AdminDashboard() {
             </div>
 
             {/* User Profile */}
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => navigate('/profile')}
               className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow hover:shadow-md transition-shadow w-full sm:w-auto justify-center"
             >
@@ -784,22 +784,22 @@ function AdminDashboard() {
                           </span>
                         </div>
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <CheckCircle className="w-3.5 h-3.5" /> Approve
                           </button>
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <X className="w-3.5 h-3.5" /> Decline
                           </button>
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={() => setSelectedEnrollment(enrollment)}
                             className="px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                           >
@@ -850,15 +850,15 @@ function AdminDashboard() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
-                              <button
-                                type="button"
+                              <button type="button"
+                                
                                 onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" /> Approve
                               </button>
-                              <button
-                                type="button"
+                              <button type="button"
+                                
                                 onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
                                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                               >
@@ -887,8 +887,8 @@ function AdminDashboard() {
               <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
               Cavite State University Naic Component Enrollment Comparison
             </h3>
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setShowAnalytics(!showAnalytics)}
               className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center"
             >
@@ -1050,16 +1050,16 @@ function AdminDashboard() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowArchiveModal(true)}
                   className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
                 >
                   <History className="w-5 h-5" />
                   <span>View Archive</span>
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={handleNewBatch}
                   className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
                 >
@@ -1083,8 +1083,8 @@ function AdminDashboard() {
                   <History className="w-6 h-6 mr-2 text-green-600" />
                   Select Batch to View
                 </h3>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowArchiveModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1103,16 +1103,16 @@ function AdminDashboard() {
                           <p className="text-sm text-gray-500">{year.students} students • {year.reports} reports</p>
                         </div>
                         <div className="flex items-center flex-wrap gap-2">
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={() => handleViewBatch(year)}
                             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             View Batch
                           </button>
 
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={() => handleDeleteArchivedBatch(year.year)}
                             className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                             title="Delete Batch"
@@ -1126,8 +1126,8 @@ function AdminDashboard() {
                 )}
               </div>
               <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowArchiveModal(false)}
                   className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -1147,8 +1147,8 @@ function AdminDashboard() {
                   <Archive className="w-6 h-6 mr-2 text-red-600" />
                   Start New Batch
                 </h3>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowNewBatchConfirm(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1183,15 +1183,15 @@ function AdminDashboard() {
               </div>
               
               <div className="flex space-x-3">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowNewBatchConfirm(false)}
                   className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={confirmNewBatch}
                   disabled={confirmText.toLowerCase() !== 'confirm'}
                   className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white rounded-lg font-medium transition-colors"
@@ -1331,22 +1331,22 @@ function AdminDashboard() {
 
               {/* Sticky action buttons */}
               <div className="flex-shrink-0 border-t bg-white p-3 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={async () => { try { await approveEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
                   className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
                   <CheckCircle className="w-4 h-4" /> Approve
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={async () => { try { await declineEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
                   className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
                   <X className="w-4 h-4" /> Decline
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setSelectedEnrollment(null)}
                   className="col-span-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                 >
@@ -1364,8 +1364,8 @@ function AdminDashboard() {
           >
             <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-black/70">
               <span className="text-white text-sm font-medium">Registration Form</span>
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => setPhotoViewer(null)}
                 className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
               >
@@ -1392,8 +1392,8 @@ function AdminDashboard() {
                   <Archive className="w-5 h-5 mr-2" />
                   Batch {archiveViewData.year} Archive Details
                 </h3>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowArchiveDetails(false)}
                   className="p-1 hover:bg-green-700 rounded-lg transition-colors"
                 >
@@ -1518,15 +1518,15 @@ function AdminDashboard() {
 
               {/* Action Buttons */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex space-x-3">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowArchiveDetails(false)}
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
                   Close
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => {
                     setShowArchiveDetails(false);
                     handleBackToCurrent();

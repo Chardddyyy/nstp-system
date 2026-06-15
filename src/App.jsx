@@ -403,8 +403,8 @@ function App() {
         usersAPI.getAll(),
         studentsAPI.getAll(),
         reportsAPI.getAll(),
-        enrollmentsAPI.getAll(),
-        conversationsAPI.getAll(),
+        enrollmentsAPI.getAll().catch(() => []),
+        conversationsAPI.getAll().catch(() => []),
         archivesAPI.getAll().catch(() => []),
         archivesAPI.getCurrentBatch().catch(() => ({ year: new Date().getFullYear() })),
       ]);

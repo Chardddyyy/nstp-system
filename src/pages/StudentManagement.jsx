@@ -420,8 +420,8 @@ function StudentManagement() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -429,24 +429,24 @@ function StudentManagement() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -454,8 +454,8 @@ function StudentManagement() {
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -463,8 +463,8 @@ function StudentManagement() {
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
             disabled={viewingArchive}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
@@ -475,8 +475,8 @@ function StudentManagement() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { handleLogout(); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -498,8 +498,8 @@ function StudentManagement() {
                 <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
               </div>
             </div>
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
               className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 shrink-0"
             >
@@ -543,8 +543,8 @@ function StudentManagement() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
@@ -557,8 +557,8 @@ function StudentManagement() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => { if (isAdmin) { setExportDept('All'); setExportCourse('All'); setShowExportModal(true); } else runExport(); }}
               title={isAdmin ? 'Download students as Excel file' : `Download ${user?.department} students as Excel`}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700"
@@ -567,8 +567,8 @@ function StudentManagement() {
               <span>Download Excel</span>
             </button>
             {isAdmin && (
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => !viewingArchive && setShowAddModal(true)}
                 disabled={viewingArchive}
                 title={viewingArchive ? 'Exit archive view to add students' : ''}
@@ -679,8 +679,8 @@ function StudentManagement() {
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={() => !viewingArchive && openEditModal(student)}
                             disabled={viewingArchive}
                             title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
@@ -688,8 +688,8 @@ function StudentManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
                             disabled={viewingArchive}
                             title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
@@ -715,8 +715,8 @@ function StudentManagement() {
         {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center space-x-2 mt-6">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -726,8 +726,8 @@ function StudentManagement() {
             <span className="px-4 py-2 text-gray-700">
               Page {currentPage} of {totalPages}
             </span>
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -769,7 +769,7 @@ function StudentManagement() {
                         ROTC: 'bg-red-600 border-red-600 text-white',
                       };
                       return (
-                        <button
+                        <button type="button"
                           key={dept}
                           type="button"
                           onClick={() => setExportDept(dept)}
@@ -786,7 +786,7 @@ function StudentManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Course / Program</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => (
-                      <button
+                      <button type="button"
                         key={course}
                         type="button"
                         onClick={() => setExportCourse(course)}
@@ -1158,15 +1158,15 @@ function StudentManagement() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={handleAddStudent}
                   disabled={isAddingStudent}
                   className="px-4 py-2 bg-green-700 hover:bg-green-800 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg transition-colors"
@@ -1260,8 +1260,8 @@ function StudentManagement() {
 
               {/* Sticky Footer */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={closeViewModal}
                   className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
                 >
@@ -1583,15 +1583,15 @@ function StudentManagement() {
                 </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={() => setShowEditModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={handleEditStudent}
                   disabled={isEditingStudent}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg transition-colors"

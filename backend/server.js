@@ -2123,26 +2123,15 @@ app.put('/api/current-batch', authenticateToken, async (req, res) => {
 // Clear all students and reports (admin only)
 app.post('/api/clear-batch', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    // Archive current data first
-    const [students] = await pool.execute('SELECT * FROM students');
-    const [reports] = await pool.execute('SELECT * FROM reports');
-    
-    const currentYear = new Date().getFullYear();
-    
-    await pool.execute(
-      'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = students + ?, reports = reports + ?',
-      [currentYear, students.length, reports.length, JSON.stringify({ students, reports }), students.length, reports.length]
-    );
-    
-    // Clear tables
-    await pool.execute('DELETE FROM students');
-    await pool.execute('DELETE FROM reports');
+    // Archiving is handled by POST /api/archives before this is called.
+    // This route only clears the live tables for the new batch.
     await pool.execute('DELETE FROM report_submissions');
-    
-    res.json({ message: 'Batch cleared and archived' });
+    await pool.execute('DELETE FROM reports');
+    await pool.execute('DELETE FROM students');
+    res.json({ message: 'Batch cleared' });
   } catch (error) {
     console.error('Clear batch error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 
@@ -2380,17 +2369,17 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
       });
     }
 
-    // No snapshot yet — query live tables using batch_year (preferred) or YEAR(created_at) fallback
+    // No snapshot yet — query live tables with minimal fields
     const [students] = await pool.execute(
-      `SELECT id, studentId, name, email, department, status, semester, schoolYear,
-              program, course, year, section, contactNumber, gender
-       FROM students WHERE schoolYear LIKE ? ORDER BY name`,
+      `SELECT studentId, name, department, status, program FROM students
+       WHERE schoolYear LIKE ? OR schoolYear IS NULL OR schoolYear = ''
+       ORDER BY name`,
       [`${year}%`]
     );
 
     const [reports] = await pool.execute(
       `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
-              r.created_at, r.batch_year, u.name as created_by_name,
+              r.batch_year, u.name as created_by_name,
               (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
@@ -2444,17 +2433,16 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
       [year]
     );
 
-    // Snapshot student records — exclude large binary columns (profilePicture) to keep JSON small
-    const [studentData] = await pool.execute(
-      `SELECT id, studentId, name, email, department, status, semester, schoolYear,
-              program, course, year, section, contactNumber, gender
-       FROM students WHERE status != "Inactive" ORDER BY name`
+    // Snapshot minimal student fields — only what the archive view displays
+    const [studentDataRaw] = await pool.execute(
+      `SELECT studentId, name, department, status, program FROM students WHERE status != "Inactive" ORDER BY name`
     );
+    const studentData = studentDataRaw;
 
-    // Snapshot report records — exclude large binary columns (reference_file_data)
+    // Snapshot minimal report fields — exclude all binary columns
     const [reportData] = await pool.execute(
       `SELECT r.id, r.title, r.description, r.department, r.status, r.due_date,
-              r.created_at, r.batch_year, u.name as created_by_name,
+              r.batch_year, u.name as created_by_name,
               (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) as submission_count
        FROM reports r
        LEFT JOIN users u ON r.created_by = u.id
@@ -2500,7 +2488,7 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Archive batch error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 

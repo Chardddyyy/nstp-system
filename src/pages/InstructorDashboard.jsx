@@ -234,8 +234,8 @@ function InstructorDashboard() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               location.pathname === '/instructor/dashboard' ? 'bg-green-700' : 'hover:bg-green-700/50'
@@ -244,40 +244,40 @@ function InstructorDashboard() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>My Students</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
@@ -287,8 +287,8 @@ function InstructorDashboard() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -303,8 +303,8 @@ function InstructorDashboard() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
@@ -319,8 +319,8 @@ function InstructorDashboard() {
           <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
             {/* Notification Container */}
             <div className="relative notification-container">
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => setShowNotifications(!showNotifications)}
                 className="relative p-2 text-gray-600 hover:text-gray-800"
               >
@@ -341,8 +341,8 @@ function InstructorDashboard() {
                 >
                   <div className="p-4 border-b border-gray-100 flex justify-between items-center">
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleSelectAll}
                         title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                         className="text-gray-400 hover:text-green-600 transition-colors"
@@ -354,8 +354,8 @@ function InstructorDashboard() {
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleMarkAllRead}
                         disabled={(notifications || []).every(n => n.read)}
                         className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
@@ -363,8 +363,8 @@ function InstructorDashboard() {
                       >
                         <MailOpen className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={handleDeleteSelected}
                         disabled={selectedNotifications.length === 0}
                         className="text-sm text-red-600 hover:text-red-700 disabled:opacity-30"
@@ -372,8 +372,8 @@ function InstructorDashboard() {
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
                         className="text-gray-400 hover:text-gray-600"
                       >
@@ -392,8 +392,8 @@ function InstructorDashboard() {
                             !notification.read ? 'bg-blue-50' : ''
                           }`}
                         >
-                          <button
-                            type="button"
+                          <button type="button"
+                            
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectNotification(notification.id);
@@ -416,8 +416,8 @@ function InstructorDashboard() {
                               </h4>
                               <div className="flex items-center gap-1.5 ml-2 shrink-0">
                                 {!notification.read && (
-                                  <button
-                                    type="button"
+                                  <button type="button"
+                                    
                                     onClick={(e) => handleMarkOneRead(e, notification.id)}
                                     className="text-blue-400 hover:text-blue-600 transition-colors"
                                     title="Mark as read"

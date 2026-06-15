@@ -461,8 +461,8 @@ function Profile() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
@@ -473,40 +473,40 @@ function Profile() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <MessageSquare className="w-5 h-5" />
             <span>Messages</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
@@ -516,8 +516,8 @@ function Profile() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
           >
@@ -547,8 +547,8 @@ function Profile() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
           <div className="flex items-start gap-2">
-            <button
-              type="button"
+            <button type="button"
+              
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
               aria-label="Open menu"
@@ -560,8 +560,8 @@ function Profile() {
               <p className="text-gray-600">Manage your account information</p>
             </div>
           </div>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
             disabled={isSaving}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-wait ${isEditing ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
@@ -582,24 +582,24 @@ function Profile() {
                   </div>
                   {isEditing && (
                     <div className="absolute bottom-0 right-0 flex space-x-1">
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={() => setShowAvatarSelector(!showAvatarSelector)}
                         className="w-10 h-10 bg-yellow-500 hover:bg-yellow-600 rounded-full flex items-center justify-center text-white transition-colors"
                         title="Select Avatar"
                       >
                         <User className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={openCamera}
                         className="w-10 h-10 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white transition-colors"
                         title="Take Photo"
                       >
                         <Camera className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={() => fileInputRef.current?.click()}
                         className="w-10 h-10 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white transition-colors"
                         title="Upload from Gallery"
@@ -629,8 +629,8 @@ function Profile() {
                   <p className="text-sm font-medium text-gray-700 mb-2">Choose an Avatar</p>
                   <div className="flex justify-center space-x-3">
                     {AVATAR_OPTIONS.map((avatar) => (
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         key={avatar.id}
                         onClick={() => handleAvatarSelect(avatar.id)}
                         className={`w-12 h-12 ${avatar.color} rounded-full flex items-center justify-center text-2xl transition-transform hover:scale-110 ${formData.avatar === avatar.id ? 'ring-2 ring-offset-2 ring-green-500' : ''}`}
@@ -747,8 +747,8 @@ function Profile() {
                     <Users className="w-5 h-5" />
                     Instructor Accounts
                   </h3>
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={() => { setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' }); setShowAddInstructor(true); }}
                     className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors"
                   >
@@ -782,8 +782,8 @@ function Profile() {
                                 {inst.department}
                               </span>
                             )}
-                            <button
-                              type="button"
+                            <button type="button"
+                              
                               onClick={() => handleDeleteInstructor(inst.id, inst.name)}
                               disabled={deletingInstructorId === inst.id}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
@@ -822,8 +822,8 @@ function Profile() {
                       placeholder="Enter current password"
                       autoComplete="current-password"
                     />
-                    <button
-                      type="button"
+                    <button type="button"
+                      
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     >
@@ -859,8 +859,8 @@ function Profile() {
                     />
                   </div>
                 </div>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={handlePasswordChange}
                   disabled={isChangingPassword}
                   className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
@@ -902,7 +902,7 @@ function Profile() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 gap-2">
                     {[{ value: 'instructor', label: 'Instructor' }, { value: 'admin', label: 'Admin' }].map(r => (
-                      <button key={r.value} type="button"
+                      <button type="button" key={r.value} type="button"
                         onClick={() => setInstructorForm(prev => ({ ...prev, role: r.value }))}
                         className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.role === r.value ? 'bg-green-700 border-green-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
                       >{r.label}</button>
@@ -941,7 +941,7 @@ function Profile() {
                         const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
                         const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
                         return (
-                          <button key={dept} type="button"
+                          <button type="button" key={dept} type="button"
                             onClick={() => setInstructorForm(prev => ({ ...prev, department: dept }))}
                             className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.department === dept ? active[dept] : idle[dept]}`}
                           >{dept}</button>
@@ -986,8 +986,8 @@ function Profile() {
                 <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
                   Cancel
                 </button>
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={handleAddInstructor}
                   disabled={isAddingInstructor || !canSubmit}
                   title={canSubmit ? '' : 'Please fill in all required fields correctly'}
@@ -1029,23 +1029,23 @@ function Profile() {
                   style={{ transform: 'scaleX(1)' }}
                 />
                 <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-6">
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={flipCamera}
                     className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
                     title="Flip Camera"
                   >
                     <SwitchCamera className="w-5 h-5" />
                   </button>
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={capturePhoto}
                     className="w-16 h-16 bg-white rounded-full border-4 border-gray-400 hover:border-gray-200 transition-colors flex items-center justify-center"
                   >
                     <div className="w-12 h-12 bg-white rounded-full" />
                   </button>
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={() => { stopCamera(); fileInputRef.current?.click(); setShowCameraModal(false); }}
                     className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white transition-colors"
                     title="Upload from Gallery"
@@ -1084,7 +1084,7 @@ function Profile() {
                       { mode: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
                       { mode: 'emoji', icon: <Smile className="w-4 h-4" />, label: 'Emoji' },
                     ].map(({ mode, icon, label }) => (
-                      <button
+                      <button type="button"
                         key={mode}
                         type="button"
                         onClick={() => setEditorMode(mode)}
@@ -1093,8 +1093,8 @@ function Profile() {
                         {icon}{label}
                       </button>
                     ))}
-                    <button
-                      type="button"
+                    <button type="button"
+                      
                       onClick={undoEditor}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
                       title="Undo"
@@ -1108,7 +1108,7 @@ function Profile() {
                     <div className="space-y-2">
                       <div className="flex gap-1.5 flex-wrap">
                         {DRAW_COLORS.map(c => (
-                          <button
+                          <button type="button"
                             key={c}
                             type="button"
                             onClick={() => setDrawColor(c)}
@@ -1138,7 +1138,7 @@ function Profile() {
                       />
                       <div className="flex gap-1.5 flex-wrap">
                         {DRAW_COLORS.map(c => (
-                          <button
+                          <button type="button"
                             key={c}
                             type="button"
                             onClick={() => setDrawColor(c)}
@@ -1156,7 +1156,7 @@ function Profile() {
                       <p className="text-gray-400 text-xs">Select emoji, then tap on photo</p>
                       <div className="flex flex-wrap gap-1">
                         {QUICK_EMOJIS.map(em => (
-                          <button
+                          <button type="button"
                             key={em}
                             type="button"
                             onClick={() => setSelectedEmoji(em)}
@@ -1170,8 +1170,8 @@ function Profile() {
                   )}
 
                   {/* Apply button */}
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={applyEditorImage}
                     className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
                   >

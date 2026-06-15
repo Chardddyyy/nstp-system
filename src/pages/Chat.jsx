@@ -1686,7 +1686,7 @@ function Chat() {
           >
             <div className="flex items-start justify-between">
               <p className="font-medium">{n.message}</p>
-              <button 
+              <button type="button" 
                 onClick={() => removeNotification(n.id)} 
                 className="ml-2 text-white/70 hover:text-white"
               >
@@ -1716,7 +1716,7 @@ function Chat() {
                 <p className="text-xs text-green-200">Messages</p>
               </div>
             </div>
-            <button 
+            <button type="button" 
               onClick={() => setSidebarOpen(false)}
               className="p-2 hover:bg-green-700 rounded-lg transition-colors lg:hidden"
               aria-label="Close menu"
@@ -1727,7 +1727,7 @@ function Chat() {
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
+          <button type="button"
             onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
@@ -1738,34 +1738,34 @@ function Chat() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          <button
+          <button type="button"
             onClick={() => { navigate('/students'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Users className="w-5 h-5" />
             <span>Students</span>
           </button>
-          <button
+          <button type="button"
             onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <FileText className="w-5 h-5" />
             <span>Reports</span>
           </button>
-          <button
+          <button type="button"
             onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
           >
             <span>Messages</span>
           </button>
-          <button
+          <button type="button"
             onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
           </button>
-          <button
+          <button type="button"
             onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
           >
@@ -1775,7 +1775,7 @@ function Chat() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button 
+          <button type="button" 
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-red-500 text-white"
           >
@@ -1792,8 +1792,8 @@ function Chat() {
           <div className="p-3 lg:p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <button
-                  type="button"
+                <button type="button"
+                  
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation cursor-pointer"
                   style={{ cursor: 'pointer', zIndex: 10 }}
@@ -1806,8 +1806,8 @@ function Chat() {
                 </h2>
               </div>
               {/* Toggle between conversations and contacts */}
-              <button
-                type="button"
+              <button type="button"
+                
                 onClick={() => setShowContacts(v => !v)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${showContacts ? 'bg-green-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                 title={showContacts ? 'Back to chats' : 'View all contacts'}
@@ -1844,7 +1844,7 @@ function Chat() {
                   );
                   const deptColor = { CWTS: 'bg-green-100 text-green-700', LTS: 'bg-purple-100 text-purple-700', ROTC: 'bg-red-100 text-red-700' };
                   return contacts.map(contact => (
-                    <button
+                    <button type="button"
                       key={contact.id}
                       type="button"
                       onClick={async () => {
@@ -1893,8 +1893,8 @@ function Chat() {
                     const hasNewMessages = unreadCount > 0 && activeConversationId !== conversation.id;
                     
                     return (
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         key={conversation.id}
                         onClick={(e) => {
                           e.preventDefault();
@@ -1946,8 +1946,8 @@ function Chat() {
               <div className="bg-white p-2 lg:p-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
                   {/* Back button - only needed on mobile; both panels are always visible on desktop */}
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={handleBackToConversations}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
                     aria-label="Back to conversations"
@@ -1980,7 +1980,7 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
-                  <button
+                  <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('voice') : handleCall}
                     className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                     title="Voice Call"
@@ -1988,7 +1988,7 @@ function Chat() {
                   >
                     <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('video') : handleVideoCall}
                     className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                     title="Video Call"
@@ -1998,7 +1998,7 @@ function Chat() {
                   </button>
                   {!isGroupConversation(activeConversation) && (
                   <div className="relative" ref={chatMenuRef}>
-                    <button
+                    <button type="button"
                       onClick={() => setShowChatMenu(!showChatMenu)}
                       className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                       title="More Options"
@@ -2009,7 +2009,7 @@ function Chat() {
                     {showChatMenu && (
                       <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[180px]">
                         {!isGroupConversation(activeConversation) && (
-                          <button
+                          <button type="button"
                             onClick={handleClearChat}
                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
                           >
@@ -2017,7 +2017,8 @@ function Chat() {
                           </button>
                         )}
                         {!isGroupConversation(activeConversation) && (
-                          <button
+                          <button type="button"
+                            
                             onClick={handleDeleteConversation}
                             className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
                           >
@@ -2025,7 +2026,7 @@ function Chat() {
                           </button>
                         )}
                         {!isGroupConversation(activeConversation) && (
-                          <button
+                          <button type="button"
                             onClick={handleBlockUser}
                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
                           >
@@ -2050,7 +2051,7 @@ function Chat() {
                     </div>
                     <div className="ml-3">
                       <p className="text-sm text-red-700">
-                        <span className="font-bold">Blocked</span> — You cannot send messages or call this user. <button onClick={handleBlockUser} className="underline font-medium">Unblock</button>
+                        <span className="font-bold">Blocked</span> — You cannot send messages or call this user. <button type="button" onClick={handleBlockUser} className="underline font-medium">Unblock</button>
                       </p>
                     </div>
                   </div>
@@ -2216,7 +2217,7 @@ function Chat() {
                                 />
                               ) : (message.type === 'file' || message.message_type === 'file') && (message.fileName || message.file_name) ? (
                                 /* File Messages with download */
-                                <button
+                                <button type="button"
                                   onClick={async () => {
                                     const fileUrl = message.fileUrl || message.file_url || message.image_url;
                                     const fileName = message.fileName || message.file_name || 'download';
@@ -2264,7 +2265,7 @@ function Chat() {
                                 </button>
                               ) : (message.type === 'voice' || message.message_type === 'voice') && (message.audioUrl || message.audio_url) ? (
                                 /* Voice Messages with play button */
-                                <button 
+                                <button type="button" 
                                   onClick={() => handlePlayVoice(message)}
                                   className={`flex items-center space-x-3 rounded-lg p-3 transition-colors min-w-[150px] ${
                                     isPlaying === message.id
@@ -2324,7 +2325,7 @@ function Chat() {
                           <div className={`flex gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(message.reactions).map(([emoji, users]) => (
                               users.length > 0 && (
-                                <button
+                                <button type="button"
                                   key={emoji}
                                   onClick={() => handleReaction(message.id, emoji)}
                                   className={`text-xs px-2 py-1 rounded-full ${users.includes(user?.id) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
@@ -2339,7 +2340,7 @@ function Chat() {
                         {/* Message Menu */}
                         {editingMessage?.id !== message.id && (
                           <div data-message-menu className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity`}>
-                            <button
+                            <button type="button"
                               onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
                               className="p-1 text-gray-400 hover:text-gray-600"
                             >
@@ -2354,7 +2355,7 @@ function Chat() {
                             {/* Emoji Reactions */}
                             <div className="flex gap-1 px-2 py-1 border-b border-gray-100">
                               {EMOJI_LIST.map(emoji => (
-                                <button
+                                <button type="button"
                                   key={emoji}
                                   onClick={() => handleReaction(message.id, emoji)}
                                   className="hover:bg-gray-100 rounded px-1"
@@ -2366,7 +2367,7 @@ function Chat() {
                             
                             {/* Edit - only for own text messages (not voice, file, or image) */}
                             {isOwn && !message.type && (
-                              <button
+                              <button type="button"
                                 onClick={() => handleStartEdit(message)}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
                               >
@@ -2377,13 +2378,13 @@ function Chat() {
                             {/* Delete options */}
                             {isOwn ? (
                               <>
-                                <button
+                                <button type="button"
                                   onClick={() => handleDelete(message.id, false)}
                                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
                                 >
                                   Delete for me
                                 </button>
-                                <button
+                                <button type="button"
                                   onClick={() => handleDelete(message.id, true)}
                                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
                                 >
@@ -2391,7 +2392,7 @@ function Chat() {
                                 </button>
                               </>
                             ) : (
-                              <button
+                              <button type="button"
                                 onClick={() => handleDelete(message.id, false)}
                                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
                               >
@@ -2435,8 +2436,8 @@ function Chat() {
                 />
                 
                 <div className="flex items-center space-x-1 lg:space-x-2">
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={handleFileAttach}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
                     title="Attach File"
@@ -2444,7 +2445,7 @@ function Chat() {
                   >
                     <Paperclip className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button 
+                  <button type="button" 
                     type="button"
                     onClick={handleGallery}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
@@ -2453,8 +2454,8 @@ function Chat() {
                   >
                     <Image className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={handleCamera}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
                     title="Live Camera"
@@ -2462,8 +2463,8 @@ function Chat() {
                   >
                     <Camera className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button
-                    type="button"
+                  <button type="button"
+                    
                     onClick={handleVoiceToggle}
                     className={`p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                     title={isRecording ? 'Stop Recording' : 'Voice Message'}
@@ -2485,7 +2486,7 @@ function Chat() {
                       }
                     }}
                   />
-                  <button 
+                  <button type="button" 
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
@@ -2500,7 +2501,7 @@ function Chat() {
                     <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
                       <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
                         {emojiList.map((emoji, index) => (
-                          <button
+                          <button type="button"
                             key={index}
                             type="button"
                             onClick={() => handleEmojiSelect(emoji)}
@@ -2510,8 +2511,8 @@ function Chat() {
                           </button>
                         ))}
                       </div>
-                      <button
-                        type="button"
+                      <button type="button"
+                        
                         onClick={() => setShowEmojiPicker(false)}
                         className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 py-2 touch-manipulation"
                       >
@@ -2519,7 +2520,7 @@ function Chat() {
                       </button>
                     </div>
                   )}
-                  <button 
+                  <button type="button" 
                     type="button"
                     onClick={handleSendMessage}
                     disabled={!messageText.trim()}
@@ -2550,14 +2551,14 @@ function Chat() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {!showImageEditor ? (
                       <>
-                        <button 
+                        <button type="button" 
                           onClick={handleDownloadImage}
                           className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
                         >
                           <Download className="w-4 h-4" />
                           <span className="hidden sm:inline">Download</span>
                         </button>
-                        <button 
+                        <button type="button" 
                           onClick={handleOpenImageEditor}
                           className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
                         >
@@ -2569,14 +2570,14 @@ function Chat() {
                       <>
                         {/* Tool Selection */}
                         <div className="flex bg-gray-800 rounded-lg p-1">
-                          <button 
+                          <button type="button" 
                             onClick={() => setEditorTool('draw')}
                             className={`px-2 py-1 sm:px-3 sm:py-1 rounded flex items-center gap-1 text-sm touch-manipulation ${editorTool === 'draw' ? 'bg-green-600 text-white' : 'text-gray-300'}`}
                           >
                             <Pencil className="w-4 h-4" />
                             <span className="hidden sm:inline">Draw</span>
                           </button>
-                          <button 
+                          <button type="button" 
                             onClick={() => setEditorTool('text')}
                             className={`px-2 py-1 sm:px-3 sm:py-1 rounded flex items-center gap-1 text-sm touch-manipulation ${editorTool === 'text' ? 'bg-green-600 text-white' : 'text-gray-300'}`}
                           >
@@ -2591,14 +2592,14 @@ function Chat() {
                           onChange={(e) => setEditorColor(e.target.value)}
                           className="w-8 h-8 sm:w-10 sm:h-10 rounded cursor-pointer touch-manipulation"
                         />
-                        <button 
+                        <button type="button" 
                           onClick={handleSendEditedImage}
                           className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
                         >
                           <Send className="w-4 h-4" />
                           <span className="hidden sm:inline">Send</span>
                         </button>
-                        <button 
+                        <button type="button" 
                           onClick={handleCloseImageEditor}
                           className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm touch-manipulation"
                         >
@@ -2606,7 +2607,7 @@ function Chat() {
                         </button>
                       </>
                     )}
-                    <button 
+                    <button type="button" 
                       onClick={handleCloseImageViewer}
                       className="p-1.5 sm:p-2 text-white hover:bg-gray-700 rounded-lg touch-manipulation"
                       aria-label="Close"
@@ -2627,7 +2628,7 @@ function Chat() {
                       className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 text-sm"
                       onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTextToCanvas(); } }}
                     />
-                    <button 
+                    <button type="button" 
                       onClick={handleAddTextToCanvas}
                       disabled={!editorText.trim() || !textPosition}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm touch-manipulation"
@@ -2683,7 +2684,7 @@ function Chat() {
                   </p>
                 </div>
                 <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
-                  <button
+                  <button type="button"
                     onClick={async () => {
                       const call = callerInfo || incomingCall;
                       if (!call) return;
@@ -2713,7 +2714,7 @@ function Chat() {
                     <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-sm sm:text-base">Answer</span>
                   </button>
-                  <button
+                  <button type="button"
                     onClick={async () => {
                       const call = callerInfo || incomingCall;
                       if (call) {
@@ -2820,7 +2821,7 @@ function Chat() {
                 {/* Controls */}
                 <div className="flex justify-center items-center gap-4 sm:gap-6">
                   {(callStatus === 'ringing' || callStatus === 'calling') && (
-                    <button 
+                    <button type="button" 
                       onClick={handleEndCall}
                       className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105"
                     >
@@ -2830,7 +2831,7 @@ function Chat() {
                   {callStatus === 'connected' && (
                     <>
                       {/* Mute */}
-                      <button 
+                      <button type="button" 
                         onClick={() => {
                           if (localStream) {
                             const audioTrack = localStream.getAudioTracks()[0];
@@ -2847,7 +2848,7 @@ function Chat() {
                       </button>
                       
                       {/* End Call */}
-                      <button 
+                      <button type="button" 
                         onClick={handleEndCall}
                         className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105"
                       >
@@ -2855,7 +2856,7 @@ function Chat() {
                       </button>
                       
                       {/* Speaker */}
-                      <button 
+                      <button type="button" 
                         onClick={() => {
                           setIsSpeakerOn(!isSpeakerOn);
                           addNotification(isSpeakerOn ? 'Speaker off' : 'Speaker on', 'info');
@@ -2943,7 +2944,7 @@ function Chat() {
                 {/* Control Buttons */}
                 <div className="flex justify-center items-center gap-4">
                   {/* Mute Button */}
-                  <button 
+                  <button type="button" 
                     onClick={() => {
                       if (localStream) {
                         const audioTrack = localStream.getAudioTracks()[0];
@@ -2960,7 +2961,7 @@ function Chat() {
                   </button>
                   
                   {/* Video Off Button */}
-                  <button 
+                  <button type="button" 
                     onClick={() => {
                       if (localStream) {
                         const videoTrack = localStream.getVideoTracks()[0];
@@ -2977,7 +2978,7 @@ function Chat() {
                   </button>
                   
                   {/* End Call Button */}
-                  <button 
+                  <button type="button" 
                     onClick={handleEndVideoCall}
                     className="p-3 sm:p-4 bg-red-500 hover:bg-red-600 rounded-full text-white touch-manipulation"
                     title="End Call"
@@ -2986,7 +2987,7 @@ function Chat() {
                   </button>
                   
                   {/* Speaker Button */}
-                  <button 
+                  <button type="button" 
                     onClick={() => {
                       setIsSpeakerOn(!isSpeakerOn);
                       addNotification(isSpeakerOn ? 'Speaker off' : 'Speaker on', 'info');
@@ -3008,7 +3009,7 @@ function Chat() {
                   <h3 className="text-lg sm:text-xl font-semibold text-white">
                     {capturedPhoto ? 'Preview Photo' : 'Camera'}
                   </h3>
-                  <button 
+                  <button type="button" 
                     onClick={handleCloseCamera}
                     className="p-2 text-white hover:bg-gray-700 rounded-lg touch-manipulation"
                     aria-label="Close camera"
@@ -3028,15 +3029,15 @@ function Chat() {
 
                 <div className="flex justify-center items-center gap-4 mt-4 sm:mt-6">
                   {!capturedPhoto ? (
-                    <button onClick={handleCapturePhoto} className="p-4 sm:p-5 bg-white rounded-full touch-manipulation hover:bg-gray-200 transition-colors" title="Take Photo">
+                    <button type="button" onClick={handleCapturePhoto} className="p-4 sm:p-5 bg-white rounded-full touch-manipulation hover:bg-gray-200 transition-colors" title="Take Photo">
                       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-4 border-gray-800 bg-white"></div>
                     </button>
                   ) : (
                     <>
-                      <button onClick={handleRetakePhoto} className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
+                      <button type="button" onClick={handleRetakePhoto} className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
                         <X className="w-5 h-5" /> Retake
                       </button>
-                      <button onClick={handleSendPhoto} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
+                      <button type="button" onClick={handleSendPhoto} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
                         <Send className="w-5 h-5" /> Send Photo
                       </button>
                     </>
@@ -3138,7 +3139,7 @@ function Chat() {
                       { id: 'text', label: '🔤 Text' },
                       { id: 'emoji', label: '😊 Emoji' },
                     ].map(t => (
-                      <button key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); }}
+                      <button type="button" key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); }}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${drawTool === t.id ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         {t.label}
                       </button>
@@ -3151,7 +3152,7 @@ function Chat() {
                   <span className="text-xs text-gray-400 w-10">Color</span>
                   <div className="flex gap-2 flex-wrap">
                     {['#1a1a1a', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#ffffff'].map(c => (
-                      <button key={c} type="button" onClick={() => setDrawColor(c)}
+                      <button type="button" key={c} type="button" onClick={() => setDrawColor(c)}
                         className={`w-7 h-7 rounded-full border-2 transition-all ${drawColor === c ? 'border-white scale-110' : 'border-gray-600'}`}
                         style={{ background: c }} />
                     ))}
@@ -3167,7 +3168,7 @@ function Chat() {
                   <span className="text-xs text-gray-400 w-10">Size</span>
                   <div className="flex gap-2">
                     {[{ v: 2, label: 'S' }, { v: 4, label: 'M' }, { v: 8, label: 'L' }, { v: 16, label: 'XL' }].map(s => (
-                      <button key={s.v} type="button" onClick={() => setDrawBrushSize(s.v)}
+                      <button type="button" key={s.v} type="button" onClick={() => setDrawBrushSize(s.v)}
                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${drawBrushSize === s.v ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         {s.label}
                       </button>
@@ -3200,7 +3201,7 @@ function Chat() {
                     <span className="text-xs text-gray-400 w-10 flex-shrink-0">Pick</span>
                     <div className="flex gap-1 flex-wrap">
                       {['😊', '😂', '❤️', '👍', '🔥', '🎉', '😎', '🙏', '✨', '💯', '👋', '🌟', '🤔', '😍', '🎨', '⭐'].map(em => (
-                        <button key={em} type="button" onClick={() => setDrawSelectedEmoji(em)}
+                        <button type="button" key={em} onClick={() => setDrawSelectedEmoji(em)}
                           className={`text-lg w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${drawSelectedEmoji === em ? 'bg-green-600' : 'hover:bg-gray-700'}`}>
                           {em}
                         </button>
@@ -3228,13 +3229,13 @@ function Chat() {
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">{confirmModalData.title}</h3>
                 <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">{confirmModalData.message}</p>
                 <div className="flex justify-end space-x-2 sm:space-x-3">
-                  <button 
+                  <button type="button" 
                     onClick={() => setShowConfirmModal(false)}
                     className="px-3 py-2 sm:px-4 sm:py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
                   >
                     {confirmModalData.cancelText}
                   </button>
-                  <button 
+                  <button type="button" 
                     onClick={confirmModalData.onConfirm}
                     className={`px-3 py-2 sm:px-4 sm:py-2 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation ${
                       confirmModalData.isDanger 

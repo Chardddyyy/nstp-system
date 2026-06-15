@@ -39,8 +39,8 @@ function IncomingCallOverlay() {
           )}
         </div>
         <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={async () => {
               await answerIncomingCall(incomingCall);
               navigate('/chat');
@@ -50,8 +50,8 @@ function IncomingCallOverlay() {
             {isVideo ? <Video className="w-4 h-4 sm:w-5 sm:h-5" /> : <Phone className="w-4 h-4 sm:w-5 sm:h-5" />}
             Answer
           </button>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => declineIncomingCall(incomingCall.id)}
             className="px-4 py-2 sm:px-6 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-medium flex items-center gap-2"
           >

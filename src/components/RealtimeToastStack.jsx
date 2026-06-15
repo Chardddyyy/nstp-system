@@ -26,8 +26,8 @@ function RealtimeToastStack() {
             <p className="font-semibold text-gray-900 text-sm">{toast.title}</p>
             <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">{toast.message}</p>
           </div>
-          <button
-            type="button"
+          <button type="button"
+            
             onClick={() => dismissToast(toast.id)}
             className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1"
             aria-label="Dismiss"
