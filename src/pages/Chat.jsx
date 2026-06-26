@@ -1,14 +1,15 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { callsAPI } from '../services/api';
+import heic2any from 'heic2any';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Send, Search,
+  User, Users, Send, Search,
   Phone, Video, MoreVertical, Paperclip, Smile,
-  Mic, Camera, Image, X, Download, Edit3, Pencil, Type,
-  Play, Menu, ArrowLeft, MicOff, Calendar,
-  Volume2, VolumeX
+  Mic, Camera, Image, X, Download,
+  Play, Menu, ArrowLeft, MicOff,
+  Volume2, VolumeX, MessageSquare
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useEffect } from 'react';
 
 // Avatar options for display
@@ -68,7 +69,6 @@ function Chat() {
           answerIncomingCall, declineIncomingCall,
           pendingAnsweredCall, setPendingAnsweredCall } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const messagesEndRef = useRef(null);
 
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -254,8 +254,6 @@ function Chat() {
         return;
       }
       
-      addNotification('Uploading file...', 'info');
-      
       try {
         // Read file as base64 for download capability
         const fileData = await new Promise((resolve, reject) => {
@@ -293,12 +291,20 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        addNotification('Opening image...', 'info');
+        // Convert HEIC/HEIF (iPhone format) to JPEG so browsers can display it
+        let readableFile = file;
+        const isHeic = file.type === 'image/heic' || file.type === 'image/heif' ||
+          file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+        if (isHeic) {
+          const convertedBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.8 });
+          readableFile = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+        }
+
         const imageData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (evt) => resolve(evt.target.result);
           reader.onerror = () => reject(new Error('Failed to read image'));
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(readableFile);
         });
         let finalImage = imageData;
         try {
@@ -377,7 +383,7 @@ function Chat() {
   const handleSendPhoto = async () => {
     if (!capturedPhoto || !activeConversation) return;
     try {
-      addNotification('Sending photo...', 'info');
+
       await sendMessage(activeConversation.id, {
         sender: 'me',
         text: '📸 Camera Photo',
@@ -575,7 +581,7 @@ function Chat() {
     const file = e.target.files[0];
     if (file && activeConversation) {
       try {
-        addNotification('Compressing photo...', 'info');
+
         const imageData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (evt) => resolve(evt.target.result);
@@ -786,14 +792,6 @@ function Chat() {
   // Image viewer and editor state
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
-  const [showImageEditor, setShowImageEditor] = useState(false);
-  const [_isViewerEditing, setIsViewerEditing] = useState(false);
-  const imageEditorCanvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [editorTool, setEditorTool] = useState('draw'); // 'draw', 'text'
-  const [editorColor, setEditorColor] = useState('#000000');
-  const [editorText, setEditorText] = useState('');
-  const [textPosition, setTextPosition] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [_blockedBy, setBlockedBy] = useState(null);
   const [showIncomingCall, setShowIncomingCall] = useState(false);
@@ -1349,10 +1347,10 @@ function Chat() {
 
   // Scroll to bottom on initial load and when sending messages
   useEffect(() => {
-    // Only auto-scroll if user is near bottom or when they send a message
     if (isNearBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMessages.length]);
 
   // Get user's own conversations only (private)
@@ -1396,40 +1394,12 @@ function Chat() {
     addNotification('Image downloaded!', 'success');
   };
 
-  const handleOpenImageEditor = () => {
-    setShowImageEditor(true);
-    setIsViewerEditing(true);
-    // Load image onto canvas with visible background
-    setTimeout(() => {
-      const canvas = imageEditorCanvasRef.current;
-      if (!canvas || !selectedImageUrl) return;
-      const ctx = canvas.getContext('2d');
-      const img = document.createElement('img');
-      img.onload = () => {
-        // Set canvas size to match image
-        canvas.width = img.width;
-        canvas.height = img.height;
-        // Draw the image as background
-        ctx.drawImage(img, 0, 0);
-      };
-      img.crossOrigin = 'anonymous';
-      img.src = selectedImageUrl;
-    }, 100);
-  };
-
-  const handleCloseImageEditor = () => {
-    setShowImageEditor(false);
-    setIsViewerEditing(false);
-    setEditorTool('draw');
-    setEditorText('');
-    setTextPosition(null);
-  };
 
   const handleClearChat = () => {
     if (!activeConversation) return;
     setConfirmModalData({
       title: 'Clear Chat',
-      message: `Clear all messages with ${activeConversation.with}?`,
+      message: `Clear all messages in ${isGroupConversation(activeConversation) ? (activeConversation.groupName || activeConversation.group_name || 'this group') : activeConversation.with}?`,
       confirmText: 'Clear',
       cancelText: 'Cancel',
       isDanger: false,
@@ -1504,67 +1474,6 @@ function Chat() {
     setShowConfirmModal(true);
   };
 
-  const handleCanvasMouseDown = (e) => {
-    const canvas = imageEditorCanvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (editorTool === 'draw') {
-      setIsDrawing(true);
-      const ctx = canvas.getContext('2d');
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.strokeStyle = editorColor;
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-    } else if (editorTool === 'text') {
-      setTextPosition({ x, y });
-    }
-  };
-
-  const handleCanvasMouseMove = (e) => {
-    if (!isDrawing || editorTool !== 'draw') return;
-    const canvas = imageEditorCanvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const ctx = canvas.getContext('2d');
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const handleCanvasMouseUp = () => {
-    setIsDrawing(false);
-  };
-
-  const handleAddTextToCanvas = () => {
-    if (!editorText.trim() || !textPosition) return;
-    const canvas = imageEditorCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    ctx.font = '24px Arial';
-    ctx.fillStyle = editorColor;
-    ctx.fillText(editorText, textPosition.x, textPosition.y);
-    setEditorText('');
-    setTextPosition(null);
-  };
-
-  const handleSendEditedImage = () => {
-    const canvas = imageEditorCanvasRef.current;
-    if (!canvas || !activeConversation) return;
-    const editedImageUrl = canvas.toDataURL('image/png');
-    sendMessage(activeConversation.id, {
-      sender: 'me',
-      text: '📷 Edited Image',
-      type: 'image',
-      imageUrl: editedImageUrl
-    });
-    handleCloseImageEditor();
-    addNotification('Edited image sent!', 'success');
-  };
 
   useEffect(() => {
     return () => {
@@ -1613,7 +1522,7 @@ function Chat() {
     setNotifications(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000);
+    }, 2000);
   };
 
   const removeNotification = (id) => {
@@ -1697,93 +1606,12 @@ function Chat() {
         ))}
       </div>
       
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <MessageSquare className="w-8 h-8" />
-              <div>
-                <h1 className="font-bold text-lg">National Service Training Program</h1>
-                <p className="text-xs text-green-200">Messages</p>
-              </div>
-            </div>
-            <button type="button" 
-              onClick={() => setSidebarOpen(false)}
-              className="p-2 hover:bg-green-700 rounded-lg transition-colors lg:hidden"
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
-              ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Users className="w-5 h-5" />
-            <span>Students</span>
-          </button>
-          <button type="button"
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
-          >
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button" 
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-red-500 text-white"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Main Content */}
       <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden`}>
@@ -1844,8 +1672,7 @@ function Chat() {
                   );
                   const deptColor = { CWTS: 'bg-green-100 text-green-700', LTS: 'bg-purple-100 text-purple-700', ROTC: 'bg-red-100 text-red-700' };
                   return contacts.map(contact => (
-                    <button type="button"
-                      key={contact.id}
+                    <button key={contact.id}
                       type="button"
                       onClick={async () => {
                         await startConversation(contact);
@@ -2008,31 +1835,24 @@ function Chat() {
                     </button>
                     {showChatMenu && (
                       <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[180px]">
-                        {!isGroupConversation(activeConversation) && (
-                          <button type="button"
-                            onClick={handleClearChat}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-                          >
-                            Clear Chat
-                          </button>
-                        )}
-                        {!isGroupConversation(activeConversation) && (
-                          <button type="button"
-                            
-                            onClick={handleDeleteConversation}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
-                          >
-                            Delete Conversation
-                          </button>
-                        )}
-                        {!isGroupConversation(activeConversation) && (
-                          <button type="button"
-                            onClick={handleBlockUser}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
-                          >
-                            {isBlocked ? 'Unblock User' : 'Block User'}
-                          </button>
-                        )}
+                        <button type="button"
+                          onClick={handleClearChat}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                        >
+                          Clear Chat
+                        </button>
+                        <button type="button"
+                          onClick={handleDeleteConversation}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                        >
+                          Delete Conversation
+                        </button>
+                        <button type="button"
+                          onClick={handleBlockUser}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
+                        >
+                          {isBlocked ? 'Unblock User' : 'Block User'}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -2445,8 +2265,7 @@ function Chat() {
                   >
                     <Paperclip className="w-4 h-4 lg:w-5 lg:h-5" />
                   </button>
-                  <button type="button" 
-                    type="button"
+                  <button type="button"
                     onClick={handleGallery}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
                     title="Gallery"
@@ -2486,8 +2305,7 @@ function Chat() {
                       }
                     }}
                   />
-                  <button type="button" 
-                    type="button"
+                  <button type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
                     title="Add Emoji"
@@ -2501,8 +2319,7 @@ function Chat() {
                     <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
                       <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
                         {emojiList.map((emoji, index) => (
-                          <button type="button"
-                            key={index}
+                          <button key={index}
                             type="button"
                             onClick={() => handleEmojiSelect(emoji)}
                             className="text-lg lg:text-xl hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation"
@@ -2520,8 +2337,7 @@ function Chat() {
                       </button>
                     </div>
                   )}
-                  <button type="button" 
-                    type="button"
+                  <button type="button"
                     onClick={handleSendMessage}
                     disabled={!messageText.trim()}
                     className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
@@ -2542,72 +2358,19 @@ function Chat() {
           )}
           {/* Image Viewer Modal with Inline Editing */}
           {imageViewerOpen && selectedImageUrl && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
               <div className="bg-gray-900 rounded-lg p-3 sm:p-4 max-w-5xl w-full mx-auto max-h-[95vh] sm:max-h-[90vh] flex flex-col">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-white">
-                    {showImageEditor ? 'Image Editor' : 'Image Viewer'}
-                  </h3>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {!showImageEditor ? (
-                      <>
-                        <button type="button" 
-                          onClick={handleDownloadImage}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span className="hidden sm:inline">Download</span>
-                        </button>
-                        <button type="button" 
-                          onClick={handleOpenImageEditor}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span className="hidden sm:inline">Edit</span>
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        {/* Tool Selection */}
-                        <div className="flex bg-gray-800 rounded-lg p-1">
-                          <button type="button" 
-                            onClick={() => setEditorTool('draw')}
-                            className={`px-2 py-1 sm:px-3 sm:py-1 rounded flex items-center gap-1 text-sm touch-manipulation ${editorTool === 'draw' ? 'bg-green-600 text-white' : 'text-gray-300'}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                            <span className="hidden sm:inline">Draw</span>
-                          </button>
-                          <button type="button" 
-                            onClick={() => setEditorTool('text')}
-                            className={`px-2 py-1 sm:px-3 sm:py-1 rounded flex items-center gap-1 text-sm touch-manipulation ${editorTool === 'text' ? 'bg-green-600 text-white' : 'text-gray-300'}`}
-                          >
-                            <Type className="w-4 h-4" />
-                            <span className="hidden sm:inline">Text</span>
-                          </button>
-                        </div>
-                        {/* Color Picker */}
-                        <input 
-                          type="color" 
-                          value={editorColor}
-                          onChange={(e) => setEditorColor(e.target.value)}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded cursor-pointer touch-manipulation"
-                        />
-                        <button type="button" 
-                          onClick={handleSendEditedImage}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
-                        >
-                          <Send className="w-4 h-4" />
-                          <span className="hidden sm:inline">Send</span>
-                        </button>
-                        <button type="button" 
-                          onClick={handleCloseImageEditor}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm touch-manipulation"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-                    <button type="button" 
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-white">Image Viewer</h3>
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={handleDownloadImage}
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1 sm:gap-2 text-sm touch-manipulation"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download</span>
+                    </button>
+                    <button type="button"
                       onClick={handleCloseImageViewer}
                       className="p-1.5 sm:p-2 text-white hover:bg-gray-700 rounded-lg touch-manipulation"
                       aria-label="Close"
@@ -2616,63 +2379,20 @@ function Chat() {
                     </button>
                   </div>
                 </div>
-
-                {/* Text Input for Text Tool */}
-                {showImageEditor && editorTool === 'text' && (
-                  <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      value={editorText}
-                      onChange={(e) => setEditorText(e.target.value)}
-                      placeholder="Enter text to add..."
-                      className="flex-1 px-3 py-2 bg-gray-800 text-white rounded-lg border border-gray-700 text-sm"
-                      onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTextToCanvas(); } }}
-                    />
-                    <button type="button" 
-                      onClick={handleAddTextToCanvas}
-                      disabled={!editorText.trim() || !textPosition}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm touch-manipulation"
-                    >
-                      Add Text
-                    </button>
-                    {!textPosition && (
-                      <span className="text-gray-400 text-xs sm:text-sm self-center">
-                        Click image to position
-                      </span>
-                    )}
-                  </div>
-                )}
-
                 <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-800 rounded-lg">
-                  {!showImageEditor ? (
-                    <img 
-                      src={selectedImageUrl} 
-                      alt="Full size" 
-                      className="max-w-full max-h-[50vh] sm:max-h-[70vh] object-contain"
-                    />
-                  ) : (
-                    <canvas
-                      ref={imageEditorCanvasRef}
-                      onMouseDown={handleCanvasMouseDown}
-                      onMouseMove={handleCanvasMouseMove}
-                      onMouseUp={handleCanvasMouseUp}
-                      onMouseLeave={handleCanvasMouseUp}
-                      className="max-w-full max-h-[40vh] sm:max-h-[60vh] cursor-crosshair"
-                    />
-                  )}
+                  <img
+                    src={selectedImageUrl}
+                    alt="Full size"
+                    className="max-w-full max-h-[70vh] object-contain"
+                  />
                 </div>
-                {showImageEditor && (
-                  <p className="text-gray-400 text-xs sm:text-sm mt-2 text-center px-2">
-                    {editorTool === 'draw' ? 'Click and drag to draw' : 'Click on image to place text, then type and click Add Text'}
-                  </p>
-                )}
               </div>
             </div>
           )}
 
           {/* Incoming Call Modal */}
           {showIncomingCall && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 animate-fade-in">
               <div className="bg-gray-900 rounded-lg p-6 sm:p-8 max-w-md w-full mx-auto text-center">
                 <div className="mb-4 sm:mb-6">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse">
@@ -2739,7 +2459,7 @@ function Chat() {
 
           {/* Call Modal */}
           {showCallModal && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
               <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 max-w-sm w-full mx-auto text-center max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div className="mb-6 sm:mb-8">
                   {/* Avatar */}
@@ -2880,7 +2600,7 @@ function Chat() {
 
           {/* Video Call Modal */}
           {showVideoCallModal && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
               <div className="bg-gray-900 rounded-lg p-4 sm:p-6 max-w-4xl w-full mx-auto max-h-[90vh] overflow-y-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
                   <div>
@@ -3003,7 +2723,7 @@ function Chat() {
           )}
           {/* Camera Modal */}
           {showCameraModal && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in">
               <div className="bg-gray-900 rounded-xl p-4 sm:p-6 max-w-4xl w-full mx-auto max-h-[95vh] flex flex-col">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-white">
@@ -3139,7 +2859,7 @@ function Chat() {
                       { id: 'text', label: '🔤 Text' },
                       { id: 'emoji', label: '😊 Emoji' },
                     ].map(t => (
-                      <button type="button" key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); }}
+                      <button key={t.id} type="button" onClick={() => { setDrawTool(t.id); setDrawTextPos(null); }}
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${drawTool === t.id ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         {t.label}
                       </button>
@@ -3152,7 +2872,7 @@ function Chat() {
                   <span className="text-xs text-gray-400 w-10">Color</span>
                   <div className="flex gap-2 flex-wrap">
                     {['#1a1a1a', '#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#ffffff'].map(c => (
-                      <button type="button" key={c} type="button" onClick={() => setDrawColor(c)}
+                      <button key={c} type="button" onClick={() => setDrawColor(c)}
                         className={`w-7 h-7 rounded-full border-2 transition-all ${drawColor === c ? 'border-white scale-110' : 'border-gray-600'}`}
                         style={{ background: c }} />
                     ))}
@@ -3168,7 +2888,7 @@ function Chat() {
                   <span className="text-xs text-gray-400 w-10">Size</span>
                   <div className="flex gap-2">
                     {[{ v: 2, label: 'S' }, { v: 4, label: 'M' }, { v: 8, label: 'L' }, { v: 16, label: 'XL' }].map(s => (
-                      <button type="button" key={s.v} type="button" onClick={() => setDrawBrushSize(s.v)}
+                      <button key={s.v} type="button" onClick={() => setDrawBrushSize(s.v)}
                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${drawBrushSize === s.v ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         {s.label}
                       </button>
@@ -3224,7 +2944,7 @@ function Chat() {
 
           {/* Confirm Modal */}
           {showConfirmModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
               <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto shadow-2xl max-h-[90vh] overflow-y-auto">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">{confirmModalData.title}</h3>
                 <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">{confirmModalData.message}</p>

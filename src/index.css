@@ -82,3 +82,134 @@ button, .touch-manipulation {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* ── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Utility classes */
+.animate-fade-in  { animation: fadeIn  0.2s ease-out both; }
+.animate-slide-up { animation: slideUp 0.28s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.animate-slide-in-left { animation: slideInLeft 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+.animate-pop-in   { animation: popIn   0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+.animate-count-up { animation: countUp 0.5s ease-out both; }
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg, #f0f4f8 25%, #dde3ea 50%, #f0f4f8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+/* Card hover lift */
+.card-interactive {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.10);
+}
+.card-interactive:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Button press feedback — excludes disabled */
+button:active:not(:disabled) {
+  transform: scale(0.96);
+  transition: transform 0.08s ease;
+}
+button {
+  transition: transform 0.08s ease, background-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* Smooth input focus ring */
+input:focus, select:focus, textarea:focus {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Page fade-in on mount */
+.page-enter {
+  animation: fadeIn 0.3s ease-out both;
+}
+
+/* Notification badge pulse */
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.15); }
+}
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* Toast slide-in from right */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
+}
+.toast-enter { animation: toastIn  0.3s cubic-bezier(0.34, 1.2, 0.64, 1) both; }
+.toast-exit  { animation: toastOut 0.25s ease-in both; }
+
+/* Sidebar smooth open (for the aside element via JS) */
+.sidebar-open  { animation: slideInLeft 0.28s cubic-bezier(0.34, 1.1, 0.64, 1) both; }
+
+/* Loading spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* Ripple container */
+.ripple-container { position: relative; overflow: hidden; }
+@keyframes ripple {
+  from { transform: scale(0); opacity: 0.4; }
+  to   { transform: scale(4); opacity: 0; }
+}
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  pointer-events: none;
+  animation: ripple 0.5s linear;
+}

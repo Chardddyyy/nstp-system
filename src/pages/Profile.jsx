@@ -1,12 +1,12 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Camera, Mail, Phone,
+  Users, User, Camera, Mail, Phone,
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
   Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
   UserPlus, Trash2
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usersAPI, getAllInstructorsGroup } from '../services/api';
 
@@ -26,7 +26,6 @@ const AVATAR_OPTIONS = [
 function Profile() {
   const { user, logout, updateUser, changePassword } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const [isEditing, setIsEditing] = useState(false);
@@ -439,93 +438,14 @@ function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 page-enter">
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center space-x-3">
-            <div>
-              <h1 className="font-bold text-lg">National Service Training Program</h1>
-              <p className="text-xs text-green-200">My Profile</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            
-            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
-              ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Users className="w-5 h-5" />
-            <span>Students</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button"
-            
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
@@ -884,7 +804,7 @@ function Profile() {
         const canSubmit = nameOk && emailOk && pwOk && confirmOk && deptOk;
 
         return (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddInstructor(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddInstructor(false)}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
@@ -902,7 +822,7 @@ function Profile() {
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 gap-2">
                     {[{ value: 'instructor', label: 'Instructor' }, { value: 'admin', label: 'Admin' }].map(r => (
-                      <button type="button" key={r.value} type="button"
+                      <button key={r.value} type="button"
                         onClick={() => setInstructorForm(prev => ({ ...prev, role: r.value }))}
                         className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.role === r.value ? 'bg-green-700 border-green-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
                       >{r.label}</button>
@@ -941,7 +861,7 @@ function Profile() {
                         const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
                         const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
                         return (
-                          <button type="button" key={dept} type="button"
+                          <button key={dept} type="button"
                             onClick={() => setInstructorForm(prev => ({ ...prev, department: dept }))}
                             className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.department === dept ? active[dept] : idle[dept]}`}
                           >{dept}</button>
@@ -1084,8 +1004,7 @@ function Profile() {
                       { mode: 'text', icon: <Type className="w-4 h-4" />, label: 'Text' },
                       { mode: 'emoji', icon: <Smile className="w-4 h-4" />, label: 'Emoji' },
                     ].map(({ mode, icon, label }) => (
-                      <button type="button"
-                        key={mode}
+                      <button key={mode}
                         type="button"
                         onClick={() => setEditorMode(mode)}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editorMode === mode ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
@@ -1108,8 +1027,7 @@ function Profile() {
                     <div className="space-y-2">
                       <div className="flex gap-1.5 flex-wrap">
                         {DRAW_COLORS.map(c => (
-                          <button type="button"
-                            key={c}
+                          <button key={c}
                             type="button"
                             onClick={() => setDrawColor(c)}
                             className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
@@ -1138,8 +1056,7 @@ function Profile() {
                       />
                       <div className="flex gap-1.5 flex-wrap">
                         {DRAW_COLORS.map(c => (
-                          <button type="button"
-                            key={c}
+                          <button key={c}
                             type="button"
                             onClick={() => setDrawColor(c)}
                             className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
@@ -1156,8 +1073,7 @@ function Profile() {
                       <p className="text-gray-400 text-xs">Select emoji, then tap on photo</p>
                       <div className="flex flex-wrap gap-1">
                         {QUICK_EMOJIS.map(em => (
-                          <button type="button"
-                            key={em}
+                          <button key={em}
                             type="button"
                             onClick={() => setSelectedEmoji(em)}
                             className={`w-8 h-8 text-lg rounded flex items-center justify-center transition-colors ${selectedEmoji === em ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}

@@ -8,6 +8,9 @@ var pool = require('./config/database');
 var { getDbConfig } = require('./config/dbEnv');
 
 var bcrypt = require('bcryptjs');
+var ExcelJS = require('exceljs');
+var path = require('path');
+var fs = require('fs');
 var app = express();
 var PORT = process.env.PORT || 3001;
 
@@ -65,29 +68,35 @@ var globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// ── Enrollment rate limiter: 10 submissions / hour per IP ────────────────────
+// ── Enrollment rate limiter ───────────────────────────────────────────────────
+// Set to 500/hour per IP so campus-wide NAT (all students sharing one public IP)
+// can all enroll without hitting the limit. Still blocks automated spam (>500/hr).
 var enrollmentLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
   message: { message: 'Too many enrollment submissions from this IP. Please try again later.' },
 });
 
-// ── In-memory login rate limiter: 5 failures / 15 min per IP ─────────────────
-// Was 10 — reduced to 5 to limit brute-force window.
+// ── In-memory login rate limiter ─────────────────────────────────────────────
+// Keyed by email (not IP) so one person's failed attempts don't lock out the
+// entire campus sharing a NAT IP address.  5 failures per email per 15 min.
 var loginAttempts = new Map();
-function checkLoginRateLimit(ip) {
+function checkLoginRateLimit(email) {
   var now = Date.now();
-  var entry = loginAttempts.get(ip);
+  var key = String(email).toLowerCase().trim();
+  var entry = loginAttempts.get(key);
   if (!entry || now > entry.resetAt) {
     entry = { count: 0, resetAt: now + 15 * 60 * 1000 };
   }
   if (entry.count >= 5) return false;
   entry.count++;
-  loginAttempts.set(ip, entry);
+  loginAttempts.set(key, entry);
   return true;
 }
-function resetLoginAttempts(ip) {
-  loginAttempts.delete(ip);
+function resetLoginAttempts(email) {
+  loginAttempts.delete(String(email).toLowerCase().trim());
 }
 
 // ── Sanitize a string: strip null bytes, trim, limit length ──────────────────
@@ -133,19 +142,9 @@ function requireAdmin(req, res, next) {
 // Creates the table if missing, then writes a single log row. Non-blocking.
 async function auditLog(action, userId, detail, ip) {
   try {
-    await pool.execute(`
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        action VARCHAR(100) NOT NULL,
-        user_id INT,
-        detail TEXT,
-        ip VARCHAR(45),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
     await pool.execute(
       'INSERT INTO audit_logs (action, user_id, detail, ip) VALUES (?, ?, ?, ?)',
-      [action, userId || null, detail ? String(detail).slice(0, 1000) : null, ip || null]
+      [action, userId || null, detail ? String(detail).slice(0, 4000) : null, ip || null]
     );
   } catch (_) { /* non-fatal */ }
 }
@@ -177,6 +176,24 @@ async function ensureUserColumns() {
   userColumnsMigrated = true;
 }
 
+async function ensureAuditLogs() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        action VARCHAR(100) NOT NULL,
+        user_id INT,
+        detail TEXT,
+        ip VARCHAR(45),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_audit_user (user_id),
+        INDEX idx_audit_created (created_at),
+        INDEX idx_audit_action (action)
+      )
+    `);
+  } catch (_) {}
+}
+
 async function ensureStudentColumns() {
   var alters = [
     'ALTER TABLE students ADD COLUMN birthMonth VARCHAR(2)',
@@ -192,6 +209,9 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN program VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN section VARCHAR(50)',
     'ALTER TABLE students ADD COLUMN profilePicture TEXT',
+    'ALTER TABLE students ADD COLUMN street VARCHAR(255)',
+    'ALTER TABLE students ADD COLUMN municipality VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN province VARCHAR(100)',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -227,6 +247,9 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN emergencyNumber VARCHAR(50)',
     'ALTER TABLE enrollments ADD COLUMN studentId VARCHAR(50)',
     'ALTER TABLE enrollments ADD COLUMN reviewed_by INT NULL',
+    'ALTER TABLE enrollments ADD COLUMN street VARCHAR(255)',
+    'ALTER TABLE enrollments ADD COLUMN municipality VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN province VARCHAR(100)',
     'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
     'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
   ];
@@ -395,12 +418,12 @@ async function userCanAccessConversation(conversationId, userId) {
 app.post('/api/auth/login', async function(req, res) {
   // Rate-limit by IP to block brute-force attacks
   var ip = req.ip || (req.connection && req.connection.remoteAddress) || 'unknown';
-  if (!checkLoginRateLimit(ip)) {
-    return res.status(429).json({ message: 'Too many failed attempts. Try again in 15 minutes.' });
+  var email = sanitizeStr(req.body.email, 255);
+  if (!checkLoginRateLimit(email)) {
+    return res.status(429).json({ message: 'Too many failed attempts for this account. Try again in 15 minutes.' });
   }
 
   try {
-    var email = sanitizeStr(req.body.email, 255);
     var password = req.body.password;
 
     if (!email || !password) {
@@ -439,11 +462,11 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var user = users[0];
-    resetLoginAttempts(ip);
+    resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
     var token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, department: user.department },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -514,6 +537,15 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
+      return res.status(400).json({ message: 'Please enter a valid email address.' });
+    }
+    if (String(password).length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
+    }
+    if (String(password).length > 128) {
+      return res.status(400).json({ message: 'Password is too long.' });
+    }
     if (assignedRole === 'instructor' && !['CWTS', 'LTS', 'ROTC'].includes(department)) {
       return res.status(400).json({ message: 'Department must be CWTS, LTS, or ROTC for instructors.' });
     }
@@ -555,7 +587,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete instructor account (admin only, cannot delete self or other admins)
+// Delete instructor account (admin only, cannot delete self or any admin)
 app.delete('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
@@ -567,6 +599,9 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     }
     const [target] = await pool.execute('SELECT id, role FROM users WHERE id = ?', [id]);
     if (target.length === 0) return res.status(404).json({ message: 'User not found.' });
+    if (target[0].role === 'admin') {
+      return res.status(403).json({ message: 'Admin accounts cannot be deleted.' });
+    }
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
     res.json({ message: 'Instructor deleted successfully.' });
   } catch (error) {
@@ -649,14 +684,234 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
 
 // ===== STUDENT ROUTES =====
 
-// Get all students
+// Get students — admins see all, instructors see only their department
 app.get('/api/students', authenticateToken, async (req, res) => {
   try {
-    const [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
+    let students;
+    if (req.user.role === 'admin') {
+      [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
+    } else {
+      [students] = await pool.execute(
+        'SELECT * FROM students WHERE department = ? ORDER BY created_at DESC',
+        [req.user.department]
+      );
+    }
     res.json(students);
   } catch (error) {
     console.error('Get students error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// CHED Excel export
+function buildChedWorkbook(students, info = {}) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'NSTP System';
+  const ws = wb.addWorksheet('Enrollment List');
+
+  const semester = info.semester || '1st Semester, Academic Year: 2025-2026';
+  const widths = [6, 14, 16, 16, 16, 12, 6, 14, 18, 14, 18, 14, 14, 16, 24];
+  widths.forEach((w, i) => (ws.getColumn(i + 1).width = w));
+
+  // Row heights — compact title rows so logos don't stretch the sheet
+  for (let i = 1; i <= 6; i++) ws.getRow(i).height = 13;
+
+  const centerMid = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  const leftMid   = { horizontal: 'left',   vertical: 'middle' };
+  const thin = { style: 'thin', color: { argb: 'FF000000' } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+  const arialSm = { name: 'Arial', size: 10 };
+
+  // ── Logos — fixed pixel size so they don't fill the whole header ──
+  const CHED_LOGO  = path.join(__dirname, 'assets', 'ched-logo.png');
+  const BAGONG_LOGO = path.join(__dirname, 'assets', 'bagong-pilipinas-logo.png');
+  if (fs.existsSync(CHED_LOGO)) {
+    const imgId = wb.addImage({ filename: CHED_LOGO, extension: 'png' });
+    ws.addImage(imgId, { tl: { col: 0.2, row: 0.1 }, ext: { width: 68, height: 68 } });
+  }
+  if (fs.existsSync(BAGONG_LOGO)) {
+    const imgId = wb.addImage({ filename: BAGONG_LOGO, extension: 'png' });
+    ws.addImage(imgId, { tl: { col: 13.3, row: 0.1 }, ext: { width: 72, height: 67 } });
+  }
+
+  // ── Title block rows 1-6, centered across A:O ──
+  const titles = [
+    { row: 1, text: 'Republic of the Philippines',    bold: false, size: 11 },
+    { row: 2, text: 'Office of the President',         bold: false, size: 11 },
+    { row: 3, text: 'COMMISSION ON HIGHER EDUCATION',  bold: true,  size: 11 },
+    { row: 5, text: semester.startsWith('2nd') ? 'NSTP 2 Enrollment List' : 'NSTP 1 Enrollment List', bold: true, size: 12 },
+    { row: 6, text: semester,                           bold: false, size: 11 },
+  ];
+  titles.forEach(({ row, text, bold, size }) => {
+    ws.mergeCells(row, 1, row, 15);
+    const cell = ws.getCell(row, 1);
+    cell.value = text;
+    cell.alignment = centerMid;
+    cell.font = { name: 'Arial', size, bold };
+  });
+
+  // ── Form fields rows 8-9 with underlined values ──
+  // Name of HEI + Address on left (A-H), Region + NSTP Component pushed right (I-O)
+  ws.mergeCells('A8:H8'); ws.mergeCells('I8:O8');
+  ws.mergeCells('A9:H9'); ws.mergeCells('I9:O9');
+
+  const hei        = info.hei           || 'CAVITE STATE UNIVERSITY NAIC';
+  const region     = info.region        || 'IV (CALABARZON)';
+  const address    = info.address       || 'Bucana Malaki, Naic, Cavite';
+  const components = info.nstpComponents || 'CWTS / LTS / ROTC';
+
+  ws.getCell('A8').value = { richText: [
+    { text: 'Name of HEI: ', font: { ...arialSm } },
+    { text: hei,             font: { ...arialSm, underline: true } },
+  ]};
+  ws.getCell('I8').value = { richText: [
+    { text: 'Region: ', font: { ...arialSm } },
+    { text: region,     font: { ...arialSm, bold: true, underline: true } },
+  ]};
+  ws.getCell('A9').value = { richText: [
+    { text: 'Address: ', font: { ...arialSm } },
+    { text: address,     font: { ...arialSm, underline: true } },
+  ]};
+  ws.getCell('I9').value = { richText: [
+    { text: 'NSTP Component: ', font: { ...arialSm } },
+    { text: components,         font: { ...arialSm, underline: true } },
+  ]};
+  ['A8','I8','A9','I9'].forEach(ref => { ws.getCell(ref).alignment = leftMid; });
+
+  // ── Table header rows 11-12 ──
+  // Do ALL merges first, then apply styles
+  ws.mergeCells('A11:A12'); ws.getCell('A11').value = 'No.';
+  ws.mergeCells('B11:B12'); ws.getCell('B11').value = 'Student No.';
+  // Student Name only spans Surname / First Name / Middle Name (C-E)
+  ws.mergeCells('C11:E11'); ws.getCell('C11').value = 'Student Name';
+  // Program, Sex, Birthdate each span both rows (row-merged, single column)
+  ws.mergeCells('F11:F12'); ws.getCell('F11').value = 'Program';
+  ws.mergeCells('G11:G12'); ws.getCell('G11').value = 'Sex';
+  ws.mergeCells('H11:H12'); ws.getCell('H11').value = 'Birthdate';
+  // Address group
+  ws.mergeCells('I11:M11'); ws.getCell('I11').value = 'Address';
+  // Contact Number and E-mail Address are standalone columns (no "Contact" group header)
+  ws.mergeCells('N11:N12'); ws.getCell('N11').value = 'Contact Number';
+  ws.mergeCells('O11:O12'); ws.getCell('O11').value = 'E-mail Address';
+
+  // Sub-columns (row 12)
+  ws.getCell('C12').value = 'Surname';
+  ws.getCell('D12').value = 'First Name';
+  ws.getCell('E12').value = 'Middle Name';
+  ws.mergeCells('I12:J12');  ws.getCell('I12').value = 'Street / Barangay';
+  ws.mergeCells('K12:L12');  ws.getCell('K12').value = 'Municipality / City';
+  ws.getCell('M12').value = 'Province';
+
+  // Apply styles — iterate only master cells of each merge + standalone cells
+  const headerStyle = { alignment: centerMid, font: { name: 'Arial', size: 9, bold: true }, border, fill: headerFill };
+  const headerCells = [
+    'A11','B11','C11','F11','G11','H11','I11','N11','O11',  // row 11 headers (N/O now row-span)
+    'C12','D12','E12','I12','K12','M12',                     // row 12 sub-columns
+  ];
+  headerCells.forEach(ref => {
+    const cell = ws.getCell(ref);
+    cell.alignment = headerStyle.alignment;
+    cell.font = headerStyle.font;
+    cell.border = headerStyle.border;
+    cell.fill = headerStyle.fill;
+  });
+
+  // ── Data rows starting at row 13 ──
+  let r = 13;
+  students.forEach((s, idx) => {
+    const surname    = s.lastName  || (s.name || '').split(',')[0]?.trim() || '';
+    const firstPart  = s.firstName || (s.name || '').split(',')[1]?.trim() || '';
+    const firstName  = s.firstName || firstPart.split(' ')[0] || '';
+    const middleName = s.middleName || firstPart.split(' ').slice(1).join(' ') || '';
+
+    let birthdate = '';
+    if (s.birthDate) {
+      const d = new Date(s.birthDate);
+      if (!isNaN(d)) birthdate = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    } else if (s.birthMonth && s.birthDay && s.birthYear) {
+      birthdate = `${s.birthMonth}/${s.birthDay}/${s.birthYear}`;
+    }
+
+    const rowVals = [
+      idx + 1,
+      s.studentId      || '',
+      surname,
+      firstName,
+      middleName,
+      s.program || s.course || '',
+      s.gender         || '',
+      birthdate,
+      s.street         || '',
+      '',
+      s.municipality   || '',
+      '',
+      s.province       || '',
+      s.contactNumber  || '',
+      s.email          || '',
+    ];
+    rowVals.forEach((v, i) => {
+      const cell = ws.getCell(r, i + 1);
+      cell.value = v;
+      cell.font = { name: 'Arial', size: 9 };
+      cell.border = border;
+      cell.alignment = { vertical: 'middle', wrapText: true };
+    });
+    ws.mergeCells(r, 9, r, 10);
+    ws.mergeCells(r, 11, r, 12);
+    r++;
+  });
+
+  return wb;
+}
+
+app.get('/api/students/ched-export', authenticateToken, async (req, res) => {
+  try {
+    // Instructors are forced to their own department; admins may choose any
+    const isAdmin = req.user.role === 'admin';
+    const dept    = isAdmin ? (req.query.department || 'All') : req.user.department;
+    const program = req.query.program || 'All';
+    const sem     = req.query.sem     || '1st Semester';
+    const year    = req.query.year    || '2025-2026';
+    const semester = `${sem}, Academic Year: ${year}`;
+
+    // Build WHERE conditions
+    const conditions = ["s.status = 'Active'"];
+    const params = [];
+    if (dept !== 'All')    { conditions.push('s.department = ?'); params.push(dept); }
+    if (program !== 'All') { conditions.push('s.program = ?');    params.push(program); }
+    const where = conditions.join(' AND ');
+
+    const [rows] = await pool.execute(
+      `SELECT s.*, e.firstName, e.lastName, e.middleName, e.street, e.municipality, e.province
+       FROM students s
+       LEFT JOIN enrollments e ON e.studentId = s.studentId AND e.status = 'Approved'
+       WHERE ${where}
+       ORDER BY s.name`,
+      params
+    );
+
+    const deptLabel    = dept    === 'All' ? 'CWTS / LTS / ROTC' : dept;
+    const programLabel = program === 'All' ? '' : ` — ${program}`;
+    const info = {
+      hei: 'CAVITE STATE UNIVERSITY NAIC',
+      region: 'IV (CALABARZON)',
+      address: 'Bucana Malaki, Naic, Cavite',
+      nstpComponents: `${deptLabel}${programLabel}`,
+      semester,
+    };
+
+    const wb = buildChedWorkbook(rows, info);
+    const fileLabel = [dept === 'All' ? 'All' : dept, program === 'All' ? '' : program].filter(Boolean).join('_');
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="CHED_NSTP_EnrollmentList_${fileLabel}_${dateStr}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('CHED export error:', error);
+    res.status(500).json({ message: 'Export failed' });
   }
 });
 
@@ -668,6 +923,12 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     // Validate required fields
     if (!studentId || !name || !department) {
       return res.status(400).json({ message: 'Missing required fields: studentId, name, department' });
+    }
+    if (!['CWTS', 'LTS', 'ROTC'].includes(department)) {
+      return res.status(400).json({ message: 'Invalid department. Must be CWTS, LTS, or ROTC.' });
+    }
+    if (!/^\d{9}$/.test(sanitizeStr(studentId, 20))) {
+      return res.status(400).json({ message: 'Student ID must be exactly 9 digits.' });
     }
 
     const n = (v) => (v === undefined || v === null || v === '') ? null : v;
@@ -694,15 +955,28 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
       return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
     }
-    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Update student
+// Update student — admins can update any student; instructors can only update their department's students
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
+
+    // Instructors: verify the target student belongs to their department
+    if (req.user.role !== 'admin') {
+      const [existing] = await pool.execute('SELECT department FROM students WHERE id = ?', [id]);
+      if (existing.length === 0) return res.status(404).json({ message: 'Student not found' });
+      if (existing[0].department !== req.user.department) {
+        return res.status(403).json({ message: 'You can only edit students in your department' });
+      }
+      // Prevent instructors from changing a student's department
+      if (department && department !== req.user.department) {
+        return res.status(403).json({ message: 'You cannot change a student\'s department' });
+      }
+    }
 
     // Convert undefined OR empty string to null (empty string breaks DATE columns in MySQL strict mode)
     const n = (v) => (v === undefined || v === null || v === '') ? null : v;
@@ -730,22 +1004,31 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
       return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
     }
-    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Delete student
 app.delete('/api/students/:id', authenticateToken, async (req, res) => {
-  // Only admins can delete students
   if (req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Admin access required' });
   }
   try {
     const { id } = req.params;
-    const [rows] = await pool.execute('SELECT studentId, name FROM students WHERE id = ?', [id]);
+    const [rows] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Student not found' });
+
+    const s = rows[0];
+    const snapshot = JSON.stringify({
+      studentId: s.studentId, name: s.name, department: s.department,
+      email: s.email, program: s.program, section: s.section, year: s.year,
+      contactNumber: s.contactNumber, address: s.address, gender: s.gender,
+      birthDate: s.birthDate, age: s.age, civilStatus: s.civilStatus,
+      emergencyContact: s.emergencyContact, emergencyNumber: s.emergencyNumber,
+      status: s.status, created_at: s.created_at,
+    });
     await pool.execute('DELETE FROM students WHERE id = ?', [id]);
-    const ip = req.ip || 'unknown';
-    auditLog('student_deleted', req.user.id, `studentId: ${rows[0]?.studentId}, name: ${rows[0]?.name}`, ip);
+    auditLog('student_deleted', req.user.id, snapshot, req.ip || 'unknown');
     res.json({ message: 'Student deleted' });
   } catch (error) {
     console.error('Delete student error:', error);
@@ -832,8 +1115,8 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     reports[0].submissions = [];
     res.status(201).json(reports[0]);
   } catch (error) {
-    console.error('Add report error:', error.sqlMessage || error.message, error.code);
-    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
+    console.error('Add report error:', error.message, error.code);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1307,7 +1590,12 @@ app.post('/api/conversations/:conversationId/messages/:messageId/reactions', aut
     const { conversationId, messageId } = req.params;
     const { emoji } = req.body;
     const userId = req.user.id;
-    
+
+    // Validate emoji: must be a non-empty string ≤ 8 characters (covers all multi-codepoint emoji)
+    if (!emoji || typeof emoji !== 'string' || emoji.trim().length === 0 || emoji.length > 8) {
+      return res.status(400).json({ message: 'Invalid emoji' });
+    }
+
     // Verify user is part of this conversation (DM or group)
     if (!(await userCanAccessConversation(conversationId, userId))) {
       return res.status(403).json({ message: 'Not authorized' });
@@ -1368,7 +1656,12 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
   try {
     const { id } = req.params;
     const { text, type, image_url, file_url, file_name, audio_url, duration } = req.body;
-    
+
+    // Reject oversized text messages (64 KB is more than enough for any real message)
+    if (text && String(text).length > 65536) {
+      return res.status(400).json({ message: 'Message text is too long (max 64 KB).' });
+    }
+
     // Check if this is a group conversation
     const [conversationCheck] = await pool.execute(
       'SELECT is_group FROM conversations WHERE id = ?',
@@ -1444,7 +1737,7 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
     if (error.code === 'ER_NET_PACKET_TOO_LARGE' || (error.message && error.message.includes('packet'))) {
       return res.status(413).json({ message: 'Image is too large. Please send a smaller image.' });
     }
-    res.status(500).json({ message: error.sqlMessage || error.message || 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -1681,6 +1974,26 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Clear all messages in a conversation (keeps conversation, clears last_message preview)
+app.delete('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isAuthorized = await userCanAccessConversation(id, req.user.id);
+    if (!isAuthorized) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    await pool.execute('DELETE FROM messages WHERE conversation_id = ?', [id]);
+    await pool.execute(
+      'UPDATE conversations SET last_message = NULL, last_message_time = NULL, last_sender_id = NULL WHERE id = ?',
+      [id]
+    );
+    res.json({ message: 'Messages cleared' });
+  } catch (error) {
+    console.error('Clear messages error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ===== CALL MANAGEMENT =====
 
 // Get incoming calls for current user (must be before /:id route)
@@ -1882,8 +2195,10 @@ app.put('/api/calls/:id/answer', authenticateToken, async (req, res) => {
 app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 'ended', 'declined', 'missed'
-    
+    const rawStatus = req.body.status;
+    const validCallStatuses = ['ended', 'declined', 'missed'];
+    const status = validCallStatuses.includes(rawStatus) ? rawStatus : 'ended';
+
     // Verify user is part of this call
     const [calls] = await pool.execute(
       'SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR receiver_id = ?)',
@@ -2048,46 +2363,6 @@ app.post('/api/calls/:id/webrtc/ice', authenticateToken, async (req, res) => {
 // ===== BATCH MANAGEMENT ROUTES =====
 
 // Get all archived years
-app.get('/api/archived-years', authenticateToken, async (req, res) => {
-  try {
-    const [archives] = await pool.execute('SELECT * FROM archived_years ORDER BY year DESC');
-    res.json(archives);
-  } catch (error) {
-    console.error('Get archived years error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Add archived year
-app.post('/api/archived-years', authenticateToken, async (req, res) => {
-  try {
-    const { year, students, reports, data } = req.body;
-    
-    await pool.execute(
-      'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?)',
-      [year, students, reports, JSON.stringify(data)]
-    );
-    
-    const [archives] = await pool.execute('SELECT * FROM archived_years WHERE year = ?', [year]);
-    res.status(201).json(archives[0]);
-  } catch (error) {
-    console.error('Add archived year error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Delete archived year
-app.delete('/api/archived-years/:year', authenticateToken, async (req, res) => {
-  try {
-    const { year } = req.params;
-    await pool.execute('DELETE FROM archived_years WHERE year = ?', [year]);
-    res.json({ message: 'Archived year deleted' });
-  } catch (error) {
-    console.error('Delete archived year error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Get current batch
 app.get('/api/current-batch', authenticateToken, async (req, res) => {
   try {
@@ -2099,11 +2374,14 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
   }
 });
 
-// Update current batch
-app.put('/api/current-batch', authenticateToken, async (req, res) => {
+// Update current batch (admin only)
+app.put('/api/current-batch', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { year } = req.body;
-    
+    const year = parseInt(req.body.year, 10);
+    if (!year || year < 2000 || year > 2100) {
+      return res.status(400).json({ message: 'Invalid batch year.' });
+    }
+
     // Check if exists
     const [existing] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
     
@@ -2196,6 +2474,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     if (!validComponents.includes(body.nstpComponent)) {
       return res.status(400).json({ message: 'Invalid NSTP component' });
     }
+    // Block duplicate pending enrollment for the same student ID
+    const [dupCheck] = await pool.execute(
+      "SELECT id FROM enrollments WHERE studentId = ? AND status = 'Pending'",
+      [sanitizeStr(body.studentId, 20)]
+    );
+    if (dupCheck.length > 0) {
+      return res.status(409).json({ message: 'An enrollment for this Student ID is already pending review.' });
+    }
     // ──────────────────────────────────────────────────────────────────────
 
     const {
@@ -2204,7 +2490,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       birthDate, birthMonth, birthDay, birthYear,
       age, civilStatus, gender, sex,
       height, weight, facebookAccount, bloodType,
-      homeAddress, address,
+      homeAddress, address, street, municipality, province,
       program, section, yearLevel, nstpComponent,
       emergencyContact, emergencyNumber, emergencyName,
       registrationPhoto
@@ -2212,8 +2498,12 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
 
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
-    const finalAddress = homeAddress || address;
+    const finalAddress = street ? `${street}, ${municipality || ''}, ${province || ''}`.replace(/, ,/g, ',').replace(/,\s*$/, '') : (homeAddress || address);
     const finalEmergencyContact = emergencyName || emergencyContact;
+    // Cap photo at ~5 MB base64 (≈ 6.7 MB string)
+    if (registrationPhoto && String(registrationPhoto).length > 7_000_000) {
+      return res.status(400).json({ message: 'Registration photo is too large. Maximum 5 MB.' });
+    }
     const photo = registrationPhoto || null;
 
     const [result] = await pool.execute(
@@ -2221,18 +2511,34 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
        (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
         birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
         gender, height, weight, facebookAccount, bloodType, address,
+        street, municipality, province,
         program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
         birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
         finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
+        street || null, municipality || null, province || null,
         program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo
       ]
     );
 
-    const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [result.insertId]);
-    res.status(201).json(enrollments[0]);
+    // Return the data we already have — no extra SELECT needed
+    res.status(201).json({
+      id: result.insertId,
+      student_name: name || null,
+      firstName, lastName,
+      middleName: middleName || null,
+      email,
+      department: nstpComponent || 'CWTS',
+      studentId,
+      contactNumber,
+      program,
+      section,
+      yearLevel,
+      status: 'Pending',
+      submitted_at: new Date().toISOString(),
+    });
   } catch (error) {
     console.error('❌ Submit enrollment error:', error.message, error.code);
     res.status(500).json({ message: 'Server error' });
@@ -2282,22 +2588,38 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
             `INSERT INTO students (
               studentId, name, email, department, status,
               section, year, program, address, contactNumber,
-              gender, birthDate, age, civilStatus, height, weight,
-              bloodType, facebookAccount, emergencyContact, emergencyNumber
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              gender, birthDate, birthMonth, birthDay, birthYear,
+              age, civilStatus, height, weight,
+              bloodType, facebookAccount, emergencyContact, emergencyNumber,
+              street, municipality, province
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              enrollment.studentId, enrollment.student_name, enrollment.email, enrollment.department, 'Active',
-              enrollment.section, enrollment.yearLevel, enrollment.program, enrollment.address, enrollment.contactNumber,
+              enrollment.studentId,
+              enrollment.student_name,
+              enrollment.email,
+              enrollment.department,
+              'Active',
+              enrollment.section,
+              enrollment.yearLevel,
+              enrollment.program,
+              enrollment.homeAddress || enrollment.address || null,
+              enrollment.contactNumber,
               enrollment.gender || enrollment.sex || null,
               birthDate,
-              enrollment.age || null,
+              enrollment.birthMonth || null,
+              enrollment.birthDay   || null,
+              enrollment.birthYear  || null,
+              enrollment.age        || null,
               enrollment.civilStatus || null,
-              enrollment.height || null,
-              enrollment.weight || null,
-              enrollment.bloodType || null,
+              enrollment.height     || null,
+              enrollment.weight     || null,
+              enrollment.bloodType  || null,
               enrollment.facebookAccount || null,
               enrollment.emergencyContact || enrollment.emergencyName || null,
-              enrollment.emergencyNumber || null
+              enrollment.emergencyNumber || null,
+              enrollment.street        || null,
+              enrollment.municipality  || null,
+              enrollment.province      || null,
             ]
           );
         }
@@ -2414,12 +2736,8 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
 });
 
 // POST archive current batch (admin only)
-app.post('/api/archives', authenticateToken, async (req, res) => {
+app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    // Check if admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
     
     const { year } = req.body;
 
@@ -2494,16 +2812,10 @@ app.post('/api/archives', authenticateToken, async (req, res) => {
 });
 
 // DELETE archived year (admin only)
-app.delete('/api/archives/:year', authenticateToken, async (req, res) => {
+app.delete('/api/archives/:year', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-    
     const { year } = req.params;
-    
     await pool.execute('DELETE FROM archived_years WHERE year = ?', [year]);
-    
     res.json({ message: `Batch ${year} deleted from archives` });
   } catch (error) {
     console.error('Delete archive error:', error);
@@ -2553,6 +2865,7 @@ async function startServer() {
 
   console.log('Running schema migrations...');
   await Promise.all([
+    ensureAuditLogs(),
     ensureMessageRestoreColumns(),
     ensureConversationSchema(),
     ensureWebRTCColumns(),

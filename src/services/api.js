@@ -228,6 +228,12 @@ export function deleteConversation(id) {
   });
 }
 
+export function clearConversationMessages(id) {
+  return apiCall('/conversations/' + id + '/messages', {
+    method: 'DELETE'
+  });
+}
+
 // Enrollments
 export function getEnrollments() {
   return apiCall('/enrollments');
@@ -371,7 +377,8 @@ export const conversationsAPI = {
   deleteMessage: deleteMessage,
   restoreMessage: restoreMessage,
   addReaction: addReaction,
-  delete: deleteConversation
+  delete: deleteConversation,
+  clearMessages: clearConversationMessages
 };
 
 export const enrollmentsAPI = {

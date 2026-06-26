@@ -1,26 +1,15 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Calendar as CalendarIcon, Plus, X,
+  Calendar as CalendarIcon, Plus, X,
   ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-
-// Avatar options for display
-const AVATAR_OPTIONS = {
-  default: { color: 'bg-gray-400', icon: '👤' },
-  green: { color: 'bg-green-500', icon: '🎓' },
-  blue: { color: 'bg-blue-500', icon: '👨‍🏫' },
-  purple: { color: 'bg-purple-500', icon: '👩‍🏫' },
-  red: { color: 'bg-red-500', icon: '👮' },
-  yellow: { color: 'bg-yellow-500', icon: '⭐' },
-};
+import Sidebar from '../components/layout/Sidebar';
 
 function Calendar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
   
@@ -229,91 +218,12 @@ function Calendar() {
   return (
     <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
 
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center space-x-3">
-            <div>
-              <h1 className="font-bold text-lg">National Service Training Program</h1>
-              <p className="text-xs text-green-200">Calendar</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            
-            onClick={() => { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              (user?.role === 'admin' && location.pathname === '/admin/dashboard') ||
-              (user?.role === 'instructor' && location.pathname === '/instructor/dashboard')
-              ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Users className="w-5 h-5" />
-            <span>Students</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-green-700"
-          >
-            <CalendarIcon className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button"
-            
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Main Content */}
       <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>

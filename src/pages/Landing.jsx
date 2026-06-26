@@ -268,7 +268,14 @@ function Landing() {
                   <Mail className="w-5 h-5 text-yellow-400" />
                 </li>
                 <li className="flex items-start space-x-2 md:justify-end">
-                  <span>Naic, Cavite, Philippines</span>
+                  <a
+                    href="https://www.google.com/maps/search/Cavite+State+University+Naic+Campus,+Naic,+Cavite,+Philippines"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors"
+                  >
+                    Naic, Cavite, Philippines
+                  </a>
                   <MapPin className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                 </li>
                 <li className="flex items-center space-x-2 md:justify-end">

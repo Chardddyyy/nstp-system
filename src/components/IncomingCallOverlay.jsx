@@ -1,6 +1,6 @@
 import { Phone, Video, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 function IncomingCallOverlay() {
   const { incomingCall, answerIncomingCall, declineIncomingCall } = useAuth();

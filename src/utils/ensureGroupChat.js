@@ -28,8 +28,7 @@ export async function ensureAllInstructorsGroup(users, currentUser) {
 
   try {
     return await conversationsAPI.createGroup('All Instructors', participantIds);
-  } catch (err) {
-    console.log('All Instructors group:', err.message);
+  } catch (_) {
     return null;
   }
 }

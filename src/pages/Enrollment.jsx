@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera } from 'lucide-react';
 
 function Enrollment() {
@@ -14,7 +14,9 @@ function Enrollment() {
       firstName: '',
       middleName: '',
       studentId: '',
-      homeAddress: '',
+      street: '',
+      municipality: '',
+      province: '',
       program: '',
       yearLevel: '',
       section: '',
@@ -145,7 +147,8 @@ function Enrollment() {
   const handleStartFresh = () => {
     localStorage.removeItem('enrollmentFormData');
     setFormData({
-      lastName: '', firstName: '', middleName: '', studentId: '', homeAddress: '',
+      lastName: '', firstName: '', middleName: '', studentId: '',
+      street: '', municipality: '', province: '',
       program: '', yearLevel: '', section: '', nstpComponent: 'CWTS',
       birthMonth: '', birthDay: '', birthYear: '', age: '', civilStatus: '', sex: '',
       height: '', weight: '', bloodType: '', contactNumber: '', email: '',
@@ -178,7 +181,7 @@ function Enrollment() {
 
     // Required fields validation
     const requiredFields = [
-      'lastName', 'firstName', 'studentId', 'homeAddress', 'email',
+      'lastName', 'firstName', 'studentId', 'street', 'municipality', 'province', 'email',
       'program', 'yearLevel', 'section',
       'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'contactNumber',
       'emergencyContact', 'emergencyNumber'
@@ -267,6 +270,18 @@ function Enrollment() {
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setRegistrationPhoto(ev.target.result); // store raw base64 PDF
+        if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
@@ -281,11 +296,19 @@ function Enrollment() {
         setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.82));
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
+      // Fallback for formats the browser can't decode in canvas (e.g. HEIC on desktop)
+      img.onerror = () => {
+        setRegistrationPhoto(ev.target.result);
+        if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+      };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
+
+  const toTitleCase = (str) =>
+    str.replace(/\b\w/g, (c) => c.toUpperCase());
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -320,8 +343,10 @@ function Enrollment() {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
     } else if (name === 'emergencyContact') {
-      // Only letters, spaces, periods, hyphens, apostrophes
-      newValue = value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '');
+      // Only letters, spaces, periods, hyphens, apostrophes — then title-case
+      newValue = toTitleCase(value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
+    } else if (['firstName', 'lastName', 'middleName', 'street', 'municipality', 'province', 'emergencyContact'].includes(name)) {
+      newValue = toTitleCase(value);
     }
 
     const updatedFormData = { ...formData, [name]: newValue };
@@ -544,21 +569,54 @@ function Enrollment() {
                   {errors.studentId && <p className="text-red-500 text-xs mt-1">{errors.studentId}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Address *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Street / Barangay *</label>
                   <input
-                    ref={el => fieldRefs.current.homeAddress = el}
+                    ref={el => fieldRefs.current.street = el}
                     type="text"
-                    name="homeAddress"
-                    id="homeAddress"
+                    name="street"
+                    id="street"
                     required
-                    autoComplete="off"
-                    placeholder="Blk 1 Lot 2, Mahogany Street, Green Village, Naic, Cavite"
-                    value={formData.homeAddress}
+                    autoComplete="address-line1"
+                    placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana Malaki"
+                    value={formData.street}
                     onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.homeAddress ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.street ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   />
-                  {errors.homeAddress && <p className="text-red-500 text-xs mt-1">{errors.homeAddress}</p>}
-                  <p className="text-xs text-gray-500 mt-1">Format: Block and Lot, Street, Village/Subdivision, Municipality, Province</p>
+                  {errors.street && <p className="text-red-500 text-xs mt-1">{errors.street}</p>}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Municipality / City *</label>
+                    <input
+                      ref={el => fieldRefs.current.municipality = el}
+                      type="text"
+                      name="municipality"
+                      id="municipality"
+                      required
+                      autoComplete="address-level2"
+                      placeholder="Naic"
+                      value={formData.municipality}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.municipality ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                    />
+                    {errors.municipality && <p className="text-red-500 text-xs mt-1">{errors.municipality}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Province *</label>
+                    <input
+                      ref={el => fieldRefs.current.province = el}
+                      type="text"
+                      name="province"
+                      id="province"
+                      required
+                      autoComplete="address-level1"
+                      placeholder="Cavite"
+                      value={formData.province}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.province ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                    />
+                    {errors.province && <p className="text-red-500 text-xs mt-1">{errors.province}</p>}
+                  </div>
                 </div>
               </div>
 
@@ -659,49 +717,41 @@ function Enrollment() {
             {/* Demographic Information */}
             <div className="border-b pb-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Demographic Information</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month (1-12) *</label>
-                  <input
-                    ref={el => fieldRefs.current.birthMonth = el}
-                    type="text"
-                    name="birthMonth"
-                    required
-                    placeholder="MM"
-                    value={formData.birthMonth}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthMonth ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                  />
-                  {errors.birthMonth && <p className="text-red-500 text-xs mt-1">{errors.birthMonth}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Day (1-31) *</label>
-                  <input
-                    ref={el => fieldRefs.current.birthDay = el}
-                    type="text"
-                    name="birthDay"
-                    required
-                    placeholder="DD"
-                    value={formData.birthDay}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthDay ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                  />
-                  {errors.birthDay && <p className="text-red-500 text-xs mt-1">{errors.birthDay}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Year (4 digits) *</label>
-                  <input
-                    ref={el => fieldRefs.current.birthYear = el}
-                    type="text"
-                    name="birthYear"
-                    required
-                    placeholder="YYYY"
-                    value={formData.birthYear}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthYear ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
-                  />
-                  {errors.birthYear && <p className="text-red-500 text-xs mt-1">{errors.birthYear}</p>}
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
+                <input
+                  ref={el => fieldRefs.current.birthMonth = el}
+                  type="date"
+                  name="birthDate"
+                  id="birthDate"
+                  autoComplete="bday"
+                  max={new Date().toISOString().split('T')[0]}
+                  value={
+                    formData.birthYear && formData.birthMonth && formData.birthDay
+                      ? `${formData.birthYear}-${String(formData.birthMonth).padStart(2,'0')}-${String(formData.birthDay).padStart(2,'0')}`
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value; // "YYYY-MM-DD" or ""
+                    if (!val) {
+                      const upd = { ...formData, birthYear: '', birthMonth: '', birthDay: '' };
+                      setFormData(upd);
+                      localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                      return;
+                    }
+                    const [y, m, d] = val.split('-');
+                    const upd = { ...formData, birthYear: y, birthMonth: String(parseInt(m)), birthDay: String(parseInt(d)) };
+                    setFormData(upd);
+                    localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                    if (errors.birthMonth || errors.birthDay || errors.birthYear) {
+                      setErrors(prev => ({ ...prev, birthMonth: '', birthDay: '', birthYear: '' }));
+                    }
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${errors.birthMonth || errors.birthDay || errors.birthYear ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                />
+                {(errors.birthMonth || errors.birthDay || errors.birthYear) && (
+                  <p className="text-red-500 text-xs mt-1">{errors.birthMonth || errors.birthDay || errors.birthYear}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
@@ -873,7 +923,7 @@ function Enrollment() {
               <input
                 ref={photoInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif,application/pdf,.pdf"
                 onChange={handlePhotoChange}
                 className="hidden"
               />
@@ -884,7 +934,7 @@ function Enrollment() {
                 >
                   <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
                   <p className="text-sm font-medium text-gray-700 mb-1">Upload your registration form</p>
-                  <p className="text-xs text-gray-400 mb-4">Take a clear photo or upload from your gallery</p>
+                  <p className="text-xs text-gray-400 mb-4">Supported: JPG, PNG, WEBP, HEIC, PDF and other image formats</p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button
                       type="button"
@@ -909,11 +959,19 @@ function Enrollment() {
                 </div>
               ) : (
                 <div className="relative">
-                  <img
-                    src={registrationPhoto}
-                    alt="Registration form"
-                    className="w-full max-h-80 object-contain rounded-xl border border-gray-200 bg-gray-50"
-                  />
+                  {registrationPhoto?.startsWith('data:application/pdf') ? (
+                    <embed
+                      src={registrationPhoto}
+                      type="application/pdf"
+                      className="w-full h-80 rounded-xl border border-gray-200 bg-gray-50"
+                    />
+                  ) : (
+                    <img
+                      src={registrationPhoto}
+                      alt="Registration form"
+                      className="w-full max-h-80 object-contain rounded-xl border border-gray-200 bg-gray-50"
+                    />
+                  )}
                   <div className="flex gap-2 mt-3">
                     <button
                       type="button"

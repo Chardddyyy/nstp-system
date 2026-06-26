@@ -1,14 +1,17 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { archivesAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
+import Sidebar from '../components/layout/Sidebar';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Shield,
+  Users, FileText, MessageSquare,
+  User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen
+  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
+
+const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
 // Avatar options for display
 const AVATAR_OPTIONS = {
@@ -23,7 +26,6 @@ const AVATAR_OPTIONS = {
 function AdminDashboard() {
   const { user, logout, clearBatchData, students, reports, allUsers, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
@@ -47,6 +49,7 @@ function AdminDashboard() {
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
@@ -54,6 +57,8 @@ function AdminDashboard() {
   const [photoViewer, setPhotoViewer] = useState(null);
   const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [showInstructorList, setShowInstructorList] = useState(false);
+  const [enrollmentSearch, setEnrollmentSearch] = useState('');
 
   const showNotif = (type, message) => {
     setNotification({ type, message });
@@ -97,8 +102,6 @@ function AdminDashboard() {
     completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
   }), [displayStats, viewingArchive, archiveViewData, students]);
 
-  const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
-
   const programStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
     const counts = {};
@@ -109,6 +112,20 @@ function AdminDashboard() {
       if (match) counts[match]++;
     });
     return Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]);
+  }, [students, viewingArchive, archiveViewData]);
+
+  const programDeptStats = useMemo(() => {
+    const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
+    return OFFICIAL_PROGRAMS.map(prog => {
+      const list = source.filter(s => (s.program || '').trim().toLowerCase() === prog.toLowerCase());
+      return {
+        program: prog,
+        total: list.length,
+        cwts: list.filter(s => s.department === 'CWTS').length,
+        lts:  list.filter(s => s.department === 'LTS').length,
+        rotc: list.filter(s => s.department === 'ROTC').length,
+      };
+    }).filter(p => p.total > 0).sort((a, b) => b.total - a.total);
   }, [students, viewingArchive, archiveViewData]);
 
   // Show loading while user context resolves
@@ -308,7 +325,7 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 page-enter">
 
       {/* Centered notification toast */}
       {notification && (
@@ -327,7 +344,7 @@ function AdminDashboard() {
 
       {/* Centered confirm dialog */}
       {confirmDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
             <div className="flex items-start gap-3 mb-5">
               <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
@@ -353,96 +370,13 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Sidebar */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center space-x-3 text-white">
-            <span className="text-xl font-bold">National Service Training Program</span>
-            
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            
-            onClick={() => { navigate('/admin/dashboard'); setSidebarOpen(false); }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              viewingArchive ? 'opacity-40 cursor-not-allowed' :
-              location.pathname === '/admin/dashboard' ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            <span>Students</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button"
-            
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+        archiveMode={viewingArchive}
+      />
 
       {/* Main Content */}
       <main className={`transition-all duration-300 ease-in-out p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
@@ -711,7 +645,7 @@ function AdminDashboard() {
 
         {/* Additional Stats */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6 rounded-xl shadow-md text-white">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-green-700 hover:to-green-800 transition-all" onClick={() => setShowInstructorList(true)}>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -723,7 +657,7 @@ function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-3 sm:p-6 rounded-xl shadow-md text-white">
+          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-yellow-600 hover:to-yellow-700 transition-all" onClick={() => navigate('/reports')}>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -735,7 +669,7 @@ function AdminDashboard() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 sm:p-6 rounded-xl shadow-md text-white">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all" onClick={() => navigate('/chat')}>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -751,17 +685,63 @@ function AdminDashboard() {
         {/* Pending Enrollments Section */}
         {!viewingArchive && (
           <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center flex-shrink-0">
                 <Users className="w-5 h-5 mr-2 text-yellow-600" />
-                Pending Enrollments ({pendingEnrollments.length})
+                Pending Enrollments
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  {enrollmentSearch.trim()
+                    ? `${pendingEnrollments.filter(e => {
+                        const q = enrollmentSearch.toLowerCase();
+                        return (e.fullName || '').toLowerCase().includes(q)
+                          || (e.studentId || '').toLowerCase().includes(q)
+                          || (e.email || '').toLowerCase().includes(q)
+                          || (e.nstpComponent || '').toLowerCase().includes(q)
+                          || (e.program || '').toLowerCase().includes(q);
+                      }).length} of ${pendingEnrollments.length}`
+                    : pendingEnrollments.length}
+                </span>
               </h3>
+              {pendingEnrollments.length > 0 && (
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, ID, email…"
+                    value={enrollmentSearch}
+                    onChange={(e) => setEnrollmentSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  />
+                  {enrollmentSearch && (
+                    <button type="button" onClick={() => setEnrollmentSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-            {pendingEnrollments.length > 0 ? (
+            {pendingEnrollments.length > 0 ? (() => {
+              const q = enrollmentSearch.trim().toLowerCase();
+              const filtered = q
+                ? pendingEnrollments.filter(e =>
+                    (e.fullName || '').toLowerCase().includes(q)
+                    || (e.studentId || '').toLowerCase().includes(q)
+                    || (e.email || '').toLowerCase().includes(q)
+                    || (e.nstpComponent || '').toLowerCase().includes(q)
+                    || (e.program || '').toLowerCase().includes(q)
+                  )
+                : pendingEnrollments;
+              return filtered.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Search className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No results for "<span className="font-medium">{enrollmentSearch}</span>"</p>
+                  <button type="button" onClick={() => setEnrollmentSearch('')} className="mt-2 text-xs text-yellow-600 hover:underline">Clear search</button>
+                </div>
+              ) : (
               <>
                 {/* ── Mobile: card list ── */}
                 <div className="sm:hidden divide-y divide-gray-100">
-                  {pendingEnrollments.map((enrollment) => {
+                  {filtered.map((enrollment) => {
                     const deptColor =
                       enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
                       enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
@@ -786,14 +766,14 @@ function AdminDashboard() {
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
                             
-                            onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
+                            onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <CheckCircle className="w-3.5 h-3.5" /> Approve
                           </button>
                           <button type="button"
                             
-                            onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
+                            onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <X className="w-3.5 h-3.5" /> Decline
@@ -825,7 +805,7 @@ function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pendingEnrollments.map((enrollment) => (
+                      {filtered.map((enrollment) => (
                         <tr
                           key={enrollment.id}
                           className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors"
@@ -852,14 +832,14 @@ function AdminDashboard() {
                             <div className="flex items-center gap-2">
                               <button type="button"
                                 
-                                onClick={async () => { try { await approveEnrollment(enrollment.id); } catch {} }}
+                                onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                               >
                                 <CheckCircle className="w-3.5 h-3.5" /> Approve
                               </button>
                               <button type="button"
                                 
-                                onClick={async () => { try { await declineEnrollment(enrollment.id); } catch {} }}
+                                onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
                                 className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                               >
                                 <X className="w-3.5 h-3.5" /> Decline
@@ -872,7 +852,7 @@ function AdminDashboard() {
                   </table>
                 </div>
               </>
-            ) : (
+            ); })() : (
               <div className="text-center py-8 text-gray-500">
                 <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>No pending enrollment applications at this time.</p>
@@ -1033,6 +1013,159 @@ function AdminDashboard() {
           )}
         </div>
 
+        {/* By Program Analytics */}
+        <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800 flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
+              Enrollment by Program
+            </h3>
+            <button type="button"
+              onClick={() => setShowProgramAnalytics(!showProgramAnalytics)}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
+            >
+              {showProgramAnalytics ? (
+                <><ChevronUp className="w-4 h-4 mr-1" /> Hide</>
+              ) : (
+                <><ChevronDown className="w-4 h-4 mr-1" /> View Analytics</>
+              )}
+            </button>
+          </div>
+
+          {/* Quick summary badges — always visible */}
+          {programDeptStats.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {programDeptStats.map(p => (
+                <div key={p.program} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                  <span className="text-xs font-semibold text-gray-700">{p.program}</span>
+                  <span className="text-xs font-bold text-gray-900">{p.total}</span>
+                  <span className="text-xs text-green-600">{p.cwts}C</span>
+                  <span className="text-xs text-purple-600">{p.lts}L</span>
+                  <span className="text-xs text-red-600">{p.rotc}R</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 mb-3">No program data yet.</p>
+          )}
+
+          {showProgramAnalytics && programDeptStats.length > 0 && (
+            <>
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-6 mb-5 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-green-500"></div><span className="text-xs text-gray-600 font-medium">CWTS</span></div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-purple-500"></div><span className="text-xs text-gray-600 font-medium">LTS</span></div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div><span className="text-xs text-gray-600 font-medium">ROTC</span></div>
+              </div>
+
+              {/* Bar Chart — one row per program */}
+              <div className="space-y-4">
+                {programDeptStats.map(p => {
+                  const maxVal = Math.max(p.cwts, p.lts, p.rotc, 1);
+                  return (
+                    <div key={p.program}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-gray-700 w-28 shrink-0">{p.program}</span>
+                        <span className="text-xs text-gray-400">{p.total} total</span>
+                      </div>
+                      <div className="space-y-1.5 ml-4">
+                        {/* CWTS */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400 w-8">CWTS</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                            <div
+                              className="h-full bg-green-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                              style={{ width: `${(p.cwts / maxVal) * 100}%`, minWidth: p.cwts > 0 ? '28px' : '0' }}
+                            >
+                              {p.cwts > 0 && <span className="text-xs text-white font-medium">{p.cwts}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        {/* LTS */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400 w-8">LTS</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                            <div
+                              className="h-full bg-purple-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                              style={{ width: `${(p.lts / maxVal) * 100}%`, minWidth: p.lts > 0 ? '28px' : '0' }}
+                            >
+                              {p.lts > 0 && <span className="text-xs text-white font-medium">{p.lts}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        {/* ROTC */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-400 w-8">ROTC</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                            <div
+                              className="h-full bg-red-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                              style={{ width: `${(p.rotc / maxVal) * 100}%`, minWidth: p.rotc > 0 ? '28px' : '0' }}
+                            >
+                              {p.rotc > 0 && <span className="text-xs text-white font-medium">{p.rotc}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Summary Table */}
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Program Enrollment Summary</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium text-gray-600">Program</th>
+                        <th className="px-3 py-2 text-center font-medium text-green-600">CWTS</th>
+                        <th className="px-3 py-2 text-center font-medium text-purple-600">LTS</th>
+                        <th className="px-3 py-2 text-center font-medium text-red-600">ROTC</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-700">Total</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">Top Dept</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {programDeptStats.map(p => {
+                        const maxDept = Math.max(p.cwts, p.lts, p.rotc);
+                        const topDept = p.cwts === maxDept ? 'CWTS' : p.lts === maxDept ? 'LTS' : 'ROTC';
+                        return (
+                          <tr key={p.program} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="px-3 py-2.5 font-medium text-gray-800">{p.program}</td>
+                            <td className="px-3 py-2.5 text-center text-green-600 font-medium">{p.cwts}</td>
+                            <td className="px-3 py-2.5 text-center text-purple-600 font-medium">{p.lts}</td>
+                            <td className="px-3 py-2.5 text-center text-red-600 font-medium">{p.rotc}</td>
+                            <td className="px-3 py-2.5 text-center font-bold text-gray-800">{p.total}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                topDept === 'CWTS' ? 'bg-green-100 text-green-700' :
+                                topDept === 'LTS'  ? 'bg-purple-100 text-purple-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {topDept}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Totals row */}
+                      <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                        <td className="px-3 py-2.5 text-gray-700">All Programs</td>
+                        <td className="px-3 py-2.5 text-center text-green-700">{programDeptStats.reduce((a, p) => a + p.cwts, 0)}</td>
+                        <td className="px-3 py-2.5 text-center text-purple-700">{programDeptStats.reduce((a, p) => a + p.lts, 0)}</td>
+                        <td className="px-3 py-2.5 text-center text-red-700">{programDeptStats.reduce((a, p) => a + p.rotc, 0)}</td>
+                        <td className="px-3 py-2.5 text-center text-gray-900">{programDeptStats.reduce((a, p) => a + p.total, 0)}</td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Batch Management - Hide when viewing archive */}
         {!viewingArchive && (
           <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5 text-white">
@@ -1076,7 +1209,7 @@ function AdminDashboard() {
 
         {/* Archive Modal - Simple List View */}
         {showArchiveModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchiveModal(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveModal(false)}>
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
@@ -1140,7 +1273,7 @@ function AdminDashboard() {
 
         {/* New Batch Confirmation Modal */}
         {showNewBatchConfirm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-3 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center">
@@ -1204,7 +1337,7 @@ function AdminDashboard() {
         )}
         {/* Enrollment Detail Modal */}
         {selectedEnrollment && (
-          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => setSelectedEnrollment(null)}>
+          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fade-in" onClick={() => setSelectedEnrollment(null)}>
             <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
 
               {/* Header */}
@@ -1333,14 +1466,14 @@ function AdminDashboard() {
               <div className="flex-shrink-0 border-t bg-white p-3 grid grid-cols-3 gap-2">
                 <button type="button"
                   
-                  onClick={async () => { try { await approveEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
+                  onClick={() => showConfirm(`Approve enrollment for ${selectedEnrollment.fullName}?`, async () => { try { await approveEnrollment(selectedEnrollment.id); setSelectedEnrollment(null); } catch {} })}
                   className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
                   <CheckCircle className="w-4 h-4" /> Approve
                 </button>
                 <button type="button"
                   
-                  onClick={async () => { try { await declineEnrollment(selectedEnrollment.id); } catch {} setSelectedEnrollment(null); }}
+                  onClick={() => showConfirm(`Decline enrollment for ${selectedEnrollment.fullName}?`, async () => { try { await declineEnrollment(selectedEnrollment.id); setSelectedEnrollment(null); } catch {} })}
                   className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
                 >
                   <X className="w-4 h-4" /> Decline
@@ -1385,7 +1518,7 @@ function AdminDashboard() {
 
         {/* Archive Detail View Modal */}
         {showArchiveDetails && archiveViewData && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowArchiveDetails(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveDetails(false)}>
             <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
                 <h3 className="text-lg font-bold flex items-center">
@@ -1540,6 +1673,56 @@ function AdminDashboard() {
             </div>
           </div>
         )}
+      {/* Instructor List Modal */}
+      {showInstructorList && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowInstructorList(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-green-600" />
+                Instructors & Admin
+              </h3>
+              <button type="button" onClick={() => setShowInstructorList(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-4 space-y-3">
+              {allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No users found.</p>
+              ) : (
+                allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                        u.role === 'admin' ? 'bg-gray-700' :
+                        u.department === 'CWTS' ? 'bg-green-600' :
+                        u.department === 'LTS'  ? 'bg-purple-600' :
+                        'bg-red-600'
+                      }`}>
+                        {(u.name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.role === 'admin' ? 'Admin' : `${u.department} Instructor`}</p>
+                      </div>
+                    </div>
+                    {u.role === 'instructor' && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowInstructorList(false); navigate('/chat'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        Message
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       </main>
       <ScrollToTopButton />
     </div>

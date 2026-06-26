@@ -1,19 +1,16 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Calendar, Plus, Search, Filter,
+  Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet
 } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/layout/Sidebar';
 import { useState, useMemo, useEffect } from 'react';
-import * as XLSX from 'xlsx';
-
 function StudentManagement() {
   const { user, logout, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const isAdmin = user?.role === 'admin';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,145 +56,38 @@ function StudentManagement() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportDept, setExportDept] = useState('All');
   const [exportCourse, setExportCourse] = useState('All');
+  const [exportSem, setExportSem] = useState('1st Semester');
+  const [exportAcadYear, setExportAcadYear] = useState('2025-2026');
 
-  // Parse birth date from either individual fields or the combined birthDate column
-  function parseBirthFields(s) {
-    const month = s.birthMonth || '';
-    const day   = s.birthDay   || '';
-    const year  = s.birthYear  || '';
-    if (month && day && year) return { month, day, year };
-
-    // Fall back to birthDate (e.g. "2000-03-15" or a Date object from MySQL)
-    if (s.birthDate) {
-      const raw = typeof s.birthDate === 'string' ? s.birthDate : String(s.birthDate);
-      // ISO format YYYY-MM-DD
-      const m = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
-      if (m) return { month: String(parseInt(m[2])), day: String(parseInt(m[3])), year: m[1] };
-    }
-    return { month, day, year };
-  }
-
-  const mapStudentRow = (s) => {
-    const birth = parseBirthFields(s);
-    return {
-      'Student ID':        s.studentId             || '',
-      'Last Name':         (s.name||'').split(',')[0]?.trim() || s.name || '',
-      'First Name':        (s.name||'').split(',')[1]?.trim() || '',
-      'Full Name':         s.name                  || '',
-      'Email':             s.email                 || '',
-      'NSTP Component':    s.department            || '',
-      'Program':           s.program               || '',
-      'Year Level':        s.year                  || '',
-      'Section':           s.section               || '',
-      'Status':            s.status                || 'Active',
-      'Contact Number':    s.contactNumber         || '',
-      'Address':           s.address || s.homeAddress || '',
-      'Birth Month':       birth.month,
-      'Birth Day':         birth.day,
-      'Birth Year':        birth.year,
-      'Age':               s.age                   || '',
-      'Civil Status':      s.civilStatus           || '',
-      'Sex/Gender':        s.gender                || '',
-      'Blood Type':        s.bloodType             || '',
-      'Height (cm)':       s.height                || '',
-      'Weight (kg)':       s.weight                || '',
-      'Facebook Account':  s.facebookAccount       || '',
-      'Emergency Contact': s.emergencyContact || s.emergencyName || '',
-      'Emergency Number':  s.emergencyNumber       || '',
-      'Date Added':        s.created_at ? new Date(s.created_at).toLocaleDateString() : '',
-    };
-  };
-
-  const runExport = () => {
+  const downloadChed = async () => {
     try {
-      const allStudents = viewingArchive && archiveViewData?.studentData
-        ? archiveViewData.studentData
-        : students;
-
-      // Instructors can only download their own department
-      const effectiveDept = !isAdmin ? (user?.department || 'CWTS') : exportDept;
-      const effectiveCourse = isAdmin ? exportCourse : 'All';
-
-      const matchesCourse = (s) =>
-        effectiveCourse === 'All' || (s.program || '').toUpperCase() === effectiveCourse;
-
-      const byDept = (s) =>
-        effectiveDept === 'All' || s.department === effectiveDept;
-
-      const list = allStudents.filter(s => byDept(s) && matchesCourse(s));
-
-      if (!list || list.length === 0) {
-        setNotification({ type: 'error', message: 'No student records found for the selected filter.' });
-        setTimeout(() => setNotification(null), 3000);
-        return;
-      }
-
-      const wb = XLSX.utils.book_new();
-
-      if (effectiveDept === 'All' && effectiveCourse === 'All') {
-        // Sheet per department + one combined sheet
-        const allRows = list.map(mapStudentRow);
-        const wsAll = XLSX.utils.json_to_sheet(allRows);
-        applyColumnWidths(wsAll, allRows);
-        XLSX.utils.book_append_sheet(wb, wsAll, 'All Students');
-
-        ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
-          const rows = list.filter(s => s.department === dept).map(mapStudentRow);
-          if (rows.length > 0) {
-            const ws = XLSX.utils.json_to_sheet(rows);
-            applyColumnWidths(ws, rows);
-            XLSX.utils.book_append_sheet(wb, ws, dept);
-          }
-        });
-      } else if (effectiveDept === 'All' && effectiveCourse !== 'All') {
-        // Course selected across all depts — one sheet per dept
-        const allRows = list.map(mapStudentRow);
-        const wsAll = XLSX.utils.json_to_sheet(allRows);
-        applyColumnWidths(wsAll, allRows);
-        XLSX.utils.book_append_sheet(wb, wsAll, `All-${effectiveCourse}`);
-
-        ['CWTS', 'LTS', 'ROTC'].forEach(dept => {
-          const rows = list.filter(s => s.department === dept).map(mapStudentRow);
-          if (rows.length > 0) {
-            const ws = XLSX.utils.json_to_sheet(rows);
-            applyColumnWidths(ws, rows);
-            XLSX.utils.book_append_sheet(wb, ws, `${dept}-${effectiveCourse}`);
-          }
-        });
-      } else {
-        // Single sheet — dept + course combo
-        const sheetName = effectiveCourse === 'All' ? effectiveDept : `${effectiveDept}-${effectiveCourse}`;
-        const rows = list.map(mapStudentRow);
-        const ws = XLSX.utils.json_to_sheet(rows);
-        applyColumnWidths(ws, rows);
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      }
-
-      const batchLabel  = viewingArchive && archiveViewData ? `Batch${archiveViewData.year}` : 'Current';
-      const deptLabel   = effectiveDept === 'All' ? 'AllDepts' : effectiveDept;
-      const courseLabel = effectiveCourse === 'All' ? 'AllCourses' : effectiveCourse;
-      const dateStr     = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `NSTP_Students_${deptLabel}_${courseLabel}_${batchLabel}_${dateStr}.xlsx`);
-
-      setNotification({ type: 'success', message: `Downloaded ${list.length} student record(s) as Excel.` });
+      const dept = isAdmin ? exportDept : (user?.department || 'CWTS');
+      const token = localStorage.getItem('nstp_token');
+      const params = new URLSearchParams({
+        department: dept,
+        sem: exportSem,
+        year: exportAcadYear,
+        program: exportCourse,
+      });
+      const res = await fetch(`http://localhost:3001/api/students/ched-export?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `CHED_NSTP_EnrollmentList_${dept}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setNotification({ type: 'success', message: 'CHED Enrollment List downloaded.' });
       setTimeout(() => setNotification(null), 3000);
       setShowExportModal(false);
     } catch {
-      setNotification({ type: 'error', message: 'Export failed. Please try again.' });
+      setNotification({ type: 'error', message: 'CHED export failed. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     }
   };
-
-  function applyColumnWidths(ws, rows) {
-    if (!rows.length) return;
-    const keys = Object.keys(rows[0]);
-    ws['!cols'] = keys.map(k => ({
-      wch: Math.min(
-        40,
-        Math.max(k.length + 2, ...rows.map(r => String(r[k] || '').length))
-      )
-    }));
-  }
 
   const handleAddStudent = async () => {
     const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'emergencyName', 'emergencyNumber'];
@@ -399,92 +289,14 @@ function StudentManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center space-x-3">
-            <div>
-              <h1 className="font-bold text-lg">Cavite State University Naic</h1>
-              <p className="text-xs text-green-200">{isAdmin ? 'Student' : user?.department + ' Instructor'}</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate(user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/students' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
-          >
-            <Users className="w-5 h-5" />
-            <span>Students</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${location.pathname === '/reports' ? 'bg-green-700' : 'hover:bg-green-700/50'}`}
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/chat'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/calendar'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { if (!viewingArchive) { navigate('/profile'); setSidebarOpen(false); } }}
-            disabled={viewingArchive}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${viewingArchive ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'}`}
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button"
-            
-            onClick={() => { handleLogout(); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+    <div className="min-h-screen bg-gray-50 page-enter">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+        archiveMode={viewingArchive}
+      />
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
@@ -526,7 +338,7 @@ function StudentManagement() {
 
         {/* Confirm dialog */}
         {confirmDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
               <div className="flex items-start gap-3 mb-5">
                 <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
@@ -559,8 +371,8 @@ function StudentManagement() {
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button type="button"
               
-              onClick={() => { if (isAdmin) { setExportDept('All'); setExportCourse('All'); setShowExportModal(true); } else runExport(); }}
-              title={isAdmin ? 'Download students as Excel file' : `Download ${user?.department} students as Excel`}
+              onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
+              title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700"
             >
               <FileSpreadsheet className="w-5 h-5" />
@@ -655,7 +467,7 @@ function StudentManagement() {
                 {currentStudents.map((student) => (
                   <tr 
                     key={student.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-green-50 cursor-pointer transition-colors duration-150"
                     onClick={() => handleViewStudent(student)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
@@ -739,7 +551,7 @@ function StudentManagement() {
 
         {/* Export Modal */}
         {showExportModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowExportModal(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowExportModal(false)}>
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
@@ -752,42 +564,42 @@ function StudentManagement() {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {['All', 'CWTS', 'LTS', 'ROTC'].map(dept => {
-                      const colors = {
-                        All:  'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200',
-                        CWTS: 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100',
-                        LTS:  'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100',
-                        ROTC: 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100',
-                      };
-                      const selected = {
-                        All:  'bg-gray-700 border-gray-700 text-white',
-                        CWTS: 'bg-blue-600 border-blue-600 text-white',
-                        LTS:  'bg-purple-600 border-purple-600 text-white',
-                        ROTC: 'bg-red-600 border-red-600 text-white',
-                      };
-                      return (
-                        <button type="button"
-                          key={dept}
-                          type="button"
-                          onClick={() => setExportDept(dept)}
-                          className={`px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all ${exportDept === dept ? selected[dept] : colors[dept]}`}
-                        >
-                          {dept === 'All' ? 'All Departments' : dept === 'CWTS' ? 'CWTS' : dept === 'LTS' ? 'LTS' : 'ROTC'}
-                        </button>
-                      );
-                    })}
+                {isAdmin && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['All', 'CWTS', 'LTS', 'ROTC'].map(dept => {
+                        const colors = {
+                          All:  'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200',
+                          CWTS: 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100',
+                          LTS:  'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100',
+                          ROTC: 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100',
+                        };
+                        const selected = {
+                          All:  'bg-gray-700 border-gray-700 text-white',
+                          CWTS: 'bg-blue-600 border-blue-600 text-white',
+                          LTS:  'bg-purple-600 border-purple-600 text-white',
+                          ROTC: 'bg-red-600 border-red-600 text-white',
+                        };
+                        return (
+                          <button key={dept}
+                            type="button"
+                            onClick={() => setExportDept(dept)}
+                            className={`px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all ${exportDept === dept ? selected[dept] : colors[dept]}`}
+                          >
+                            {dept === 'All' ? 'All Departments' : dept}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Course / Program</label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => (
-                      <button type="button"
-                        key={course}
+                      <button key={course}
                         type="button"
                         onClick={() => setExportCourse(course)}
                         className={`px-2 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
@@ -803,14 +615,41 @@ function StudentManagement() {
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                  {exportDept === 'All' && exportCourse === 'All'
-                    ? <>Will create <strong>4 sheets</strong>: All Students + one sheet per department.</>
-                    : exportDept === 'All'
-                    ? <>Will create sheets per department, filtered to <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong>.</>
-                    : exportCourse === 'All'
-                    ? <>Will create a single <strong>{exportDept}</strong> sheet with all {exportDept} student records.</>
-                    : <>Will create a single sheet: <strong>{exportDept} — {exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students.</>
+                  {isAdmin
+                    ? (exportCourse === 'All'
+                        ? <>Will export <strong>{exportDept === 'All' ? 'all departments' : exportDept}</strong> students in CHED format.</>
+                        : <>Will export <strong>{exportDept === 'All' ? 'all departments' : exportDept}</strong> — <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students in CHED format.</>)
+                    : (exportCourse === 'All'
+                        ? <>Will export all <strong>{user?.department}</strong> students in CHED format.</>
+                        : <>Will export <strong>{user?.department}</strong> — <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students in CHED format.</>)
                   }
+                </div>
+
+                <div className="border-t border-dashed border-gray-200 pt-4">
+                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-3">CHED Format Settings</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Semester</label>
+                      <select
+                        value={exportSem}
+                        onChange={(e) => setExportSem(e.target.value)}
+                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                      >
+                        <option>1st Semester</option>
+                        <option>2nd Semester</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Academic Year</label>
+                      <input
+                        type="text"
+                        value={exportAcadYear}
+                        onChange={(e) => setExportAcadYear(e.target.value)}
+                        placeholder="e.g. 2025-2026"
+                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -818,7 +657,7 @@ function StudentManagement() {
                 <button type="button" onClick={() => setShowExportModal(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
                   Cancel
                 </button>
-                <button type="button" onClick={runExport} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+                <button type="button" onClick={downloadChed} className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
                   <Download className="w-4 h-4" /> Download
                 </button>
               </div>
@@ -828,7 +667,7 @@ function StudentManagement() {
 
         {/* Add Student Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
             <div
               className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()}
@@ -1180,7 +1019,7 @@ function StudentManagement() {
 
         {/* View Student Modal */}
         {showViewModal && viewStudent && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeViewModal}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeViewModal}>
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
               <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
@@ -1272,7 +1111,7 @@ function StudentManagement() {
           </div>
         )}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEditModal(false)}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
             <div
               className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain"
               onClick={(e) => e.stopPropagation()}

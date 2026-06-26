@@ -1,12 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import React, { useState, createContext, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
-
-const BASE_PATH = (() => {
-  const pathname = window.location.pathname;
-  if (pathname.startsWith('/nstp-system/')) return '/nstp-system/';
-  return import.meta.env.BASE_URL || '/';
-})();
-
+import { useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
+import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
 import Landing from './pages/Landing';
@@ -21,11 +15,11 @@ import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch } from './services/api';
 
-export const AuthContext = createContext(null);
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+const BASE_PATH = (() => {
+  const pathname = window.location.pathname;
+  if (pathname.startsWith('/nstp-system/')) return '/nstp-system/';
+  return import.meta.env.BASE_URL || '/';
+})();
 
 // Defined OUTSIDE App so its reference never changes between re-renders, preventing
 // React from unmounting+remounting page children on every polling tick.
@@ -295,6 +289,7 @@ function App() {
     refreshLiveData();
     const interval = setInterval(refreshLiveData, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 
   // Poll for incoming/outgoing calls every 2 seconds
@@ -381,6 +376,7 @@ function App() {
     } else {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadCurrentUser() {
@@ -689,8 +685,16 @@ function App() {
     });
   }
 
-  function clearMessagesFunc(conversationId) {
+  async function clearMessagesFunc(conversationId) {
     setMessages(prev => ({ ...prev, [conversationId]: [] }));
+    setConversations(prev => prev.map(c =>
+      c.id === conversationId ? { ...c, last_message: null, last_message_time: null, last_sender_id: null } : c
+    ));
+    try {
+      await conversationsAPI.clearMessages(conversationId);
+    } catch (err) {
+      console.error('Failed to clear messages on server:', err);
+    }
   }
 
   const getUserConversations = useCallback(() => {

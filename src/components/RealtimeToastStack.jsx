@@ -1,4 +1,4 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { X, Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -16,7 +16,7 @@ function RealtimeToastStack() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto bg-white border border-green-200 shadow-xl rounded-xl p-4 flex gap-3"
+          className="pointer-events-auto bg-white border border-green-200 shadow-xl rounded-xl p-4 flex gap-3 toast-enter"
           role="alert"
         >
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

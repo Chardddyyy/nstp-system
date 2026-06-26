@@ -1,10 +1,11 @@
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import ScrollToTopButton from '../components/ScrollToTopButton';
+import Sidebar from '../components/layout/Sidebar';
 import {
-  LayoutDashboard, Users, FileText, MessageSquare,
-  LogOut, User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, Shield, MailOpen
+  Users, FileText, MessageSquare,
+  User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 // Avatar options for display
@@ -20,7 +21,6 @@ const AVATAR_OPTIONS = {
 function InstructorDashboard() {
   const { user, logout, students, reports, conversations, messages, notifications, setNotifications } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [showNotifications, setShowNotifications] = useState(false);
@@ -210,93 +210,13 @@ function InstructorDashboard() {
   const recentReports = myReports.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 border-b border-green-700">
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center`}>
-              <Shield className={`w-6 h-6 ${colors.text}`} />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg">Cavite State University Naic</h1>
-              <p className="text-xs text-green-200">{user?.department} Instructor</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <button type="button"
-            
-            onClick={() => { navigate('/instructor/dashboard'); setSidebarOpen(false); }}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              location.pathname === '/instructor/dashboard' ? 'bg-green-700' : 'hover:bg-green-700/50'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/students'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Users className="w-5 h-5" />
-            <span>My Students</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/reports'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/chat'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/calendar'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
-          </button>
-          <button type="button"
-            
-            onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700/50 transition-colors"
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
-          <button type="button"
-            
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+    <div className="min-h-screen bg-gray-50 page-enter">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+        user={user}
+      />
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
