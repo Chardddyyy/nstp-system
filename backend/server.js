@@ -620,7 +620,7 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    const { name, email, phone, bio, avatar, profilePicture } = req.body;
+    const { name, email, phone, bio, avatar, profilePicture, role, department, password } = req.body;
 
     // Validate email format
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
@@ -631,18 +631,40 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Profile picture too large. Maximum 10 MB.' });
     }
 
-    await pool.execute(
-      'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ? WHERE id = ?',
-      [
+    if (req.user.role === 'admin') {
+      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?';
+      const params = [
         sanitizeStr(name, 255),
         sanitizeStr(email, 255),
         sanitizeStr(phone, 50),
         sanitizeStr(bio, 500),
         sanitizeStr(avatar, 50),
         profilePicture || null,
-        id
-      ]
-    );
+        role || 'instructor',
+        role === 'admin' ? null : (department || 'CWTS')
+      ];
+      if (password && String(password).trim().length >= 6) {
+        const hashed = await bcrypt.hash(String(password).trim(), 12);
+        updateSql += ', password = ?';
+        params.push(hashed);
+      }
+      updateSql += ' WHERE id = ?';
+      params.push(id);
+      await pool.execute(updateSql, params);
+    } else {
+      await pool.execute(
+        'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ? WHERE id = ?',
+        [
+          sanitizeStr(name, 255),
+          sanitizeStr(email, 255),
+          sanitizeStr(phone, 50),
+          sanitizeStr(bio, 500),
+          sanitizeStr(avatar, 50),
+          profilePicture || null,
+          id
+        ]
+      );
+    }
 
     const [updatedUsers] = await pool.execute(
       'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio FROM users WHERE id = ?',

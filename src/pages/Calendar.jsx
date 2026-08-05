@@ -466,34 +466,45 @@ function Calendar() {
 
         {/* Add Event Modal */}
         {showAddEventModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddEventModal(false)}>
-            <div className="bg-white rounded-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Add Event</h3>
-                <button type="button"
-                  
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddEventModal(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col border border-emerald-100/80 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <CalendarIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Add New Event</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Schedule activity or announcement</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
                   onClick={() => setShowAddEventModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="space-y-4">
+
+              {/* Form Body */}
+              <div className="p-6 space-y-4 text-xs sm:text-sm">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Event Title *</label>
                   <input
                     type="text"
                     id="event-title"
                     name="eventTitle"
                     value={newEvent.title}
                     onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    placeholder="Enter event title"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                    placeholder="Enter event title..."
                     autoComplete="off"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Scheduled Date *</label>
                   <input
                     type="date"
                     id="event-date"
@@ -501,11 +512,13 @@ function Calendar() {
                     value={newEvent.date}
                     min={todayStr}
                     onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Description <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                  </label>
                   <textarea
                     id="event-description"
                     name="eventDescription"
@@ -513,24 +526,26 @@ function Calendar() {
                     onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
                     rows={3}
                     autoComplete="off"
-                    placeholder="Add details or notes about this event..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none resize-none"
+                    placeholder="Add details, instructions or notes about this event..."
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none resize-none font-medium"
                   />
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button type="button"
-                  
+
+              {/* Footer Actions */}
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
                   onClick={() => setShowAddEventModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="button"
-                  
+                <button
+                  type="button"
                   onClick={handleAddEvent}
                   disabled={!newEvent.title.trim() || !newEvent.date}
-                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Add Event
                 </button>
