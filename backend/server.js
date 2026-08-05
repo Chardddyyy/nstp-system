@@ -632,6 +632,11 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     }
 
     if (req.user.role === 'admin') {
+      const [existingUserRows] = await pool.execute('SELECT role, department FROM users WHERE id = ?', [id]);
+      const existingUser = existingUserRows[0] || {};
+      const targetRole = role ? role : (existingUser.role || 'instructor');
+      const targetDept = targetRole === 'admin' ? 'NSTP Office' : (department ? department : (existingUser.department || 'CWTS'));
+
       let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?';
       const params = [
         sanitizeStr(name, 255),
@@ -640,8 +645,8 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
         sanitizeStr(bio, 500),
         sanitizeStr(avatar, 50),
         profilePicture || null,
-        role || 'instructor',
-        role === 'admin' ? null : (department || 'CWTS')
+        targetRole,
+        targetDept
       ];
       if (password && String(password).trim().length >= 6) {
         const hashed = await bcrypt.hash(String(password).trim(), 12);
@@ -3047,6 +3052,10 @@ async function startServer() {
         console.log(`Hashed plain-text password for user id=${u.id}`);
       }
     }
+    // Self-healing: ensure admin account always retains role='admin' and NSTP Office department
+    try {
+      await pool.execute("UPDATE users SET role = 'admin', department = 'NSTP Office' WHERE email = 'admin@cvsu.edu.ph'");
+    } catch (e) { /* ignore */ }
   } catch (e) {
     console.warn('Password hash migration warning:', e.message);
   }

@@ -1,12 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar } from 'lucide-react';
+import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
   const { submitEnrollment } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Live Enrollment Schedule Status State
+  const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
+
+  useEffect(() => {
+    const updateSchedule = () => setEnrollmentStatus(calculateEnrollmentStatus());
+    window.addEventListener('nstp_enrollment_schedule_changed', updateSchedule);
+    const interval = setInterval(updateSchedule, 10000);
+    return () => {
+      window.removeEventListener('nstp_enrollment_schedule_changed', updateSchedule);
+      clearInterval(interval);
+    };
+  }, []);
   const [formData, setFormData] = useState(() => {
     const saved = localStorage.getItem('enrollmentFormData');
     return saved ? JSON.parse(saved) : {
@@ -47,99 +61,6 @@ function Enrollment() {
 
   const [registrationPhoto, setRegistrationPhoto] = useState(null);
   const photoInputRef = useRef(null);
-
-  // Camera state
-  const [showCamera, setShowCamera]       = useState(false);
-  const [cameraStream, setCameraStream]   = useState(null);
-  const [facingMode, setFacingMode]       = useState('environment');
-  const [capturedFrame, setCapturedFrame] = useState(null);
-  const videoRef  = useRef(null);
-  const boxRef    = useRef(null);
-  const streamRef = useRef(null);
-
-  useEffect(() => {
-    if (videoRef.current && cameraStream) videoRef.current.srcObject = cameraStream;
-  }, [cameraStream]);
-
-  useEffect(() => () => stopCamera(), []); // cleanup on unmount
-
-  const stopCamera = () => {
-    const s = streamRef.current;
-    if (s) { s.getTracks().forEach(t => t.stop()); streamRef.current = null; }
-    setCameraStream(null);
-  };
-
-  const openCamera = async (mode) => {
-    const fm = mode || facingMode;
-    setCapturedFrame(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: fm, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false
-      });
-      streamRef.current = stream;
-      setCameraStream(stream);
-      setShowCamera(true);
-    } catch {
-      setToast({ message: 'Camera access denied. Please allow camera permission in your browser.', type: 'error' });
-    }
-  };
-
-  const flipCamera = async () => {
-    const next = facingMode === 'environment' ? 'user' : 'environment';
-    setFacingMode(next);
-    stopCamera();
-    await openCamera(next);
-  };
-
-  // Crop the video frame to exactly what's inside the guide box
-  const captureToBox = () => {
-    const video = videoRef.current;
-    const box   = boxRef.current;
-    if (!video || !box || !video.videoWidth) return;
-
-    const vRect = video.getBoundingClientRect();
-    const bRect = box.getBoundingClientRect();
-
-    // Box position relative to the displayed video (0–1)
-    const relX = (bRect.left - vRect.left) / vRect.width;
-    const relY = (bRect.top  - vRect.top)  / vRect.height;
-    const relW = bRect.width  / vRect.width;
-    const relH = bRect.height / vRect.height;
-
-    // Map to actual video pixel coordinates
-    const vw = video.videoWidth, vh = video.videoHeight;
-    const cropX = Math.max(0, Math.round(relX * vw));
-    const cropY = Math.max(0, Math.round(relY * vh));
-    const cropW = Math.min(vw - cropX, Math.round(relW * vw));
-    const cropH = Math.min(vh - cropY, Math.round(relH * vh));
-
-    // Draw full frame then extract the box region
-    const full = document.createElement('canvas');
-    full.width = vw; full.height = vh;
-    full.getContext('2d').drawImage(video, 0, 0);
-
-    const out = document.createElement('canvas');
-    out.width = cropW; out.height = cropH;
-    out.getContext('2d').drawImage(full, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-    stopCamera();
-    setCapturedFrame(out.toDataURL('image/jpeg', 0.94));
-  };
-
-  const confirmCapturedPhoto = () => {
-    if (!capturedFrame) return;
-    setRegistrationPhoto(capturedFrame);
-    if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
-    setCapturedFrame(null);
-    setShowCamera(false);
-  };
-
-  const closeCamera = () => {
-    stopCamera();
-    setCapturedFrame(null);
-    setShowCamera(false);
-  };
 
   // True when there is saved progress from a previous session
   const hasSavedData = !!localStorage.getItem('enrollmentFormData');
@@ -397,11 +318,6 @@ function Enrollment() {
       
     } catch (error) {
       console.error('❌ Enrollment submission failed:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        stack: error.stack
-      });
       const raw = error?.message || '';
       const friendly = raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate')
         ? `Student ID "${formData.studentId}" is already enrolled. Please check your Student ID.`
@@ -413,6 +329,82 @@ function Enrollment() {
       setIsSubmitting(false);
     }
   };
+
+  if (!enrollmentStatus.isOpen) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans flex flex-col justify-between">
+        <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
+                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
+                    NSTP Portal
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-[9px] sm:text-xs truncate font-medium">National Service Training Program Student Enrollment</p>
+              </div>
+            </div>
+            <Link
+              to="/"
+              className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2.5 sm:px-4 py-1.5 rounded-xl text-[10px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+              <span>Back to Home</span>
+            </Link>
+          </div>
+        </header>
+
+        <main className="max-w-xl mx-auto py-12 px-4 w-full text-center flex-1 flex items-center justify-center">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-200/80 space-y-4">
+            <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-200">
+              <Clock className="w-8 h-8" />
+            </div>
+            
+            <h2 className="text-xl sm:text-2xl font-black text-emerald-950">{enrollmentStatus.headline}</h2>
+            <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-medium">
+              {enrollmentStatus.subtext}
+            </p>
+
+            {enrollmentStatus.openAtFormatted && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center my-3">
+                <p className="text-xs text-emerald-800 font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-emerald-700" /> Scheduled Opening Date &amp; Time
+                </p>
+                <p className="text-base sm:text-lg font-black text-emerald-950">{enrollmentStatus.openAtFormatted}</p>
+                {enrollmentStatus.closeAtFormatted && (
+                  <p className="text-xs text-emerald-700 font-medium mt-1">Application Deadline: <strong>{enrollmentStatus.closeAtFormatted}</strong></p>
+                )}
+              </div>
+            )}
+
+            {enrollmentStatus.customNotice && (
+              <p className="text-amber-800 text-xs font-semibold bg-amber-50 border border-amber-200 p-3 rounded-xl">
+                📢 {enrollmentStatus.customNotice}
+              </p>
+            )}
+
+            <div className="pt-2">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl text-xs shadow-md transition-all active:scale-95"
+              >
+                &larr; Return to Main Portal
+              </Link>
+            </div>
+          </div>
+        </main>
+
+        <footer className="bg-emerald-950 text-white py-3 text-center text-xs">
+          <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
+        </footer>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -438,14 +430,11 @@ function Enrollment() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
-
-      {/* Centered Toast Notification */}
+      {/* Toast notification */}
       {toast && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-          <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-bold max-w-sm w-full mx-4 border border-white/20 animate-fade-in ${toast.type === 'success' ? 'bg-emerald-700' : 'bg-red-600'}`}>
-            {toast.type === 'success'
-              ? <CheckCircle className="w-5 h-5 flex-shrink-0 text-amber-300" />
-              : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+        <div className="fixed top-4 right-4 z-50 animate-bounce">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white font-semibold text-xs ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
+            {toast.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
             <span className="flex-1">{toast.message}</span>
             <button type="button" onClick={() => setToast(null)} className="text-white/80 hover:text-white flex-shrink-0 ml-1 cursor-pointer">
               <X className="w-4 h-4" />
@@ -454,54 +443,54 @@ function Enrollment() {
         </div>
       )}
 
-      {/* Sticky Glassmorphic Header */}
+      {/* Sticky Glassmorphic Header - Scaled Miniature Match */}
       <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
-          <div className="flex items-center space-x-3 min-w-0">
-            <div className="w-10 h-10 bg-white rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
                 <span className="hidden sm:inline-flex bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
                   NSTP Portal
                 </span>
               </div>
-              <p className="text-emerald-200 text-xs truncate">National Service Training Program Student Enrollment</p>
+              <p className="text-emerald-200 text-[9px] sm:text-xs truncate font-medium">National Service Training Program Student Enrollment</p>
             </div>
           </div>
 
           <Link
             to="/"
-            className="flex items-center gap-1.5 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-4 py-2 rounded-xl text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm"
+            className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2.5 sm:px-4 py-1.5 rounded-xl text-[10px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-amber-400" />
+            <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
             <span>Back to Home</span>
           </Link>
         </div>
       </header>
 
-      {/* Main Form Container */}
-      <main className="max-w-5xl mx-auto py-8 sm:py-12 px-4 w-full flex-1">
-        <div className="bg-white rounded-3xl shadow-xl border border-emerald-100/80 overflow-hidden">
+      {/* Main Form Container - Compact Mobile Spacing */}
+      <main className="max-w-5xl mx-auto py-4 sm:py-10 px-3 sm:px-4 w-full flex-1">
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-100/80 overflow-hidden">
           
           {/* Hero Header Banner */}
-          <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-6 sm:p-10 text-center relative overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-8 text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
-            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-gray-950 font-black text-[11px] uppercase tracking-widest px-3.5 py-1 rounded-full mb-3 shadow-md">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-950" />
+            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-gray-950 font-black text-[10px] sm:text-[11px] uppercase tracking-wider px-3 py-0.5 rounded-full mb-2 shadow-sm">
+              <Sparkles className="w-3 h-3 text-emerald-950" />
               Official Student Enrollment Form
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+            <h2 className="text-lg sm:text-3xl font-black text-white tracking-tight">
               NSTP Enrollment Application
             </h2>
-            <p className="text-emerald-200 text-xs sm:text-sm mt-2 max-w-xl mx-auto font-medium">
+            <p className="text-emerald-200 text-[11px] sm:text-sm mt-1.5 max-w-xl mx-auto font-medium">
               Cavite State University Naic Campus • Please provide accurate details matching your official CvSU Registration Form.
             </p>
           </div>
 
-          <div className="p-6 sm:p-10 space-y-8">
+          <div className="p-4 sm:p-8 space-y-5 sm:space-y-8">
             {hasSavedData && (
               <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-sm">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-900">
@@ -1078,11 +1067,11 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => openCamera()}
+                        onClick={() => photoInputRef.current.click()}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
-                        Scan with Camera
+                        Scan / Take Photo
                       </button>
                     </div>
                   </div>

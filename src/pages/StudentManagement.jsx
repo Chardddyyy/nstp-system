@@ -351,25 +351,27 @@ function StudentManagement() {
           </div>
         )}
 
-        {/* Hero Header Card */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
-            <div className="flex items-center gap-3.5">
+        {/* Hero Header Card - Unified CvSU Naic Aesthetics */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 relative z-10">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">Student Management</h2>
-                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
-                    CvSU Naic
-                  </span>
+
+              <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xs sm:text-2xl font-black tracking-tight text-white truncate">Student Management</h2>
                 </div>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update your department student roster'}</p>
+                <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update your department student roster'}</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
@@ -397,11 +399,11 @@ function StudentManagement() {
       </div>
 
         {/* Mobile-Responsive Filters */}
-        <div className="bg-white/90 backdrop-blur-md p-3.5 sm:p-5 rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-6">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="bg-white/90 backdrop-blur-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="flex-1 min-w-0">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-700/60" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700/60" />
                 <input
                   type="text"
                   id="student-search"
@@ -410,46 +412,41 @@ function StudentManagement() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoComplete="off"
-                  className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium bg-gray-50/50"
+                  className="w-full pl-8 pr-3 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium bg-gray-50/50"
                 />
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5">
               {isAdmin && (
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-emerald-800 shrink-0 hidden sm:block" />
-                  <select
-                    id="filter-dept"
-                    name="filterDept"
-                    value={filterDept}
-                    onChange={(e) => setFilterDept(e.target.value)}
-                    className="w-full sm:w-auto px-3.5 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
-                  >
-                    <option value="All">All Departments</option>
-                    <option value="CWTS">CWTS</option>
-                    <option value="LTS">LTS</option>
-                    <option value="ROTC">ROTC</option>
-                  </select>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
                 <select
-                  id="filter-course"
-                  name="filterCourse"
-                  value={filterCourse}
-                  onChange={(e) => setFilterCourse(e.target.value)}
-                  className="w-full sm:w-auto px-3.5 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+                  id="filter-dept"
+                  name="filterDept"
+                  value={filterDept}
+                  onChange={(e) => setFilterDept(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
                 >
-                  <option value="All">All Courses</option>
-                  <option value="BSIT">BSIT</option>
-                  <option value="BSCS">BSCS</option>
-                  <option value="BSFAS">BSFAS</option>
-                  <option value="BSBA">BSBA</option>
-                  <option value="BSED">BSEd</option>
-                  <option value="BEED">BEED</option>
-                  <option value="BSHM">BSHM</option>
+                  <option value="All">All Depts</option>
+                  <option value="CWTS">CWTS</option>
+                  <option value="LTS">LTS</option>
+                  <option value="ROTC">ROTC</option>
                 </select>
-              </div>
+              )}
+              <select
+                id="filter-course"
+                name="filterCourse"
+                value={filterCourse}
+                onChange={(e) => setFilterCourse(e.target.value)}
+                className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+              >
+                <option value="All">All Courses</option>
+                <option value="BSIT">BSIT</option>
+                <option value="BSCS">BSCS</option>
+                <option value="BSFAS">BSFAS</option>
+                <option value="BSBA">BSBA</option>
+                <option value="BSED">BSEd</option>
+                <option value="BEED">BEED</option>
+                <option value="BSHM">BSHM</option>
+              </select>
             </div>
           </div>
         </div>
@@ -460,12 +457,12 @@ function StudentManagement() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
+                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
                   <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
                   <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                  {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
+                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                  {isAdmin && <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -475,11 +472,11 @@ function StudentManagement() {
                     className="hover:bg-green-50 cursor-pointer transition-colors duration-150"
                     onClick={() => handleViewStudent(student)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">{student.studentId}</td>
+                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                        <p className="text-sm text-gray-500">{student.email}</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-900">{student.name}</p>
+                        <p className="text-[10px] sm:text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">{student.email}</p>
                       </div>
                     </td>
                     <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -488,13 +485,13 @@ function StudentManagement() {
                     <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.year}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(student.department)}`}>
+                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium ${getDepartmentColor(student.department)}`}>
                         {student.department}
                       </span>
                     </td>
                     {isAdmin && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
                         <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
                             onClick={() => !viewingArchive && openEditModal(student)}
@@ -1108,65 +1105,132 @@ function StudentManagement() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeViewModal}>
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
-              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
+              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl z-10">
                 <h3 className="text-lg font-bold flex items-center">
                   <Users className="w-5 h-5 mr-2" />
                   Student Information
                 </h3>
-                <button type="button" onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors">
+                <button type="button" onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors cursor-pointer">
                   <X className="w-6 h-6" />
                 </button>
               </div>
               
-              <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
+              <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Personal Information Section */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Personal Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Student ID:</span> <span className="font-medium">{viewStudent.studentId}</span></div>
-                    <div><span className="text-gray-500">Full Name:</span> <span className="font-medium">{viewStudent.name}</span></div>
-                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{viewStudent.email || '-'}</span></div>
-                    <div><span className="text-gray-500">Contact:</span> <span className="font-medium">{viewStudent.contactNumber || '-'}</span></div>
-                    <div><span className="text-gray-500">Address:</span> <span className="font-medium">{viewStudent.homeAddress || viewStudent.address || '-'}</span></div>
-                    <div><span className="text-gray-500">Facebook:</span> <span className="font-medium">{viewStudent.facebookAccount || '-'}</span></div>
+                <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                    <User className="w-4 h-4 text-emerald-600" />
+                    Personal Information
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.studentId}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Full Name</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.name}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Email</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.email || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Contact</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.contactNumber || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Address</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.homeAddress || viewStudent.address || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Facebook</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.facebookAccount || '-'}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Academic Information Section */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Academic Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Program:</span> <span className="font-medium">{viewStudent.program || '-'}</span></div>
-                    <div><span className="text-gray-500">Section:</span> <span className="font-medium">{viewStudent.section || '-'}</span></div>
-                    <div><span className="text-gray-500">Year Level:</span> <span className="font-medium">{viewStudent.year || '-'}</span></div>
-                    <div><span className="text-gray-500">NSTP Component:</span> <span className="font-medium">{viewStudent.department || '-'}</span></div>
+                <div className="bg-emerald-50/50 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/60 shadow-2xs">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                    <GraduationCap className="w-4 h-4 text-emerald-600" />
+                    Academic Information
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Program</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.program || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Section</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.section || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.year || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Component</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{viewStudent.department || '-'}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Demographic Information Section */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Demographic Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Birth Date:</span> <span className="font-medium">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</span></div>
-                    <div><span className="text-gray-500">Age:</span> <span className="font-medium">{viewStudent.age || '-'}</span></div>
-                    <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{viewStudent.gender || '-'}</span></div>
-                    <div><span className="text-gray-500">Civil Status:</span> <span className="font-medium">{viewStudent.civilStatus || '-'}</span></div>
-                    <div><span className="text-gray-500">Height:</span> <span className="font-medium">{viewStudent.height ? `${viewStudent.height} cm` : '-'}</span></div>
-                    <div><span className="text-gray-500">Weight:</span> <span className="font-medium">{viewStudent.weight ? `${viewStudent.weight} kg` : '-'}</span></div>
-                    <div><span className="text-gray-500">Blood Type:</span> <span className="font-medium">{viewStudent.bloodType || '-'}</span></div>
+                <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                    <Heart className="w-4 h-4 text-emerald-600" />
+                    Demographic Information
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Date</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Age</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.age || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Gender</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.gender || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.civilStatus || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.height ? `${viewStudent.height} cm` : '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.weight ? `${viewStudent.weight} kg` : '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.bloodType || '-'}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Emergency Contact Section */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2">Emergency Contact</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-gray-500">Contact Person:</span> <span className="font-medium">{viewStudent.emergencyContact || '-'}</span></div>
-                    <div><span className="text-gray-500">Contact Number:</span> <span className="font-medium">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</span></div>
+                <div className="bg-amber-50/60 p-3.5 sm:p-5 rounded-2xl border border-amber-200/60 shadow-2xs">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                    <Phone className="w-4 h-4 text-amber-700" />
+                    Emergency Contact
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Contact Person</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyContact || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Contact Number</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</span>
+                    </div>
                   </div>
                 </div>
-
-
               </div>
 
               {/* Sticky Footer */}

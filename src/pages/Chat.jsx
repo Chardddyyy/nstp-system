@@ -2364,7 +2364,7 @@ function Chat() {
                 <p className="text-sm text-gray-500 mb-6">Choose someone from your contact list or start a new chat to begin messaging.</p>
                 <button
                   type="button"
-                  onClick={() => setShowNewChatModal(true)}
+                  onClick={() => setShowContacts(true)}
                   className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm shadow-green-700/20"
                 >
                   <Plus className="w-4 h-4 mr-2" />

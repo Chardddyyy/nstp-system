@@ -518,25 +518,25 @@ function Profile() {
           </div>
         )}
 
-        {/* Hero Header Card */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
-            <div className="flex items-center gap-3.5">
+        {/* Hero Header Card - Compact Mobile Layout */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 relative z-10">
+            <div className="flex items-center gap-3">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4" />
               </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">User Profile & Account</h2>
-                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
+                  <h2 className="text-base sm:text-2xl font-black tracking-tight text-white">User Profile &amp; Account</h2>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full hidden sm:inline-block">
                     CvSU Naic
                   </span>
                 </div>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Manage your personal credentials, profile picture &amp; system options</p>
+                <p className="text-emerald-200 text-[11px] sm:text-xs font-medium mt-0.5">Manage your personal credentials, profile picture &amp; system options</p>
               </div>
             </div>
             <button type="button"

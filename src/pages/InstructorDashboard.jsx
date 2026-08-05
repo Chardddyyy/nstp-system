@@ -154,16 +154,7 @@ function InstructorDashboard() {
     navigate('/login');
   };
 
-  // Get component color based on department
-  const getComponentColor = () => {
-    switch(user?.department) {
-      case 'ROTC': return { bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-200', gradient: 'from-red-600 to-red-700' };
-      case 'LTS': return { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200', gradient: 'from-purple-600 to-purple-700' };
-      default: return { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200', gradient: 'from-green-600 to-green-700' };
-    }
-  };
 
-  const colors = getComponentColor();
 
   // Get user avatar display
   const getUserAvatar = () => {
@@ -229,28 +220,30 @@ function InstructorDashboard() {
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Hero Header */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
-            <div className="flex items-center gap-3.5">
+        {/* Hero Header - Unified CvSU Naic Aesthetics */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
+          <div className="flex justify-between items-center gap-2 sm:gap-3 relative z-10">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">{user?.department} Instructor Portal</h2>
-                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
-                    CvSU Naic
-                  </span>
+
+              <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xs sm:text-2xl font-black tracking-tight text-white truncate">{user?.department} Instructor Portal</h2>
                 </div>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Welcome back, {user?.name || 'Instructor'} 👋</p>
+                <p className="text-emerald-200 text-[10px] sm:text-sm font-medium truncate mt-0.5">Welcome back, {user?.name || 'Instructor'} 👋</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 w-full lg:w-auto justify-end">
+            <div className="flex items-center gap-2 shrink-0">
             {/* Notification Container */}
             <div className="relative notification-container">
               <button type="button"
@@ -390,33 +383,33 @@ function InstructorDashboard() {
         </div>
       </div>
 
-        {/* Interactive Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+        {/* Interactive Statistics Cards - Compact Mobile Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4 mb-4 sm:mb-6">
           {/* Card 1: Total Students */}
           <div 
             onClick={() => navigate('/students')}
-            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 hover:border-emerald-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+            className="bg-white/90 backdrop-blur-md p-3.5 sm:p-5 rounded-2xl shadow-md shadow-emerald-950/5 border border-emerald-100/80 hover:border-emerald-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group relative overflow-hidden"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800/80">Total Active Students</p>
-                <p className="text-2xl sm:text-4xl font-black text-emerald-950 mt-1">{stats.totalStudents}</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800/80">Total Active Students</p>
+                <p className="text-xl sm:text-3xl font-black text-emerald-950 mt-0.5">{stats.totalStudents}</p>
               </div>
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-emerald-700/10 text-emerald-800 border border-emerald-200/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-800 group-hover:text-white transition-all duration-300 shadow-sm shrink-0">
-                <Users className="w-6 h-6 sm:w-7 sm:h-7" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-emerald-700/10 text-emerald-800 border border-emerald-200/60 flex items-center justify-center group-hover:scale-105 group-hover:bg-emerald-800 group-hover:text-white transition-all duration-300 shadow-2xs shrink-0">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-emerald-100/60">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
+            <div className="mt-3 pt-2.5 border-t border-emerald-100/60">
+              <div className="flex items-center justify-between text-[11px] font-bold text-emerald-800">
                 <span className="flex items-center gap-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  <TrendingUp className="w-3 h-3 text-emerald-600" />
                   {user?.department} Roster
                 </span>
-                <span className="bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-emerald-800 group-hover:text-white transition-colors">
-                  View Students &rarr;
+                <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full text-[9px] font-black group-hover:bg-emerald-800 group-hover:text-white transition-colors">
+                  View &rarr;
                 </span>
               </div>
-              <div className="h-2 w-full bg-emerald-100/80 rounded-full overflow-hidden mt-2">
+              <div className="h-1.5 w-full bg-emerald-100/80 rounded-full overflow-hidden mt-1.5">
                 <div className="h-full bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
               </div>
             </div>
@@ -425,25 +418,25 @@ function InstructorDashboard() {
           {/* Card 2: Pending Messages */}
           <div 
             onClick={() => navigate('/chat')}
-            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-blue-100/80 hover:border-blue-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+            className="bg-white/90 backdrop-blur-md p-3.5 sm:p-5 rounded-2xl shadow-md shadow-emerald-950/5 border border-blue-100/80 hover:border-blue-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group relative overflow-hidden"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-blue-800/80">Unread Messages</p>
-                <p className="text-2xl sm:text-4xl font-black text-blue-950 mt-1">{stats.pendingMessages}</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-800/80">Unread Messages</p>
+                <p className="text-xl sm:text-3xl font-black text-blue-950 mt-0.5">{stats.pendingMessages}</p>
               </div>
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-blue-700/10 text-blue-700 border border-blue-200/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shrink-0">
-                <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-blue-700/10 text-blue-700 border border-blue-200/60 flex items-center justify-center group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-2xs shrink-0">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-blue-100/60">
-              <div className="flex items-center justify-between text-xs font-bold text-blue-900">
-                <span>{stats.pendingMessages > 0 ? `${stats.pendingMessages} new messages` : 'All conversations read'}</span>
-                <span className="bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  Open Chat &rarr;
+            <div className="mt-3 pt-2.5 border-t border-blue-100/60">
+              <div className="flex items-center justify-between text-[11px] font-bold text-blue-900">
+                <span>{stats.pendingMessages > 0 ? `${stats.pendingMessages} unread` : 'All read'}</span>
+                <span className="bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full text-[9px] font-black group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  Open &rarr;
                 </span>
               </div>
-              <div className="h-2 w-full bg-blue-100/80 rounded-full overflow-hidden mt-2">
+              <div className="h-1.5 w-full bg-blue-100/80 rounded-full overflow-hidden mt-1.5">
                 <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-500" style={{ width: stats.pendingMessages > 0 ? '100%' : '0%' }}></div>
               </div>
             </div>
@@ -452,25 +445,25 @@ function InstructorDashboard() {
           {/* Card 3: Pending Reports */}
           <div 
             onClick={() => navigate('/reports')}
-            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-amber-100/80 hover:border-amber-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+            className="bg-white/90 backdrop-blur-md p-3.5 sm:p-5 rounded-2xl shadow-md shadow-emerald-950/5 border border-amber-100/80 hover:border-amber-300 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group relative overflow-hidden"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-amber-900/80">Pending Reports</p>
-                <p className="text-2xl sm:text-4xl font-black text-amber-950 mt-1">{stats.pendingReports}</p>
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-amber-900/80">Pending Reports</p>
+                <p className="text-xl sm:text-3xl font-black text-amber-950 mt-0.5">{stats.pendingReports}</p>
               </div>
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/15 text-amber-700 border border-amber-300/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-emerald-950 transition-all duration-300 shadow-sm shrink-0">
-                <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl bg-amber-500/15 text-amber-700 border border-amber-300/60 flex items-center justify-center group-hover:scale-105 group-hover:bg-amber-500 group-hover:text-emerald-950 transition-all duration-300 shadow-2xs shrink-0">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-amber-100/60">
-              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                <span>{stats.pendingReports > 0 ? 'Submission Required' : 'All Reports Submitted'}</span>
-                <span className="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-amber-500 group-hover:text-emerald-950 transition-colors">
-                  Submit Reports &rarr;
+            <div className="mt-3 pt-2.5 border-t border-amber-100/60">
+              <div className="flex items-center justify-between text-[11px] font-bold text-amber-900">
+                <span>{stats.pendingReports > 0 ? 'Submission Required' : 'All Submitted'}</span>
+                <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[9px] font-black group-hover:bg-amber-500 group-hover:text-emerald-950 transition-colors">
+                  Submit &rarr;
                 </span>
               </div>
-              <div className="h-2 w-full bg-amber-100/80 rounded-full overflow-hidden mt-2">
+              <div className="h-1.5 w-full bg-amber-100/80 rounded-full overflow-hidden mt-1.5">
                 <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500" style={{ width: stats.pendingReports > 0 ? '100%' : '0%' }}></div>
               </div>
             </div>

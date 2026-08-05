@@ -6,10 +6,11 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
+import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -31,6 +32,41 @@ function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   
+  // Enrollment Timed Schedule & Portal Control
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleConfig, setScheduleConfig] = useState(() => getEnrollmentSchedule());
+  const [scheduleStatus, setScheduleStatus] = useState(() => calculateEnrollmentStatus());
+
+  useEffect(() => {
+    const handleScheduleChange = (e) => {
+      if (e.detail) {
+        setScheduleStatus(e.detail);
+        setScheduleConfig(e.detail.schedule);
+      }
+    };
+    window.addEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
+    return () => window.removeEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
+  }, []);
+
+  const handleSaveSchedule = (newConfig) => {
+    const updatedStatus = saveEnrollmentSchedule(newConfig);
+    setScheduleConfig(newConfig);
+    setScheduleStatus(updatedStatus);
+    showNotif('success', `Enrollment Schedule Saved: Portal is ${updatedStatus.isOpen ? 'OPEN' : 'CLOSED'}`);
+  };
+
+  const quickForceOpen = () => {
+    handleSaveSchedule({ ...scheduleConfig, mode: 'FORCE_OPEN' });
+  };
+
+  const quickForceClose = () => {
+    handleSaveSchedule({ ...scheduleConfig, mode: 'FORCE_CLOSE' });
+  };
+
+  const _quickSetAuto = () => {
+    handleSaveSchedule({ ...scheduleConfig, mode: 'AUTO' });
+  };
+  
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -48,8 +84,8 @@ function AdminDashboard() {
   }, [showNotifications]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [_showProgramAnalytics, _setShowProgramAnalytics] = useState(true);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
@@ -58,6 +94,22 @@ function AdminDashboard() {
   const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
+  // Online Enrollment Portal Status Switch (stored in localStorage)
+  const [_enrollmentOpen, _setEnrollmentOpen] = useState(() => {
+    const saved = localStorage.getItem('nstp_enrollment_open');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const _toggleEnrollmentStatus = () => {
+    const next = !_enrollmentOpen;
+    _setEnrollmentOpen(next);
+    localStorage.setItem('nstp_enrollment_open', JSON.stringify(next));
+    setNotification({
+      type: 'success',
+      message: `Online Enrollment is now ${next ? 'OPEN' : 'CLOSED'}`
+    });
+    setTimeout(() => setNotification(null), 3000);
+  };
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
   const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
   const [analyticsViewMode, setAnalyticsViewMode] = useState('chart');
@@ -103,18 +155,6 @@ function AdminDashboard() {
     rotc: displayStats.rotcStudents,
     completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
   }), [displayStats, viewingArchive, archiveViewData, students]);
-
-  const programStats = useMemo(() => {
-    const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
-    const counts = {};
-    OFFICIAL_PROGRAMS.forEach(p => { counts[p] = 0; });
-    source.forEach(s => {
-      const prog = (s.program || '').trim();
-      const match = OFFICIAL_PROGRAMS.find(p => p.toLowerCase() === prog.toLowerCase());
-      if (match) counts[match]++;
-    });
-    return Object.entries(counts).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]);
-  }, [students, viewingArchive, archiveViewData]);
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
@@ -413,176 +453,236 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Hero Header */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
-            <div className="flex items-center gap-3.5">
+        {/* Hero Header - Scaled & Compact Mobile Layout */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6">
+          <div className="flex justify-between items-center gap-1.5 sm:gap-3 relative z-10">
+            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
-                    {viewingArchive ? `Batch ${archiveViewData?.year} Records` : 'Admin Dashboard'}
+              
+              <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <h1 className="text-[11px] sm:text-2xl font-black tracking-tight text-white truncate">
+                    {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                   </h1>
-                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
-                    CvSU Naic
-                  </span>
                 </div>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">
-                  {viewingArchive ? 'Viewing archived batch data' : `Welcome back, ${user?.name || 'Administrator'} 👋`}
+                <p className="text-emerald-200 text-[9px] sm:text-sm font-medium truncate mt-0.5">
+                  {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'} 👋`}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3 w-full lg:w-auto justify-end">
-              {/* Notification Bell */}
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              {/* Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
-              <button type="button"
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl transition-colors cursor-pointer shrink-0"
-                title="Notifications"
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 text-emerald-950 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-emerald-950 shadow-sm">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-              
-              {/* Notification Dropdown */}
-              {showNotifications && (
-                <div
-                  className="notification-dropdown absolute right-0 mt-3 w-[min(26rem,90vw)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
+                <button type="button"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0"
+                  title="Notifications"
                 >
-                  <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <button type="button"
-                        
-                        onClick={handleSelectAll}
-                        title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
-                        className="text-gray-400 hover:text-green-600 transition-colors"
-                      >
-                        {selectedNotifications.length === (notifications || []).length && notifications.length > 0
-                          ? <CheckSquare className="w-5 h-5 text-green-600" />
-                          : <Square className="w-5 h-5" />}
-                      </button>
-                      <h3 className="font-semibold text-gray-800">Notifications</h3>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button type="button"
-                        onClick={handleMarkAllRead}
-                        disabled={
-                          selectedNotifications.length > 0
-                            ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
-                            : (notifications || []).every(n => n.read)
-                        }
-                        className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
-                        title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
-                      >
-                        <MailOpen className="w-5 h-5" />
-                      </button>
-                      <button type="button"
-                        
-                        onClick={handleDeleteSelected}
-                        disabled={selectedNotifications.length === 0}
-                        className="text-red-600 hover:text-red-700 disabled:opacity-30"
-                        title="Delete selected"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      <button type="button"
-                        
-                        onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <p className="p-4 text-gray-500 text-center">No notifications</p>
-                    ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 flex items-start space-x-3 ${
-                            !notification.read ? 'bg-blue-50' : ''
-                          }`}
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[9px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Notification Dropdown Panel */}
+                {showNotifications && (
+                  <div
+                    className="notification-dropdown absolute right-0 mt-3 w-[min(26rem,90vw)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-3.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+                      <div className="flex items-center space-x-2">
+                        <button type="button"
+                          onClick={handleSelectAll}
+                          title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
+                          className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
-                          <button type="button"
-                            
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectNotification(notification.id);
-                            }}
-                            className="mt-1 shrink-0"
-                          >
-                            {selectedNotifications.some(function(sid) { return notificationIdsMatch(sid, notification.id); }) ? (
-                              <CheckSquare className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <Square className="w-5 h-5 text-gray-400" />
-                            )}
-                          </button>
-                          <div
-                            className="flex-1 cursor-pointer"
-                            onClick={() => handleNotificationItemClick(notification)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <h4 className={`text-sm font-medium ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                {notification.title}
-                              </h4>
-                              <div className="flex items-center gap-1.5 ml-2 shrink-0">
-                                {!notification.read && (
-                                  <button type="button"
-                                    
-                                    onClick={(e) => handleMarkOneRead(e, notification.id)}
-                                    className="text-blue-400 hover:text-blue-600 transition-colors"
-                                    title="Mark as read"
-                                  >
-                                    <MailOpen className="w-3.5 h-3.5" />
-                                  </button>
+                          {selectedNotifications.length === (notifications || []).length && notifications.length > 0
+                            ? <CheckSquare className="w-4 h-4 text-emerald-600" />
+                            : <Square className="w-4 h-4" />}
+                        </button>
+                        <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">Notifications ({unreadCount} new)</h3>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button type="button"
+                          onClick={handleMarkAllRead}
+                          disabled={
+                            selectedNotifications.length > 0
+                              ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                              : (notifications || []).every(n => n.read)
+                          }
+                          className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer"
+                          title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
+                        >
+                          <MailOpen className="w-4 h-4" />
+                        </button>
+                        <button type="button"
+                          onClick={handleDeleteSelected}
+                          disabled={selectedNotifications.length === 0}
+                          className="text-rose-600 hover:text-rose-700 disabled:opacity-30 transition-colors cursor-pointer"
+                          title="Delete selected"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button type="button"
+                          onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
+                          className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                      {(!notifications || notifications.length === 0) ? (
+                        <div className="p-6 text-center text-gray-400 text-xs font-medium">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-800" />
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.map((n) => {
+                          const isSelected = selectedNotifications.some(sid => notificationIdsMatch(sid, n.id));
+                          return (
+                            <div
+                              key={n.id}
+                              className={`p-3 transition-colors flex items-start space-x-2.5 ${
+                                !n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <button type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectNotification(n.id);
+                                }}
+                                className="mt-0.5 shrink-0 text-gray-400 hover:text-emerald-600 cursor-pointer"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-4 h-4 text-emerald-600" />
+                                ) : (
+                                  <Square className="w-4 h-4 text-gray-300" />
                                 )}
-                                <span className="text-xs text-gray-400">{notification.time}</span>
+                              </button>
+                              <div
+                                className="flex-1 cursor-pointer min-w-0"
+                                onClick={() => handleNotificationItemClick(n)}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <h4 className={`text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                    {n.title}
+                                  </h4>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {!n.read && (
+                                      <button type="button"
+                                        onClick={(e) => handleMarkOneRead(e, n.id)}
+                                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                                        title="Mark as read"
+                                      >
+                                        <MailOpen className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                    <span className="text-[10px] text-gray-400 font-medium">{n.time}</span>
+                                  </div>
+                                </div>
+                                <p className={`text-xs mt-0.5 line-clamp-2 ${n.read ? 'text-gray-500 font-normal' : 'text-gray-700 font-medium'}`}>
+                                  {n.message}
+                                </p>
                               </div>
                             </div>
-                            <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-gray-600'}`}>
-                              {notification.message}
-                            </p>
-                            {!notification.read && (
-                              <span className="inline-block mt-2 w-2 h-2 bg-blue-500 rounded-full"></span>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* User Profile */}
-            <button type="button"
-              onClick={() => navigate('/profile')}
-              className="flex items-center space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-3.5 py-2 rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0"
-            >
-              {getUserAvatar()}
-              <div className="hidden sm:block text-left">
-                <p className="font-bold text-xs text-white leading-tight">{user?.name}</p>
-                <p className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">Administrator</p>
+                )}
               </div>
-            </button>
+
+              {/* User Profile - Displays Avatar, Name, & Role on Mobile */}
+              <button type="button"
+                onClick={() => navigate('/profile')}
+                className="flex items-center space-x-1 sm:space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 sm:px-3.5 py-1 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+              >
+                <div className="shrink-0">
+                  {getUserAvatar()}
+                </div>
+                <div className="block text-left min-w-0 overflow-hidden">
+                  <p className="font-bold text-[9px] sm:text-xs text-white leading-tight truncate max-w-[70px] sm:max-w-none">{user?.name || 'Admin'}</p>
+                  <p className="text-[7px] sm:text-[10px] text-amber-300 font-semibold uppercase tracking-wider truncate">Admin</p>
+                </div>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Quick Action Navigation Cards - 3 Side-by-Side on Cellphone */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
+          <div
+            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            onClick={() => setShowInstructorList(true)}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-emerald-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Instructors</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalInstructors} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
+                </div>
+              </div>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
+            </div>
+          </div>
+
+          <div
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            onClick={() => navigate('/reports')}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-amber-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Reports</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
+                </div>
+              </div>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
+            </div>
+          </div>
+
+          <div
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            onClick={() => navigate('/chat')}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-blue-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Messages</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.unreadMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
+                </div>
+              </div>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
+            </div>
+          </div>
+        </div>
 
         {/* Interactive Analytics & Program Distribution Panel */}
         <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
@@ -724,16 +824,39 @@ function AdminDashboard() {
                       </span>
                     </div>
 
-                    <div className="h-2.5 w-full bg-gray-200 rounded-full overflow-hidden mb-2">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
-                          selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
-                          selectedComponentFilter === 'ROTC' ? 'bg-rose-600' :
-                          'bg-gradient-to-r from-emerald-500 to-teal-600'
-                        }`}
-                        style={{ width: `${percent}%` }}
-                      ></div>
+                    <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner mb-2">
+                      {selectedComponentFilter === 'ALL' ? (
+                        item.total > 0 ? (
+                          <>
+                            <div
+                              style={{ width: `${(item.cwts / item.total) * 100}%` }}
+                              className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
+                              title={`CWTS: ${item.cwts}`}
+                            />
+                            <div
+                              style={{ width: `${(item.lts / item.total) * 100}%` }}
+                              className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
+                              title={`LTS: ${item.lts}`}
+                            />
+                            <div
+                              style={{ width: `${(item.rotc / item.total) * 100}%` }}
+                              className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
+                              title={`ROTC: ${item.rotc}`}
+                            />
+                          </>
+                        ) : (
+                          <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[9px] text-gray-500">0 enrolled</div>
+                        )
+                      ) : (
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
+                            selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
+                            'bg-rose-600'
+                          }`}
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      )}
                     </div>
 
                     {selectedComponentFilter === 'ALL' && (
@@ -769,83 +892,111 @@ function AdminDashboard() {
           )}
         </div>
 
-        {/* Quick Action Navigation Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        {/* Quick Action Navigation Cards - 3 Side-by-Side on Cellphone */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
           <div
-            className="bg-gradient-to-r from-emerald-700 to-green-800 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => setShowInstructorList(true)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-5 h-5 text-white" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-emerald-100 text-xs font-medium uppercase tracking-wider">Instructors</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{stats.totalInstructors} Active</p>
+                <div className="min-w-0">
+                  <p className="text-emerald-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Instructors</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalInstructors} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
                 </div>
               </div>
-              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all">View &rarr;</span>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
             </div>
           </div>
 
           <div
-            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/reports')}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <FileText className="w-5 h-5 text-white" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-amber-100 text-xs font-medium uppercase tracking-wider">Reports</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{stats.pendingReports} Pending</p>
+                <div className="min-w-0">
+                  <p className="text-amber-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Reports</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
                 </div>
               </div>
-              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all">Review &rarr;</span>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
             </div>
           </div>
 
           <div
-            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/chat')}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <MessageSquare className="w-5 h-5 text-white" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-blue-100 text-xs font-medium uppercase tracking-wider">Messages</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{stats.unreadMessages} Unread</p>
+                <div className="min-w-0">
+                  <p className="text-blue-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Messages</p>
+                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.unreadMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
                 </div>
               </div>
-              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all">Open &rarr;</span>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
             </div>
           </div>
         </div>
 
-        {/* Pending Enrollments Section */}
+        {/* Pending Enrollments Section with Enrollment Switch */}
         {!viewingArchive && (
-          <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
+          <div className="bg-white rounded-2xl shadow-md p-3.5 sm:p-6 mb-3 sm:mb-5 border border-emerald-100/60">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center flex-shrink-0">
-                <Users className="w-5 h-5 mr-2 text-yellow-600" />
-                Pending Enrollments
-                <span className="ml-2 text-sm font-normal text-gray-500">
-                  {enrollmentSearch.trim()
-                    ? `${pendingEnrollments.filter(e => {
-                        const q = enrollmentSearch.toLowerCase();
-                        return (e.fullName || '').toLowerCase().includes(q)
-                          || (e.studentId || '').toLowerCase().includes(q)
-                          || (e.email || '').toLowerCase().includes(q)
-                          || (e.nstpComponent || '').toLowerCase().includes(q)
-                          || (e.program || '').toLowerCase().includes(q);
-                      }).length} of ${pendingEnrollments.length}`
-                    : pendingEnrollments.length}
-                </span>
-              </h3>
+              <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 flex-1">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center flex-shrink-0">
+                  <Users className="w-5 h-5 mr-2 text-amber-600" />
+                  Pending Enrollments
+                  <span className="ml-2 text-xs sm:text-sm font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
+                    {enrollmentSearch.trim()
+                      ? `${pendingEnrollments.filter(e => {
+                          const q = enrollmentSearch.toLowerCase();
+                          return (e.fullName || '').toLowerCase().includes(q)
+                            || (e.studentId || '').toLowerCase().includes(q)
+                            || (e.email || '').toLowerCase().includes(q)
+                            || (e.nstpComponent || '').toLowerCase().includes(q)
+                            || (e.program || '').toLowerCase().includes(q);
+                        }).length} of ${pendingEnrollments.length}`
+                      : pendingEnrollments.length}
+                  </span>
+                </h3>
+
+                {/* Admin Timed Enrollment Schedule & Switch Button */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleModalOpen(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer border shrink-0 ${
+                      scheduleStatus.isOpen
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 active:scale-95'
+                        : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-500 active:scale-95'
+                    }`}
+                    title="Configure automatic date/time opening and closing schedule for enrollment"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${scheduleStatus.isOpen ? 'bg-amber-300 animate-ping' : 'bg-white'}`}></span>
+                    <span>{scheduleStatus.isOpen ? 'Portal OPEN' : 'Portal CLOSED'}</span>
+                    <Clock className="w-3.5 h-3.5 ml-1" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleModalOpen(true)}
+                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Set Date &amp; Time Schedule</span>
+                  </button>
+                </div>
+              </div>
               {pendingEnrollments.length > 0 && (
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -1052,232 +1203,66 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Bar Chart */}
-              <div className="overflow-x-auto">
-                <div className="min-w-[500px] space-y-5">
-                  {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
-                    year: y.year, 
-                    cwts: y.data?.cwts || y.cwts || 0, 
-                    lts: y.data?.lts || y.lts || 0, 
-                    rotc: y.data?.rotc || y.rotc || 0 
-                  })), 
-                    { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
-                  ].sort((a, b) => a.year - b.year).map((data) => {
-                    const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
-                    const totalForYear = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
+              {/* Bar Chart — Fitted 100% on Mobile */}
+              <div className="w-full space-y-3 sm:space-y-4">
+                {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
+                  year: y.year, 
+                  cwts: y.data?.cwts || y.cwts || 0, 
+                  lts: y.data?.lts || y.lts || 0, 
+                  rotc: y.data?.rotc || y.rotc || 0 
+                })), 
+                  { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
+                ].sort((a, b) => a.year - b.year).map((data) => {
+                  const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
+                  const totalForYear = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
 
-                    return (
-                      <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-2xl p-4 transition-all duration-200 group">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch Year {data.year}</span>
-                            {data.year === parseInt(currentBatch) && (
-                              <span className="text-[10px] bg-emerald-700 text-white font-extrabold px-2 py-0.5 rounded-full uppercase">Active Batch</span>
-                            )}
-                          </div>
-                          <span className="text-xs font-bold text-gray-700 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
-                            {totalForYear} total enrolled
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {/* CWTS Bar */}
-                          <div className="flex items-center gap-3">
-                            <span className="w-12 text-xs font-bold text-emerald-800">CWTS</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${(data.cwts / maxVal) * 100}%`, minWidth: data.cwts > 0 ? '34px' : '0' }}
-                              >
-                                {data.cwts > 0 && <span className="text-xs text-white font-black">{data.cwts}</span>}
-                              </div>
-                            </div>
-                          </div>
-                          {/* LTS Bar */}
-                          <div className="flex items-center gap-3">
-                            <span className="w-12 text-xs font-bold text-purple-800">LTS</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${(data.lts / maxVal) * 100}%`, minWidth: data.lts > 0 ? '34px' : '0' }}
-                              >
-                                {data.lts > 0 && <span className="text-xs text-white font-black">{data.lts}</span>}
-                              </div>
-                            </div>
-                          </div>
-                          {/* ROTC Bar */}
-                          <div className="flex items-center gap-3">
-                            <span className="w-12 text-xs font-bold text-rose-800">ROTC</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${(data.rotc / maxVal) * 100}%`, minWidth: data.rotc > 0 ? '34px' : '0' }}
-                              >
-                                {data.rotc > 0 && <span className="text-xs text-white font-black">{data.rotc}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Summary Table */}
-              <div className="mt-6 border-t border-gray-100 pt-5">
-                <h4 className="text-sm font-bold text-gray-900 mb-3">Enrollment Summary by Batch Year</h4>
-                <div className="overflow-x-auto rounded-xl border border-gray-200/80">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100/90 text-gray-700">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-extrabold text-xs uppercase tracking-wider">Batch Year</th>
-                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-emerald-700">CWTS</th>
-                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-purple-700">LTS</th>
-                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-rose-700">ROTC</th>
-                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-900">Total</th>
-                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-700">Top Component</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
-                        year: y.year, 
-                        cwts: y.data?.cwts || y.cwts || 0, 
-                        lts: y.data?.lts || y.lts || 0, 
-                        rotc: y.data?.rotc || y.rotc || 0 
-                      })), 
-                        { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
-                      ].sort((a, b) => b.year - a.year).map((data) => {
-                        const maxComponent = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0);
-                        const highest = data.cwts === maxComponent ? 'CWTS' : data.lts === maxComponent ? 'LTS' : 'ROTC';
-                        return (
-                          <tr key={data.year} className="hover:bg-emerald-50/40 transition-colors cursor-pointer group" onClick={() => navigate('/students')}>
-                            <td className="px-4 py-3 font-bold text-gray-900 group-hover:text-emerald-800">
-                              {data.year} {data.year === parseInt(currentBatch) && <span className="text-[10px] text-emerald-700 font-extrabold ml-1">(Current)</span>}
-                            </td>
-                            <td className="px-4 py-3 text-center text-emerald-700 font-bold">{data.cwts || 0}</td>
-                            <td className="px-4 py-3 text-center text-purple-700 font-bold">{data.lts || 0}</td>
-                            <td className="px-4 py-3 text-center text-rose-700 font-bold">{data.rotc || 0}</td>
-                            <td className="px-4 py-3 text-center text-gray-900 font-black">{(data.cwts || 0) + (data.lts || 0) + (data.rotc || 0)}</td>
-                            <td className="px-4 py-3 text-center">
-                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold shadow-2xs ${
-                                highest === 'CWTS' ? 'bg-emerald-100 text-emerald-800' :
-                                highest === 'LTS' ? 'bg-purple-100 text-purple-800' :
-                                'bg-rose-100 text-rose-800'
-                              }`}>
-                                {highest}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* By Program Analytics */}
-        <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-sm shadow-inner shrink-0">
-                <BarChart3 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900">Enrollment by Program</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Degree program distribution broken down by NSTP component</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowProgramAnalytics(!showProgramAnalytics)}
-              className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-extrabold flex items-center border border-blue-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer"
-            >
-              {showProgramAnalytics ? (
-                <><ChevronUp className="w-4 h-4 mr-1" /> Hide</>
-              ) : (
-                <><ChevronDown className="w-4 h-4 mr-1" /> View Analytics</>
-              )}
-            </button>
-          </div>
-
-          {/* Quick summary interactive badges */}
-          {programDeptStats.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {programDeptStats.map(p => (
-                <div
-                  key={p.program}
-                  className="flex items-center gap-2 bg-gray-50 hover:bg-blue-50/70 border border-gray-200/80 hover:border-blue-300 rounded-xl px-3 py-2 transition-all duration-150 cursor-pointer active:scale-95 group shadow-2xs"
-                  onClick={() => navigate('/students')}
-                  title={`View ${p.program} students`}
-                >
-                  <span className="text-xs font-extrabold text-gray-800 group-hover:text-blue-900">{p.program}</span>
-                  <span className="text-xs font-black text-gray-900 bg-white group-hover:bg-blue-100 px-1.5 py-0.5 rounded-md shadow-2xs">{p.total}</span>
-                  <span className="text-[11px] text-emerald-700 font-bold">{p.cwts}C</span>
-                  <span className="text-[11px] text-purple-700 font-bold">{p.lts}L</span>
-                  <span className="text-[11px] text-rose-700 font-bold">{p.rotc}R</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400 mb-3">No program data yet.</p>
-          )}
-
-          {showProgramAnalytics && programDeptStats.length > 0 && (
-            <div className="animate-fade-in">
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-6 mb-5 pt-3 border-t border-gray-100">
-                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-emerald-500 to-teal-500"></div><span className="text-xs text-gray-700 font-bold">CWTS</span></div>
-                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500"></div><span className="text-xs text-gray-700 font-bold">LTS</span></div>
-                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-rose-500 to-red-600"></div><span className="text-xs text-gray-700 font-bold">ROTC</span></div>
-              </div>
-
-              {/* Bar Chart — one row per program */}
-              <div className="space-y-4">
-                {programDeptStats.map(p => {
-                  const maxVal = Math.max(p.cwts, p.lts, p.rotc, 1);
                   return (
-                    <div key={p.program} className="bg-gray-50/70 hover:bg-blue-50/40 border border-gray-200/60 hover:border-blue-300 rounded-2xl p-3.5 transition-all duration-200 group cursor-pointer" onClick={() => navigate('/students')}>
+                    <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-900 w-28 shrink-0">{p.program}</span>
-                        <span className="text-xs font-bold text-blue-800 bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-2xs">{p.total} total enrolled</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch Year {data.year}</span>
+                          {data.year === parseInt(currentBatch) && (
+                            <span className="text-[9px] sm:text-[10px] bg-emerald-700 text-white font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full uppercase">Active</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-bold text-gray-700 bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
+                          {totalForYear} total
+                        </span>
                       </div>
-                      <div className="space-y-2 ml-2">
-                        {/* CWTS */}
+                      <div className="space-y-1.5 sm:space-y-2">
+                        {/* CWTS Bar */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-emerald-700 w-10">CWTS</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(p.cwts / maxVal) * 100}%`, minWidth: p.cwts > 0 ? '30px' : '0' }}
+                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-emerald-800 shrink-0">CWTS</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(data.cwts / maxVal) * 100}%`, minWidth: data.cwts > 0 ? '20px' : '0' }}
                             >
-                              {p.cwts > 0 && <span className="text-xs text-white font-black">{p.cwts}</span>}
+                              {data.cwts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.cwts}</span>}
                             </div>
                           </div>
                         </div>
-                        {/* LTS */}
+                        {/* LTS Bar */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-purple-700 w-10">LTS</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(p.lts / maxVal) * 100}%`, minWidth: p.lts > 0 ? '30px' : '0' }}
+                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-purple-800 shrink-0">LTS</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(data.lts / maxVal) * 100}%`, minWidth: data.lts > 0 ? '20px' : '0' }}
                             >
-                              {p.lts > 0 && <span className="text-xs text-white font-black">{p.lts}</span>}
+                              {data.lts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.lts}</span>}
                             </div>
                           </div>
                         </div>
-                        {/* ROTC */}
+                        {/* ROTC Bar */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-rose-700 w-10">ROTC</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(p.rotc / maxVal) * 100}%`, minWidth: p.rotc > 0 ? '30px' : '0' }}
+                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-rose-800 shrink-0">ROTC</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(data.rotc / maxVal) * 100}%`, minWidth: data.rotc > 0 ? '20px' : '0' }}
                             >
-                              {p.rotc > 0 && <span className="text-xs text-white font-black">{p.rotc}</span>}
+                              {data.rotc > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.rotc}</span>}
                             </div>
                           </div>
                         </div>
@@ -1286,61 +1271,11 @@ function AdminDashboard() {
                   );
                 })}
               </div>
-
-              {/* Summary Table */}
-              <div className="mt-6 border-t border-gray-100 pt-5">
-                <h4 className="text-sm font-bold text-gray-900 mb-3">Program Enrollment Summary</h4>
-                <div className="overflow-x-auto rounded-xl border border-gray-200/80">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100/90 text-gray-700">
-                      <tr>
-                        <th className="px-3.5 py-3 text-left font-extrabold text-xs uppercase tracking-wider">Degree Program</th>
-                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-emerald-700">CWTS</th>
-                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-purple-700">LTS</th>
-                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-rose-700">ROTC</th>
-                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-900">Total</th>
-                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-700">Top Component</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {programDeptStats.map(p => {
-                        const maxDept = Math.max(p.cwts, p.lts, p.rotc);
-                        const topDept = p.cwts === maxDept ? 'CWTS' : p.lts === maxDept ? 'LTS' : 'ROTC';
-                        return (
-                          <tr key={p.program} className="hover:bg-blue-50/40 transition-colors cursor-pointer group" onClick={() => navigate('/students')}>
-                            <td className="px-3.5 py-3 font-bold text-gray-900 group-hover:text-blue-900">{p.program}</td>
-                            <td className="px-3.5 py-3 text-center text-emerald-700 font-bold">{p.cwts}</td>
-                            <td className="px-3.5 py-3 text-center text-purple-700 font-bold">{p.lts}</td>
-                            <td className="px-3.5 py-3 text-center text-rose-700 font-bold">{p.rotc}</td>
-                            <td className="px-3.5 py-3 text-center font-black text-gray-900">{p.total}</td>
-                            <td className="px-3.5 py-3 text-center">
-                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold shadow-2xs ${
-                                topDept === 'CWTS' ? 'bg-emerald-100 text-emerald-800' :
-                                topDept === 'LTS'  ? 'bg-purple-100 text-purple-800' :
-                                'bg-rose-100 text-rose-800'
-                              }`}>
-                                {topDept}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {/* All Programs Totals Row */}
-                      <tr className="bg-gray-100/90 font-black border-t-2 border-gray-300">
-                        <td className="px-3.5 py-3 text-gray-900">All Programs</td>
-                        <td className="px-3.5 py-3 text-center text-emerald-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.cwts, 0)}</td>
-                        <td className="px-3.5 py-3 text-center text-purple-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.lts, 0)}</td>
-                        <td className="px-3.5 py-3 text-center text-rose-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.rotc, 0)}</td>
-                        <td className="px-3.5 py-3 text-center text-gray-950 font-black text-base">{programDeptStats.reduce((a, p) => a + p.total, 0)}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
         </div>
+
+
 
         {/* Batch Management - Hide when viewing archive */}
         {!viewingArchive && (
@@ -1928,6 +1863,172 @@ function AdminDashboard() {
           </div>
         </div>
       )}
+
+        {/* Admin Enrollment Timed Schedule Modal */}
+        {scheduleModalOpen && (
+          <div className="fixed inset-0 bg-emerald-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-emerald-100 flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-6 flex items-center justify-between shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Enrollment Schedule Settings</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Set opening date, time, &amp; auto-close schedule</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+                {/* Current Live Status Banner */}
+                <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2 ${
+                  scheduleStatus.isOpen 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                    : 'bg-rose-50 border-rose-200 text-rose-900'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`}></span>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider">{scheduleStatus.headline}</p>
+                      <p className="text-[11px] font-medium opacity-90 mt-0.5">{scheduleStatus.subtext}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border shadow-2xs shrink-0">
+                    {scheduleConfig.mode}
+                  </span>
+                </div>
+
+                {/* Control Mode Options */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">Operation Mode</label>
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'AUTO' }))}
+                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                        scheduleConfig.mode === 'AUTO'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      🕒 Auto Timed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={quickForceOpen}
+                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                        scheduleConfig.mode === 'FORCE_OPEN'
+                          ? 'bg-green-600 text-white border-green-600 shadow-md'
+                          : 'bg-gray-50 text-green-700 border-green-200 hover:bg-green-50'
+                      }`}
+                    >
+                      🟢 Force Open
+                    </button>
+                    <button
+                      type="button"
+                      onClick={quickForceClose}
+                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                        scheduleConfig.mode === 'FORCE_CLOSE'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-md'
+                          : 'bg-gray-50 text-rose-700 border-rose-200 hover:bg-rose-50'
+                      }`}
+                    >
+                      🔴 Force Close
+                    </button>
+                  </div>
+                </div>
+
+                {/* Opening Date & Time */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                    📅 Opening Date &amp; Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={scheduleConfig.openAt || ''}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Leave empty to open immediately when Auto Timed mode is selected.</p>
+                </div>
+
+                {/* Closing Date & Time */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                    ⌛ Automatic Closing Date &amp; Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={scheduleConfig.closeAt || ''}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Enrollment will automatically close when this date and time is reached.</p>
+                </div>
+
+                {/* Announcement Notice */}
+                <div>
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                    📢 Student Notice / Announcement Text
+                  </label>
+                  <input
+                    type="text"
+                    value={scheduleConfig.customNotice || ''}
+                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
+                    placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={quickForceOpen}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    Open Now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={quickForceClose}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    Close Now
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleModalOpen(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSaveSchedule(scheduleConfig);
+                      setScheduleModalOpen(false);
+                    }}
+                    className="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+                  >
+                    Save &amp; Apply Schedule
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <ScrollToTopButton />
     </div>

@@ -69,16 +69,21 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               </button>
             </div>
           ) : (
-            <div className="flex items-center space-x-3">
-              <div className={`w-10 h-10 ${colors.bg} rounded-2xl flex items-center justify-center shrink-0 shadow-md border border-white/20`}>
-                <Shield className={`w-5 h-5 ${colors.text}`} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 ${colors.bg} rounded-2xl flex items-center justify-center shrink-0 shadow-md border border-white/20`}>
+                  <Shield className={`w-5 h-5 ${colors.text}`} />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="font-black text-xs leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
+                    {user?.department} Instructor
+                  </span>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h1 className="font-black text-xs leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
-                <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
-                  {user?.department} Instructor
-                </span>
-              </div>
+              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
             </div>
           )}
         </div>
