@@ -3,7 +3,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle, FileSpreadsheet
+  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';

@@ -86,6 +86,7 @@ function Reports() {
     navigate('/login');
   };
 
+  const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
 
   const openEditModal = (report) => {
