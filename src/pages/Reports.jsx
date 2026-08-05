@@ -342,9 +342,8 @@ function Reports() {
           </div>
           {isAdmin && !viewingArchive && (
             <button type="button"
-              
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center"
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white font-bold px-4.5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-emerald-900/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center"
             >
               <Plus className="w-5 h-5" />
               <span>Create Assignment</span>

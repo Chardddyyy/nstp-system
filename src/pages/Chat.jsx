@@ -6,7 +6,7 @@ import {
   Phone, Video, MoreVertical, Paperclip, Smile,
   Mic, Camera, Image, X, Download,
   Play, Menu, ArrowLeft, MicOff,
-  Volume2, VolumeX, MessageSquare
+  Volume2, VolumeX, MessageSquare, Plus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -1423,8 +1423,17 @@ function Chat() {
       isDanger: true,
       onConfirm: async () => {
         try {
-          await deleteConversation(activeConversation.id);
-          setActiveConversationId(null);
+          const targetId = activeConversation.id;
+          await deleteConversation(targetId);
+
+          // Auto-switch to next available conversation
+          const remaining = (conversations || []).filter(c => String(c.id) !== String(targetId));
+          if (remaining.length > 0) {
+            setActiveConversationId(remaining[0].id);
+          } else {
+            setActiveConversationId(null);
+          }
+
           setShowChatMenu(false);
           setShowConfirmModal(false);
         } catch {
@@ -2349,10 +2358,21 @@ function Chat() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Select a conversation to start messaging</p>
+            <div className="flex-1 flex items-center justify-center p-6 bg-gray-50/50">
+              <div className="text-center max-w-sm mx-auto p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">Select a Conversation</h3>
+                <p className="text-sm text-gray-500 mb-6">Choose someone from your contact list or start a new chat to begin messaging.</p>
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatModal(true)}
+                  className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm shadow-green-700/20"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Start New Chat
+                </button>
               </div>
             </div>
           )}

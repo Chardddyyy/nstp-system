@@ -1510,10 +1510,10 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?
         ORDER BY m.created_at DESC
-        LIMIT ?
+        LIMIT ${limit}
       ) latest
       ORDER BY latest.created_at ASC
-    `, [conversationId, limit]);
+    `, [conversationId]);
 
     res.json(messages);
   } catch (error) {
@@ -2831,12 +2831,140 @@ app.get('/api/audit-logs', authenticateToken, requireAdmin, async (req, res) => 
       `SELECT al.*, u.name as user_name, u.email as user_email
        FROM audit_logs al
        LEFT JOIN users u ON al.user_id = u.id
-       ORDER BY al.created_at DESC LIMIT ?`,
-      [limit]
+       ORDER BY al.created_at DESC LIMIT ${limit}`
     );
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Real-time Active Sessions & Telemetry Tracking ────────────────────────────
+var activeSessions = new Map(); // sessionId -> { visitorId, user, page, lastSeen, ip }
+var totalUniqueVisitors = new Set(); // persistent unique visitor IDs in memory
+var visitorLogFile = path.join(__dirname, 'visitors_telemetry.json');
+
+// Load stored visitors telemetry on server startup
+try {
+  if (fs.existsSync(visitorLogFile)) {
+    var rawData = fs.readFileSync(visitorLogFile, 'utf8');
+    var parsed = JSON.parse(rawData);
+    if (Array.isArray(parsed.visitors)) {
+      parsed.visitors.forEach(function(id) { totalUniqueVisitors.add(id); });
+    }
+  }
+} catch (e) {
+  console.warn('[Telemetry] Error reading visitors file:', e.message);
+}
+
+function saveTelemetry() {
+  try {
+    fs.writeFileSync(visitorLogFile, JSON.stringify({
+      visitors: Array.from(totalUniqueVisitors),
+      updatedAt: new Date().toISOString()
+    }, null, 2));
+  } catch (e) { /* ignore */ }
+}
+
+// Clean up stale sessions (> 25s since last ping) every 10 seconds
+setInterval(function() {
+  var now = Date.now();
+  for (var entry of activeSessions.entries()) {
+    var sid = entry[0];
+    var data = entry[1];
+    if (now - data.lastSeen > 25000) {
+      activeSessions.delete(sid);
+    }
+  }
+}, 10000);
+
+// Heartbeat ping endpoint (Public)
+app.post('/api/telemetry/ping', function(req, res) {
+  var body = req.body || {};
+  var sessionId = body.sessionId;
+  var visitorId = body.visitorId;
+  var user = body.user;
+  var page = body.page;
+
+  if (!sessionId || !visitorId) {
+    return res.status(400).json({ message: 'Missing session/visitor identity' });
+  }
+
+  var isNewVisitor = !totalUniqueVisitors.has(visitorId);
+  totalUniqueVisitors.add(visitorId);
+  if (isNewVisitor) {
+    saveTelemetry();
+  }
+
+  activeSessions.set(sessionId, {
+    visitorId: visitorId,
+    user: user || null,
+    page: page || '/',
+    lastSeen: Date.now(),
+    ip: req.ip
+  });
+
+  res.json({ success: true, totalVisitors: totalUniqueVisitors.size, activeOnlineCount: activeSessions.size });
+});
+
+// Telemetry statistics and real-time active user list (Public)
+app.get('/api/telemetry/stats', async function(req, res) {
+  try {
+    var now = Date.now();
+    var activeList = [];
+    var seenUserEmails = new Set();
+
+    for (var entry of activeSessions.entries()) {
+      var sid = entry[0];
+      var data = entry[1];
+      if (now - data.lastSeen <= 25000) {
+        var name = 'Guest Visitor';
+        var role = 'Guest / Student Visitor';
+        var isAuth = false;
+        var email = null;
+        var avatar = null;
+
+        if (data.user && data.user.name) {
+          name = data.user.name;
+          role = data.user.role ? (data.user.role.charAt(0).toUpperCase() + data.user.role.slice(1)) : 'User';
+          if (data.user.program) role += ' (' + data.user.program + ')';
+          isAuth = true;
+          email = data.user.email;
+          avatar = data.user.avatar || null;
+        }
+
+        if (email && seenUserEmails.has(email)) continue;
+        if (email) seenUserEmails.add(email);
+
+        activeList.push({
+          id: sid,
+          name: name,
+          role: role,
+          page: data.page,
+          isAuth: isAuth,
+          lastActiveSec: Math.max(0, Math.floor((now - data.lastSeen) / 1000))
+        });
+      }
+    }
+
+    var studentRows = await pool.query('SELECT COUNT(*) as count FROM students').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+    var userRows = await pool.query('SELECT COUNT(*) as count FROM users').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+
+    var dbStudents = (studentRows[0] && studentRows[0].count) || 0;
+    var dbUsers = (userRows[0] && userRows[0].count) || 0;
+    var totalRegisteredUsers = dbStudents + dbUsers;
+    var totalUsageCount = totalUniqueVisitors.size;
+
+    res.json({
+      totalVisitors: totalUsageCount,
+      totalRegisteredUsers: totalRegisteredUsers,
+      totalStudents: dbStudents,
+      activeOnlineCount: activeList.length,
+      activeUsers: activeList
+    });
+  } catch (err) {
+    console.error('Telemetry stats error:', err);
+    res.status(500).json({ message: 'Error retrieving telemetry' });
   }
 });
 
@@ -2862,6 +2990,11 @@ async function startServer() {
     console.error('Start XAMPP MySQL, then run: cd backend && npm run setup-db');
     process.exit(1);
   }
+
+  app.listen(PORT, function() {
+    console.log('Server running on port ' + PORT);
+    console.log('API available at http://localhost:' + PORT + '/api');
+  });
 
   console.log('Running schema migrations...');
   await Promise.all([
@@ -2895,11 +3028,6 @@ async function startServer() {
   } catch (e) {
     console.warn('Password hash migration warning:', e.message);
   }
-
-  app.listen(PORT, function() {
-    console.log('Server running on port ' + PORT);
-    console.log('API available at http://localhost:' + PORT + '/api');
-  });
 }
 
 startServer();

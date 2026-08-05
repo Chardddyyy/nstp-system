@@ -370,21 +370,19 @@ function StudentManagement() {
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button type="button"
-              
               onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
               title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white bg-blue-600 hover:bg-blue-700"
+              className="flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 w-full sm:w-auto justify-center text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold shadow-md shadow-blue-900/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95"
             >
               <FileSpreadsheet className="w-5 h-5" />
               <span>Download Excel</span>
             </button>
             {isAdmin && (
               <button type="button"
-                
                 onClick={() => !viewingArchive && setShowAddModal(true)}
                 disabled={viewingArchive}
                 title={viewingArchive ? 'Exit archive view to add students' : ''}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center text-white ${viewingArchive ? 'bg-green-700/40 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'}`}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 w-full sm:w-auto justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
               >
                 <Plus className="w-5 h-5" />
                 <span>Add Student</span>
@@ -464,9 +462,9 @@ function StudentManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {currentStudents.map((student) => (
+                {currentStudents.map((student, index) => (
                   <tr 
-                    key={student.id} 
+                    key={student.id || student.studentId || `student-${index}`} 
                     className="hover:bg-green-50 cursor-pointer transition-colors duration-150"
                     onClick={() => handleViewStudent(student)}
                   >
@@ -490,22 +488,20 @@ function StudentManagement() {
                     </td>
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
-                            
                             onClick={() => !viewingArchive && openEditModal(student)}
                             disabled={viewingArchive}
                             title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
-                            className={`p-1 rounded ${viewingArchive ? 'text-blue-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'}`}
+                            className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-blue-300 border-gray-100 cursor-not-allowed' : 'text-blue-600 bg-blue-50/80 border-blue-200/80 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-2xs hover:shadow-xs'}`}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button type="button"
-                            
                             onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
                             disabled={viewingArchive}
                             title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
-                            className={`p-1 rounded ${viewingArchive ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
+                            className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-rose-300 border-gray-100 cursor-not-allowed' : 'text-rose-600 bg-rose-50/80 border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 shadow-2xs hover:shadow-xs'}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -551,43 +547,51 @@ function StudentManagement() {
 
         {/* Export Modal */}
         {showExportModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowExportModal(false)}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-                  <h3 className="text-lg font-bold text-gray-800">Download Excel</h3>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowExportModal(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border border-gray-100 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-inner">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-gray-900">Export Masterlist</h3>
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">CHED Excel</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Configure parameters for official CHED masterlist export</p>
+                  </div>
                 </div>
-                <button type="button" onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="space-y-4">
+                {/* Department Selection */}
                 {isAdmin && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">Select Department / Component</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {['All', 'CWTS', 'LTS', 'ROTC'].map(dept => {
-                        const colors = {
-                          All:  'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200',
-                          CWTS: 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100',
-                          LTS:  'bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100',
-                          ROTC: 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100',
-                        };
-                        const selected = {
-                          All:  'bg-gray-700 border-gray-700 text-white',
-                          CWTS: 'bg-blue-600 border-blue-600 text-white',
-                          LTS:  'bg-purple-600 border-purple-600 text-white',
-                          ROTC: 'bg-red-600 border-red-600 text-white',
-                        };
+                      {[
+                        { key: 'All', label: 'All Departments', activeClass: 'bg-emerald-700 border-emerald-700 text-white shadow-xs' },
+                        { key: 'CWTS', label: 'CWTS Component', activeClass: 'bg-emerald-600 border-emerald-600 text-white shadow-xs' },
+                        { key: 'LTS',  label: 'LTS Component',  activeClass: 'bg-purple-600 border-purple-600 text-white shadow-xs' },
+                        { key: 'ROTC', label: 'ROTC Component', activeClass: 'bg-rose-600 border-rose-600 text-white shadow-xs' },
+                      ].map(dept => {
+                        const isSelected = exportDept === dept.key;
                         return (
-                          <button key={dept}
+                          <button
+                            key={dept.key}
                             type="button"
-                            onClick={() => setExportDept(dept)}
-                            className={`px-4 py-2.5 rounded-lg border-2 font-medium text-sm transition-all ${exportDept === dept ? selected[dept] : colors[dept]}`}
+                            onClick={() => setExportDept(dept.key)}
+                            className={`px-3 py-2.5 rounded-xl border-2 font-semibold text-xs transition-all duration-200 active:scale-95 flex items-center justify-between ${
+                              isSelected ? dept.activeClass : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300'
+                            }`}
                           >
-                            {dept === 'All' ? 'All Departments' : dept}
+                            <span>{dept.label}</span>
+                            {isSelected && <span className="text-xs">✓</span>}
                           </button>
                         );
                       })}
@@ -595,70 +599,99 @@ function StudentManagement() {
                   </div>
                 )}
 
+                {/* Course / Program Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Course / Program</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">Select Degree Program</label>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => (
-                      <button key={course}
-                        type="button"
-                        onClick={() => setExportCourse(course)}
-                        className={`px-2 py-2 rounded-lg border-2 font-medium text-xs transition-all ${
-                          exportCourse === course
-                            ? 'bg-green-700 border-green-700 text-white'
-                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        {course === 'All' ? 'All Courses' : course === 'BSED' ? 'BSEd' : course}
-                      </button>
-                    ))}
+                    {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => {
+                      const isSelected = exportCourse === course;
+                      return (
+                        <button
+                          key={course}
+                          type="button"
+                          onClick={() => setExportCourse(course)}
+                          className={`px-2 py-2 rounded-xl border-2 font-bold text-xs transition-all duration-150 active:scale-95 ${
+                            isSelected
+                              ? 'bg-emerald-700 border-emerald-700 text-white shadow-xs'
+                              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-emerald-50/50 hover:border-emerald-200'
+                          }`}
+                        >
+                          {course === 'All' ? 'All' : course === 'BSED' ? 'BSEd' : course}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                  {isAdmin
-                    ? (exportCourse === 'All'
-                        ? <>Will export <strong>{exportDept === 'All' ? 'all departments' : exportDept}</strong> students in CHED format.</>
-                        : <>Will export <strong>{exportDept === 'All' ? 'all departments' : exportDept}</strong> — <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students in CHED format.</>)
-                    : (exportCourse === 'All'
-                        ? <>Will export all <strong>{user?.department}</strong> students in CHED format.</>
-                        : <>Will export <strong>{user?.department}</strong> — <strong>{exportCourse === 'BSED' ? 'BSEd' : exportCourse}</strong> students in CHED format.</>)
-                  }
-                </div>
+                {/* Live Export Dynamic Preview Card */}
+                {(() => {
+                  const matchingCount = students.filter(s => {
+                    const deptMatch = exportDept === 'All' || s.department === exportDept;
+                    const courseMatch = exportCourse === 'All' || (s.program || '').toLowerCase() === (exportCourse === 'BSED' ? 'bsed' : exportCourse).toLowerCase();
+                    return deptMatch && courseMatch;
+                  }).length;
 
-                <div className="border-t border-dashed border-gray-200 pt-4">
-                  <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-3">CHED Format Settings</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  return (
+                    <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-3.5 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 font-bold text-sm shadow-xs">
+                        {matchingCount}
+                      </div>
+                      <div className="text-xs text-emerald-950">
+                        <p className="font-bold">
+                          Exporting <strong>{matchingCount}</strong> student records
+                        </p>
+                        <p className="text-emerald-700 text-[11px] mt-0.5">
+                          {isAdmin ? (exportDept === 'All' ? 'All Departments' : exportDept) : user?.department} · {exportCourse === 'All' ? 'All Courses' : exportCourse} · CHED Format
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* CHED Format Settings */}
+                <div className="border-t border-dashed border-gray-200 pt-3">
+                  <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-2.5">CHED Report Header Settings</p>
+                  <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Semester</label>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Semester</label>
                       <select
                         value={exportSem}
                         onChange={(e) => setExportSem(e.target.value)}
-                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        className="w-full text-xs font-medium border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
                       >
                         <option>1st Semester</option>
                         <option>2nd Semester</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Academic Year</label>
+                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Academic Year</label>
                       <input
                         type="text"
                         value={exportAcadYear}
                         onChange={(e) => setExportAcadYear(e.target.value)}
                         placeholder="e.g. 2025-2026"
-                        className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                        className="w-full text-xs font-medium border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-5">
-                <button type="button" onClick={() => setShowExportModal(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+              {/* Action Buttons */}
+              <div className="flex gap-2.5 mt-5">
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(false)}
+                  className="flex-1 px-4 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-semibold transition-all active:scale-95"
+                >
                   Cancel
                 </button>
-                <button type="button" onClick={downloadChed} className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
-                  <Download className="w-4 h-4" /> Download
+                <button
+                  type="button"
+                  onClick={downloadChed}
+                  className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/20 active:scale-95 hover:-translate-y-0.5"
+                >
+                  <Download className="w-4 h-4" /> Download Excel
                 </button>
               </div>
             </div>
@@ -1080,21 +1113,7 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Status Section */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-gray-500 text-sm">Status:</span>
-                      <span className={`ml-2 px-2 py-1 rounded text-sm font-medium ${
-                        viewStudent.status === 'Active' ? 'bg-green-100 text-green-700' :
-                        viewStudent.status === 'Inactive' ? 'bg-red-100 text-red-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {viewStudent.status || 'Active'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+
               </div>
 
               {/* Sticky Footer */}

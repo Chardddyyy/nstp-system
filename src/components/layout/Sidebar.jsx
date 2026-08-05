@@ -25,13 +25,13 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
 
   function navClass(path) {
     const active = location.pathname === path;
-    return `w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-      active ? 'bg-green-700' : 'hover:bg-green-700/50'
+    return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 ${
+      active ? 'bg-gradient-to-r from-emerald-600 to-green-700 font-bold shadow-md shadow-emerald-950/30' : 'hover:bg-green-700/60 font-medium hover:translate-x-1'
     }`;
   }
 
   function archiveNavClass() {
-    return `w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+    return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
       archiveMode ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'
     }`;
   }
@@ -51,8 +51,14 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         <div className="p-6 border-b border-green-700">
           {isAdmin ? (
             <div className="flex items-center justify-between">
-              <span className="text-lg font-bold leading-tight">National Service Training Program</span>
-              <button type="button" onClick={onClose} className="lg:hidden p-1 hover:bg-green-700 rounded">
+              <div className="flex items-center space-x-3">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-9 h-9 object-contain flex-shrink-0" />
+                <div className="min-w-0">
+                  <h1 className="font-bold text-sm leading-tight text-white">CvSU Naic NSTP</h1>
+                  <p className="text-xs text-green-200">Admin Control Panel</p>
+                </div>
+              </div>
+              <button type="button" onClick={onClose} className="lg:hidden p-1 hover:bg-green-700 rounded text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -123,7 +129,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         {/* Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
           <button type="button" onClick={onLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-red-300"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-rose-900/40 hover:text-rose-200 transition-all duration-200 text-rose-300 font-semibold active:scale-95"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

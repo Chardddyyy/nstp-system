@@ -6,7 +6,7 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -59,6 +59,8 @@ function AdminDashboard() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
+  const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
+  const [analyticsViewMode, setAnalyticsViewMode] = useState('chart');
 
   const showNotif = (type, message) => {
     setNotification({ type, message });
@@ -188,8 +190,17 @@ function AdminDashboard() {
   function handleMarkAllRead(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     setNotifications(function(prev) {
+      if (selectedNotifications.length > 0) {
+        return (prev || []).map(function(n) {
+          const isSelected = selectedNotifications.some(function(sid) {
+            return notificationIdsMatch(sid, n.id);
+          });
+          return isSelected ? { ...n, read: true } : n;
+        });
+      }
       return (prev || []).map(function(n) { return { ...n, read: true }; });
     });
+    setSelectedNotifications([]);
   }
 
   function handleMarkOneRead(e, id) {
@@ -462,11 +473,14 @@ function AdminDashboard() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button type="button"
-                        
                         onClick={handleMarkAllRead}
-                        disabled={(notifications || []).every(n => n.read)}
+                        disabled={
+                          selectedNotifications.length > 0
+                            ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                            : (notifications || []).every(n => n.read)
+                        }
                         className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
-                        title="Mark all as read"
+                        title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
                       >
                         <MailOpen className="w-5 h-5" />
                       </button>
@@ -565,119 +579,244 @@ function AdminDashboard() {
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">Total Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.totalStudents}</p>
+        {/* Interactive Analytics & Program Distribution Panel */}
+        <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 pb-4 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                  📊
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">CvSU Naic Analytics &amp; Program Distribution</h3>
+                <span className="relative flex h-2.5 w-2.5 ml-1">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span className="bg-emerald-700 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-2xs ml-auto sm:ml-2">
+                  Total Active Students: {displayStats.totalStudents}
+                </span>
               </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
-              </div>
+              <p className="text-xs text-gray-500 mt-1">Interactive student enrollment metrics across degree programs and NSTP components</p>
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
-              <span>{viewingArchive ? 'Archived total' : 'Total enrolled students'}</span>
+
+            {/* Interactive View Toggles & Component Filter */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Component Filters */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSelectedComponentFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ALL' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedComponentFilter('CWTS')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'CWTS' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  CWTS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedComponentFilter('LTS')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'LTS' ? 'bg-purple-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  LTS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedComponentFilter('ROTC')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ROTC' ? 'bg-rose-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  ROTC
+                </button>
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsViewMode('chart')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'chart' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Chart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsViewMode('grid')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  Grid
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">CWTS Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.cwtsStudents}</p>
-              </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
-              </div>
+          {/* Component Ratio Stacked Bar Visual */}
+          <div className="mb-5 p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/60">
+            <div className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-2">
+              <span>Component Enrollment Ratio</span>
+              <span>Total Active: {displayStats.totalStudents}</span>
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
-              <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.cwtsStudents/displayStats.totalStudents*100) : 0}% of total</span>
+            <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner">
+              {displayStats.totalStudents > 0 ? (
+                <>
+                  <div
+                    style={{ width: `${(displayStats.cwtsStudents / displayStats.totalStudents) * 100}%` }}
+                    className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
+                    title={`CWTS: ${displayStats.cwtsStudents} (${Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100)}%)`}
+                    onClick={() => setSelectedComponentFilter('CWTS')}
+                  />
+                  <div
+                    style={{ width: `${(displayStats.ltsStudents / displayStats.totalStudents) * 100}%` }}
+                    className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
+                    title={`LTS: ${displayStats.ltsStudents} (${Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100)}%)`}
+                    onClick={() => setSelectedComponentFilter('LTS')}
+                  />
+                  <div
+                    style={{ width: `${(displayStats.rotcStudents / displayStats.totalStudents) * 100}%` }}
+                    className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
+                    title={`ROTC: ${displayStats.rotcStudents} (${Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100)}%)`}
+                    onClick={() => setSelectedComponentFilter('ROTC')}
+                  />
+                </>
+              ) : (
+                <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[10px] text-gray-500">No data</div>
+              )}
+            </div>
+            <div className="flex items-center justify-between text-xs pt-2 font-medium">
+              <span className="text-emerald-700">🟢 CWTS: {displayStats.cwtsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
+              <span className="text-purple-700">🟣 LTS: {displayStats.ltsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
+              <span className="text-rose-700">🔴 ROTC: {displayStats.rotcStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100) : 0}%)</span>
             </div>
           </div>
 
-          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">LTS Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.ltsStudents}</p>
-              </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
-              <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.ltsStudents/displayStats.totalStudents*100) : 0}% of total</span>
-            </div>
-          </div>
+          {/* MODE 1: HORIZONTAL CHARTS VIEW */}
+          {analyticsViewMode === 'chart' ? (
+            <div className="space-y-3 animate-fade-in">
+              {programDeptStats.map(item => {
+                const displayedCount = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
+                const maxVal = Math.max(...programDeptStats.map(p => selectedComponentFilter === 'CWTS' ? p.cwts : selectedComponentFilter === 'LTS' ? p.lts : selectedComponentFilter === 'ROTC' ? p.rotc : p.total), 1);
+                const percent = Math.round((displayedCount / maxVal) * 100);
+                const sharePercent = displayStats.totalStudents > 0 ? Math.round((displayedCount / displayStats.totalStudents) * 100) : 0;
 
-          <div className={`p-3 sm:p-6 rounded-xl shadow-md ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">ROTC Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{displayStats.rotcStudents}</p>
-              </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
-              </div>
+                return (
+                  <div
+                    key={item.program}
+                    className="bg-gray-50/80 hover:bg-emerald-50/40 border border-gray-200/70 hover:border-emerald-300 rounded-xl p-3.5 transition-all duration-200 group cursor-pointer"
+                    onClick={() => navigate('/students')}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-gray-900 group-hover:text-emerald-800 transition-colors">{item.program}</span>
+                        <span className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                          {sharePercent}% of total
+                        </span>
+                      </div>
+                      <span className="text-sm font-black text-emerald-800 bg-white px-2.5 py-0.5 rounded-md border border-emerald-100 shadow-2xs">
+                        {displayedCount} students
+                      </span>
+                    </div>
+
+                    <div className="h-2.5 w-full bg-gray-200 rounded-full overflow-hidden mb-2">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
+                          selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
+                          selectedComponentFilter === 'ROTC' ? 'bg-rose-600' :
+                          'bg-gradient-to-r from-emerald-500 to-teal-600'
+                        }`}
+                        style={{ width: `${percent}%` }}
+                      ></div>
+                    </div>
+
+                    {selectedComponentFilter === 'ALL' && (
+                      <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                        <span className="text-emerald-700 font-medium">CWTS: {item.cwts}</span>
+                        <span className="text-purple-700 font-medium">LTS: {item.lts}</span>
+                        <span className="text-rose-700 font-medium">ROTC: {item.rotc}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-gray-500">
-              <span>{displayStats.totalStudents > 0 ? Math.round(displayStats.rotcStudents/displayStats.totalStudents*100) : 0}% of total</span>
+          ) : (
+            /* MODE 2: INTERACTIVE GRID BADGE VIEW */
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 animate-fade-in">
+              {programDeptStats.map(item => {
+                const count = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
+                return (
+                  <div
+                    key={item.program}
+                    className="bg-gray-50 hover:bg-emerald-50/60 border border-gray-200/80 hover:border-emerald-300 rounded-xl p-3 flex items-center justify-between transition-all duration-150 group cursor-pointer"
+                    onClick={() => navigate('/students')}
+                  >
+                    <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-900 truncate mr-2">{item.program}</span>
+                    <span className="text-sm font-black text-gray-900 group-hover:text-emerald-700 bg-white group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shadow-2xs shrink-0 transition-colors">
+                      {count}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Per Program Stats */}
-        {programStats.length > 0 && (
-          <div className={`rounded-xl shadow-md p-3 sm:p-5 mb-3 sm:mb-6 ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-            <p className="text-sm font-semibold text-gray-600 mb-3">Students per Department/Program</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-              {programStats.map(([prog, count]) => (
-                <div key={prog} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 truncate mr-2">{prog}</span>
-                  <span className="text-base font-bold text-gray-800 shrink-0">{count}</span>
+        {/* Quick Action Navigation Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div
+            className="bg-gradient-to-r from-emerald-700 to-green-800 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            onClick={() => setShowInstructorList(true)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5 text-white" />
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Additional Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-green-700 hover:to-green-800 transition-all" onClick={() => setShowInstructorList(true)}>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+                <div>
+                  <p className="text-emerald-100 text-xs font-medium uppercase tracking-wider">Instructors</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{stats.totalInstructors} Active</p>
+                </div>
               </div>
-              <div>
-                <p className="text-green-100 text-sm">Total Instructors</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalInstructors}</p>
-              </div>
+              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all">View &rarr;</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-yellow-600 hover:to-yellow-700 transition-all" onClick={() => navigate('/reports')}>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            onClick={() => navigate('/reports')}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-amber-100 text-xs font-medium uppercase tracking-wider">Reports</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{stats.pendingReports} Pending</p>
+                </div>
               </div>
-              <div>
-                <p className="text-yellow-100 text-sm">Pending Reports</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.pendingReports}</p>
-              </div>
+              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all">Review &rarr;</span>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 sm:p-6 rounded-xl shadow-md text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all" onClick={() => navigate('/chat')}>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+          <div
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-5 rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+            onClick={() => navigate('/chat')}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MessageSquare className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-blue-100 text-xs font-medium uppercase tracking-wider">Messages</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{stats.unreadMessages} Unread</p>
+                </div>
               </div>
-              <div>
-                <p className="text-blue-100 text-sm">Unread Messages</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.unreadMessages}</p>
-              </div>
+              <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all">Open &rarr;</span>
             </div>
           </div>
         </div>
@@ -861,16 +1000,23 @@ function AdminDashboard() {
             )}
           </div>
         )}
-        <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-green-600" />
-              Cavite State University Naic Component Enrollment Comparison
-            </h3>
-            <button type="button"
-              
+
+        {/* Component Enrollment Comparison (Multi-Year Analytics) */}
+        <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm shadow-inner shrink-0">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Cavite State University Naic Component Enrollment Comparison</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Historical and active student enrollment comparison across academic batch years</p>
+              </div>
+            </div>
+            <button
+              type="button"
               onClick={() => setShowAnalytics(!showAnalytics)}
-              className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center"
+              className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center border border-emerald-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer"
             >
               {showAnalytics ? (
                 <><ChevronUp className="w-4 h-4 mr-1" /> Hide Analytics</>
@@ -881,27 +1027,29 @@ function AdminDashboard() {
           </div>
           
           {showAnalytics && (
-            <>
-              {/* Legend */}
-              <div className="flex items-center justify-center space-x-6 mb-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span className="text-sm text-gray-700 font-medium">CWTS</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-purple-500 rounded"></div>
-                  <span className="text-sm text-gray-700 font-medium">LTS</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-red-500 rounded"></div>
-                  <span className="text-sm text-gray-700 font-medium">ROTC</span>
+            <div className="animate-fade-in">
+              {/* Legend & Filter */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-3 bg-gray-50/80 rounded-xl border border-gray-200/60">
+                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Components Legend</span>
+                <div className="flex items-center space-x-5">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md shadow-xs"></div>
+                    <span className="text-xs text-gray-700 font-bold">CWTS</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-md shadow-xs"></div>
+                    <span className="text-xs text-gray-700 font-bold">LTS</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-rose-500 to-red-600 rounded-md shadow-xs"></div>
+                    <span className="text-xs text-gray-700 font-bold">ROTC</span>
+                  </div>
                 </div>
               </div>
 
               {/* Bar Chart */}
               <div className="overflow-x-auto">
-                <div className="min-w-[500px]">
-                  {/* Current Year + Archived Years - filter out current batch from archive to avoid duplicates */}
+                <div className="min-w-[500px] space-y-5">
                   {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
                     year: y.year, 
                     cwts: y.data?.cwts || y.cwts || 0, 
@@ -911,45 +1059,55 @@ function AdminDashboard() {
                     { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
                   ].sort((a, b) => a.year - b.year).map((data) => {
                     const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
+                    const totalForYear = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
+
                     return (
-                      <div key={data.year} className="mb-6">
-                        <div className="flex items-center mb-2">
-                          <span className="w-16 text-sm font-bold text-gray-700">{data.year}</span>
+                      <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-2xl p-4 transition-all duration-200 group">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch Year {data.year}</span>
+                            {data.year === parseInt(currentBatch) && (
+                              <span className="text-[10px] bg-emerald-700 text-white font-extrabold px-2 py-0.5 rounded-full uppercase">Active Batch</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-gray-700 bg-white px-2.5 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
+                            {totalForYear} total enrolled
+                          </span>
                         </div>
-                        <div className="space-y-2 ml-16">
+                        <div className="space-y-2">
                           {/* CWTS Bar */}
-                          <div className="flex items-center">
-                            <span className="w-12 text-xs text-gray-500">CWTS</span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                          <div className="flex items-center gap-3">
+                            <span className="w-12 text-xs font-bold text-emerald-800">CWTS</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
                               <div 
-                                className="h-full bg-green-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                                style={{ width: `${(data.cwts / maxVal) * 100}%`, minWidth: data.cwts > 0 ? '30px' : '0' }}
+                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${(data.cwts / maxVal) * 100}%`, minWidth: data.cwts > 0 ? '34px' : '0' }}
                               >
-                                {data.cwts > 0 && <span className="text-xs text-white font-medium">{data.cwts}</span>}
+                                {data.cwts > 0 && <span className="text-xs text-white font-black">{data.cwts}</span>}
                               </div>
                             </div>
                           </div>
                           {/* LTS Bar */}
-                          <div className="flex items-center">
-                            <span className="w-12 text-xs text-gray-500">LTS</span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                          <div className="flex items-center gap-3">
+                            <span className="w-12 text-xs font-bold text-purple-800">LTS</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
                               <div 
-                                className="h-full bg-purple-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                                style={{ width: `${(data.lts / maxVal) * 100}%`, minWidth: data.lts > 0 ? '30px' : '0' }}
+                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${(data.lts / maxVal) * 100}%`, minWidth: data.lts > 0 ? '34px' : '0' }}
                               >
-                                {data.lts > 0 && <span className="text-xs text-white font-medium">{data.lts}</span>}
+                                {data.lts > 0 && <span className="text-xs text-white font-black">{data.lts}</span>}
                               </div>
                             </div>
                           </div>
                           {/* ROTC Bar */}
-                          <div className="flex items-center">
-                            <span className="w-12 text-xs text-gray-500">ROTC</span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                          <div className="flex items-center gap-3">
+                            <span className="w-12 text-xs font-bold text-rose-800">ROTC</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-6 overflow-hidden">
                               <div 
-                                className="h-full bg-red-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                                style={{ width: `${(data.rotc / maxVal) * 100}%`, minWidth: data.rotc > 0 ? '30px' : '0' }}
+                                className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${(data.rotc / maxVal) * 100}%`, minWidth: data.rotc > 0 ? '34px' : '0' }}
                               >
-                                {data.rotc > 0 && <span className="text-xs text-white font-medium">{data.rotc}</span>}
+                                {data.rotc > 0 && <span className="text-xs text-white font-black">{data.rotc}</span>}
                               </div>
                             </div>
                           </div>
@@ -961,21 +1119,21 @@ function AdminDashboard() {
               </div>
 
               {/* Summary Table */}
-              <div className="mt-6 border-t border-gray-200 pt-4">
-                <h4 className="text-md font-semibold text-gray-800 mb-3">Enrollment Summary by Year</h4>
-                <div className="overflow-x-auto">
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <h4 className="text-sm font-bold text-gray-900 mb-3">Enrollment Summary by Batch Year</h4>
+                <div className="overflow-x-auto rounded-xl border border-gray-200/80">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
+                    <thead className="bg-gray-100/90 text-gray-700">
                       <tr>
-                        <th className="px-4 py-2 text-left font-medium text-gray-600">Year</th>
-                        <th className="px-4 py-2 text-center font-medium text-green-600">CWTS</th>
-                        <th className="px-4 py-2 text-center font-medium text-purple-600">LTS</th>
-                        <th className="px-4 py-2 text-center font-medium text-red-600">ROTC</th>
-                        <th className="px-4 py-2 text-center font-medium text-gray-600">Total</th>
-                        <th className="px-4 py-2 text-center font-medium text-gray-600">Highest</th>
+                        <th className="px-4 py-3 text-left font-extrabold text-xs uppercase tracking-wider">Batch Year</th>
+                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-emerald-700">CWTS</th>
+                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-purple-700">LTS</th>
+                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-rose-700">ROTC</th>
+                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-900">Total</th>
+                        <th className="px-4 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-700">Top Component</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
                         year: y.year, 
                         cwts: y.data?.cwts || y.cwts || 0, 
@@ -987,17 +1145,19 @@ function AdminDashboard() {
                         const maxComponent = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0);
                         const highest = data.cwts === maxComponent ? 'CWTS' : data.lts === maxComponent ? 'LTS' : 'ROTC';
                         return (
-                          <tr key={data.year} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="px-4 py-3 font-medium text-gray-800">{data.year}</td>
-                            <td className="px-4 py-3 text-center text-green-600 font-medium">{data.cwts || 0}</td>
-                            <td className="px-4 py-3 text-center text-purple-600 font-medium">{data.lts || 0}</td>
-                            <td className="px-4 py-3 text-center text-red-600 font-medium">{data.rotc || 0}</td>
-                            <td className="px-4 py-3 text-center text-gray-800 font-bold">{(data.cwts || 0) + (data.lts || 0) + (data.rotc || 0)}</td>
+                          <tr key={data.year} className="hover:bg-emerald-50/40 transition-colors cursor-pointer group" onClick={() => navigate('/students')}>
+                            <td className="px-4 py-3 font-bold text-gray-900 group-hover:text-emerald-800">
+                              {data.year} {data.year === parseInt(currentBatch) && <span className="text-[10px] text-emerald-700 font-extrabold ml-1">(Current)</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center text-emerald-700 font-bold">{data.cwts || 0}</td>
+                            <td className="px-4 py-3 text-center text-purple-700 font-bold">{data.lts || 0}</td>
+                            <td className="px-4 py-3 text-center text-rose-700 font-bold">{data.rotc || 0}</td>
+                            <td className="px-4 py-3 text-center text-gray-900 font-black">{(data.cwts || 0) + (data.lts || 0) + (data.rotc || 0)}</td>
                             <td className="px-4 py-3 text-center">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                highest === 'CWTS' ? 'bg-green-100 text-green-700' :
-                                highest === 'LTS' ? 'bg-purple-100 text-purple-700' :
-                                'bg-red-100 text-red-700'
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold shadow-2xs ${
+                                highest === 'CWTS' ? 'bg-emerald-100 text-emerald-800' :
+                                highest === 'LTS' ? 'bg-purple-100 text-purple-800' :
+                                'bg-rose-100 text-rose-800'
                               }`}>
                                 {highest}
                               </span>
@@ -1009,20 +1169,26 @@ function AdminDashboard() {
                   </table>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* By Program Analytics */}
-        <div className="bg-white rounded-xl shadow-md p-3 sm:p-6 mb-3 sm:mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center">
-              <BarChart3 className="w-5 h-5 mr-2 text-blue-600" />
-              Enrollment by Program
-            </h3>
-            <button type="button"
+        <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-sm shadow-inner shrink-0">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Enrollment by Program</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Degree program distribution broken down by NSTP component</p>
+              </div>
+            </div>
+            <button
+              type="button"
               onClick={() => setShowProgramAnalytics(!showProgramAnalytics)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
+              className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-extrabold flex items-center border border-blue-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer"
             >
               {showProgramAnalytics ? (
                 <><ChevronUp className="w-4 h-4 mr-1" /> Hide</>
@@ -1032,16 +1198,21 @@ function AdminDashboard() {
             </button>
           </div>
 
-          {/* Quick summary badges — always visible */}
+          {/* Quick summary interactive badges */}
           {programDeptStats.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-2 mb-4">
               {programDeptStats.map(p => (
-                <div key={p.program} className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                  <span className="text-xs font-semibold text-gray-700">{p.program}</span>
-                  <span className="text-xs font-bold text-gray-900">{p.total}</span>
-                  <span className="text-xs text-green-600">{p.cwts}C</span>
-                  <span className="text-xs text-purple-600">{p.lts}L</span>
-                  <span className="text-xs text-red-600">{p.rotc}R</span>
+                <div
+                  key={p.program}
+                  className="flex items-center gap-2 bg-gray-50 hover:bg-blue-50/70 border border-gray-200/80 hover:border-blue-300 rounded-xl px-3 py-2 transition-all duration-150 cursor-pointer active:scale-95 group shadow-2xs"
+                  onClick={() => navigate('/students')}
+                  title={`View ${p.program} students`}
+                >
+                  <span className="text-xs font-extrabold text-gray-800 group-hover:text-blue-900">{p.program}</span>
+                  <span className="text-xs font-black text-gray-900 bg-white group-hover:bg-blue-100 px-1.5 py-0.5 rounded-md shadow-2xs">{p.total}</span>
+                  <span className="text-[11px] text-emerald-700 font-bold">{p.cwts}C</span>
+                  <span className="text-[11px] text-purple-700 font-bold">{p.lts}L</span>
+                  <span className="text-[11px] text-rose-700 font-bold">{p.rotc}R</span>
                 </div>
               ))}
             </div>
@@ -1050,12 +1221,12 @@ function AdminDashboard() {
           )}
 
           {showProgramAnalytics && programDeptStats.length > 0 && (
-            <>
+            <div className="animate-fade-in">
               {/* Legend */}
-              <div className="flex items-center justify-center gap-6 mb-5 pt-2 border-t border-gray-100">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-green-500"></div><span className="text-xs text-gray-600 font-medium">CWTS</span></div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-purple-500"></div><span className="text-xs text-gray-600 font-medium">LTS</span></div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-red-500"></div><span className="text-xs text-gray-600 font-medium">ROTC</span></div>
+              <div className="flex items-center justify-center gap-6 mb-5 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-emerald-500 to-teal-500"></div><span className="text-xs text-gray-700 font-bold">CWTS</span></div>
+                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500"></div><span className="text-xs text-gray-700 font-bold">LTS</span></div>
+                <div className="flex items-center gap-2"><div className="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-rose-500 to-red-600"></div><span className="text-xs text-gray-700 font-bold">ROTC</span></div>
               </div>
 
               {/* Bar Chart — one row per program */}
@@ -1063,45 +1234,45 @@ function AdminDashboard() {
                 {programDeptStats.map(p => {
                   const maxVal = Math.max(p.cwts, p.lts, p.rotc, 1);
                   return (
-                    <div key={p.program}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-700 w-28 shrink-0">{p.program}</span>
-                        <span className="text-xs text-gray-400">{p.total} total</span>
+                    <div key={p.program} className="bg-gray-50/70 hover:bg-blue-50/40 border border-gray-200/60 hover:border-blue-300 rounded-2xl p-3.5 transition-all duration-200 group cursor-pointer" onClick={() => navigate('/students')}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-extrabold text-gray-900 group-hover:text-blue-900 w-28 shrink-0">{p.program}</span>
+                        <span className="text-xs font-bold text-blue-800 bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-2xs">{p.total} total enrolled</span>
                       </div>
-                      <div className="space-y-1.5 ml-4">
+                      <div className="space-y-2 ml-2">
                         {/* CWTS */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 w-8">CWTS</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                          <span className="text-xs font-bold text-emerald-700 w-10">CWTS</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
                             <div
-                              className="h-full bg-green-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                              style={{ width: `${(p.cwts / maxVal) * 100}%`, minWidth: p.cwts > 0 ? '28px' : '0' }}
+                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(p.cwts / maxVal) * 100}%`, minWidth: p.cwts > 0 ? '30px' : '0' }}
                             >
-                              {p.cwts > 0 && <span className="text-xs text-white font-medium">{p.cwts}</span>}
+                              {p.cwts > 0 && <span className="text-xs text-white font-black">{p.cwts}</span>}
                             </div>
                           </div>
                         </div>
                         {/* LTS */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 w-8">LTS</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                          <span className="text-xs font-bold text-purple-700 w-10">LTS</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
                             <div
-                              className="h-full bg-purple-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                              style={{ width: `${(p.lts / maxVal) * 100}%`, minWidth: p.lts > 0 ? '28px' : '0' }}
+                              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(p.lts / maxVal) * 100}%`, minWidth: p.lts > 0 ? '30px' : '0' }}
                             >
-                              {p.lts > 0 && <span className="text-xs text-white font-medium">{p.lts}</span>}
+                              {p.lts > 0 && <span className="text-xs text-white font-black">{p.lts}</span>}
                             </div>
                           </div>
                         </div>
                         {/* ROTC */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400 w-8">ROTC</span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden">
+                          <span className="text-xs font-bold text-rose-700 w-10">ROTC</span>
+                          <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden">
                             <div
-                              className="h-full bg-red-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
-                              style={{ width: `${(p.rotc / maxVal) * 100}%`, minWidth: p.rotc > 0 ? '28px' : '0' }}
+                              className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-2 transition-all duration-500 shadow-xs"
+                              style={{ width: `${(p.rotc / maxVal) * 100}%`, minWidth: p.rotc > 0 ? '30px' : '0' }}
                             >
-                              {p.rotc > 0 && <span className="text-xs text-white font-medium">{p.rotc}</span>}
+                              {p.rotc > 0 && <span className="text-xs text-white font-black">{p.rotc}</span>}
                             </div>
                           </div>
                         </div>
@@ -1112,36 +1283,36 @@ function AdminDashboard() {
               </div>
 
               {/* Summary Table */}
-              <div className="mt-6 border-t border-gray-100 pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Program Enrollment Summary</h4>
-                <div className="overflow-x-auto">
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <h4 className="text-sm font-bold text-gray-900 mb-3">Program Enrollment Summary</h4>
+                <div className="overflow-x-auto rounded-xl border border-gray-200/80">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-100/90 text-gray-700">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Program</th>
-                        <th className="px-3 py-2 text-center font-medium text-green-600">CWTS</th>
-                        <th className="px-3 py-2 text-center font-medium text-purple-600">LTS</th>
-                        <th className="px-3 py-2 text-center font-medium text-red-600">ROTC</th>
-                        <th className="px-3 py-2 text-center font-medium text-gray-700">Total</th>
-                        <th className="px-3 py-2 text-center font-medium text-gray-600">Top Dept</th>
+                        <th className="px-3.5 py-3 text-left font-extrabold text-xs uppercase tracking-wider">Degree Program</th>
+                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-emerald-700">CWTS</th>
+                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-purple-700">LTS</th>
+                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-rose-700">ROTC</th>
+                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-900">Total</th>
+                        <th className="px-3.5 py-3 text-center font-extrabold text-xs uppercase tracking-wider text-gray-700">Top Component</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {programDeptStats.map(p => {
                         const maxDept = Math.max(p.cwts, p.lts, p.rotc);
                         const topDept = p.cwts === maxDept ? 'CWTS' : p.lts === maxDept ? 'LTS' : 'ROTC';
                         return (
-                          <tr key={p.program} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                            <td className="px-3 py-2.5 font-medium text-gray-800">{p.program}</td>
-                            <td className="px-3 py-2.5 text-center text-green-600 font-medium">{p.cwts}</td>
-                            <td className="px-3 py-2.5 text-center text-purple-600 font-medium">{p.lts}</td>
-                            <td className="px-3 py-2.5 text-center text-red-600 font-medium">{p.rotc}</td>
-                            <td className="px-3 py-2.5 text-center font-bold text-gray-800">{p.total}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                topDept === 'CWTS' ? 'bg-green-100 text-green-700' :
-                                topDept === 'LTS'  ? 'bg-purple-100 text-purple-700' :
-                                'bg-red-100 text-red-700'
+                          <tr key={p.program} className="hover:bg-blue-50/40 transition-colors cursor-pointer group" onClick={() => navigate('/students')}>
+                            <td className="px-3.5 py-3 font-bold text-gray-900 group-hover:text-blue-900">{p.program}</td>
+                            <td className="px-3.5 py-3 text-center text-emerald-700 font-bold">{p.cwts}</td>
+                            <td className="px-3.5 py-3 text-center text-purple-700 font-bold">{p.lts}</td>
+                            <td className="px-3.5 py-3 text-center text-rose-700 font-bold">{p.rotc}</td>
+                            <td className="px-3.5 py-3 text-center font-black text-gray-900">{p.total}</td>
+                            <td className="px-3.5 py-3 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold shadow-2xs ${
+                                topDept === 'CWTS' ? 'bg-emerald-100 text-emerald-800' :
+                                topDept === 'LTS'  ? 'bg-purple-100 text-purple-800' :
+                                'bg-rose-100 text-rose-800'
                               }`}>
                                 {topDept}
                               </span>
@@ -1149,20 +1320,20 @@ function AdminDashboard() {
                           </tr>
                         );
                       })}
-                      {/* Totals row */}
-                      <tr className="bg-gray-50 font-bold border-t border-gray-200">
-                        <td className="px-3 py-2.5 text-gray-700">All Programs</td>
-                        <td className="px-3 py-2.5 text-center text-green-700">{programDeptStats.reduce((a, p) => a + p.cwts, 0)}</td>
-                        <td className="px-3 py-2.5 text-center text-purple-700">{programDeptStats.reduce((a, p) => a + p.lts, 0)}</td>
-                        <td className="px-3 py-2.5 text-center text-red-700">{programDeptStats.reduce((a, p) => a + p.rotc, 0)}</td>
-                        <td className="px-3 py-2.5 text-center text-gray-900">{programDeptStats.reduce((a, p) => a + p.total, 0)}</td>
+                      {/* All Programs Totals Row */}
+                      <tr className="bg-gray-100/90 font-black border-t-2 border-gray-300">
+                        <td className="px-3.5 py-3 text-gray-900">All Programs</td>
+                        <td className="px-3.5 py-3 text-center text-emerald-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.cwts, 0)}</td>
+                        <td className="px-3.5 py-3 text-center text-purple-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.lts, 0)}</td>
+                        <td className="px-3.5 py-3 text-center text-rose-800 font-extrabold">{programDeptStats.reduce((a, p) => a + p.rotc, 0)}</td>
+                        <td className="px-3.5 py-3 text-center text-gray-950 font-black text-base">{programDeptStats.reduce((a, p) => a + p.total, 0)}</td>
                         <td></td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 

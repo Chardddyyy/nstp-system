@@ -395,6 +395,25 @@ export const archivesAPI = {
   getCurrentBatch: getCurrentBatch
 };
 
+export function pingTelemetry(data) {
+  return fetch('http://localhost:3001/api/telemetry/ping', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(function(res) { return res.json(); }).catch(function() { return { success: false }; });
+}
+
+export function getTelemetryStats() {
+  return fetch('http://localhost:3001/api/telemetry/stats')
+    .then(function(res) { return res.json(); })
+    .catch(function() { return null; });
+}
+
+export const telemetryAPI = {
+  ping: pingTelemetry,
+  getStats: getTelemetryStats
+};
+
 export const callsAPI = {
   initiate: initiateCall,
   getIncoming: getIncomingCalls,
@@ -406,3 +425,5 @@ export const callsAPI = {
   sendIce: sendCallIce,
   getWebRTCSignaling: getCallWebRTCSignaling
 };
+
+

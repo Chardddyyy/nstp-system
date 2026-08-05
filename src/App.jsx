@@ -13,7 +13,7 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;
@@ -73,6 +73,40 @@ function App() {
   const seenSubmissionKeys = useRef(new Set());
   const seenReportIds = useRef(new Set());
   const seenConvLastMessageTime = useRef({});
+
+  // Global Realtime Telemetry Heartbeat Ping
+  useEffect(() => {
+    let sid = sessionStorage.getItem('nstp_session_id');
+    if (!sid) {
+      sid = 'sid_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      sessionStorage.setItem('nstp_session_id', sid);
+    }
+
+    let vid = localStorage.getItem('nstp_visitor_id');
+    if (!vid) {
+      vid = 'vid_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      localStorage.setItem('nstp_visitor_id', vid);
+    }
+
+    const sendPing = () => {
+      pingTelemetry({
+        sessionId: sid,
+        visitorId: vid,
+        user: user ? {
+          name: user.name,
+          role: user.role,
+          email: user.email,
+          program: user.program || user.department,
+          avatar: user.avatar
+        } : null,
+        page: window.location.pathname
+      });
+    };
+
+    sendPing();
+    const interval = setInterval(sendPing, 8000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const pushNotification = useCallback((notif) => {
     const item = {

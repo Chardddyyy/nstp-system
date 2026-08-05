@@ -101,8 +101,17 @@ function InstructorDashboard() {
   function handleMarkAllRead(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     setNotifications(function(prev) {
+      if (selectedNotifications.length > 0) {
+        return (prev || []).map(function(n) {
+          const isSelected = selectedNotifications.some(function(sid) {
+            return notificationIdsMatch(sid, n.id);
+          });
+          return isSelected ? { ...n, read: true } : n;
+        });
+      }
       return (prev || []).map(function(n) { return { ...n, read: true }; });
     });
+    setSelectedNotifications([]);
   }
 
   function handleMarkOneRead(e, id) {
@@ -275,11 +284,14 @@ function InstructorDashboard() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button type="button"
-                        
                         onClick={handleMarkAllRead}
-                        disabled={(notifications || []).every(n => n.read)}
+                        disabled={
+                          selectedNotifications.length > 0
+                            ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                            : (notifications || []).every(n => n.read)
+                        }
                         className="text-blue-600 hover:text-blue-700 disabled:opacity-30 transition-colors"
-                        title="Mark all as read"
+                        title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
                       >
                         <MailOpen className="w-5 h-5" />
                       </button>
@@ -374,49 +386,66 @@ function InstructorDashboard() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Total Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.totalStudents}</p>
+                <p className="text-gray-500 text-xs sm:text-sm font-medium">Total Students</p>
+                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1">{stats.totalStudents}</p>
               </div>
-              <div className={`w-9 h-9 sm:w-12 sm:h-12 ${colors.bg} rounded-lg flex items-center justify-center`}>
+              <div className={`w-9 h-9 sm:w-12 sm:h-12 ${colors.bg} rounded-xl flex items-center justify-center shadow-inner`}>
                 <Users className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
               </div>
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-green-600 flex items-center">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              <span>+8 new this month</span>
+            <div className="hidden sm:block mt-3">
+              <div className="flex items-center text-xs text-emerald-600 font-medium mb-1">
+                <TrendingUp className="w-3.5 h-3.5 mr-1" />
+                <span>Active Department Students</span>
+              </div>
+              <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Pending Messages</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.pendingMessages}</p>
+                <p className="text-gray-500 text-xs sm:text-sm font-medium">Pending Messages</p>
+                <p className="text-xl sm:text-3xl font-bold text-blue-900 mt-1">{stats.pendingMessages}</p>
               </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-inner">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-blue-500">
-              <span>{stats.pendingMessages > 0 ? 'You have unread messages' : 'No unread messages'}</span>
+            <div className="hidden sm:block mt-3">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Status</span>
+                <span className={`font-medium ${stats.pendingMessages > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{stats.pendingMessages > 0 ? 'Unread Messages' : 'All Read'}</span>
+              </div>
+              <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: stats.pendingMessages > 0 ? '100%' : '0%' }}></div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-md">
+          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Pending Reports</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-800">{stats.pendingReports}</p>
+                <p className="text-gray-500 text-xs sm:text-sm font-medium">Pending Reports</p>
+                <p className="text-xl sm:text-3xl font-bold text-orange-900 mt-1">{stats.pendingReports}</p>
               </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center shadow-inner">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
-            <div className="hidden sm:block mt-2 text-xs sm:text-sm text-red-500">
-              <span>Needs attention</span>
+            <div className="hidden sm:block mt-3">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Action</span>
+                <span className={`font-medium ${stats.pendingReports > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>{stats.pendingReports > 0 ? 'Submission Required' : 'Up to Date'}</span>
+              </div>
+              <div className="h-1.5 w-full bg-orange-100 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: stats.pendingReports > 0 ? '100%' : '0%' }}></div>
+              </div>
             </div>
           </div>
         </div>

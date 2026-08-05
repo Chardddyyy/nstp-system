@@ -481,10 +481,13 @@ function Profile() {
             </div>
           </div>
           <button type="button"
-            
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
             disabled={isSaving}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto justify-center disabled:opacity-60 disabled:cursor-wait ${isEditing ? 'bg-green-700 hover:bg-green-800 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            className={`flex items-center space-x-2 px-4.5 py-2.5 rounded-xl transition-all duration-200 w-full sm:w-auto justify-center font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait ${
+              isEditing
+                ? 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white shadow-emerald-900/20 hover:shadow-lg hover:-translate-y-0.5'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-900/20 hover:shadow-lg hover:-translate-y-0.5'
+            }`}
           >
             {isEditing ? <Save className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
