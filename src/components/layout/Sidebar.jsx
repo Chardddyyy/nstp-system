@@ -26,13 +26,15 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
   function navClass(path) {
     const active = location.pathname === path;
     return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 ${
-      active ? 'bg-gradient-to-r from-emerald-600 to-green-700 font-bold shadow-md shadow-emerald-950/30' : 'hover:bg-green-700/60 font-medium hover:translate-x-1'
+      active 
+        ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 font-black shadow-md shadow-amber-950/30' 
+        : 'text-emerald-100/90 hover:bg-emerald-800/60 hover:text-white font-semibold hover:translate-x-1'
     }`;
   }
 
   function archiveNavClass() {
     return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
-      archiveMode ? 'opacity-40 cursor-not-allowed' : 'hover:bg-green-700/50'
+      archiveMode ? 'opacity-40 cursor-not-allowed text-emerald-200/50' : 'text-emerald-100/90 hover:bg-emerald-800/60'
     }`;
   }
 
@@ -41,46 +43,52 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
       {/* Overlay */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xs z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-green-800 text-white shadow-xl z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-r border-emerald-800/50 z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Header */}
-        <div className="p-6 border-b border-green-700">
+        <div className="p-6 border-b border-emerald-800/60">
           {isAdmin ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-9 h-9 object-contain flex-shrink-0" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center p-1 shrink-0 shadow-sm">
+                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+                </div>
                 <div className="min-w-0">
-                  <h1 className="font-bold text-sm leading-tight text-white">CvSU Naic NSTP</h1>
-                  <p className="text-xs text-green-200">Admin Control Panel</p>
+                  <h1 className="font-black text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5">
+                    Admin Portal
+                  </span>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="lg:hidden p-1 hover:bg-green-700 rounded text-white">
+              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
           ) : (
             <div className="flex items-center space-x-3">
-              <div className={`w-10 h-10 ${colors.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                <Shield className={`w-6 h-6 ${colors.text}`} />
+              <div className={`w-10 h-10 ${colors.bg} rounded-2xl flex items-center justify-center shrink-0 shadow-md border border-white/20`}>
+                <Shield className={`w-5 h-5 ${colors.text}`} />
               </div>
               <div className="min-w-0">
-                <h1 className="font-bold text-base leading-tight">Cavite State University Naic</h1>
-                <p className="text-xs text-green-200 truncate">{user?.department} Instructor</p>
+                <h1 className="font-black text-xs leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
+                  {user?.department} Instructor
+                </span>
               </div>
             </div>
           )}
         </div>
 
         {/* Nav */}
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1.5">
           <button type="button" onClick={() => go(dashPath)}
             disabled={archiveMode}
             className={isAdmin ? (archiveMode
-              ? 'w-full flex items-center space-x-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed'
+              ? 'w-full flex items-center space-x-3 px-4 py-3 rounded-xl opacity-40 cursor-not-allowed text-emerald-200/50'
               : navClass(dashPath))
               : navClass(dashPath)}
           >
@@ -127,9 +135,9 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         </nav>
 
         {/* Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-emerald-800/60 bg-emerald-950/40">
           <button type="button" onClick={onLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-rose-900/40 hover:text-rose-200 transition-all duration-200 text-rose-300 font-semibold active:scale-95"
+            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-rose-950/30 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 border border-rose-900/40 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

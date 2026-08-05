@@ -301,7 +301,7 @@ function Reports() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 page-enter">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -311,21 +311,20 @@ function Reports() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Archive Banner */}
         {viewingArchive && archiveViewData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center justify-between">
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Archive className="w-6 h-6 text-amber-600 shrink-0" />
               <div>
-                <h2 className="text-base font-bold text-amber-800">Previous Report — Batch {archiveViewData.year}</h2>
-                <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
+                <h2 className="text-base font-black text-amber-900">Previous Report — Batch {archiveViewData.year}</h2>
+                <p className="text-xs text-amber-700 font-medium">Viewing archived batch data. Editing is disabled.</p>
               </div>
             </div>
             <button type="button"
-              
               onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
-              className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2 shrink-0"
+              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Back to Current</span>
@@ -336,11 +335,11 @@ function Reports() {
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
               {notification.type === 'success'
                 ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1">{notification.message}</span>
+              <span className="flex-1 font-semibold">{notification.message}</span>
               <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
@@ -348,36 +347,42 @@ function Reports() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
-          <div className="flex items-start gap-2">
-            <button type="button"
-              
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-gray-800">
-                {isAdmin ? 'Report Assignments' : 'My Reports'}
-              </h2>
-              <p className="text-gray-600">
-                {isAdmin ? 'Create report assignments for instructors' : 'View and submit your assigned reports'}
-              </p>
+        {/* Hero Header Card */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+            <div className="flex items-center gap-3.5">
+              <button type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+                    {isAdmin ? 'Report Assignments' : 'My Reports'}
+                  </h2>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
+                    CvSU Naic
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">
+                  {isAdmin ? 'Create & manage report submission requirements for instructors' : 'Submit and monitor required department report files'}
+                </p>
+              </div>
             </div>
+            {isAdmin && !viewingArchive && (
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-5 py-2.5 rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-xs sm:text-sm shrink-0"
+              >
+                <Plus className="w-4 h-4 text-emerald-950" />
+                <span>Create Assignment</span>
+              </button>
+            )}
           </div>
-          {isAdmin && !viewingArchive && (
-            <button
-              type="button"
-              onClick={handleOpenCreateModal}
-              className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-5 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-xs sm:text-sm"
-            >
-              <Plus className="w-5 h-5 text-emerald-950" />
-              <span>Create Assignment</span>
-            </button>
-          )}
         </div>
 
         {/* Filters */}

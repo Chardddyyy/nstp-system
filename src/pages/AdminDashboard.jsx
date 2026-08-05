@@ -390,22 +390,21 @@ function AdminDashboard() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ease-in-out p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 transition-all duration-300 ease-in-out p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Archive className="w-6 h-6 text-amber-600" />
                 <div>
-                  <h2 className="text-lg font-bold text-amber-800">Previous Report - Batch {archiveViewData.year}</h2>
-                  <p className="text-sm text-amber-600">Viewing archived data. Editing is disabled.</p>
+                  <h2 className="text-lg font-black text-amber-900">Previous Report - Batch {archiveViewData.year}</h2>
+                  <p className="text-xs text-amber-700 font-medium">Viewing archived batch data. Editing is read-only.</p>
                 </div>
               </div>
               <button type="button"
-                
                 onClick={handleBackToCurrent}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+                className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 active:scale-95"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Back to Current</span>
@@ -414,29 +413,35 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
-          <div className="flex items-start gap-2">
-            <button type="button"
-              
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-800">
-                {viewingArchive ? `Batch ${archiveViewData?.year} Records` : 'Admin Dashboard'}
-              </h1>
-              <p className="text-gray-600">
-                {viewingArchive ? 'Viewing archived batch data' : `Welcome back, ${user?.name}`}
-              </p>
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+            <div className="flex items-center gap-3.5">
+              <button type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white">
+                    {viewingArchive ? `Batch ${archiveViewData?.year} Records` : 'Admin Dashboard'}
+                  </h1>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
+                    CvSU Naic
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">
+                  {viewingArchive ? 'Viewing archived batch data' : `Welcome back, ${user?.name || 'Administrator'} 👋`}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
-            {/* Notification Bell */}
-            <div className="relative notification-container">
+            
+            <div className="flex items-center space-x-3 w-full lg:w-auto justify-end">
+              {/* Notification Bell */}
+              <div className="relative notification-container">
               <button type="button"
                 
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -566,18 +571,18 @@ function AdminDashboard() {
 
             {/* User Profile */}
             <button type="button"
-              
               onClick={() => navigate('/profile')}
-              className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow hover:shadow-md transition-shadow w-full sm:w-auto justify-center"
+              className="flex items-center space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-3.5 py-2 rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0"
             >
               {getUserAvatar()}
-              <div className="hidden sm:block">
-                <p className="font-medium text-gray-800">{user?.name}</p>
-                <p className="text-sm text-gray-500">Administrator</p>
+              <div className="hidden sm:block text-left">
+                <p className="font-bold text-xs text-white leading-tight">{user?.name}</p>
+                <p className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">Administrator</p>
               </div>
             </button>
           </div>
         </div>
+      </div>
 
         {/* Interactive Analytics & Program Distribution Panel */}
         <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>

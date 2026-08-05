@@ -219,7 +219,7 @@ function InstructorDashboard() {
   const recentReports = myReports.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-gray-50 page-enter">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -228,24 +228,29 @@ function InstructorDashboard() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-3 sm:mb-5 gap-4">
-          <div className="flex items-start gap-2">
-            <button type="button"
-              
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-gray-800">{user?.department} Dashboard</h2>
-              <p className="text-gray-600">Welcome back, {user?.name}</p>
+      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+            <div className="flex items-center gap-3.5">
+              <button type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">{user?.department} Instructor Portal</h2>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
+                    CvSU Naic
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Welcome back, {user?.name || 'Instructor'} 👋</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-4 w-full lg:w-auto justify-end">
+            <div className="flex items-center space-x-3 w-full lg:w-auto justify-end">
             {/* Notification Container */}
             <div className="relative notification-container">
               <button type="button"
@@ -374,15 +379,16 @@ function InstructorDashboard() {
                 </div>
               )}
             </div>
-            <Link to="/profile" className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow hover:shadow-md transition-shadow w-full sm:w-auto justify-center">
+            <Link to="/profile" className="flex items-center space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-3.5 py-2 rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0">
               {getUserAvatar()}
-              <div className="hidden sm:block">
-                <p className="font-medium text-gray-800">{user?.name}</p>
-                <p className="text-sm text-gray-500">{user?.department} Instructor</p>
+              <div className="hidden sm:block text-left">
+                <p className="font-bold text-xs text-white leading-tight">{user?.name}</p>
+                <p className="text-[10px] text-amber-300 font-semibold uppercase tracking-wider">{user?.department} Instructor</p>
               </div>
             </Link>
           </div>
         </div>
+      </div>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">

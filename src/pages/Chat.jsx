@@ -1591,15 +1591,15 @@ function Chat() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50">
       {/* Simple Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map(n => (
           <div 
             key={n.id} 
-            className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm w-[min(20rem,90vw)] ${
-              n.type === 'success' ? 'bg-green-500' : 
-              n.type === 'error' ? 'bg-red-500' : 'bg-gray-800'
+            className={`px-4 py-3 rounded-2xl shadow-xl text-white text-sm w-[min(20rem,90vw)] font-semibold ${
+              n.type === 'success' ? 'bg-emerald-600' : 
+              n.type === 'error' ? 'bg-rose-600' : 'bg-emerald-950'
             }`}
           >
             <div className="flex items-start justify-between">
@@ -1625,28 +1625,25 @@ function Chat() {
       {/* Main Content */}
       <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
-        <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white border-r border-gray-200 flex-col h-full overflow-hidden`}>
-          <div className="p-3 lg:p-4 border-b border-gray-200">
+        <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
+          <div className="p-3.5 lg:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2.5">
                 <button type="button"
-                  
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation cursor-pointer"
-                  style={{ cursor: 'pointer', zIndex: 10 }}
+                  className="p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
                   title="Toggle menu"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Menu className="w-4 h-4" />
                 </button>
-                <h2 className="text-lg lg:text-xl font-bold text-gray-800">
-                  {showContacts ? 'Contacts' : 'Messages'}
+                <h2 className="text-base lg:text-lg font-black text-white tracking-tight">
+                  {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
                 </h2>
               </div>
               {/* Toggle between conversations and contacts */}
               <button type="button"
-                
                 onClick={() => setShowContacts(v => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${showContacts ? 'bg-green-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${showContacts ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 shadow-sm' : 'bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100'}`}
                 title={showContacts ? 'Back to chats' : 'View all contacts'}
               >
                 {showContacts

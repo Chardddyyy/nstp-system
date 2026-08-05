@@ -492,7 +492,7 @@ function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 page-enter">
+    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">
 
       <Sidebar
         open={sidebarOpen}
@@ -502,15 +502,15 @@ function Profile() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-2 sm:p-4 lg:p-6 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
               {notification.type === 'success'
                 ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1">{notification.message}</span>
+              <span className="flex-1 font-semibold">{notification.message}</span>
               <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
@@ -518,34 +518,40 @@ function Profile() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-5 gap-4">
-          <div className="flex items-start gap-2">
-            <button type="button"
-              
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <div>
-              <h2 className="text-2xl lg:text-3xl font-bold text-gray-800">My Profile</h2>
-              <p className="text-gray-600">Manage your account information</p>
+        {/* Hero Header Card */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+            <div className="flex items-center gap-3.5">
+              <button type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">User Profile & Account</h2>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full hidden sm:inline-block">
+                    CvSU Naic
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Manage your personal credentials, profile picture &amp; system options</p>
+              </div>
             </div>
+            <button type="button"
+              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+              disabled={isSaving}
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-2xl transition-all duration-200 w-full sm:w-auto justify-center font-black shadow-md active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-60 shrink-0 ${
+                isEditing
+                  ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20'
+                  : 'bg-emerald-800/90 hover:bg-emerald-700 text-white border border-emerald-700/60'
+              }`}
+            >
+              {isEditing ? <Save className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+            </button>
           </div>
-          <button type="button"
-            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            disabled={isSaving}
-            className={`flex items-center space-x-2 px-4.5 py-2.5 rounded-xl transition-all duration-200 w-full sm:w-auto justify-center font-bold shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait ${
-              isEditing
-                ? 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white shadow-emerald-900/20 hover:shadow-lg hover:-translate-y-0.5'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-blue-900/20 hover:shadow-lg hover:-translate-y-0.5'
-            }`}
-          >
-            {isEditing ? <Save className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
-          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">

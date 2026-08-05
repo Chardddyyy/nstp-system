@@ -216,7 +216,7 @@ function Calendar() {
 
   // Get user avatar display
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden flex flex-col">
+    <div className="h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 overflow-hidden flex flex-col">
 
       <Sidebar
         open={sidebarOpen}
@@ -230,11 +230,11 @@ function Calendar() {
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
               {notification.type === 'success'
                 ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
                 : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1">{notification.message}</span>
+              <span className="flex-1 font-semibold">{notification.message}</span>
               <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
@@ -242,33 +242,39 @@ function Calendar() {
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
-          <div className="flex items-center gap-2">
-            <button type="button"
-              
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-200 rounded-lg shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="w-6 h-6 text-gray-700" />
-            </button>
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gray-800">Calendar</h1>
-              <p className="text-gray-500 text-sm">
-                {isAdmin ? 'Manage events and holidays' : 'View calendar and events'}
-              </p>
+        {/* Hero Header Card */}
+        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-4 sm:p-5 shadow-xl border border-emerald-800/40 relative overflow-hidden mb-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-10">
+            <div className="flex items-center gap-3">
+              <button type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-colors cursor-pointer"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg sm:text-2xl font-black tracking-tight text-white">NSTP Activity Calendar</h1>
+                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full hidden sm:inline-block">
+                    CvSU Naic
+                  </span>
+                </div>
+                <p className="text-emerald-200 text-xs font-medium mt-0.5">
+                  {isAdmin ? 'Schedule, view & organize NSTP campus events and holidays' : 'View official NSTP activities and academic holidays'}
+                </p>
+              </div>
             </div>
+            {isAdmin && (
+              <button type="button"
+                onClick={() => setShowAddEventModal(true)}
+                className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center text-xs sm:text-sm cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4 text-emerald-950" />
+                <span>Add Event</span>
+              </button>
+            )}
           </div>
-          {isAdmin && (
-            <button type="button"
-              onClick={() => setShowAddEventModal(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white font-bold px-4.5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-emerald-900/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Event</span>
-            </button>
-          )}
         </div>
 
         {/* Calendar Component — fills remaining viewport height */}
