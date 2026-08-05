@@ -396,58 +396,60 @@ function StudentManagement() {
         </div>
       </div>
 
-        {/* Filters */}
-        <div className="bg-white p-4 rounded-xl shadow-md mb-6">
-          <div className="flex flex-wrap gap-4">
+        {/* Mobile-Responsive Filters */}
+        <div className="bg-white/90 backdrop-blur-md p-3.5 sm:p-5 rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 min-w-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-700/60" />
                 <input
                   type="text"
                   id="student-search"
                   name="studentSearch"
-                  placeholder="Search by name or student ID..."
+                  placeholder="Search student name, ID, section..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoComplete="off"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium bg-gray-50/50"
                 />
               </div>
             </div>
-            {isAdmin && (
-              <div className="flex items-center space-x-2">
-                <Filter className="w-5 h-5 text-gray-500" />
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-emerald-800 shrink-0 hidden sm:block" />
+                  <select
+                    id="filter-dept"
+                    name="filterDept"
+                    value={filterDept}
+                    onChange={(e) => setFilterDept(e.target.value)}
+                    className="w-full sm:w-auto px-3.5 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+                  >
+                    <option value="All">All Departments</option>
+                    <option value="CWTS">CWTS</option>
+                    <option value="LTS">LTS</option>
+                    <option value="ROTC">ROTC</option>
+                  </select>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
                 <select
-                  id="filter-dept"
-                  name="filterDept"
-                  value={filterDept}
-                  onChange={(e) => setFilterDept(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                  id="filter-course"
+                  name="filterCourse"
+                  value={filterCourse}
+                  onChange={(e) => setFilterCourse(e.target.value)}
+                  className="w-full sm:w-auto px-3.5 py-2.5 text-xs sm:text-sm border border-emerald-100/80 rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
                 >
-                  <option value="All">All Departments</option>
-                  <option value="CWTS">CWTS</option>
-                  <option value="LTS">LTS</option>
-                  <option value="ROTC">ROTC</option>
+                  <option value="All">All Courses</option>
+                  <option value="BSIT">BSIT</option>
+                  <option value="BSCS">BSCS</option>
+                  <option value="BSFAS">BSFAS</option>
+                  <option value="BSBA">BSBA</option>
+                  <option value="BSED">BSEd</option>
+                  <option value="BEED">BEED</option>
+                  <option value="BSHM">BSHM</option>
                 </select>
               </div>
-            )}
-            <div className="flex items-center space-x-2">
-              <select
-                id="filter-course"
-                name="filterCourse"
-                value={filterCourse}
-                onChange={(e) => setFilterCourse(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-              >
-                <option value="All">All Courses</option>
-                <option value="BSIT">BSIT</option>
-                <option value="BSCS">BSCS</option>
-                <option value="BSFAS">BSFAS</option>
-                <option value="BSBA">BSBA</option>
-                <option value="BSED">BSEd</option>
-                <option value="BEED">BEED</option>
-                <option value="BSHM">BSHM</option>
-              </select>
             </div>
           </div>
         </div>
