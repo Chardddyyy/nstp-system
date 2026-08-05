@@ -442,7 +442,7 @@ function StudentManagement() {
                 <option value="All">All Courses</option>
                 <option value="BSIT">BSIT</option>
                 <option value="BSCS">BSCS</option>
-                <option value="FASD">FASD</option>
+                <option value="BSFAS">BSFAS</option>
                 <option value="BSBA">BSBA</option>
                 <option value="BSED">BSEd</option>
                 <option value="BEED">BEED</option>
@@ -608,7 +608,7 @@ function StudentManagement() {
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">Select Degree Program</label>
                   <div className="grid grid-cols-4 gap-1.5">
-                    {['All', 'BSIT', 'BSCS', 'FASD', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => {
+                    {['All', 'BSIT', 'BSCS', 'BSFAS', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(course => {
                       const isSelected = exportCourse === course;
                       return (
                         <button
