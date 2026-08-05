@@ -390,67 +390,88 @@ function InstructorDashboard() {
         </div>
       </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-3 sm:mb-6">
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        {/* Interactive Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          {/* Card 1: Total Students */}
+          <div 
+            onClick={() => navigate('/students')}
+            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 hover:border-emerald-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-xs sm:text-sm font-medium">Total Students</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1">{stats.totalStudents}</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-800/80">Total Active Students</p>
+                <p className="text-2xl sm:text-4xl font-black text-emerald-950 mt-1">{stats.totalStudents}</p>
               </div>
-              <div className={`w-9 h-9 sm:w-12 sm:h-12 ${colors.bg} rounded-xl flex items-center justify-center shadow-inner`}>
-                <Users className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-emerald-700/10 text-emerald-800 border border-emerald-200/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-800 group-hover:text-white transition-all duration-300 shadow-sm shrink-0">
+                <Users className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
             </div>
-            <div className="hidden sm:block mt-3">
-              <div className="flex items-center text-xs text-emerald-600 font-medium mb-1">
-                <TrendingUp className="w-3.5 h-3.5 mr-1" />
-                <span>Active Department Students</span>
+            <div className="mt-4 pt-3 border-t border-emerald-100/60">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
+                <span className="flex items-center gap-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                  {user?.department} Roster
+                </span>
+                <span className="bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-emerald-800 group-hover:text-white transition-colors">
+                  View Students &rarr;
+                </span>
               </div>
-              <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-600 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
+              <div className="h-2 w-full bg-emerald-100/80 rounded-full overflow-hidden mt-2">
+                <div className="h-full bg-gradient-to-r from-emerald-600 to-teal-500 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          {/* Card 2: Pending Messages */}
+          <div 
+            onClick={() => navigate('/chat')}
+            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-blue-100/80 hover:border-blue-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-xs sm:text-sm font-medium">Pending Messages</p>
-                <p className="text-xl sm:text-3xl font-bold text-blue-900 mt-1">{stats.pendingMessages}</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-blue-800/80">Unread Messages</p>
+                <p className="text-2xl sm:text-4xl font-black text-blue-950 mt-1">{stats.pendingMessages}</p>
               </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-inner">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-blue-700/10 text-blue-700 border border-blue-200/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm shrink-0">
+                <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
             </div>
-            <div className="hidden sm:block mt-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Status</span>
-                <span className={`font-medium ${stats.pendingMessages > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{stats.pendingMessages > 0 ? 'Unread Messages' : 'All Read'}</span>
+            <div className="mt-4 pt-3 border-t border-blue-100/60">
+              <div className="flex items-center justify-between text-xs font-bold text-blue-900">
+                <span>{stats.pendingMessages > 0 ? `${stats.pendingMessages} new messages` : 'All conversations read'}</span>
+                <span className="bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  Open Chat &rarr;
+                </span>
               </div>
-              <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-600 rounded-full transition-all duration-500" style={{ width: stats.pendingMessages > 0 ? '100%' : '0%' }}></div>
+              <div className="h-2 w-full bg-blue-100/80 rounded-full overflow-hidden mt-2">
+                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-500" style={{ width: stats.pendingMessages > 0 ? '100%' : '0%' }}></div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+          {/* Card 3: Pending Reports */}
+          <div 
+            onClick={() => navigate('/reports')}
+            className="bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-xl shadow-emerald-950/5 border border-amber-100/80 hover:border-amber-300 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group relative overflow-hidden"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-xs sm:text-sm font-medium">Pending Reports</p>
-                <p className="text-xl sm:text-3xl font-bold text-orange-900 mt-1">{stats.pendingReports}</p>
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-amber-900/80">Pending Reports</p>
+                <p className="text-2xl sm:text-4xl font-black text-amber-950 mt-1">{stats.pendingReports}</p>
               </div>
-              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center shadow-inner">
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-amber-500/15 text-amber-700 border border-amber-300/60 flex items-center justify-center group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-emerald-950 transition-all duration-300 shadow-sm shrink-0">
+                <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
               </div>
             </div>
-            <div className="hidden sm:block mt-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Action</span>
-                <span className={`font-medium ${stats.pendingReports > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>{stats.pendingReports > 0 ? 'Submission Required' : 'Up to Date'}</span>
+            <div className="mt-4 pt-3 border-t border-amber-100/60">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                <span>{stats.pendingReports > 0 ? 'Submission Required' : 'All Reports Submitted'}</span>
+                <span className="bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full text-[10px] font-black group-hover:bg-amber-500 group-hover:text-emerald-950 transition-colors">
+                  Submit Reports &rarr;
+                </span>
               </div>
-              <div className="h-1.5 w-full bg-orange-100 rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: stats.pendingReports > 0 ? '100%' : '0%' }}></div>
+              <div className="h-2 w-full bg-amber-100/80 rounded-full overflow-hidden mt-2">
+                <div className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500" style={{ width: stats.pendingReports > 0 ? '100%' : '0%' }}></div>
               </div>
             </div>
           </div>
