@@ -718,90 +718,71 @@ function Profile() {
 
             {/* Instructor Accounts — admin only */}
             {isAdmin && (
-              <div className="bg-white rounded-3xl shadow-xl border border-emerald-100/80 overflow-hidden">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base sm:text-lg font-black tracking-tight">Instructor Accounts</h3>
-                      <p className="text-emerald-200 text-xs font-medium">Manage &amp; view active instructor credentials</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
+              <div className="bg-white rounded-xl shadow-md p-3 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Instructor Accounts
+                  </h3>
+                  <button type="button"
                     onClick={() => { setInstructorForm({ name: '', email: '', role: 'instructor', department: 'CWTS', password: '', confirmPassword: '' }); setShowAddInstructor(true); }}
-                    className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm cursor-pointer shrink-0"
+                    className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    <UserPlus className="w-4 h-4 text-emerald-950" />
-                    <span>Add Instructor</span>
+                    <UserPlus className="w-4 h-4" />
+                    Add Instructor
                   </button>
                 </div>
 
-                {/* Body / List */}
-                <div className="p-4 sm:p-6">
-                  {instructors.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
-                      <Users className="w-10 h-10 mx-auto mb-2 opacity-50 text-emerald-800" />
-                      <p className="text-sm font-medium">No instructor accounts created yet.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {instructors.map(inst => {
-                        const deptColors = {
-                          CWTS: 'bg-blue-100/80 border-blue-200 text-blue-800 font-bold',
-                          LTS: 'bg-purple-100/80 border-purple-200 text-purple-800 font-bold',
-                          ROTC: 'bg-red-100/80 border-red-200 text-red-800 font-bold'
-                        };
-                        return (
-                          <div 
-                            key={inst.id} 
-                            onClick={() => openEditInstructorModal(inst)}
-                            className="flex items-center justify-between p-3.5 bg-gray-50/70 hover:bg-emerald-50/70 border border-gray-100 hover:border-emerald-200 rounded-2xl transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-700 to-teal-800 text-amber-300 flex items-center justify-center font-black text-sm shadow-sm shrink-0">
-                                {inst.name?.charAt(0)?.toUpperCase() || '?'}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-black text-gray-800 truncate group-hover:text-emerald-900 transition-colors">{inst.name}</p>
-                                <p className="text-xs text-gray-500 truncate font-medium">{inst.email}</p>
-                              </div>
+                {instructors.length === 0 ? (
+                  <p className="text-gray-400 text-sm text-center py-4">No instructor accounts yet.</p>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {instructors.map(inst => {
+                      const deptColors = { CWTS: 'bg-blue-100 text-blue-700', LTS: 'bg-purple-100 text-purple-700', ROTC: 'bg-red-100 text-red-700' };
+                      return (
+                        <div 
+                          key={inst.id} 
+                          onClick={() => openEditInstructorModal(inst)}
+                          className="flex items-center justify-between py-3 gap-3 hover:bg-gray-50 px-2 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 flex-shrink-0 text-sm font-bold">
+                              {inst.name?.charAt(0)?.toUpperCase() || '?'}
                             </div>
-                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              {inst.role === 'admin' ? (
-                                <span className="text-xs px-2.5 py-1 rounded-xl font-black bg-amber-100 text-amber-800 border border-amber-300">Admin</span>
-                              ) : (
-                                <span className={`text-xs px-2.5 py-1 rounded-xl border ${deptColors[inst.department] || 'bg-gray-100 text-gray-700'}`}>
-                                  {inst.department}
-                                </span>
-                              )}
-                              <button 
-                                type="button"
-                                onClick={() => openEditInstructorModal(inst)}
-                                className="p-2 text-emerald-700 hover:bg-emerald-100 rounded-xl transition-colors cursor-pointer"
-                                title="View & Edit Instructor Details"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                              <button 
-                                type="button"
-                                onClick={() => handleDeleteInstructor(inst.id, inst.name)}
-                                disabled={deletingInstructorId === inst.id}
-                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
-                                title="Delete instructor"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
+                              <p className="text-xs text-gray-400 truncate">{inst.email}</p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                          <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {inst.role === 'admin' ? (
+                              <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">Admin</span>
+                            ) : (
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'}`}>
+                                {inst.department}
+                              </span>
+                            )}
+                            <button type="button"
+                              onClick={() => openEditInstructorModal(inst)}
+                              className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-gray-100 rounded transition-colors"
+                              title="Edit instructor"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button type="button"
+                              onClick={() => handleDeleteInstructor(inst.id, inst.name)}
+                              disabled={deletingInstructorId === inst.id}
+                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
+                              title="Delete instructor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -889,40 +870,27 @@ function Profile() {
         const canSubmit = nameOk && emailOk && pwOk && confirmOk && deptOk;
 
         return (
-          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddInstructor(false)}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col border border-emerald-100/80 overflow-hidden" onClick={e => e.stopPropagation()}>
-              {/* Header */}
-              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
-                    <UserPlus className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black tracking-tight">
-                      Add New {f.role === 'admin' ? 'Admin' : 'Instructor'}
-                    </h3>
-                    <p className="text-emerald-200 text-xs font-medium">Create instructor credentials &amp; department</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddInstructor(false)}
-                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddInstructor(false)}>
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-green-700" />
+                  Add New {f.role === 'admin' ? 'Admin' : 'Instructor'}
+                </h3>
+                <button type="button" onClick={() => setShowAddInstructor(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Form Body */}
-              <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto">
+              <div className="space-y-3">
                 {/* Role */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Account Role *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
                   <div className="grid grid-cols-2 gap-2">
                     {[{ value: 'instructor', label: 'Instructor' }, { value: 'admin', label: 'Admin' }].map(r => (
                       <button key={r.value} type="button"
                         onClick={() => setInstructorForm(prev => ({ ...prev, role: r.value }))}
-                        className={`py-2.5 rounded-xl border-2 font-black text-xs transition-all cursor-pointer ${f.role === r.value ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 border-amber-400 text-emerald-950 shadow-sm' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
+                        className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.role === r.value ? 'bg-green-700 border-green-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'}`}
                       >{r.label}</button>
                     ))}
                   </div>
@@ -930,22 +898,22 @@ function Profile() {
 
                 {/* Full Name */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Full Name *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Full Name <span className="text-red-500">*</span></label>
                   <input type="text" id="inst-name" name="instructorName" value={f.name}
                     onChange={e => setInstructorForm(prev => ({ ...prev, name: e.target.value.replace(/[0-9]/g, '') }))}
-                    placeholder="e.g. Juan Dela Cruz" autoComplete="off"
-                    className={`w-full px-4 py-2.5 text-xs sm:text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium ${!nameOk && f.name.length > 0 ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                    placeholder="e.g. Juan dela Cruz" autoComplete="off"
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${!nameOk && f.name.length > 0 ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   />
                   {!nameOk && f.name.length > 0 && <p className="text-red-500 text-xs mt-0.5">Name is required</p>}
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Email Address <span className="text-red-500">*</span></label>
                   <input type="email" id="inst-email" name="instructorEmail" value={f.email}
                     onChange={e => setInstructorForm(prev => ({ ...prev, email: e.target.value }))}
                     placeholder="e.g. juan@cvsu.edu.ph" autoComplete="off"
-                    className={`w-full px-4 py-2.5 text-xs sm:text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium ${f.email.length > 0 && !emailOk ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.email.length > 0 && !emailOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   />
                   {f.email.length > 0 && !emailOk && <p className="text-red-500 text-xs mt-0.5">Enter a valid email address</p>}
                 </div>
@@ -953,15 +921,15 @@ function Profile() {
                 {/* Department (instructor only) */}
                 {f.role === 'instructor' && (
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department *</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Department <span className="text-red-500">*</span></label>
                     <div className="grid grid-cols-3 gap-2">
                       {['CWTS', 'LTS', 'ROTC'].map(dept => {
-                        const active = { CWTS: 'bg-blue-600 border-blue-600 text-white font-bold', LTS: 'bg-purple-600 border-purple-600 text-white font-bold', ROTC: 'bg-red-600 border-red-600 text-white font-bold' };
+                        const active = { CWTS: 'bg-blue-600 border-blue-600 text-white', LTS: 'bg-purple-600 border-purple-600 text-white', ROTC: 'bg-red-600 border-red-600 text-white' };
                         const idle   = { CWTS: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100', LTS: 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100', ROTC: 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' };
                         return (
                           <button key={dept} type="button"
                             onClick={() => setInstructorForm(prev => ({ ...prev, department: dept }))}
-                            className={`py-2 rounded-xl border-2 font-bold text-xs transition-all cursor-pointer ${f.department === dept ? active[dept] : idle[dept]}`}
+                            className={`py-2 rounded-lg border-2 font-medium text-sm transition-all ${f.department === dept ? active[dept] : idle[dept]}`}
                           >{dept}</button>
                         );
                       })}
@@ -972,15 +940,15 @@ function Profile() {
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Password *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Password <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <input type={showInstructorPassword ? 'text' : 'password'} id="inst-password" name="instructorPassword"
                       value={f.password}
                       onChange={e => setInstructorForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="At least 6 characters" autoComplete="new-password"
-                      className={`w-full px-4 py-2.5 pr-10 text-xs sm:text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium ${f.password.length > 0 && !pwOk ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                      className={`w-full px-3 py-2 pr-9 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.password.length > 0 && !pwOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
-                    <button type="button" onClick={() => setShowInstructorPassword(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                    <button type="button" onClick={() => setShowInstructorPassword(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                       {showInstructorPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -989,31 +957,29 @@ function Profile() {
 
                 {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Confirm Password *</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Confirm Password <span className="text-red-500">*</span></label>
                   <input type="password" id="inst-confirm-password" name="instructorConfirmPassword"
                     value={f.confirmPassword}
                     onChange={e => setInstructorForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
                     placeholder="Re-enter password" autoComplete="new-password"
-                    className={`w-full px-4 py-2.5 text-xs sm:text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium ${f.confirmPassword.length > 0 && !confirmOk ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.confirmPassword.length > 0 && !confirmOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   />
                   {f.confirmPassword.length > 0 && !confirmOk && <p className="text-red-500 text-xs mt-0.5">Passwords do not match</p>}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
-                <button type="button" onClick={() => setShowAddInstructor(false)} className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer">
+              <div className="flex gap-3 mt-5">
+                <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
                   Cancel
                 </button>
-                <button
-                  type="button"
+                <button type="button"
                   onClick={handleAddInstructor}
                   disabled={isAddingInstructor || !canSubmit}
                   title={canSubmit ? '' : 'Please fill in all required fields correctly'}
-                  className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <UserPlus className="w-4 h-4 text-emerald-950" />
-                  <span>{isAddingInstructor ? 'Adding...' : `Add ${f.role === 'admin' ? 'Admin' : 'Instructor'}`}</span>
+                  <UserPlus className="w-4 h-4" />
+                  {isAddingInstructor ? 'Adding...' : `Add ${f.role === 'admin' ? 'Admin' : 'Instructor'}`}
                 </button>
               </div>
             </div>
