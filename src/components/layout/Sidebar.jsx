@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  Calendar, User, LogOut, Shield, X,
+  Calendar, User, LogOut, Shield, X, FileCheck
 } from 'lucide-react';
 
 const DEPT_COLORS = {
@@ -127,6 +127,15 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
           >
             <Calendar className="w-5 h-5" />
             <span>Calendar</span>
+          </button>
+
+          <button type="button"
+            onClick={() => { if (!archiveMode) go('/letter-formats'); }}
+            disabled={archiveMode}
+            className={archiveMode ? archiveNavClass() : navClass('/letter-formats')}
+          >
+            <FileCheck className="w-5 h-5" />
+            <span>Letter Formats</span>
           </button>
 
           <button type="button"

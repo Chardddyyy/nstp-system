@@ -13,6 +13,7 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
+import LetterFormats from './pages/LetterFormats';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
 
 const BASE_PATH = (() => {
@@ -786,6 +787,7 @@ function App() {
           <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Reports /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Chat /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
+          <Route path="/letter-formats" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><LetterFormats /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
