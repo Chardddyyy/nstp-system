@@ -414,7 +414,7 @@ function AdminDashboard() {
         )}
 
         {/* Hero Header */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
             <div className="flex items-center gap-3.5">
               <button type="button"
@@ -443,13 +443,13 @@ function AdminDashboard() {
               {/* Notification Bell */}
               <div className="relative notification-container">
               <button type="button"
-                
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="relative p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl transition-colors cursor-pointer shrink-0"
+                title="Notifications"
               >
-                <Bell className="w-6 h-6" />
+                <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 text-emerald-950 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-emerald-950 shadow-sm">
                     {unreadCount}
                   </span>
                 )}
@@ -458,7 +458,7 @@ function AdminDashboard() {
               {/* Notification Dropdown */}
               {showNotifications && (
                 <div
-                  className="notification-dropdown absolute right-0 mt-2 w-[min(24rem,90vw)] bg-white rounded-xl shadow-lg border border-gray-200 z-50"
+                  className="notification-dropdown absolute right-0 mt-3 w-[min(26rem,90vw)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
                   onMouseDown={(e) => e.stopPropagation()}
                   onTouchStart={(e) => e.stopPropagation()}
                 >

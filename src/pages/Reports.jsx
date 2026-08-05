@@ -348,7 +348,7 @@ function Reports() {
         )}
 
         {/* Hero Header Card */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-5 sm:p-8 shadow-2xl border border-emerald-800/40 relative mb-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
             <div className="flex items-center gap-3.5">
               <button type="button"

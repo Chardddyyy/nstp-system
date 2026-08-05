@@ -243,7 +243,7 @@ function Calendar() {
         )}
 
         {/* Hero Header Card */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-4 sm:p-5 shadow-xl border border-emerald-800/40 relative overflow-hidden mb-3">
+        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-3xl p-4 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 relative z-10">
             <div className="flex items-center gap-3">
               <button type="button"
