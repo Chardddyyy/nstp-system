@@ -1378,47 +1378,74 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Archive Modal - Simple List View */}
+        {/* Archive Modal - Glassmorphic Batch Selection */}
         {showArchiveModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveModal(false)}>
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                  <History className="w-6 h-6 mr-2 text-green-600" />
-                  Select Batch to View
-                </h3>
-                <button type="button"
-                  
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveModal(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col border border-emerald-100 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Archived Student Batches</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Select a historical batch to inspect or delete</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
                   onClick={() => setShowArchiveModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
+
+              {/* Batch List Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-3 max-h-[60vh]">
                 {archivedYears.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No archived data yet</p>
+                  <div className="text-center py-10">
+                    <History className="w-12 h-12 text-emerald-200 mx-auto mb-2 opacity-50" />
+                    <p className="text-gray-500 font-bold text-sm">No archived batches found</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {archivedYears.sort((a, b) => b.year - a.year).map((year) => (
-                      <div key={year.year} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 rounded-lg p-4 gap-3">
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-800">Batch {year.year}</h4>
-                          <p className="text-sm text-gray-500">{year.students} students • {year.reports} reports</p>
+                      <div
+                        key={year.year}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
+                      >
+                        <div className="flex items-center space-x-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-sm shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                            {year.year}
+                          </div>
+                          <div>
+                            <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                {year.students} Students
+                              </span>
+                              <span className="text-[11px] font-bold text-gray-500">
+                                • {year.reports} Reports
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center flex-wrap gap-2">
-                          <button type="button"
-                            
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                          <button
+                            type="button"
                             onClick={() => handleViewBatch(year)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                           >
                             View Batch
                           </button>
 
-                          <button type="button"
-                            
+                          <button
+                            type="button"
                             onClick={() => handleDeleteArchivedBatch(year.year)}
-                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                            className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 p-2 rounded-xl text-xs font-bold transition-all cursor-pointer hover:border-red-300"
                             title="Delete Batch"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1429,11 +1456,13 @@ function AdminDashboard() {
                   </div>
                 )}
               </div>
-              <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <button type="button"
-                  
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+                <button
+                  type="button"
                   onClick={() => setShowArchiveModal(false)}
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
+                  className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                 >
                   Close
                 </button>

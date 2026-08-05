@@ -3,14 +3,14 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   FileText, Plus, Search, Calendar,
   Send, MessageCircle, CheckCircle, Clock,
-  Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User
+  Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User, Pencil
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useMemo, useEffect } from 'react';
 
 function Reports() {
-  const { user, logout, reports, addReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, reports, addReport, updateReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
@@ -86,18 +86,39 @@ function Reports() {
     navigate('/login');
   };
 
-  const [isCreatingReport, setIsCreatingReport] = useState(false);
+  const [editingReport, setEditingReport] = useState(null);
 
-  // Admin creates a report assignment for instructors
-  const handleCreateReport = async () => {
-    const newReport = {
+  const openEditModal = (report) => {
+    setEditingReport(report);
+    setCreateForm({
+      title: report.title || '',
+      description: report.description || '',
+      department: report.department || 'All',
+      dueDate: report.dueDate || report.due_date || '',
+      referenceFile: (report.reference_file_data || report.referenceFile?.data)
+        ? { name: report.reference_file_name || report.referenceFile?.name || 'Reference File', data: report.reference_file_data || report.referenceFile?.data }
+        : null
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleOpenCreateModal = () => {
+    setEditingReport(null);
+    setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
+    setShowCreateModal(true);
+  };
+
+  // Admin creates or updates a report assignment for instructors
+  const handleSaveReport = async () => {
+    const reportData = {
       title: createForm.title,
       description: createForm.description,
       department: createForm.department,
       due_date: createForm.dueDate,
-      createdBy: user?.name,
-      createdAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Draft',
+      dueDate: createForm.dueDate,
+      createdBy: editingReport ? editingReport.createdBy : user?.name,
+      createdAt: editingReport ? editingReport.createdAt : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: editingReport ? editingReport.status : 'Draft',
       referenceFile: createForm.referenceFile,
       reference_file_data: createForm.referenceFile?.data || null,
       reference_file_name: createForm.referenceFile?.name || null,
@@ -105,14 +126,20 @@ function Reports() {
 
     setIsCreatingReport(true);
     try {
-      await addReport(newReport);
+      if (editingReport) {
+        await updateReport(editingReport.id, reportData);
+        setNotification({ type: 'success', message: 'Report assignment updated!' });
+      } else {
+        await addReport(reportData);
+        setNotification({ type: 'success', message: 'Report assignment created!' });
+      }
       setShowCreateModal(false);
+      setEditingReport(null);
       setCurrentPage(1);
       setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
-      setNotification({ type: 'success', message: 'Report assignment created!' });
       setTimeout(() => setNotification(null), 3000);
     } catch (_error) {
-      setNotification({ type: 'error', message: 'Failed to create report. Please try again.' });
+      setNotification({ type: 'error', message: 'Failed to save report assignment. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
       setIsCreatingReport(false);
@@ -341,11 +368,12 @@ function Reports() {
             </div>
           </div>
           {isAdmin && !viewingArchive && (
-            <button type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 text-white font-bold px-4.5 py-2.5 rounded-xl transition-all duration-200 shadow-md shadow-emerald-900/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center"
+            <button
+              type="button"
+              onClick={handleOpenCreateModal}
+              className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-5 py-2.5 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-xs sm:text-sm"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5 text-emerald-950" />
               <span>Create Assignment</span>
             </button>
           )}
@@ -458,13 +486,24 @@ function Reports() {
                     </span>
                   )}
                   {isAdmin && !viewingArchive && (
-                    <button type="button"
-                      
-                      onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openEditModal(report); }}
+                        className="p-2 text-emerald-700 hover:bg-emerald-100/80 rounded-xl transition-colors cursor-pointer"
+                        title="Edit Report Assignment"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteReport(report.id); }}
+                        className="p-2 text-red-600 hover:bg-red-100/80 rounded-xl transition-colors cursor-pointer"
+                        title="Delete Report Assignment"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -494,9 +533,10 @@ function Reports() {
           ))}
         </div>
 
+        {/* Empty State */}
         {currentReports.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl shadow-md">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <div className="bg-white rounded-xl shadow-md p-8 text-center">
+            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-500">
               {isAdmin ? 'No report assignments created yet.' : isInstructor ? 'No report assignments for your department.' : 'No reports available.'}
             </p>
@@ -528,14 +568,42 @@ function Reports() {
           </div>
         )}
 
-        {/* Create Report Assignment Modal (Admin) */}
+        {/* Create / Edit Report Assignment Modal (Admin) */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowCreateModal(false)}>
-            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Create Report Assignment</h3>
-              <div className="space-y-4">
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowCreateModal(false)}>
+            <div 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
+              onClick={(e) => e.stopPropagation()} 
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">
+                      {editingReport ? 'Edit Report Assignment' : 'Create Report Assignment'}
+                    </h3>
+                    <p className="text-emerald-200 text-xs font-medium">
+                      {editingReport ? 'Update assignment details & reference file for instructors' : 'Set up a new report request for NSTP instructors'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Form Body */}
+              <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Template (Optional)</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Template (Optional)</label>
                   <select
                     onChange={(e) => {
                       const template = reportTemplates.find(t => t.title === e.target.value);
@@ -543,42 +611,42 @@ function Reports() {
                         setCreateForm({...createForm, title: template.title, description: template.description});
                       }
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none mb-2"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                   >
                     <option value="">-- Select a template --</option>
                     {reportTemplates.map((template, idx) => (
                       <option key={idx} value={template.title}>{template.title}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500">Select a template or create a custom report assignment</p>
+                  <p className="text-[11px] text-gray-500 mt-1">Select a pre-configured template or write custom instructions</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Title *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Title *</label>
                   <input
                     type="text"
                     value={createForm.title}
                     onChange={(e) => setCreateForm({...createForm, title: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     placeholder="e.g., Activity Schedule - March 2024"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description/Instructions *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description / Instructions *</label>
                   <textarea
                     value={createForm.description}
                     onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-32 resize-none"
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none h-32 resize-none font-medium"
                     placeholder="Describe what instructors need to submit (e.g., Activity Schedule, DTR, Grading Sheet, Attendance, etc.)"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Assign To Department</label>
                     <select
                       value={createForm.department}
                       onChange={(e) => setCreateForm({...createForm, department: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     >
                       <option value="All">All Departments</option>
                       <option value="CWTS">CWTS Only</option>
@@ -587,19 +655,19 @@ function Reports() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Due Date</label>
                     <input
                       type="date"
                       value={createForm.dueDate}
                       onChange={(e) => setCreateForm({...createForm, dueDate: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                      className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     />
                   </div>
                 </div>
 
                 {/* Reference File Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reference File (Optional)</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Reference File (Optional)</label>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -607,47 +675,49 @@ function Reports() {
                     className="hidden"
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                   />
-                  <div className="flex items-center space-x-2">
-                    <button type="button"
-                      
+                  <div className="flex items-center space-x-3">
+                    <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
                     >
-                      <Upload className="w-5 h-5 text-gray-500" />
-                      <span className="text-sm text-gray-700">Upload File</span>
+                      <Upload className="w-4 h-4 text-emerald-700" />
+                      <span>{createForm.referenceFile ? 'Change Reference File' : 'Upload Reference File'}</span>
                     </button>
                     {createForm.referenceFile && (
-                      <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-lg">
-                        <File className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-blue-700 truncate max-w-[200px]">{createForm.referenceFile.name}</span>
-                        <button type="button"
-                          
+                      <div className="flex items-center gap-2 bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl text-emerald-950 font-bold text-xs">
+                        <File className="w-4 h-4 text-emerald-700" />
+                        <span className="truncate max-w-[200px]">{createForm.referenceFile.name}</span>
+                        <button
+                          type="button"
                           onClick={() => setCreateForm({...createForm, referenceFile: null})}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-emerald-700 hover:text-red-600 ml-1 cursor-pointer"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Upload reference materials for instructors (PDF, Word, Excel, PowerPoint)</p>
+                  <p className="text-[11px] text-gray-500 mt-1.5">Attach optional reference material or instructions (PDF, Word, Excel, PowerPoint)</p>
                 </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button type="button"
-                  
+
+              {/* Action Buttons */}
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="button"
-                  
-                  onClick={handleCreateReport}
+                <button
+                  type="button"
+                  onClick={handleSaveReport}
                   disabled={!createForm.title.trim() || !createForm.description.trim() || isCreatingReport}
-                  className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {isCreatingReport ? 'Creating...' : 'Create Assignment'}
+                  {isCreatingReport ? (editingReport ? 'Saving Changes...' : 'Creating...') : (editingReport ? 'Update Assignment' : 'Create Assignment')}
                 </button>
               </div>
             </div>
