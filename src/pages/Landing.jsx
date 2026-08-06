@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar } from 'lucide-react';
+import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar, Play, Film, Video } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTelemetryStats } from '../services/api';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
@@ -50,6 +50,34 @@ function Landing() {
     };
   }, []);
 
+  // Video Auto Pause / Resume on Scroll
+  const videoRef = useRef(null);
+  const wasPlayingOnScrollRef = useRef(false);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          if (!videoEl.paused) {
+            wasPlayingOnScrollRef.current = true;
+            videoEl.pause();
+          }
+        } else {
+          if (wasPlayingOnScrollRef.current) {
+            videoEl.play().catch(() => {});
+          }
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    observer.observe(videoEl);
+    return () => observer.disconnect();
+  }, []);
+
   // Real-time Telemetry & Active Online Users state
   const [telemetry, setTelemetry] = useState({
     totalVisitors: 0,
@@ -78,11 +106,11 @@ function Landing() {
   }, []);
 
   const totalVisitorsCount = telemetry.totalVisitors !== undefined && telemetry.totalVisitors !== null
-    ? telemetry.totalVisitors 
+    ? telemetry.totalVisitors
     : parseInt(localStorage.getItem('nstp_total_visitors') || '0', 10);
 
-  const activeOnlineCount = telemetry.activeOnlineCount > 0 
-    ? telemetry.activeOnlineCount 
+  const activeOnlineCount = telemetry.activeOnlineCount > 0
+    ? telemetry.activeOnlineCount
     : 1;
 
   const startTimer = useCallback(() => {
@@ -130,15 +158,15 @@ function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-3 shrink-0">
-            <Link 
-              to="/enrollment" 
+            <Link
+              to="/enrollment"
               className="inline-flex items-center gap-1 bg-emerald-800 hover:bg-emerald-700 text-emerald-100 font-bold px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl text-[9px] sm:text-xs border border-emerald-700 active:scale-95 transition-all shrink-0"
             >
               <Sparkles className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
               <span>Enrollment</span>
             </Link>
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               className="bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-2 sm:px-5 py-1 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-sm transition-all shadow-md shadow-amber-950/20 active:scale-95 shrink-0"
             >
               Login &rarr;
@@ -152,9 +180,8 @@ function Landing() {
         {CAROUSEL_IMAGES.map((image, index) => (
           <div
             key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'
-            }`}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'
+              }`}
           >
             <img
               src={image.src}
@@ -188,9 +215,8 @@ function Landing() {
                 setCurrentSlide(index);
                 startTimer();
               }}
-              className={`h-1.5 sm:h-2.5 rounded-full transition-all duration-300 ${
-                index === currentSlide ? 'w-6 sm:w-10 bg-amber-400' : 'w-1.5 sm:w-2.5 bg-white/50 hover:bg-white/80'
-              }`}
+              className={`h-1.5 sm:h-2.5 rounded-full transition-all duration-300 ${index === currentSlide ? 'w-6 sm:w-10 bg-amber-400' : 'w-1.5 sm:w-2.5 bg-white/50 hover:bg-white/80'
+                }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
@@ -223,24 +249,22 @@ function Landing() {
       <section className="py-8 sm:py-12 px-3 sm:px-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800/80">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          
+
           {/* Dynamic Schedule Status Banner */}
           <div className="mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
               <div className="flex items-start space-x-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                  enrollmentStatus.isOpen 
-                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50' 
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${enrollmentStatus.isOpen
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50'
                     : 'bg-amber-400 text-emerald-950 shadow-lg'
-                }`}>
+                  }`}>
                   {enrollmentStatus.isOpen ? <Sparkles className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-black text-white">{enrollmentStatus.headline}</h3>
-                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      enrollmentStatus.isOpen ? 'bg-amber-400 text-emerald-950 animate-pulse' : 'bg-rose-500 text-white'
-                    }`}>
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${enrollmentStatus.isOpen ? 'bg-amber-400 text-emerald-950 animate-pulse' : 'bg-rose-500 text-white'
+                      }`}>
                       {enrollmentStatus.isOpen ? 'Active Now' : 'Closed'}
                     </span>
                   </div>
@@ -268,10 +292,10 @@ function Landing() {
           <p className="text-emerald-100 text-xs sm:text-base mb-5 max-w-xl mx-auto font-medium">
             Submit your official enrollment application for CWTS, LTS, or ROTC component online.
           </p>
-          
+
           {enrollmentStatus.isOpen ? (
-            <Link 
-              to="/enrollment" 
+            <Link
+              to="/enrollment"
               className="inline-flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-lg transition-all shadow-xl shadow-amber-950/30 hover:shadow-2xl hover:-translate-y-1 active:scale-95 group"
             >
               <span>Enroll Online Now</span>
@@ -430,9 +454,8 @@ function Landing() {
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-slide-up" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold ${
-                  activeComponentModal === 'ROTC' ? 'bg-rose-600' : activeComponentModal === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
-                }`}>
+                <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold ${activeComponentModal === 'ROTC' ? 'bg-rose-600' : activeComponentModal === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
+                  }`}>
                   {activeComponentModal === 'ROTC' ? <Shield className="w-5 h-5" /> : activeComponentModal === 'CWTS' ? <Users className="w-5 h-5" /> : <GraduationCap className="w-5 h-5" />}
                 </div>
                 <div>
@@ -444,7 +467,7 @@ function Landing() {
                 ✕
               </button>
             </div>
-            
+
             <div className="space-y-3 text-xs text-gray-700">
               <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/60">
                 <p className="font-bold text-gray-900 mb-1">Key Focus Areas:</p>
@@ -529,6 +552,67 @@ function Landing() {
         </div>
       </section>
 
+      {/* NSTP Video Orientation & Educational Overview Section */}
+      <section className="py-8 sm:py-16 px-4 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-t border-emerald-800/80">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="max-w-4xl mx-auto relative z-10">
+          <div className="text-center mb-6 sm:mb-10">
+            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] sm:text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
+              <Play className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Official NSTP Video Orientation
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2 tracking-tight">What is NSTP? Video Guide &amp; Overview</h2>
+            <p className="text-emerald-200 text-xs sm:text-base mt-1.5 max-w-2xl mx-auto font-medium leading-relaxed">
+              Watch this educational video explanation to learn more about Republic Act 9163, NSTP 1 &amp; 2 components (CWTS, LTS, ROTC), and graduation requirements.
+            </p>
+          </div>
+
+          {/* Responsive 16:9 Video Container */}
+          <div className="bg-black/40 rounded-2xl sm:rounded-3xl border border-white/15 p-2.5 sm:p-4 shadow-2xl backdrop-blur-md">
+            <div className="relative w-full aspect-video rounded-xl sm:rounded-2xl overflow-hidden bg-black flex items-center justify-center group shadow-inner border border-white/10">
+              {/* Native HTML5 Web Video Player - 100% In-App Playback (No YouTube frames or popups) */}
+              <video
+                ref={videoRef}
+                controls
+                controlsList="nodownload"
+                playsInline
+                poster={`${import.meta.env.BASE_URL}cvsunaiccampus.png`}
+                className="w-full h-full rounded-xl sm:rounded-2xl object-cover bg-black"
+              >
+                <source src={`${import.meta.env.BASE_URL}nstp-orientation.mp4`} type="video/mp4" />
+                <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
+                Your browser does not support HTML5 video.
+              </video>
+            </div>
+
+            {/* Video Details & Credits Box */}
+            <div className="mt-4 p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-left">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
+                  <Film className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-black text-xs sm:text-sm text-white">National Service Training Program (NSTP) Orientation</h4>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Educational orientation guide explaining Republic Act 9163, CWTS, LTS, &amp; ROTC</p>
+                </div>
+              </div>
+
+              {/* Video Credits Box (Locked - Text Only) */}
+              <div className="bg-amber-400/10 border border-amber-400/20 px-4 py-2.5 rounded-xl text-left shrink-0 w-full sm:w-auto">
+                <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
+                  <Award className="w-3.5 h-3.5 text-amber-400" /> Video Credits:
+                </p>
+                <p className="text-xs font-black text-white mt-0.5">
+                  University of the Philippines Diliman (UP Diliman)
+                </p>
+                <p className="text-[9px] text-amber-200/90 font-semibold mt-0.5">
+                  Official Educational &amp; Orientation Content Producer
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Frequently Asked Questions (FAQ) & Guidelines */}
       <section className="py-8 sm:py-16 px-4 bg-gray-50 border-t border-gray-100">
         <div className="max-w-4xl mx-auto">
@@ -594,8 +678,8 @@ function Landing() {
                 <h4 className="text-xs sm:text-xl font-black leading-tight">Cavite State University Naic</h4>
               </div>
               <p className="text-emerald-200 text-[9px] sm:text-xs leading-tight sm:leading-relaxed mb-2 max-w-xl">
-                A premier institution committed to providing quality education and producing 
-                morally upright graduates who contribute to national development through the 
+                A premier institution committed to providing quality education and producing
+                morally upright graduates who contribute to national development through the
                 National Service Training Program (NSTP).
               </p>
               <p className="text-amber-400 text-[8px] sm:text-xs font-bold leading-tight">Core Values: Truth • Integrity • Excellence • Service</p>
@@ -606,9 +690,9 @@ function Landing() {
               <h5 className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider mb-1.5 sm:mb-2.5 text-amber-400">Contact NSTP Office</h5>
               <ul className="space-y-1 sm:space-y-2 text-emerald-200 text-[9px] sm:text-xs font-medium">
                 <li className="flex items-center justify-end space-x-1 sm:space-x-2">
-                  <a 
+                  <a
                     href="https://www.cvsu-naic.edu.ph/"
-                    target="_blank" 
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end space-x-1 sm:space-x-2 truncate"
                   >
@@ -617,9 +701,9 @@ function Landing() {
                   </a>
                 </li>
                 <li className="flex items-center justify-end space-x-1 sm:space-x-2">
-                  <a 
+                  <a
                     href="https://web.facebook.com/cvsunaicpio?_rdc=1&_rdr#"
-                    target="_blank" 
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end space-x-1 sm:space-x-2 truncate"
                   >

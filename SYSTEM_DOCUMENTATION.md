@@ -9,7 +9,6 @@ Ang **CvSU Naic NSTP Record & Report Management System** ay isang web-based plat
 Layunin nitong i-automate at gawing mabilis, ligtas, at digital ang mga sumusunod na proseso:
 * **Online Enrollment** ng mga bagong mag-aaral (Freshmen) para sa tatlong NSTP components (**CWTS, LTS, at ROTC**).
 * **Student & Masterlist Management** para sa pag-organisa ng libo-libong mag-aaral ayon sa Batch, Course, Component, at Section.
-* **Serial Number Generation** na sumusunod sa pamantayan ng CHED at DND/AFP.
 * **Attendance & Telemetry Analytics** para sa real-time online tracking ng mga aktibong bisita at estudyante.
 * **Reports, Grading, & Announcements** para sa pagsusumite ng mga proyekto, pagbibigay ng marka, at pagpapakalat ng opisyal na anunsyo.
 

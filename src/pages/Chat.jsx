@@ -1538,16 +1538,18 @@ function Chat() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Helper function to format time
+  // Helper function to format time (Military Time: 0100H to 2400H)
   const formatTime = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const formattedHours = hours % 12 || 12;
-    const formattedMinutes = minutes.toString().padStart(2, '0');
-    return `${formattedHours}:${formattedMinutes} ${ampm}`;
+    if (hours === 0 && minutes === 0) {
+      return '2400H';
+    }
+    const hh = hours.toString().padStart(2, '0');
+    const mm = minutes.toString().padStart(2, '0');
+    return `${hh}${mm}H`;
   };
 
   // Helper function to format date

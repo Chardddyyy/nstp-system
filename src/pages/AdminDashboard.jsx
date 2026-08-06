@@ -84,8 +84,8 @@ function AdminDashboard() {
   }, [showNotifications]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(true);
-  const [_showProgramAnalytics, _setShowProgramAnalytics] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
@@ -686,7 +686,7 @@ function AdminDashboard() {
 
         {/* Interactive Analytics & Program Distribution Panel */}
         <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 pb-4 border-b border-gray-100">
+          <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${showProgramAnalytics ? 'mb-5 pb-4 border-b border-gray-100' : ''}`}>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
@@ -704,249 +704,218 @@ function AdminDashboard() {
               <p className="text-xs text-gray-500 mt-1">Interactive student enrollment metrics across degree programs and NSTP components</p>
             </div>
 
-            {/* Interactive View Toggles & Component Filter */}
+            {/* Interactive View Toggles & Component Filter & Hide Button */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Component Filters */}
-              <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setSelectedComponentFilter('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ALL' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedComponentFilter('CWTS')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'CWTS' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  CWTS
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedComponentFilter('LTS')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'LTS' ? 'bg-purple-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  LTS
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedComponentFilter('ROTC')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ROTC' ? 'bg-rose-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  ROTC
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowProgramAnalytics(!showProgramAnalytics)}
+                className="px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+              >
+                {showProgramAnalytics ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 text-emerald-700" />
+                    <span>Hide Analytics</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-4 h-4 text-emerald-700" />
+                    <span>Show Analytics</span>
+                  </>
+                )}
+              </button>
 
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setAnalyticsViewMode('chart')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'chart' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Chart
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnalyticsViewMode('grid')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Grid
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Component Ratio Stacked Bar Visual */}
-          <div className="mb-5 p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/60">
-            <div className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-2">
-              <span>Component Enrollment Ratio</span>
-              <span>Total Active: {displayStats.totalStudents}</span>
-            </div>
-            <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner">
-              {displayStats.totalStudents > 0 ? (
+              {showProgramAnalytics && (
                 <>
-                  <div
-                    style={{ width: `${(displayStats.cwtsStudents / displayStats.totalStudents) * 100}%` }}
-                    className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
-                    title={`CWTS: ${displayStats.cwtsStudents} (${Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100)}%)`}
-                    onClick={() => setSelectedComponentFilter('CWTS')}
-                  />
-                  <div
-                    style={{ width: `${(displayStats.ltsStudents / displayStats.totalStudents) * 100}%` }}
-                    className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
-                    title={`LTS: ${displayStats.ltsStudents} (${Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100)}%)`}
-                    onClick={() => setSelectedComponentFilter('LTS')}
-                  />
-                  <div
-                    style={{ width: `${(displayStats.rotcStudents / displayStats.totalStudents) * 100}%` }}
-                    className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
-                    title={`ROTC: ${displayStats.rotcStudents} (${Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100)}%)`}
-                    onClick={() => setSelectedComponentFilter('ROTC')}
-                  />
+                  {/* Component Filters */}
+                  <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedComponentFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ALL' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedComponentFilter('CWTS')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'CWTS' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      CWTS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedComponentFilter('LTS')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'LTS' ? 'bg-purple-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      LTS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedComponentFilter('ROTC')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${selectedComponentFilter === 'ROTC' ? 'bg-rose-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      ROTC
+                    </button>
+                  </div>
+
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setAnalyticsViewMode('chart')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'chart' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      Chart
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnalyticsViewMode('grid')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${analyticsViewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'}`}
+                    >
+                      Grid
+                    </button>
+                  </div>
                 </>
-              ) : (
-                <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[10px] text-gray-500">No data</div>
               )}
             </div>
-            <div className="flex items-center justify-between text-xs pt-2 font-medium">
-              <span className="text-emerald-700">🟢 CWTS: {displayStats.cwtsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
-              <span className="text-purple-700">🟣 LTS: {displayStats.ltsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
-              <span className="text-rose-700">🔴 ROTC: {displayStats.rotcStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100) : 0}%)</span>
-            </div>
           </div>
 
-          {/* MODE 1: HORIZONTAL CHARTS VIEW */}
-          {analyticsViewMode === 'chart' ? (
-            <div className="space-y-3 animate-fade-in">
-              {programDeptStats.map(item => {
-                const displayedCount = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
-                const maxVal = Math.max(...programDeptStats.map(p => selectedComponentFilter === 'CWTS' ? p.cwts : selectedComponentFilter === 'LTS' ? p.lts : selectedComponentFilter === 'ROTC' ? p.rotc : p.total), 1);
-                const percent = Math.round((displayedCount / maxVal) * 100);
-                const sharePercent = displayStats.totalStudents > 0 ? Math.round((displayedCount / displayStats.totalStudents) * 100) : 0;
+          {showProgramAnalytics && (
+            <>
+              {/* Component Ratio Stacked Bar Visual */}
+              <div className="mb-5 p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/60">
+                <div className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-2">
+                  <span>Component Enrollment Ratio</span>
+                  <span>Total Active: {displayStats.totalStudents}</span>
+                </div>
+                <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner">
+                  {displayStats.totalStudents > 0 ? (
+                    <>
+                      <div
+                        style={{ width: `${(displayStats.cwtsStudents / displayStats.totalStudents) * 100}%` }}
+                        className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
+                        title={`CWTS: ${displayStats.cwtsStudents} (${Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100)}%)`}
+                        onClick={() => setSelectedComponentFilter('CWTS')}
+                      />
+                      <div
+                        style={{ width: `${(displayStats.ltsStudents / displayStats.totalStudents) * 100}%` }}
+                        className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
+                        title={`LTS: ${displayStats.ltsStudents} (${Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100)}%)`}
+                        onClick={() => setSelectedComponentFilter('LTS')}
+                      />
+                      <div
+                        style={{ width: `${(displayStats.rotcStudents / displayStats.totalStudents) * 100}%` }}
+                        className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
+                        title={`ROTC: ${displayStats.rotcStudents} (${Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100)}%)`}
+                        onClick={() => setSelectedComponentFilter('ROTC')}
+                      />
+                    </>
+                  ) : (
+                    <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[10px] text-gray-500">No data</div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs pt-2 font-medium">
+                  <span className="text-emerald-700">🟢 CWTS: {displayStats.cwtsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
+                  <span className="text-purple-700">🟣 LTS: {displayStats.ltsStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100) : 0}%)</span>
+                  <span className="text-rose-700">🔴 ROTC: {displayStats.rotcStudents} ({displayStats.totalStudents > 0 ? Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100) : 0}%)</span>
+                </div>
+              </div>
 
-                return (
-                  <div
-                    key={item.program}
-                    className="bg-gray-50/80 hover:bg-emerald-50/40 border border-gray-200/70 hover:border-emerald-300 rounded-xl p-3.5 transition-all duration-200 group cursor-pointer"
-                    onClick={() => navigate('/students')}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-gray-900 group-hover:text-emerald-800 transition-colors">{item.program}</span>
-                        <span className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-                          {sharePercent}% of total
+              {/* MODE 1: HORIZONTAL CHARTS VIEW */}
+              {analyticsViewMode === 'chart' ? (
+                <div className="space-y-3 animate-fade-in">
+                  {programDeptStats.map(item => {
+                    const displayedCount = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
+                    const maxVal = Math.max(...programDeptStats.map(p => selectedComponentFilter === 'CWTS' ? p.cwts : selectedComponentFilter === 'LTS' ? p.lts : selectedComponentFilter === 'ROTC' ? p.rotc : p.total), 1);
+                    const percent = Math.round((displayedCount / maxVal) * 100);
+                    const sharePercent = displayStats.totalStudents > 0 ? Math.round((displayedCount / displayStats.totalStudents) * 100) : 0;
+
+                    return (
+                      <div
+                        key={item.program}
+                        className="bg-gray-50/80 hover:bg-emerald-50/40 border border-gray-200/70 hover:border-emerald-300 rounded-xl p-3.5 transition-all duration-200 group cursor-pointer"
+                        onClick={() => navigate('/students')}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-gray-900 group-hover:text-emerald-800 transition-colors">{item.program}</span>
+                            <span className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                              {sharePercent}% of total
+                            </span>
+                          </div>
+                          <span className="text-sm font-black text-emerald-800 bg-white px-2.5 py-0.5 rounded-md border border-emerald-100 shadow-2xs">
+                            {displayedCount} students
+                          </span>
+                        </div>
+
+                        <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner mb-2">
+                          {selectedComponentFilter === 'ALL' ? (
+                            item.total > 0 ? (
+                              <>
+                                <div
+                                  style={{ width: `${(item.cwts / item.total) * 100}%` }}
+                                  className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
+                                  title={`CWTS: ${item.cwts}`}
+                                />
+                                <div
+                                  style={{ width: `${(item.lts / item.total) * 100}%` }}
+                                  className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
+                                  title={`LTS: ${item.lts}`}
+                                />
+                                <div
+                                  style={{ width: `${(item.rotc / item.total) * 100}%` }}
+                                  className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
+                                  title={`ROTC: ${item.rotc}`}
+                                />
+                              </>
+                            ) : (
+                              <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[9px] text-gray-500">0 enrolled</div>
+                            )
+                          ) : (
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
+                                selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
+                                'bg-rose-600'
+                              }`}
+                              style={{ width: `${percent}%` }}
+                            ></div>
+                          )}
+                        </div>
+
+                        {selectedComponentFilter === 'ALL' && (
+                          <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                            <span className="text-emerald-700 font-medium">CWTS: {item.cwts}</span>
+                            <span className="text-purple-700 font-medium">LTS: {item.lts}</span>
+                            <span className="text-rose-700 font-medium">ROTC: {item.rotc}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* MODE 2: INTERACTIVE GRID BADGE VIEW */
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 animate-fade-in">
+                  {programDeptStats.map(item => {
+                    const count = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
+                    return (
+                      <div
+                        key={item.program}
+                        className="bg-gray-50 hover:bg-emerald-50/60 border border-gray-200/80 hover:border-emerald-300 rounded-xl p-3 flex items-center justify-between transition-all duration-150 group cursor-pointer"
+                        onClick={() => navigate('/students')}
+                      >
+                        <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-900 truncate mr-2">{item.program}</span>
+                        <span className="text-sm font-black text-gray-900 group-hover:text-emerald-700 bg-white group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shadow-2xs shrink-0 transition-colors">
+                          {count}
                         </span>
                       </div>
-                      <span className="text-sm font-black text-emerald-800 bg-white px-2.5 py-0.5 rounded-md border border-emerald-100 shadow-2xs">
-                        {displayedCount} students
-                      </span>
-                    </div>
-
-                    <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner mb-2">
-                      {selectedComponentFilter === 'ALL' ? (
-                        item.total > 0 ? (
-                          <>
-                            <div
-                              style={{ width: `${(item.cwts / item.total) * 100}%` }}
-                              className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
-                              title={`CWTS: ${item.cwts}`}
-                            />
-                            <div
-                              style={{ width: `${(item.lts / item.total) * 100}%` }}
-                              className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
-                              title={`LTS: ${item.lts}`}
-                            />
-                            <div
-                              style={{ width: `${(item.rotc / item.total) * 100}%` }}
-                              className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
-                              title={`ROTC: ${item.rotc}`}
-                            />
-                          </>
-                        ) : (
-                          <div className="w-full bg-gray-300 h-full flex items-center justify-center text-[9px] text-gray-500">0 enrolled</div>
-                        )
-                      ) : (
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
-                            selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
-                            'bg-rose-600'
-                          }`}
-                          style={{ width: `${percent}%` }}
-                        ></div>
-                      )}
-                    </div>
-
-                    {selectedComponentFilter === 'ALL' && (
-                      <div className="flex items-center gap-3 text-[11px] text-gray-500">
-                        <span className="text-emerald-700 font-medium">CWTS: {item.cwts}</span>
-                        <span className="text-purple-700 font-medium">LTS: {item.lts}</span>
-                        <span className="text-rose-700 font-medium">ROTC: {item.rotc}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            /* MODE 2: INTERACTIVE GRID BADGE VIEW */
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 animate-fade-in">
-              {programDeptStats.map(item => {
-                const count = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
-                return (
-                  <div
-                    key={item.program}
-                    className="bg-gray-50 hover:bg-emerald-50/60 border border-gray-200/80 hover:border-emerald-300 rounded-xl p-3 flex items-center justify-between transition-all duration-150 group cursor-pointer"
-                    onClick={() => navigate('/students')}
-                  >
-                    <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-900 truncate mr-2">{item.program}</span>
-                    <span className="text-sm font-black text-gray-900 group-hover:text-emerald-700 bg-white group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shadow-2xs shrink-0 transition-colors">
-                      {count}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
-        </div>
-
-        {/* Quick Action Navigation Cards - 3 Side-by-Side on Cellphone */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
-          <div
-            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
-            onClick={() => setShowInstructorList(true)}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-emerald-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Instructors</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalInstructors} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
-                </div>
-              </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
-            </div>
-          </div>
-
-          <div
-            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
-            onClick={() => navigate('/reports')}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <FileText className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-amber-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Reports</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
-                </div>
-              </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
-            </div>
-          </div>
-
-          <div
-            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
-            onClick={() => navigate('/chat')}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <MessageSquare className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-blue-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Messages</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.unreadMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
-                </div>
-              </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
-            </div>
-          </div>
         </div>
 
         {/* Pending Enrollments Section with Enrollment Switch */}

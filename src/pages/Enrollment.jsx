@@ -47,10 +47,56 @@ function Enrollment() {
       contactNumber: '',
       email: '',
       facebookAccount: '',
+      registeredVoter: '',
       emergencyContact: '',
       emergencyNumber: ''
     };
   });
+
+  const [heightUnit, setHeightUnit] = useState('cm');
+  const [heightInput, setHeightInput] = useState(() => formData.height || '');
+  const [weightUnit, setWeightUnit] = useState('kg');
+  const [weightInput, setWeightInput] = useState(() => formData.weight || '');
+
+  const convertToCm = (val, unit) => {
+    if (!val || String(val).trim() === '') return '';
+    const numStr = String(val).trim();
+    if (unit === 'cm') {
+      return String(Math.round(parseFloat(numStr) || 0));
+    }
+    if (unit === 'm') {
+      const meters = parseFloat(numStr);
+      return isNaN(meters) ? '' : String(Math.round(meters * 100));
+    }
+    if (unit === 'ft') {
+      if (numStr.includes("'") || numStr.includes('"') || numStr.includes(' ')) {
+        const parts = numStr.replace(/["']/g, ' ').trim().split(/\s+/);
+        const feet = parseFloat(parts[0]) || 0;
+        const inches = parseFloat(parts[1]) || 0;
+        const totalInches = (feet * 12) + inches;
+        return String(Math.round(totalInches * 2.54));
+      } else {
+        const feet = parseFloat(numStr);
+        if (isNaN(feet)) return '';
+        return String(Math.round(feet * 30.48));
+      }
+    }
+    return numStr;
+  };
+
+  const convertToKg = (val, unit) => {
+    if (!val || String(val).trim() === '') return '';
+    const numStr = String(val).trim();
+    if (unit === 'kg') {
+      return String(Math.round(parseFloat(numStr) || 0));
+    }
+    if (unit === 'lbs') {
+      const lbs = parseFloat(numStr);
+      if (isNaN(lbs)) return '';
+      return String(Math.round(lbs * 0.45359237));
+    }
+    return numStr;
+  };
 
   const [errors, setErrors] = useState({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -73,8 +119,10 @@ function Enrollment() {
       program: '', yearLevel: '', section: '', nstpComponent: 'CWTS',
       birthMonth: '', birthDay: '', birthYear: '', age: '', civilStatus: '', sex: '',
       height: '', weight: '', bloodType: '', contactNumber: '', email: '',
-      facebookAccount: '', emergencyContact: '', emergencyNumber: ''
+      facebookAccount: '', registeredVoter: '', emergencyContact: '', emergencyNumber: ''
     });
+    setHeightInput('');
+    setWeightInput('');
     setErrors({});
     setAgreedToTerms(false);
   };
@@ -100,11 +148,12 @@ function Enrollment() {
   const validateForm = () => {
     const newErrors = {};
 
-    // Required fields validation
+    // Required fields validation (All fields required except middleName)
     const requiredFields = [
       'lastName', 'firstName', 'studentId', 'street', 'municipality', 'province', 'email',
-      'program', 'yearLevel', 'section',
-      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'contactNumber',
+      'program', 'yearLevel', 'section', 'nstpComponent',
+      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'registeredVoter',
+      'height', 'weight', 'bloodType', 'contactNumber', 'facebookAccount',
       'emergencyContact', 'emergencyNumber'
     ];
 
@@ -228,8 +277,14 @@ function Enrollment() {
     e.target.value = '';
   };
 
-  const toTitleCase = (str) =>
-    str.replace(/\b\w/g, (c) => c.toUpperCase());
+  // Capitalize First Letter of Every Word (Upper Case Every Word)
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str
+      .split(' ')
+      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+      .join(' ');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -246,8 +301,8 @@ function Enrollment() {
       // Only allow numbers
       newValue = value.replace(/\D/g, '');
     } else if (name === 'height' || name === 'weight') {
-      // Only allow numbers and decimal
-      newValue = value.replace(/[^0-9.]/g, '');
+      // Handled separately by unit selection inputs
+      newValue = value;
     } else if (name === 'bloodType') {
       newValue = value.toUpperCase().slice(0, 3);
     } else if (name === 'birthMonth') {
@@ -264,7 +319,7 @@ function Enrollment() {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
     } else if (['firstName', 'lastName', 'middleName', 'municipality', 'province', 'emergencyContact'].includes(name)) {
-      // Disallow numbers and special characters (only letters, spaces, dots, hyphens)
+      // Disallow numbers and special characters; automatically Capitalize First Letter of each word
       newValue = toTitleCase(value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
     } else if (name === 'street') {
       newValue = toTitleCase(value);
@@ -302,9 +357,24 @@ function Enrollment() {
     setIsSubmitting(true);
 
     try {
+      const cleanLastName = toTitleCase(formData.lastName.trim());
+      const cleanFirstName = toTitleCase(formData.firstName.trim());
+      const cleanMiddleName = toTitleCase(formData.middleName.trim());
+      const cleanStreet = toTitleCase(formData.street.trim());
+      const cleanMunicipality = toTitleCase(formData.municipality.trim());
+      const cleanProvince = toTitleCase(formData.province.trim());
+      const cleanEmergencyContact = toTitleCase(formData.emergencyContact.trim());
+
       const enrollmentData = {
         ...formData,
-        fullName: `${formData.lastName}, ${formData.firstName} ${formData.middleName}`.trim(),
+        lastName: cleanLastName,
+        firstName: cleanFirstName,
+        middleName: cleanMiddleName,
+        street: cleanStreet,
+        municipality: cleanMunicipality,
+        province: cleanProvince,
+        emergencyContact: cleanEmergencyContact,
+        fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim(),
         birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
         status: 'Pending',
         registrationPhoto,
@@ -843,7 +913,7 @@ function Enrollment() {
                     name="birthDate"
                     id="birthDate"
                     autoComplete="bday"
-                    max={new Date().toISOString().split('T')[0]}
+                    max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`}
                     value={
                       formData.birthYear && formData.birthMonth && formData.birthDay
                         ? `${formData.birthYear}-${String(formData.birthMonth).padStart(2,'0')}-${String(formData.birthDay).padStart(2,'0')}`
@@ -852,17 +922,42 @@ function Enrollment() {
                     onChange={(e) => {
                       const val = e.target.value;
                       if (!val) {
-                        const upd = { ...formData, birthYear: '', birthMonth: '', birthDay: '' };
+                        const upd = { ...formData, birthYear: '', birthMonth: '', birthDay: '', age: '' };
                         setFormData(upd);
                         localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         return;
                       }
                       const [y, m, d] = val.split('-');
-                      const upd = { ...formData, birthYear: y, birthMonth: String(parseInt(m)), birthDay: String(parseInt(d)) };
+                      const currentYr = new Date().getFullYear();
+                      let safeY = y;
+                      if (parseInt(safeY) > currentYr) {
+                        safeY = currentYr.toString();
+                      }
+                      
+                      // Auto-compute age
+                      const birth = new Date(parseInt(safeY), parseInt(m) - 1, parseInt(d));
+                      let calcAge = '';
+                      if (!isNaN(birth.getTime())) {
+                        const today = new Date();
+                        let a = today.getFullYear() - birth.getFullYear();
+                        const mDiff = today.getMonth() - birth.getMonth();
+                        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) {
+                          a--;
+                        }
+                        calcAge = a >= 0 && a <= 120 ? a.toString() : '';
+                      }
+
+                      const upd = { 
+                        ...formData, 
+                        birthYear: safeY, 
+                        birthMonth: String(parseInt(m)), 
+                        birthDay: String(parseInt(d)),
+                        age: calcAge
+                      };
                       setFormData(upd);
                       localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
-                      if (errors.birthMonth || errors.birthDay || errors.birthYear) {
-                        setErrors(prev => ({ ...prev, birthMonth: '', birthDay: '', birthYear: '' }));
+                      if (errors.birthMonth || errors.birthDay || errors.birthYear || errors.age) {
+                        setErrors(prev => ({ ...prev, birthMonth: '', birthDay: '', birthYear: '', age: '' }));
                       }
                     }}
                     className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.birthMonth || errors.birthDay || errors.birthYear ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
@@ -874,16 +969,18 @@ function Enrollment() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Age *</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <span>Age *</span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Auto-computed</span>
+                    </label>
                     <input
                       ref={el => fieldRefs.current.age = el}
                       type="text"
                       name="age"
-                      required
-                      placeholder="e.g. 18"
-                      value={formData.age}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.age ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                      readOnly
+                      placeholder="Auto-computed"
+                      value={formData.age || ''}
+                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 cursor-not-allowed"
                     />
                     {errors.age && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.age}</p>}
                   </div>
@@ -925,38 +1022,114 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Height (cm)</label>
-                    <input
-                      type="text"
-                      name="height"
-                      placeholder="e.g. 165"
-                      value={formData.height}
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                    <select
+                      ref={el => fieldRefs.current.registeredVoter = el}
+                      name="registeredVoter"
+                      required
+                      value={formData.registeredVoter || ''}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
-                    />
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.registeredVoter ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    >
+                      <option value="">Select Option</option>
+                      <option value="Yes">Yes (Registered Voter)</option>
+                      <option value="No">No (Not Registered)</option>
+                    </select>
+                    {errors.registeredVoter && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.registeredVoter}</p>}
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4 mt-4">
+                <div className="grid md:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Weight (kg)</label>
-                    <input
-                      type="text"
-                      name="weight"
-                      placeholder="e.g. 55"
-                      value={formData.weight}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
-                    />
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <span>Height *</span>
+                      {formData.height && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.height} cm</span>}
+                    </label>
+                    <div className="flex gap-1.5">
+                      <input
+                        ref={el => fieldRefs.current.height = el}
+                        type="text"
+                        placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
+                        value={heightInput}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9.'"]/g, '');
+                          setHeightInput(raw);
+                          const cmVal = convertToCm(raw, heightUnit);
+                          const updated = { ...formData, height: cmVal };
+                          setFormData(updated);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
+                        }}
+                        className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.height ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                      />
+                      <select
+                        value={heightUnit}
+                        onChange={(e) => {
+                          const newUnit = e.target.value;
+                          setHeightUnit(newUnit);
+                          const cmVal = convertToCm(heightInput, newUnit);
+                          const updated = { ...formData, height: cmVal };
+                          setFormData(updated);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
+                        }}
+                        className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                      >
+                        <option value="cm">cm</option>
+                        <option value="ft">ft / in</option>
+                        <option value="m">m</option>
+                      </select>
+                    </div>
+                    {errors.height && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.height}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <span>Weight *</span>
+                      {formData.weight && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.weight} kg</span>}
+                    </label>
+                    <div className="flex gap-1.5">
+                      <input
+                        ref={el => fieldRefs.current.weight = el}
+                        type="text"
+                        placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
+                        value={weightInput}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9.]/g, '');
+                          setWeightInput(raw);
+                          const kgVal = convertToKg(raw, weightUnit);
+                          const updated = { ...formData, weight: kgVal };
+                          setFormData(updated);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
+                        }}
+                        className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.weight ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                      />
+                      <select
+                        value={weightUnit}
+                        onChange={(e) => {
+                          const newUnit = e.target.value;
+                          setWeightUnit(newUnit);
+                          const kgVal = convertToKg(weightInput, newUnit);
+                          const updated = { ...formData, weight: kgVal };
+                          setFormData(updated);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
+                        }}
+                        className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                      >
+                        <option value="kg">kg</option>
+                        <option value="lbs">lbs</option>
+                      </select>
+                    </div>
+                    {errors.weight && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.weight}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                     <select
+                      ref={el => fieldRefs.current.bloodType = el}
                       name="bloodType"
+                      required
                       value={formData.bloodType}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.bloodType ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     >
                       <option value="">Select Blood Type</option>
                       <option value="A">A</option>
@@ -972,6 +1145,7 @@ function Enrollment() {
                       <option value="O+">O+</option>
                       <option value="O-">O-</option>
                     </select>
+                    {errors.bloodType && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.bloodType}</p>}
                   </div>
 
                   <div>
@@ -982,15 +1156,53 @@ function Enrollment() {
                       name="contactNumber"
                       required
                       placeholder="09123456789"
-                      value={formData.contactNumber}
-                      onChange={handleChange}
+                      value={formData.contactNumber || '09'}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (!val || val === '0') {
+                          val = '09';
+                        } else if (!val.startsWith('09')) {
+                          if (val.startsWith('9')) {
+                            val = '0' + val;
+                          } else {
+                            val = '09' + val;
+                          }
+                        }
+                        val = val.slice(0, 11);
+                        const upd = { ...formData, contactNumber: val };
+                        setFormData(upd);
+                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                        if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }));
+                      }}
+                      onFocus={(e) => {
+                        if (!e.target.value) {
+                          const upd = { ...formData, contactNumber: '09' };
+                          setFormData(upd);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                        }
+                      }}
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.contactNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     />
                     {errors.contactNumber && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.contactNumber}</p>}
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                <div className="grid md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <input
+                      ref={el => fieldRefs.current.facebookAccount = el}
+                      type="text"
+                      name="facebookAccount"
+                      required
+                      placeholder="https://facebook.com/username"
+                      value={formData.facebookAccount || ''}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.facebookAccount ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    />
+                    {errors.facebookAccount && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.facebookAccount}</p>}
+                  </div>
+
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                     <input
@@ -1014,8 +1226,31 @@ function Enrollment() {
                       name="emergencyNumber"
                       required
                       placeholder="09123456789"
-                      value={formData.emergencyNumber}
-                      onChange={handleChange}
+                      value={formData.emergencyNumber || '09'}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (!val || val === '0') {
+                          val = '09';
+                        } else if (!val.startsWith('09')) {
+                          if (val.startsWith('9')) {
+                            val = '0' + val;
+                          } else {
+                            val = '09' + val;
+                          }
+                        }
+                        val = val.slice(0, 11);
+                        const upd = { ...formData, emergencyNumber: val };
+                        setFormData(upd);
+                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                        if (errors.emergencyNumber) setErrors(prev => ({ ...prev, emergencyNumber: '' }));
+                      }}
+                      onFocus={(e) => {
+                        if (!e.target.value) {
+                          const upd = { ...formData, emergencyNumber: '09' };
+                          setFormData(upd);
+                          localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                        }
+                      }}
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.emergencyNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     />
                     {errors.emergencyNumber && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.emergencyNumber}</p>}

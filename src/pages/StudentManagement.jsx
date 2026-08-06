@@ -3,7 +3,7 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart
+  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -29,27 +29,179 @@ function StudentManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Form state for adding/editing
+  // Form state for adding/editing - fully synchronized with Enrollment.jsx
   const [formData, setFormData] = useState({
     studentId: '',
+    lastName: '',
+    firstName: '',
+    middleName: '',
     name: '',
     email: '',
+    street: '',
+    municipality: '',
+    province: '',
+    address: '',
     department: 'CWTS',
     year: '',
+    yearLevel: '',
     program: '',
     section: '',
     contactNumber: '',
-    address: '',
     birthMonth: '',
     birthDay: '',
     birthYear: '',
     age: '',
     civilStatus: '',
+    sex: '',
     gender: '',
+    height: '',
+    weight: '',
     bloodType: '',
+    facebookAccount: '',
+    emergencyContact: '',
     emergencyName: '',
     emergencyNumber: ''
   });
+
+  const [heightUnit, setHeightUnit] = useState('cm');
+  const [heightInput, setHeightInput] = useState('');
+  const [weightUnit, setWeightUnit] = useState('kg');
+  const [weightInput, setWeightInput] = useState('');
+
+  const convertToCm = (val, unit) => {
+    if (!val || String(val).trim() === '') return '';
+    const numStr = String(val).trim();
+    if (unit === 'cm') {
+      return String(Math.round(parseFloat(numStr) || 0));
+    }
+    if (unit === 'm') {
+      const meters = parseFloat(numStr);
+      return isNaN(meters) ? '' : String(Math.round(meters * 100));
+    }
+    if (unit === 'ft') {
+      if (numStr.includes("'") || numStr.includes('"') || numStr.includes(' ')) {
+        const parts = numStr.replace(/["']/g, ' ').trim().split(/\s+/);
+        const feet = parseFloat(parts[0]) || 0;
+        const inches = parseFloat(parts[1]) || 0;
+        const totalInches = (feet * 12) + inches;
+        return String(Math.round(totalInches * 2.54));
+      } else {
+        const feet = parseFloat(numStr);
+        if (isNaN(feet)) return '';
+        return String(Math.round(feet * 30.48));
+      }
+    }
+    return numStr;
+  };
+
+  const convertToKg = (val, unit) => {
+    if (!val || String(val).trim() === '') return '';
+    const numStr = String(val).trim();
+    if (unit === 'kg') {
+      return String(Math.round(parseFloat(numStr) || 0));
+    }
+    if (unit === 'lbs') {
+      const lbs = parseFloat(numStr);
+      if (isNaN(lbs)) return '';
+      return String(Math.round(lbs * 0.45359237));
+    }
+    return numStr;
+  };
+
+  const toTitleCase = (str) => {
+    if (!str || typeof str !== 'string') return '';
+    return str
+      .split(' ')
+      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+      .join(' ');
+  };
+
+  const handleFormFieldChange = (e) => {
+    const { name, value } = e.target;
+    let newValue = value;
+
+    if (name === 'studentId') {
+      newValue = value.replace(/\D/g, '').slice(0, 9);
+    } else if (name === 'contactNumber' || name === 'emergencyNumber') {
+      let digits = value.replace(/\D/g, '');
+      if (!digits || digits === '0') {
+        newValue = '09';
+      } else if (!digits.startsWith('09')) {
+        if (digits.startsWith('9')) {
+          newValue = '0' + digits;
+        } else {
+          newValue = '09' + digits;
+        }
+      } else {
+        newValue = digits;
+      }
+      newValue = newValue.slice(0, 11);
+    } else if (name === 'age') {
+      newValue = value.replace(/\D/g, '');
+    } else if (name === 'bloodType') {
+      newValue = value.toUpperCase().slice(0, 3);
+    } else if (name === 'birthMonth') {
+      newValue = value.replace(/\D/g, '');
+      if (parseInt(newValue) > 12) newValue = '12';
+      if (newValue.startsWith('0') && newValue.length > 1) newValue = newValue.slice(1);
+    } else if (name === 'birthDay') {
+      newValue = value.replace(/\D/g, '');
+      if (parseInt(newValue) > 31) newValue = '31';
+      if (newValue.startsWith('0') && newValue.length > 1) newValue = newValue.slice(1);
+    } else if (name === 'birthYear') {
+      newValue = value.replace(/\D/g, '').slice(0, 4);
+      const currentYear = new Date().getFullYear();
+      if (newValue.length === 4 && parseInt(newValue) > currentYear) {
+        newValue = currentYear.toString();
+      }
+    } else if (['firstName', 'lastName', 'middleName', 'municipality', 'province', 'emergencyContact', 'emergencyName'].includes(name)) {
+      newValue = toTitleCase(value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
+    } else if (name === 'street') {
+      newValue = toTitleCase(value);
+    }
+
+    const updated = {
+      ...formData,
+      [name]: newValue,
+      ...(name === 'emergencyContact' ? { emergencyName: newValue } : {}),
+      ...(name === 'emergencyName' ? { emergencyContact: newValue } : {}),
+      ...(name === 'sex' ? { gender: newValue } : {}),
+      ...(name === 'gender' ? { sex: newValue } : {}),
+      ...(name === 'yearLevel' ? { year: newValue } : {}),
+      ...(name === 'year' ? { yearLevel: newValue } : {})
+    };
+
+    // Auto-calculate age if birthMonth, birthDay, birthYear are present
+    const m = name === 'birthMonth' ? newValue : updated.birthMonth;
+    const d = name === 'birthDay' ? newValue : updated.birthDay;
+    const y = name === 'birthYear' ? newValue : updated.birthYear;
+
+    if (m && d && y && y.length === 4) {
+      const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      if (!isNaN(birth.getTime())) {
+        const today = new Date();
+        let calcAge = today.getFullYear() - birth.getFullYear();
+        const mDiff = today.getMonth() - birth.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) {
+          calcAge--;
+        }
+        updated.age = calcAge >= 0 && calcAge <= 120 ? calcAge.toString() : '';
+      }
+    }
+
+    setFormData(updated);
+  };
+
+  const resetFormData = () => {
+    setFormData({
+      studentId: '', lastName: '', firstName: '', middleName: '', name: '',
+      email: '', street: '', municipality: '', province: '', address: '',
+      department: '', year: '', yearLevel: '', program: '', section: '',
+      contactNumber: '09', birthMonth: '', birthDay: '', birthYear: '', age: '',
+      civilStatus: '', sex: '', gender: '', registeredVoter: '', height: '', weight: '', bloodType: '',
+      facebookAccount: '', emergencyContact: '', emergencyName: '', emergencyNumber: '09'
+    });
+  };
 
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
@@ -90,18 +242,27 @@ function StudentManagement() {
   };
 
   const handleAddStudent = async () => {
-    const requiredFields = ['studentId', 'name', 'email', 'department', 'year', 'program', 'section', 'gender', 'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'contactNumber', 'emergencyName', 'emergencyNumber'];
+    const requiredFields = [
+      'lastName', 'firstName', 'studentId', 'street', 'municipality', 'province', 'email',
+      'program', 'yearLevel', 'section', 'department',
+      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'registeredVoter',
+      'height', 'weight', 'bloodType', 'contactNumber', 'facebookAccount',
+      'emergencyContact', 'emergencyNumber'
+    ];
     const fieldLabels = {
-      studentId: 'Student ID', name: 'Full Name', email: 'Email', department: 'Department',
-      year: 'Year Level', program: 'Program', section: 'Section', gender: 'Sex',
-      birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year', age: 'Age',
-      civilStatus: 'Civil Status', contactNumber: 'Contact Number',
-      emergencyName: 'Emergency Contact Name', emergencyNumber: 'Emergency Contact Number'
+      lastName: 'Last Name', firstName: 'First Name', studentId: 'Student ID',
+      street: 'Street / Barangay', municipality: 'Municipality / City', province: 'Province',
+      email: 'Email', program: 'Program', yearLevel: 'Year Level', section: 'Section',
+      department: 'Department', birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year',
+      age: 'Age', civilStatus: 'Civil Status', sex: 'Sex', registeredVoter: 'Registered Voter',
+      height: 'Height', weight: 'Weight', bloodType: 'Blood Type', contactNumber: 'Contact Number',
+      facebookAccount: 'Facebook Account', emergencyContact: 'Emergency Contact Person', emergencyNumber: 'Emergency Contact Number'
     };
 
     for (const field of requiredFields) {
-      if (!formData[field] || formData[field].toString().trim() === '') {
-        setNotification({ type: 'error', message: `"${fieldLabels[field]}" is required. Please fill it in before saving.` });
+      const val = formData[field];
+      if (!val || val.toString().trim() === '') {
+        setNotification({ type: 'error', message: `"${fieldLabels[field] || field}" is required. Please fill it in before saving.` });
         setTimeout(() => setNotification(null), 5000);
         return;
       }
@@ -112,15 +273,15 @@ function StudentManagement() {
       setTimeout(() => setNotification(null), 5000);
       return;
     }
-    const contactLen = formData.contactNumber.replace(/\D/g, '').length;
-    if (contactLen !== 11) {
-      setNotification({ type: 'error', message: `Contact Number must be exactly 11 digits — you entered ${contactLen} digit${contactLen !== 1 ? 's' : ''}.` });
+    const contactLen = formData.contactNumber.replace(/\D/g, '');
+    if (contactLen.length !== 11) {
+      setNotification({ type: 'error', message: `Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.` });
       setTimeout(() => setNotification(null), 5000);
       return;
     }
-    const emerLen = formData.emergencyNumber.replace(/\D/g, '').length;
-    if (emerLen !== 11) {
-      setNotification({ type: 'error', message: `Emergency Contact Number must be exactly 11 digits — you entered ${emerLen} digit${emerLen !== 1 ? 's' : ''}.` });
+    const emerLen = formData.emergencyNumber.replace(/\D/g, '');
+    if (emerLen.length !== 11) {
+      setNotification({ type: 'error', message: `Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.` });
       setTimeout(() => setNotification(null), 5000);
       return;
     }
@@ -130,29 +291,57 @@ function StudentManagement() {
       return;
     }
 
-    setIsAddingStudent(true);
-    try {
-      await addStudent(formData);
-      // Only close the modal AFTER the API call succeeds
-      setShowAddModal(false);
-      setCurrentPage(1);
-      setNotification({ type: 'success', message: 'Student added successfully!' });
-      setFormData({
-        studentId: '', name: '', email: '', department: 'CWTS', year: '', program: '',
-        section: '', gender: '', birthMonth: '', birthDay: '', birthYear: '', age: '',
-        civilStatus: '', contactNumber: '', address: '', bloodType: '',
-        emergencyName: '', emergencyNumber: ''
-      });
-    } catch (error) {
-      const raw = error?.message || '';
-      const msg = raw.toLowerCase().includes('already exists')
-        ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
-        : raw || 'Failed to add student. Please try again.';
-      setNotification({ type: 'error', message: msg });
-      setTimeout(() => setNotification(null), 6000);
-    } finally {
-      setIsAddingStudent(false);
-    }
+    const cleanLastName = toTitleCase(formData.lastName.trim());
+    const cleanFirstName = toTitleCase(formData.firstName.trim());
+    const cleanMiddleName = toTitleCase(formData.middleName.trim());
+    const cleanStreet = toTitleCase(formData.street.trim());
+    const cleanMunicipality = toTitleCase(formData.municipality.trim());
+    const cleanProvince = toTitleCase(formData.province.trim());
+    const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
+
+    const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim();
+    const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`;
+
+    const studentPayload = {
+      ...formData,
+      lastName: cleanLastName,
+      firstName: cleanFirstName,
+      middleName: cleanMiddleName,
+      street: cleanStreet,
+      municipality: cleanMunicipality,
+      province: cleanProvince,
+      name: fullName,
+      address: fullAddress,
+      gender: formData.sex || formData.gender,
+      sex: formData.sex || formData.gender,
+      year: formData.yearLevel || formData.year,
+      yearLevel: formData.yearLevel || formData.year,
+      emergencyName: cleanEmergencyContact,
+      emergencyContact: cleanEmergencyContact,
+    };
+
+    setConfirmDialog({
+      message: `Confirm NSTP Track Selection:\n\nYou selected "${studentPayload.department}" for student "${cleanFirstName} ${cleanLastName}".\n\nAre you sure you want to enroll this student under ${studentPayload.department}?`,
+      onConfirm: async () => {
+        setIsAddingStudent(true);
+        try {
+          await addStudent(studentPayload);
+          setShowAddModal(false);
+          setCurrentPage(1);
+          setNotification({ type: 'success', message: `Student enrolled successfully under ${studentPayload.department}!` });
+          resetFormData();
+        } catch (error) {
+          const raw = error?.message || '';
+          const msg = raw.toLowerCase().includes('already exists')
+            ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
+            : raw || 'Failed to add student. Please try again.';
+          setNotification({ type: 'error', message: msg });
+          setTimeout(() => setNotification(null), 6000);
+        } finally {
+          setIsAddingStudent(false);
+        }
+      }
+    });
   };
 
   const handleLogout = () => {
@@ -165,12 +354,19 @@ function StudentManagement() {
     ? archiveViewData.studentData
     : students;
 
-  // Filter students based on search, department, and course - memoized for performance
+  // Filter students based on search (across ALL student fields!), department, and course
   const filteredStudents = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
     return sourceStudents.filter(student => {
-      if (!student || !student.name || !student.studentId) return false;
-      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!student) return false;
+
+      // Comprehensive search across ALL student info fields (email, bloodtype, section, name, address, phone, etc.)
+      const matchesSearch = !query || Object.entries(student).some(([key, val]) => {
+        if (val === null || val === undefined) return false;
+        if (typeof val === 'object') return false;
+        return String(val).toLowerCase().includes(query);
+      });
+
       const matchesDept = filterDept === 'All' || student.department === filterDept;
       const matchesCourse = filterCourse === 'All' || (student.program || '').toUpperCase() === filterCourse;
 
@@ -197,15 +393,39 @@ function StudentManagement() {
   const handleEditStudent = async () => {
     setIsEditingStudent(true);
     try {
-      await updateStudent(selectedStudent.id, formData);
+      const cleanLastName = toTitleCase((formData.lastName || '').trim());
+      const cleanFirstName = toTitleCase((formData.firstName || '').trim());
+      const cleanMiddleName = toTitleCase((formData.middleName || '').trim());
+      const cleanStreet = toTitleCase((formData.street || '').trim());
+      const cleanMunicipality = toTitleCase((formData.municipality || '').trim());
+      const cleanProvince = toTitleCase((formData.province || '').trim());
+      const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
+
+      const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim() || formData.name;
+      const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`.replace(/^,\s*|,\s*$/g, '') || formData.address;
+
+      const payload = {
+        ...formData,
+        lastName: cleanLastName,
+        firstName: cleanFirstName,
+        middleName: cleanMiddleName,
+        street: cleanStreet,
+        municipality: cleanMunicipality,
+        province: cleanProvince,
+        name: fullName,
+        address: fullAddress,
+        gender: formData.sex || formData.gender,
+        sex: formData.sex || formData.gender,
+        year: formData.yearLevel || formData.year,
+        yearLevel: formData.yearLevel || formData.year,
+        emergencyName: cleanEmergencyContact,
+        emergencyContact: cleanEmergencyContact,
+      };
+
+      await updateStudent(selectedStudent.id, payload);
       setShowEditModal(false);
       setSelectedStudent(null);
-      setFormData({
-        studentId: '', name: '', email: '', department: 'CWTS', year: '', program: '',
-        section: '', gender: '', birthMonth: '', birthDay: '', birthYear: '', age: '',
-        civilStatus: '', contactNumber: '', address: '', bloodType: '', height: '', weight: '',
-        facebookAccount: '', emergencyName: '', emergencyNumber: ''
-      });
+      resetFormData();
       setNotification({ type: 'success', message: 'Student updated successfully!' });
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
@@ -232,10 +452,14 @@ function StudentManagement() {
   };
 
   const openEditModal = (student) => {
+    if (!student) return;
     setSelectedStudent(student);
-    // Parse birthDate into separate fields if available
-    let birthMonth = '', birthDay = '', birthYear = '';
-    if (student.birthDate) {
+
+    let birthMonth = student.birthMonth ? String(student.birthMonth) : '';
+    let birthDay = student.birthDay ? String(student.birthDay) : '';
+    let birthYear = student.birthYear ? String(student.birthYear) : '';
+
+    if ((!birthMonth || !birthDay || !birthYear) && student.birthDate) {
       const date = new Date(student.birthDate);
       if (!isNaN(date.getTime())) {
         birthMonth = (date.getMonth() + 1).toString();
@@ -243,30 +467,105 @@ function StudentManagement() {
         birthYear = date.getFullYear().toString();
       }
     }
-    // Ensure all fields have default values to prevent uncontrolled input warning
+
+    let lastName = student.lastName || '';
+    let firstName = student.firstName || '';
+    let middleName = student.middleName || '';
+    if (!lastName && !firstName && typeof student.name === 'string' && student.name) {
+      if (student.name.includes(',')) {
+        const parts = student.name.split(',');
+        lastName = (parts[0] || '').trim();
+        const rest = (parts[1] || '').trim().split(' ');
+        firstName = rest[0] || '';
+        middleName = rest.slice(1).join(' ');
+      } else {
+        const parts = student.name.split(' ');
+        firstName = parts[0] || '';
+        lastName = parts[parts.length - 1] || '';
+        middleName = parts.slice(1, -1).join(' ');
+      }
+    }
+
+    let street = student.street || '';
+    let municipality = student.municipality || '';
+    let province = student.province || '';
+    if (!street && !municipality && (student.address || student.homeAddress)) {
+      const addr = String(student.address || student.homeAddress || '');
+      const parts = addr.split(',').map(s => s.trim());
+      if (parts.length >= 3) {
+        street = parts[0];
+        municipality = parts[1];
+        province = parts.slice(2).join(', ');
+      } else if (parts.length === 2) {
+        street = parts[0];
+        municipality = parts[1];
+      } else {
+        street = addr;
+      }
+    }
+
+    // Auto calculate age if missing or from birthdate
+    let calcAge = student.age ? String(student.age) : '';
+    if (birthMonth && birthDay && birthYear) {
+      const birth = new Date(parseInt(birthYear), parseInt(birthMonth) - 1, parseInt(birthDay));
+      if (!isNaN(birth.getTime())) {
+        const today = new Date();
+        let a = today.getFullYear() - birth.getFullYear();
+        const mDiff = today.getMonth() - birth.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) {
+          a--;
+        }
+        if (a >= 0 && a <= 120) calcAge = a.toString();
+      }
+    }
+
+    // Auto prefix 09 for contact numbers
+    let contactNo = String(student.contactNumber || '09');
+    if (!contactNo.startsWith('09')) {
+      contactNo = '09' + contactNo.replace(/\D/g, '').replace(/^0?9?/, '');
+    }
+    let emerNo = String(student.emergencyNumber || '09');
+    if (!emerNo.startsWith('09')) {
+      emerNo = '09' + emerNo.replace(/\D/g, '').replace(/^0?9?/, '');
+    }
+
     setFormData({
-      studentId: student.studentId || '',
-      name: student.name || '',
-      email: student.email || '',
-      department: student.department || 'CWTS',
-      year: student.year || '1st Year',
-      program: student.program || '',
-      section: student.section || '',
-      gender: student.gender || '',
-      birthMonth: student.birthMonth || birthMonth || '',
-      birthDay: student.birthDay || birthDay || '',
-      birthYear: student.birthYear || birthYear || '',
-      age: student.age || '',
-      civilStatus: student.civilStatus || '',
-      height: student.height || '',
-      weight: student.weight || '',
-      bloodType: student.bloodType || '',
-      facebookAccount: student.facebookAccount || '',
-      contactNumber: student.contactNumber || '',
-      address: student.address || student.homeAddress || '',
-      emergencyName: student.emergencyName || student.emergencyContact || '',
-      emergencyNumber: student.emergencyNumber || ''
+      studentId: String(student.studentId || ''),
+      lastName: toTitleCase(lastName),
+      firstName: toTitleCase(firstName),
+      middleName: toTitleCase(middleName),
+      name: String(student.name || ''),
+      email: String(student.email || ''),
+      department: String(student.department || 'CWTS'),
+      year: String(student.year || student.yearLevel || '1st Year'),
+      yearLevel: String(student.yearLevel || student.year || '1st Year'),
+      program: String(student.program || ''),
+      section: String(student.section || ''),
+      sex: String(student.sex || student.gender || ''),
+      gender: String(student.gender || student.sex || ''),
+      birthMonth: birthMonth,
+      birthDay: birthDay,
+      birthYear: birthYear,
+      age: calcAge,
+      civilStatus: String(student.civilStatus || ''),
+      registeredVoter: String(student.registeredVoter || student.isVoter || ''),
+      height: String(student.height || ''),
+      weight: String(student.weight || ''),
+      bloodType: String(student.bloodType || ''),
+      facebookAccount: String(student.facebookAccount || ''),
+      contactNumber: contactNo.slice(0, 11),
+      street: toTitleCase(street),
+      municipality: toTitleCase(municipality),
+      province: toTitleCase(province),
+      address: String(student.address || student.homeAddress || ''),
+      emergencyContact: toTitleCase(String(student.emergencyContact || student.emergencyName || '')),
+      emergencyName: toTitleCase(String(student.emergencyName || student.emergencyContact || '')),
+      emergencyNumber: emerNo.slice(0, 11)
     });
+    setHeightInput(String(student.height || ''));
+    setWeightInput(String(student.weight || ''));
+    setHeightUnit('cm');
+    setWeightUnit('kg');
     setShowEditModal(true);
   };
 
@@ -738,26 +1037,62 @@ function StudentManagement() {
                 </button>
               </div>
 
-              {/* Form Body */}
+              {/* Form Body - Synchronized with Enrollment.jsx */}
               <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
                 
-                {/* Academic & Basic Details */}
+                {/* 1. Personal & Address Identification */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-emerald-700" />
-                    Academic Identification
+                    <User className="w-4 h-4 text-emerald-700" />
+                    1. Personal Information & Address
                   </h4>
-                  
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={formData.lastName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Dela Cruz"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={formData.firstName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Juan"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
+                      <input
+                        type="text"
+                        name="middleName"
+                        value={formData.middleName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Santos (Optional)"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
                         type="text"
-                        value={formData.studentId}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 9);
-                          setFormData({...formData, studentId: value});
-                        }}
+                        name="studentId"
+                        value={formData.studentId || ''}
+                        onChange={handleFormFieldChange}
                         maxLength={9}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         placeholder="202400001"
@@ -765,95 +1100,74 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Full Name *</label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[0-9]/g, '');
-                          setFormData({...formData, name: val});
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                        placeholder="Juan Dela Cruz"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                       <input
                         type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        name="email"
+                        value={formData.email || ''}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         placeholder="student@cvsu.edu.ph"
                         required
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <input
+                      type="text"
+                      name="street"
+                      value={formData.street || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Home Address *</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                       <input
                         type="text"
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        name="municipality"
+                        value={formData.municipality || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Naic"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                        placeholder="Brgy. Bucana, Naic, Cavite"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <input
+                        type="text"
+                        name="province"
+                        value={formData.province || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Cavite"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         required
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* 2. Academic Information */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-emerald-700" />
+                    2. Academic Information
+                  </h4>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department *</label>
-                      <select
-                        value={formData.department}
-                        onChange={(e) => setFormData({...formData, department: e.target.value})}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
-                      >
-                        <option value="CWTS">CWTS</option>
-                        <option value="LTS">LTS</option>
-                        <option value="ROTC">ROTC</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
-                      <select
-                        value={formData.year}
-                        onChange={(e) => setFormData({...formData, year: e.target.value})}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
-                      >
-                        <option value="">Year</option>
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
-                      <select
-                        value={formData.section}
-                        onChange={(e) => setFormData({...formData, section: e.target.value})}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
-                      >
-                        <option value="">Section</option>
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
-                        <option value="D">Section D</option>
-                      </select>
-                    </div>
-                    <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
-                        value={formData.program}
-                        onChange={(e) => setFormData({...formData, program: e.target.value})}
+                        name="program"
+                        value={formData.program || ''}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
@@ -867,14 +1181,61 @@ function StudentManagement() {
                         <option value="BSED">BSED</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                      <select
+                        name="section"
+                        value={formData.section || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Section</option>
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                        <option value="D">Section D</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <select
+                        name="yearLevel"
+                        value={formData.yearLevel || formData.year || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Year</option>
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <select
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Select Department *</option>
+                        <option value="CWTS">CWTS</option>
+                        <option value="LTS">LTS</option>
+                        <option value="ROTC">ROTC</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                {/* Personal Information */}
+                {/* 3. Demographic & Emergency Info */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-emerald-700" />
-                    Personal &amp; Demographic Details
+                    <Heart className="w-4 h-4 text-emerald-700" />
+                    3. Demographic &amp; Emergency Details
                   </h4>
                   
                   {/* Birth Date */}
@@ -883,12 +1244,9 @@ function StudentManagement() {
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
                       <input
                         type="text"
+                        name="birthMonth"
                         value={formData.birthMonth || ''}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val > 12) val = '12';
-                          setFormData({...formData, birthMonth: val});
-                        }}
+                        onChange={handleFormFieldChange}
                         placeholder="1-12"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         required
@@ -898,12 +1256,9 @@ function StudentManagement() {
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
                       <input
                         type="text"
+                        name="birthDay"
                         value={formData.birthDay || ''}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val > 31) val = '31';
-                          setFormData({...formData, birthDay: val});
-                        }}
+                        onChange={handleFormFieldChange}
                         placeholder="1-31"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         required
@@ -913,11 +1268,9 @@ function StudentManagement() {
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
                       <input
                         type="text"
+                        name="birthYear"
                         value={formData.birthYear || ''}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                          setFormData({...formData, birthYear: val});
-                        }}
+                        onChange={handleFormFieldChange}
                         placeholder="YYYY"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         required
@@ -925,28 +1278,32 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  {/* Age, Civil Status, Sex, Height */}
+                  {/* Age, Civil Status, Sex, Registered Voter */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Age *</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Age *</span>
+                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">Auto</span>
+                      </label>
                       <input
                         type="text"
+                        name="age"
+                        readOnly
+                        placeholder="Auto-computed"
                         value={formData.age || ''}
-                        onChange={(e) => setFormData({...formData, age: e.target.value.replace(/\D/g, '')})}
-                        placeholder="e.g. 18"
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
+                        className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
                       <select
+                        name="civilStatus"
                         value={formData.civilStatus || ''}
-                        onChange={(e) => setFormData({...formData, civilStatus: e.target.value})}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
-                        <option value="">Status</option>
+                        <option value="">Status *</option>
                         <option value="Single">Single</option>
                         <option value="Married">Married</option>
                         <option value="Divorced">Divorced</option>
@@ -956,48 +1313,119 @@ function StudentManagement() {
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                       <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({...formData, gender: e.target.value})}
+                        name="sex"
+                        value={formData.sex || formData.gender || ''}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
-                        <option value="">Sex</option>
+                        <option value="">Sex *</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Height (cm)</label>
-                      <input
-                        type="text"
-                        value={formData.height || ''}
-                        onChange={(e) => setFormData({...formData, height: e.target.value.replace(/[^0-9.]/g, '')})}
-                        placeholder="cm"
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                      <select
+                        name="registeredVoter"
+                        value={formData.registeredVoter || ''}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                      />
+                        required
+                      >
+                        <option value="">Voter Status *</option>
+                        <option value="Yes">Yes (Registered Voter)</option>
+                        <option value="No">No (Not Registered)</option>
+                      </select>
                     </div>
                   </div>
 
-                  {/* Weight, Blood Type, Facebook */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Height & Weight with units */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Weight (kg)</label>
-                      <input
-                        type="text"
-                        value={formData.weight || ''}
-                        onChange={(e) => setFormData({...formData, weight: e.target.value.replace(/[^0-9.]/g, '')})}
-                        placeholder="kg"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                      />
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Height *</span>
+                        {formData.height && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.height} cm</span>}
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
+                          value={heightInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.'"]/g, '');
+                            setHeightInput(raw);
+                            const cmVal = convertToCm(raw, heightUnit);
+                            setFormData({...formData, height: cmVal});
+                          }}
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          required
+                        />
+                        <select
+                          value={heightUnit}
+                          onChange={(e) => {
+                            const newUnit = e.target.value;
+                            setHeightUnit(newUnit);
+                            const cmVal = convertToCm(heightInput, newUnit);
+                            setFormData({...formData, height: cmVal});
+                          }}
+                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                        >
+                          <option value="cm">cm</option>
+                          <option value="ft">ft / in</option>
+                          <option value="m">m</option>
+                        </select>
+                      </div>
                     </div>
+
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Weight *</span>
+                        {formData.weight && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.weight} kg</span>}
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
+                          value={weightInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.]/g, '');
+                            setWeightInput(raw);
+                            const kgVal = convertToKg(raw, weightUnit);
+                            setFormData({...formData, weight: kgVal});
+                          }}
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          required
+                        />
+                        <select
+                          value={weightUnit}
+                          onChange={(e) => {
+                            const newUnit = e.target.value;
+                            setWeightUnit(newUnit);
+                            const kgVal = convertToKg(weightInput, newUnit);
+                            setFormData({...formData, weight: kgVal});
+                          }}
+                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                        >
+                          <option value="kg">kg</option>
+                          <option value="lbs">lbs</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Blood Type & Contact Number */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
+                        name="bloodType"
                         value={formData.bloodType || ''}
-                        onChange={(e) => setFormData({...formData, bloodType: e.target.value})}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
                       >
-                        <option value="">Blood Type</option>
+                        <option value="">Select Blood Type *</option>
                         <option value="A">A</option>
                         <option value="A+">A+</option>
                         <option value="A-">A-</option>
@@ -1013,47 +1441,44 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
                       <input
                         type="text"
-                        value={formData.facebookAccount || ''}
-                        onChange={(e) => setFormData({...formData, facebookAccount: e.target.value})}
-                        placeholder="facebook.com/username"
+                        name="contactNumber"
+                        value={formData.contactNumber || '09'}
+                        onChange={handleFormFieldChange}
+                        onFocus={(e) => {
+                          if (!e.target.value) setFormData(prev => ({ ...prev, contactNumber: '09' }));
+                        }}
+                        placeholder="09123456789"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                   </div>
 
+                  {/* Facebook Account */}
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
                     <input
-                      type="tel"
-                      value={formData.contactNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                        setFormData({...formData, contactNumber: value});
-                      }}
-                      maxLength={11}
+                      type="text"
+                      name="facebookAccount"
+                      value={formData.facebookAccount || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="https://facebook.com/username"
                       className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                      placeholder="09123456789"
                       required
                     />
                   </div>
-                </div>
 
-                {/* Emergency Contact */}
-                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Phone className="w-4 h-4 text-emerald-700" />
-                    Emergency Contact Person
-                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact Person *</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
                         type="text"
-                        value={formData.emergencyName || ''}
-                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '')})}
+                        name="emergencyContact"
+                        value={formData.emergencyContact || formData.emergencyName || ''}
+                        onChange={handleFormFieldChange}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         placeholder="Parent/Guardian Name"
                         required
@@ -1063,11 +1488,9 @@ function StudentManagement() {
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                       <input
                         type="tel"
+                        name="emergencyNumber"
                         value={formData.emergencyNumber || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                          setFormData({...formData, emergencyNumber: value});
-                        }}
+                        onChange={handleFormFieldChange}
                         maxLength={11}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                         placeholder="09123456789"
@@ -1116,36 +1539,75 @@ function StudentManagement() {
               </div>
               
               <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-                {/* Personal Information Section */}
+                {/* Personal & Name Breakdown Section */}
                 <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
                   <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                     <User className="w-4 h-4 text-emerald-600" />
-                    Personal Information
+                    Personal Details &amp; Name Breakdown
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID Number</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.studentId}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Full Name</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.name}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Last Name</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                        {viewStudent.lastName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[0]?.trim() : viewStudent.name?.split(' ').slice(-1)[0]) || '-'}
+                      </span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Email</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">First Name</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                        {viewStudent.firstName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[1]?.trim().split(' ')[0] : viewStudent.name?.split(' ')[0]) || '-'}
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Middle Name</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                        {viewStudent.middleName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (viewStudent.name?.split(' ').length > 2 ? viewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '(None)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Email Address</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.email || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Contact</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Contact Number</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.contactNumber || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Address</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.homeAddress || viewStudent.address || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Facebook Profile Link</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">
+                        {viewStudent.facebookAccount ? (
+                          <a href={viewStudent.facebookAccount.startsWith('http') ? viewStudent.facebookAccount : `https://${viewStudent.facebookAccount}`} target="_blank" rel="noreferrer" className="text-emerald-700 underline hover:text-emerald-900">
+                            {viewStudent.facebookAccount}
+                          </a>
+                        ) : '-'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Complete Address Breakdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Street / Barangay</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.street || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Facebook</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.facebookAccount || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Municipality / City</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.municipality || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Province</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.province || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-1 sm:col-span-3">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Full Combined Address</span>
+                      <span className="font-bold text-xs text-gray-900 mt-0.5 block">{viewStudent.address || viewStudent.homeAddress || `${viewStudent.street || ''}, ${viewStudent.municipality || ''}, ${viewStudent.province || ''}`}</span>
                     </div>
                   </div>
                 </div>
@@ -1154,11 +1616,11 @@ function StudentManagement() {
                 <div className="bg-emerald-50/50 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/60 shadow-2xs">
                   <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                     <GraduationCap className="w-4 h-4 text-emerald-600" />
-                    Academic Information
+                    Academic Information &amp; NSTP Track
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Program</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.program || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
@@ -1167,47 +1629,65 @@ function StudentManagement() {
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.year || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.yearLevel || viewStudent.year || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Component</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Department</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{viewStudent.department || '-'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Demographic Information Section */}
+                {/* Demographic & Physical Information Section */}
                 <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
                   <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                     <Heart className="w-4 h-4 text-emerald-600" />
-                    Demographic Information
+                    Demographic Information &amp; Physical Stats
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Date</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthDate ? new Date(viewStudent.birthDate).toLocaleDateString() : (viewStudent.birthdate || '-')}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Month</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthMonth || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Age</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.age || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Day</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthDay || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Gender</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.gender || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Year</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthYear || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Calculated Age</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.age || '-'} yrs old</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Sex / Gender</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.sex || viewStudent.gender || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.civilStatus || '-'}</span>
                     </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Registered Voter Status</span>
+                      <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-1 ${
+                        (viewStudent.registeredVoter === 'Yes' || viewStudent.isVoter === 'Yes')
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
+                      }`}>
+                        {viewStudent.registeredVoter || viewStudent.isVoter ? `${viewStudent.registeredVoter || viewStudent.isVoter} (Voter)` : '-'}
+                      </span>
+                    </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.height ? `${viewStudent.height} cm` : '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.height ? `${viewStudent.height}` : '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.weight ? `${viewStudent.weight} kg` : '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.weight ? `${viewStudent.weight}` : '-'}</span>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.bloodType || '-'}</span>
                     </div>
@@ -1218,27 +1698,64 @@ function StudentManagement() {
                 <div className="bg-amber-50/60 p-3.5 sm:p-5 rounded-2xl border border-amber-200/60 shadow-2xs">
                   <h4 className="text-xs sm:text-sm font-extrabold text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                     <Phone className="w-4 h-4 text-amber-700" />
-                    Emergency Contact
+                    Emergency Contact Details
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Contact Person</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyContact || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Person</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyContact || viewStudent.emergencyName || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyNumber || viewStudent.emergencyContact || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Number</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyNumber || '-'}</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Submitted Registration Form / Photo Document if present */}
+                {(viewStudent.registrationPhoto || viewStudent.photoUrl) && (
+                  <div className="bg-blue-50/60 p-3.5 sm:p-5 rounded-2xl border border-blue-200/60 shadow-2xs">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-blue-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                      <FileText className="w-4 h-4 text-blue-700" />
+                      CvSU Registration Form Proof
+                    </h4>
+                    <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-100">
+                      <img
+                        src={viewStudent.registrationPhoto || viewStudent.photoUrl}
+                        alt="Registration Proof"
+                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-xs"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-gray-900">Submitted Registration Document</p>
+                        <a
+                          href={viewStudent.registrationPhoto || viewStudent.photoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline mt-1 inline-block"
+                        >
+                          View Full Image ↗
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Sticky Footer */}
-              <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
+              <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end gap-2.5">
                 <button type="button"
-                  
+                  onClick={() => {
+                    const st = viewStudent;
+                    closeViewModal();
+                    openEditModal(st);
+                  }}
+                  className="px-5 bg-emerald-700 hover:bg-emerald-800 text-white py-2 rounded-xl font-bold text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Pencil className="w-4 h-4 text-amber-300" /> Edit Student
+                </button>
+                <button type="button"
                   onClick={closeViewModal}
-                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
+                  className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Close
                 </button>
@@ -1247,13 +1764,11 @@ function StudentManagement() {
           </div>
         )}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
-            <div
-              className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto overscroll-contain"
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
+            <div 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault();
-                if (e.key === 'Escape') { e.preventDefault(); setShowEditModal(false); }
                 if (e.key === 'Tab') {
                   const focusable = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea'));
                   if (!focusable.length) return;
@@ -1263,176 +1778,291 @@ function StudentManagement() {
                 }
               }}
             >
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Edit Student</h3>
-              <div className="space-y-4">
-                {/* Basic Information */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-                  <input
-                    type="text"
-                    value={formData.studentId}
-                    onChange={(e) => setFormData({...formData, studentId: e.target.value.replace(/\D/g, '').slice(0, 9)})}
-                    maxLength={9}
-                    placeholder="9 digits only"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Address</label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                    <select
-                      value={formData.department}
-                      onChange={(e) => setFormData({...formData, department: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    >
-                      <option value="CWTS">CWTS</option>
-                      <option value="LTS">LTS</option>
-                      <option value="ROTC">ROTC</option>
-                    </select>
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <Pencil className="w-5 h-5" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                    <select
-                      value={formData.section}
-                      onChange={(e) => setFormData({...formData, section: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    >
-                      <option value="">Select Section</option>
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
-                    </select>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Edit Student Information</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Update student registration details &amp; program section</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-                    <select
-                      value={formData.year}
-                      onChange={(e) => setFormData({...formData, year: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    >
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="4th Year">4th Year</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
-                    <select
-                      value={formData.program}
-                      onChange={(e) => setFormData({...formData, program: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                    >
-                      <option value="">Select Program</option>
-                      <option value="BSIT">BSIT</option>
-                      <option value="BSCS">BSCS</option>
-                      <option value="BSFAS">BSFAS</option>
-                      <option value="BSHM">BSHM</option>
-                      <option value="BSBA">BSBA</option>
-                      <option value="BEED Science">BEED Science</option>
-                      <option value="BSED">BSED</option>
-                    </select>
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-                {/* Personal Information - Matching Enrollment Form */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Personal Information</h4>
-                  
-                  {/* Birth Date - Separate Fields */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-4">
+              {/* Form Body - Synchronized with Enrollment.jsx & Add Student Modal */}
+              <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+                
+                {/* 1. Personal & Address Identification */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-emerald-700" />
+                    1. Personal Information &amp; Address
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Month (1-12)</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
                         type="text"
-                        value={formData.birthMonth}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val > 12) val = '12';
-                          setFormData({...formData, birthMonth: val});
-                        }}
-                        placeholder="MM"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="lastName"
+                        value={formData.lastName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Dela Cruz"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Day (1-31)</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
                       <input
                         type="text"
-                        value={formData.birthDay}
-                        onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val > 31) val = '31';
-                          setFormData({...formData, birthDay: val});
-                        }}
-                        placeholder="DD"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="firstName"
+                        value={formData.firstName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Juan"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Birth Year (4 digits)</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
                       <input
                         type="text"
-                        value={formData.birthYear}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                          setFormData({...formData, birthYear: val});
-                        }}
-                        placeholder="YYYY"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="middleName"
+                        value={formData.middleName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Reyes"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                       />
                     </div>
                   </div>
 
-                  {/* Age, Civil Status, Sex, Height */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
                         type="text"
-                        value={formData.age}
-                        onChange={(e) => setFormData({...formData, age: e.target.value.replace(/\D/g, '')})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="studentId"
+                        value={formData.studentId || ''}
+                        onChange={handleFormFieldChange}
+                        maxLength={9}
+                        placeholder="202612345"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Civil Status</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="student@cvsu.edu.ph"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                      <input
+                        type="text"
+                        name="street"
+                        value={formData.street || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Brgy. Bucana"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                      <input
+                        type="text"
+                        name="municipality"
+                        value={formData.municipality || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Naic"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <input
+                        type="text"
+                        name="province"
+                        value={formData.province || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Cavite"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Academic Information */}
+                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-emerald-700" />
+                    2. Academic Details &amp; Section
+                  </h4>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
-                        value={formData.civilStatus}
-                        onChange={(e) => setFormData({...formData, civilStatus: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="program"
+                        value={formData.program || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
                       >
-                        <option value="">Select</option>
+                        <option value="">Select Program</option>
+                        <option value="BSIT">BSIT</option>
+                        <option value="BSCS">BSCS</option>
+                        <option value="BSFAS">BSFAS</option>
+                        <option value="BSHM">BSHM</option>
+                        <option value="BSBA">BSBA</option>
+                        <option value="BEED Science">BEED Science</option>
+                        <option value="BSED">BSED</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                      <select
+                        name="section"
+                        value={formData.section || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Select Section</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <select
+                        name="yearLevel"
+                        value={formData.yearLevel || formData.year || '1st Year'}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <select
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Select Department *</option>
+                        <option value="CWTS">CWTS</option>
+                        <option value="LTS">LTS</option>
+                        <option value="ROTC">ROTC</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Demographic & Emergency Info */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-emerald-700" />
+                    3. Demographic &amp; Emergency Details
+                  </h4>
+                  
+                  {/* Birth Date */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
+                      <input
+                        type="text"
+                        name="birthMonth"
+                        value={formData.birthMonth || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="1-12"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
+                      <input
+                        type="text"
+                        name="birthDay"
+                        value={formData.birthDay || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="1-31"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
+                      <input
+                        type="text"
+                        name="birthYear"
+                        value={formData.birthYear || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="YYYY"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Age, Civil Status, Sex, Registered Voter */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Age *</span>
+                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">Auto</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="age"
+                        readOnly
+                        placeholder="Auto-computed"
+                        value={formData.age || ''}
+                        className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
+                      <select
+                        name="civilStatus"
+                        value={formData.civilStatus || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Select Status *</option>
                         <option value="Single">Single</option>
                         <option value="Married">Married</option>
                         <option value="Divorced">Divorced</option>
@@ -1440,49 +2070,121 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                       <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="sex"
+                        value={formData.sex || formData.gender || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
                       >
-                        <option value="">Select</option>
+                        <option value="">Select Sex *</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-                      <input
-                        type="text"
-                        value={formData.height}
-                        onChange={(e) => setFormData({...formData, height: e.target.value.replace(/[^0-9.]/g, '')})}
-                        placeholder="cm"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      />
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                      <select
+                        name="registeredVoter"
+                        value={formData.registeredVoter || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
+                      >
+                        <option value="">Voter Status *</option>
+                        <option value="Yes">Yes (Registered Voter)</option>
+                        <option value="No">No (Not Registered)</option>
+                      </select>
                     </div>
                   </div>
 
-                  {/* Weight, Blood Type, Contact, Facebook */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Height & Weight with units */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
-                      <input
-                        type="text"
-                        value={formData.weight}
-                        onChange={(e) => setFormData({...formData, weight: e.target.value.replace(/[^0-9.]/g, '')})}
-                        placeholder="kg"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      />
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Height *</span>
+                        {formData.height && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.height} cm</span>}
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
+                          value={heightInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.'"]/g, '');
+                            setHeightInput(raw);
+                            const cmVal = convertToCm(raw, heightUnit);
+                            setFormData(prev => ({ ...prev, height: cmVal }));
+                          }}
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          required
+                        />
+                        <select
+                          value={heightUnit}
+                          onChange={(e) => {
+                            const newUnit = e.target.value;
+                            setHeightUnit(newUnit);
+                            const cmVal = convertToCm(heightInput, newUnit);
+                            setFormData(prev => ({ ...prev, height: cmVal }));
+                          }}
+                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                        >
+                          <option value="cm">cm</option>
+                          <option value="ft">ft / in</option>
+                          <option value="m">m</option>
+                        </select>
+                      </div>
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Blood Type</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Weight *</span>
+                        {formData.weight && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.weight} kg</span>}
+                      </label>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
+                          value={weightInput}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.]/g, '');
+                            setWeightInput(raw);
+                            const kgVal = convertToKg(raw, weightUnit);
+                            setFormData(prev => ({ ...prev, weight: kgVal }));
+                          }}
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          required
+                        />
+                        <select
+                          value={weightUnit}
+                          onChange={(e) => {
+                            const newUnit = e.target.value;
+                            setWeightUnit(newUnit);
+                            const kgVal = convertToKg(weightInput, newUnit);
+                            setFormData(prev => ({ ...prev, weight: kgVal }));
+                          }}
+                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                        >
+                          <option value="kg">kg</option>
+                          <option value="lbs">lbs</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Blood Type & Contact Number */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
-                        value={formData.bloodType}
-                        onChange={(e) => setFormData({...formData, bloodType: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        name="bloodType"
+                        value={formData.bloodType || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        required
                       >
-                        <option value="">Select</option>
+                        <option value="">Select Blood Type *</option>
                         <option value="A">A</option>
                         <option value="A+">A+</option>
                         <option value="A-">A-</option>
@@ -1497,81 +2199,87 @@ function StudentManagement() {
                         <option value="O-">O-</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                      <input
+                        type="text"
+                        name="contactNumber"
+                        value={formData.contactNumber || '09'}
+                        onChange={handleFormFieldChange}
+                        onFocus={(e) => {
+                          if (!e.target.value) setFormData(prev => ({ ...prev, contactNumber: '09' }));
+                        }}
+                        placeholder="09123456789"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
+                      />
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Facebook Account */}
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <input
+                      type="text"
+                      name="facebookAccount"
+                      value={formData.facebookAccount || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="https://facebook.com/username"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      required
+                    />
+                  </div>
+
+                  {/* Emergency Contact Info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200/60">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (11 digits)</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
-                        type="tel"
-                        value={formData.contactNumber}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                          setFormData({...formData, contactNumber: value});
-                        }}
-                        maxLength={11}
-                        placeholder="09123456789"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        type="text"
+                        name="emergencyContact"
+                        value={formData.emergencyContact || formData.emergencyName || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Parent or Guardian Name"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Account</label>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                       <input
-                        type="text"
-                        value={formData.facebookAccount}
-                        onChange={(e) => setFormData({...formData, facebookAccount: e.target.value})}
-                        placeholder="facebook.com/username"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                        type="tel"
+                        name="emergencyNumber"
+                        value={formData.emergencyNumber || '09'}
+                        onChange={handleFormFieldChange}
+                        onFocus={(e) => {
+                          if (!e.target.value) setFormData(prev => ({ ...prev, emergencyNumber: '09' }));
+                        }}
+                        placeholder="09123456789"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        required
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Emergency Contact */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Emergency Contact</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                      <input
-                        type="text"
-                        value={formData.emergencyName}
-                        onChange={(e) => setFormData({...formData, emergencyName: e.target.value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, '')})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact Number (11 digits)</label>
-                      <input
-                        type="tel"
-                        value={formData.emergencyNumber}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                          setFormData({...formData, emergencyNumber: value});
-                        }}
-                        maxLength={11}
-                        placeholder="09123456789"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button type="button"
-                  
+
+              {/* Footer */}
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0 rounded-b-3xl">
+                <button
+                  type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
-                <button type="button"
-                  
+                <button
+                  type="button"
                   onClick={handleEditStudent}
                   disabled={isEditingStudent}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-wait text-white rounded-lg transition-colors"
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60"
                 >
-                  {isEditingStudent ? 'Saving...' : 'Save Changes'}
+                  {isEditingStudent ? 'Saving Changes...' : 'Save Changes'}
                 </button>
               </div>
             </div>

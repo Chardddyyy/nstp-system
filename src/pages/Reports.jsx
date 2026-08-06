@@ -109,8 +109,22 @@ function Reports() {
     setShowCreateModal(true);
   };
 
+  const getTodayLocalStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   // Admin creates or updates a report assignment for instructors
   const handleSaveReport = async () => {
+    if (createForm.dueDate) {
+      const todayStr = getTodayLocalStr();
+      if (createForm.dueDate < todayStr) {
+        setNotification({ type: 'error', message: 'Due date cannot be in the past. Please select today or a future date.' });
+        setTimeout(() => setNotification(null), 4000);
+        return;
+      }
+    }
+
     const reportData = {
       title: createForm.title,
       description: createForm.description,
@@ -140,7 +154,7 @@ function Reports() {
       setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
       setTimeout(() => setNotification(null), 3000);
     } catch (_error) {
-      setNotification({ type: 'error', message: 'Failed to save report assignment. Please try again.' });
+      setNotification({ type: 'error', message: _error?.message || 'Failed to save report assignment. Please try again.' });
       setTimeout(() => setNotification(null), 3000);
     } finally {
       setIsCreatingReport(false);
@@ -666,6 +680,7 @@ function Reports() {
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Due Date</label>
                     <input
                       type="date"
+                      min={getTodayLocalStr()}
                       value={createForm.dueDate}
                       onChange={(e) => setCreateForm({...createForm, dueDate: e.target.value})}
                       className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"

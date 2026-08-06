@@ -45,10 +45,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// ── Body size: 20 MB max (base64 of a 10 MB image ≈ 13.3 MB) ────────────────
-// Was 200 MB — that size allows trivial DoS/DDoS via large payload attacks.
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ limit: '20mb', extended: true }));
+// ── Body size: 500 MB max for large file uploads ────────────────────────────────
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
 // ── Global rate limiter ───────────────────────────────────────────────────────
 // The app polls every 2s (calls) + 8s (live data × 4 API calls) per user.
@@ -212,6 +211,10 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN street VARCHAR(255)',
     'ALTER TABLE students ADD COLUMN municipality VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN province VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN firstName VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN lastName VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN middleName VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN registeredVoter VARCHAR(20)',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -252,6 +255,7 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN province VARCHAR(100)',
     'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
     'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
+    'ALTER TABLE enrollments ADD COLUMN registeredVoter VARCHAR(20)',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -1112,12 +1116,17 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Title is required' });
     }
     
-    // Validate date format if provided
+    // Validate date format and ensure due date is not in the past
     let safeDueDate = null;
     if (due_date && due_date !== '') {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(due_date)) {
         return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
+      }
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (due_date < todayStr) {
+        return res.status(400).json({ message: 'Due date cannot be in the past. Please select today or a future date.' });
       }
       safeDueDate = due_date;
     }
@@ -1153,6 +1162,14 @@ app.put('/api/reports/:id', authenticateToken, requireAdmin, async (req, res) =>
     const { id } = req.params;
     const { title, description, department, due_date, status } = req.body;
     
+    if (due_date && due_date !== '') {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (due_date < todayStr) {
+        return res.status(400).json({ message: 'Due date cannot be in the past. Please select today or a future date.' });
+      }
+    }
+
     await pool.execute(
       'UPDATE reports SET title = ?, description = ?, department = ?, due_date = ?, status = ? WHERE id = ?',
       [title, description, department, due_date, status, id]
@@ -2520,13 +2537,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       homeAddress, address, street, municipality, province,
       program, section, yearLevel, nstpComponent,
       emergencyContact, emergencyNumber, emergencyName,
-      registrationPhoto
+      registrationPhoto, registeredVoter, isVoter
     } = req.body;
 
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
     const finalAddress = street ? `${street}, ${municipality || ''}, ${province || ''}`.replace(/, ,/g, ',').replace(/,\s*$/, '') : (homeAddress || address);
     const finalEmergencyContact = emergencyName || emergencyContact;
+    const finalVoter = registeredVoter || isVoter || 'No';
     // Cap photo at ~5 MB base64 (≈ 6.7 MB string)
     if (registrationPhoto && String(registrationPhoto).length > 7_000_000) {
       return res.status(400).json({ message: 'Registration photo is too large. Maximum 5 MB.' });
@@ -2539,14 +2557,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
         birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
         gender, height, weight, facebookAccount, bloodType, address,
         street, municipality, province,
-        program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
         birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
         finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
         street || null, municipality || null, province || null,
-        program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo
+        program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo, finalVoter
       ]
     );
 
@@ -2563,27 +2581,27 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       program,
       section,
       yearLevel,
+      registeredVoter: finalVoter,
       status: 'Pending',
       submitted_at: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('❌ Submit enrollment error:', error.message, error.code);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Submit enrollment error:', error);
+    res.status(500).json({ message: 'Failed to submit enrollment' });
   }
 });
 
-// Approve/Decline enrollment
+// Update enrollment status
 app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
-  }
   try {
     const { id } = req.params;
     const { status } = req.body;
+    if (!['Approved', 'Declined'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
 
-    const validStatuses = ['Approved', 'Declined', 'Pending'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status value' });
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
     }
 
     await pool.execute(
@@ -2618,8 +2636,9 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               gender, birthDate, birthMonth, birthDay, birthYear,
               age, civilStatus, height, weight,
               bloodType, facebookAccount, emergencyContact, emergencyNumber,
-              street, municipality, province
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              street, municipality, province,
+              firstName, lastName, middleName, registeredVoter
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               enrollment.studentId,
               enrollment.student_name,
@@ -2647,6 +2666,10 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               enrollment.street        || null,
               enrollment.municipality  || null,
               enrollment.province      || null,
+              enrollment.firstName     || null,
+              enrollment.lastName      || null,
+              enrollment.middleName    || null,
+              enrollment.registeredVoter || 'No',
             ]
           );
         }

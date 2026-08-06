@@ -277,16 +277,10 @@ export default function LetterFormats() {
     });
   }, [templates, selectedCategory, searchTerm, isAdmin, user]);
 
-  // Handle Attached File Selection
+  // Handle Attached File Selection (Supports any file type and any file size)
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // File size limit: 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('File size must be under 10MB', 'error');
-      return;
-    }
 
     const sizeFormatted = file.size > 1024 * 1024 
       ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
@@ -497,18 +491,6 @@ export default function LetterFormats() {
                   <span className="sm:hidden">Add</span>
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1 sm:space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 sm:px-3.5 py-1 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
-              >
-                <div className="shrink-0">{getUserAvatar()}</div>
-                <div className="block text-left min-w-0 overflow-hidden">
-                  <p className="font-bold text-[9px] sm:text-xs text-white leading-tight truncate max-w-[70px] sm:max-w-none">{user?.name || 'User'}</p>
-                  <p className="text-[7px] sm:text-[10px] text-amber-300 font-semibold uppercase tracking-wider truncate">{user?.role === 'admin' ? 'Admin' : `${user?.department} Inst.`}</p>
-                </div>
-              </button>
             </div>
           </div>
         </div>
@@ -887,10 +869,10 @@ export default function LetterFormats() {
                         <Upload className="w-6 h-6" />
                       </div>
                       <p className="text-xs font-extrabold text-gray-800">Click to upload or drag &amp; drop document file</p>
-                      <p className="text-[10px] text-gray-400 font-medium mt-1">Supports PDF, DOCX, DOC, TXT, PNG, JPG (Max 10MB)</p>
+                      <p className="text-[10px] text-gray-400 font-medium mt-1">Supports any file type &amp; size (PDF, DOCX, ZIP, MP4, etc.)</p>
                       <input
                         type="file"
-                        accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                        accept="*"
                         onChange={handleFileChange}
                         className="hidden"
                       />

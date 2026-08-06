@@ -54,8 +54,8 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
           {isAdmin ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center p-1 shrink-0 shadow-sm">
-                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+                <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center p-1.5 shrink-0 shadow-md backdrop-blur-xs overflow-hidden">
+                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="font-black text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
