@@ -223,7 +223,7 @@ function Chat() {
     );
   };
 
-  const handleSetActiveConversation = (id) => {
+  const handleSetActiveConversation = async (id) => {
     setActiveConversationId(id);
     setShowConversations(false); // Hide conversation list on mobile when chat opens
     setSidebarOpen(false); // Close main navigation sidebar
@@ -234,6 +234,16 @@ function Chat() {
       localStorage.setItem('nstp_read_conversations', JSON.stringify(updated));
       return updated;
     });
+
+    // Fetch messages IMMEDIATELY for this conversation so user doesn't wait 8 seconds!
+    try {
+      const msgs = await conversationsAPI.getMessages(id);
+      if (msgs && Array.isArray(msgs)) {
+        setMessages(prev => ({ ...prev, [id]: msgs }));
+      }
+    } catch (err) {
+      console.warn('Failed to load instant messages for conversation:', id);
+    }
   };
 
   const handleBackToConversations = () => {
@@ -1616,7 +1626,7 @@ function Chat() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50">
+    <div className="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50">
       {/* Simple Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map(n => (
@@ -1648,7 +1658,7 @@ function Chat() {
       />
 
       {/* Main Content */}
-      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden w-full max-w-full`}>
+      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden w-full max-w-full relative`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
           <div className="p-3.5 lg:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-sm">
@@ -1752,7 +1762,6 @@ function Chat() {
                     
                     return (
                       <button type="button"
-                        
                         key={conversation.id}
                         onClick={(e) => {
                           e.preventDefault();
@@ -1797,7 +1806,7 @@ function Chat() {
         </div>
 
         {/* Chat Area - Full width on mobile when active */}
-        <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full max-w-full min-h-0 overflow-x-hidden overflow-y-hidden`}>
+        <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full max-w-full h-full min-h-0 max-h-full overflow-hidden relative`}>
           {activeConversation ? (
             <>
               {/* Hidden audio element for remote WebRTC audio stream */}
