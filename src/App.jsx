@@ -1,20 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useContext, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
-import Landing from './pages/Landing';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard';
-import InstructorDashboard from './pages/InstructorDashboard';
-import StudentManagement from './pages/StudentManagement';
-import Reports from './pages/Reports';
-import Chat from './pages/Chat';
-import Profile from './pages/Profile';
-import Calendar from './pages/Calendar';
-import Enrollment from './pages/Enrollment';
-import LetterFormats from './pages/LetterFormats';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
+
+// Route Lazy Loading for Sub-Second Mobile Load Times
+const Landing = lazy(() => import('./pages/Landing'));
+const Login = lazy(() => import('./pages/Login'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const InstructorDashboard = lazy(() => import('./pages/InstructorDashboard'));
+const StudentManagement = lazy(() => import('./pages/StudentManagement'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const Enrollment = lazy(() => import('./pages/Enrollment'));
+const LetterFormats = lazy(() => import('./pages/LetterFormats'));
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;
@@ -434,10 +436,17 @@ function App() {
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
 
-  // Restore session from stored token on mount
+  // Restore session from stored token on mount INSTANTLY
   useEffect(() => {
     const token = localStorage.getItem('nstp_token');
+    const cachedUser = localStorage.getItem('nstp_cached_user');
     if (token) {
+      if (cachedUser) {
+        try {
+          setUser(JSON.parse(cachedUser));
+          setLoading(false);
+        } catch {}
+      }
       loadCurrentUser();
     } else {
       setLoading(false);
@@ -449,6 +458,8 @@ function App() {
     try {
       const userData = await usersAPI.getMe();
       setUser(userData);
+      localStorage.setItem('nstp_cached_user', JSON.stringify(userData));
+      setLoading(false);
       await loadAllData(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -512,7 +523,9 @@ function App() {
       if (!response.token) return { success: false, message: 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       localStorage.setItem('nstp_token', response.token);
+      localStorage.setItem('nstp_cached_user', JSON.stringify(response.user));
       setUser(response.user);
+      setLoading(false);
       await loadAllData(response.user);
       return { success: true, role: response.user.role };
     } catch (error) {
@@ -523,6 +536,7 @@ function App() {
 
   function logout() {
     localStorage.removeItem('nstp_token');
+    localStorage.removeItem('nstp_cached_user');
     setUser(null);
     setUsers([]);
     setStudents([]);
@@ -814,19 +828,29 @@ function App() {
       <BrowserRouter basename={BASE_PATH}>
         <RealtimeToastStack />
         <IncomingCallOverlay />
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/enrollment" element={<Enrollment />} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/instructor/dashboard" element={<ProtectedRoute allowedRoles={['instructor']}><InstructorDashboard /></ProtectedRoute>} />
-          <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><StudentManagement /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Reports /></ProtectedRoute>} />
-          <Route path="/chat" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Chat /></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
-          <Route path="/letter-formats" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><LetterFormats /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
-        </Routes>
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-xs mx-auto">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mx-auto mb-3"></div>
+              <p className="text-sm font-semibold text-gray-800">Loading NSTP System...</p>
+              <p className="text-xs text-gray-500 mt-1">CvSU Naic Campus</p>
+            </div>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/enrollment" element={<Enrollment />} />
+            <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/instructor/dashboard" element={<ProtectedRoute allowedRoles={['instructor']}><InstructorDashboard /></ProtectedRoute>} />
+            <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><StudentManagement /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Reports /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Chat /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
+            <Route path="/letter-formats" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><LetterFormats /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthContext.Provider>
   );

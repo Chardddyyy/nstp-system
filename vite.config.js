@@ -10,4 +10,15 @@ export default defineConfig({
     react(), 
     tailwindcss()
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-xlsx': ['xlsx']
+        }
+      }
+    }
+  }
 })
