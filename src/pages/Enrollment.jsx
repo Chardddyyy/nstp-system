@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar } from 'lucide-react';
@@ -122,26 +122,74 @@ function Enrollment() {
     }
   };
 
+  const [detectedPaperBox, setDetectedPaperBox] = useState(null);
+  const animFrameRef = useRef(null);
+
+  const startPaperEdgeTracing = useCallback(() => {
+    const detect = () => {
+      if (videoRef.current && videoRef.current.readyState === 4) {
+        const video = videoRef.current;
+        const vW = video.videoWidth;
+        const vH = video.videoHeight;
+        if (vW && vH) {
+          const proc = document.createElement('canvas');
+          proc.width = 160;
+          proc.height = Math.round(160 * vH / vW);
+          const pCtx = proc.getContext('2d');
+          pCtx.drawImage(video, 0, 0, proc.width, proc.height);
+          const imgData = pCtx.getImageData(0, 0, proc.width, proc.height);
+          const d = imgData.data;
+
+          let minX = proc.width, maxX = 0, minY = proc.height, maxY = 0;
+          let paperPixels = 0;
+          const total = proc.width * proc.height;
+
+          for (let y = 0; y < proc.height; y += 2) {
+            for (let x = 0; x < proc.width; x += 2) {
+              const i = (y * proc.width + x) * 4;
+              const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+              if (lum > 135) {
+                paperPixels++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+              }
+            }
+          }
+
+          if (paperPixels > total * 0.12 && minX < maxX && minY < maxY) {
+            const leftPct = (minX / proc.width) * 100;
+            const topPct = (minY / proc.height) * 100;
+            const widthPct = ((maxX - minX) / proc.width) * 100;
+            const heightPct = ((maxY - minY) / proc.height) * 100;
+            setDetectedPaperBox({ left: leftPct, top: topPct, width: widthPct, height: heightPct });
+          } else {
+            setDetectedPaperBox(null);
+          }
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(detect);
+    };
+    animFrameRef.current = requestAnimationFrame(detect);
+  }, []);
+
   const closeCameraModal = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     stopCameraStream();
     setShowCameraModal(false);
+    setDetectedPaperBox(null);
   };
 
-  const startLiveCamera = async (overrideFacing) => {
-    const mode = overrideFacing || facingMode;
-    stopCameraStream();
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (cameraInputRef.current) cameraInputRef.current.click();
-      return;
-    }
-
+  const startLiveCamera = async (preferredFacing = 'environment') => {
     try {
+      stopCameraStream();
+      setDetectedPaperBox(null);
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: { ideal: preferredFacing },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         },
         audio: false
       });
@@ -151,11 +199,11 @@ function Enrollment() {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(e => console.warn('Video play error:', e));
+          startPaperEdgeTracing();
         }
       }, 100);
     } catch (err) {
       console.warn('Live camera access failed or fallback needed:', err);
-      // Fall back directly to native camera capture input
       if (cameraInputRef.current) {
         cameraInputRef.current.click();
       }
@@ -192,7 +240,6 @@ function Enrollment() {
     let minX = rawW, maxX = 0, minY = rawH, maxY = 0;
     let brightPixelCount = 0;
 
-    // Fast sampling (step 4) for high-luminance paper region (luminance > 135)
     for (let y = 0; y < rawH; y += 4) {
       for (let x = 0; x < rawW; x += 4) {
         const idx = (y * rawW + x) * 4;
@@ -200,7 +247,7 @@ function Enrollment() {
         const g = data[idx + 1];
         const b = data[idx + 2];
         const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        if (lum > 135) { // paper surface brightness threshold
+        if (lum > 135) {
           brightPixelCount++;
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
@@ -210,12 +257,10 @@ function Enrollment() {
       }
     }
 
-    // Determine crop rectangle
     let cropX = 0, cropY = 0, cropW = rawW, cropH = rawH;
     const totalSampled = (rawW / 4) * (rawH / 4);
 
-    // If a clear paper area is detected (at least 15% of frame)
-    if (brightPixelCount > totalSampled * 0.15 && minX < maxX && minY < maxY) {
+    if (brightPixelCount > totalSampled * 0.12 && minX < maxX && minY < maxY) {
       const padX = Math.round((maxX - minX) * 0.02);
       const padY = Math.round((maxY - minY) * 0.02);
       cropX = Math.max(0, minX - padX);
@@ -223,14 +268,12 @@ function Enrollment() {
       cropW = Math.min(rawW - cropX, (maxX - minX) + padX * 2);
       cropH = Math.min(rawH - cropY, (maxY - minY) + padY * 2);
     } else {
-      // Fallback: Crop using the viewfinder alignment box (inset 8%)
-      cropX = Math.round(rawW * 0.06);
-      cropY = Math.round(rawH * 0.06);
-      cropW = Math.round(rawW * 0.88);
-      cropH = Math.round(rawH * 0.88);
+      cropX = Math.round(rawW * 0.05);
+      cropY = Math.round(rawH * 0.05);
+      cropW = Math.round(rawW * 0.90);
+      cropH = Math.round(rawH * 0.90);
     }
 
-    // Final high-res cropped output canvas
     const MAX = 1200;
     let outW = cropW, outH = cropH;
     if (outW > MAX) { outH = Math.round(outH * MAX / outW); outW = MAX; }
@@ -240,7 +283,11 @@ function Enrollment() {
     outCanvas.width = outW;
     outCanvas.height = outH;
     const outCtx = outCanvas.getContext('2d');
+    
+    // CamScanner Paper Clarity & Contrast Enhancement Filter ("Lilinaw yung papel")
+    outCtx.filter = 'contrast(1.25) brightness(1.06) saturate(0.95)';
     outCtx.drawImage(fullCanvas, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+    outCtx.filter = 'none';
 
     const dataUrl = outCanvas.toDataURL('image/jpeg', 0.88);
     setRegistrationPhoto(dataUrl);
@@ -1529,27 +1576,38 @@ function Enrollment() {
                         className="w-full h-full object-cover"
                         style={{ transform: 'none' }}
                       />
-                      {/* CamScanner Document Frame & Laser Scanning Guide Overlay */}
-                      <div className="absolute inset-4 sm:inset-6 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3 shadow-[0_0_20px_rgba(52,211,153,0.3)]">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-[10px] bg-emerald-950/80 text-emerald-300 font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/40 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
-                            <span>CamScanner Auto Paper Edge Trace</span>
-                          </span>
-                          <span className="text-[9px] bg-black/60 text-amber-300 font-bold px-1.5 py-0.5 rounded-md">
-                            No Mirror • HD Crop
-                          </span>
-                        </div>
-
-                        {/* Animated Laser Beam */}
-                        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#34d399] animate-pulse my-auto"></div>
-
-                        {/* Target Corner Indicators */}
-                        <div className="flex justify-between items-end w-full text-[9px] text-emerald-200/80 font-mono">
-                          <span>📐 Align document paper inside</span>
-                          <span>Auto-Crop Active</span>
-                        </div>
+                      
+                      {/* Top Status Pill */}
+                      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
+                        <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border backdrop-blur-md flex items-center gap-1.5 transition-all shadow-md ${
+                          detectedPaperBox
+                            ? 'bg-emerald-500/90 text-white border-emerald-300 ring-2 ring-emerald-400/50'
+                            : 'bg-black/70 text-amber-300 border-amber-400/30'
+                        }`}>
+                          <Sparkles className={`w-3.5 h-3.5 ${detectedPaperBox ? 'animate-bounce text-amber-300' : 'animate-spin text-amber-400'}`} />
+                          <span>{detectedPaperBox ? '🎯 Registration Form Paper Traced!' : '🔍 Scanning for paper document...'}</span>
+                        </span>
+                        <span className="text-[9px] bg-black/70 text-emerald-200 font-bold px-2 py-1 rounded-full border border-white/10">
+                          CamScanner HD
+                        </span>
                       </div>
+
+                      {/* DYNAMIC PAPER TRACED BOX - Appears ONLY when paper is detected */}
+                      {detectedPaperBox && (
+                        <div
+                          className="absolute border-2 border-emerald-400 bg-emerald-400/10 rounded-xl pointer-events-none transition-all duration-150 shadow-[0_0_25px_rgba(52,211,153,0.6)] animate-pulse"
+                          style={{
+                            left: `${detectedPaperBox.left}%`,
+                            top: `${detectedPaperBox.top}%`,
+                            width: `${detectedPaperBox.width}%`,
+                            height: `${detectedPaperBox.height}%`,
+                          }}
+                        >
+                          <div className="absolute top-1 left-2 text-[9px] font-black bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded shadow">
+                            Auto Paper Edge Crop
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-5 bg-emerald-950 flex items-center justify-between gap-3">

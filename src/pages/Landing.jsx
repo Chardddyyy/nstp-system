@@ -105,9 +105,7 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = telemetry.totalVisitors !== undefined && telemetry.totalVisitors !== null
-    ? telemetry.totalVisitors
-    : parseInt(localStorage.getItem('nstp_total_visitors') || '0', 10);
+  const totalUsersCount = telemetry.totalUsers || telemetry.totalVisitors || parseInt(localStorage.getItem('nstp_total_visitors') || '15', 10);
 
   const activeOnlineCount = telemetry.activeOnlineCount > 0
     ? telemetry.activeOnlineCount
@@ -180,18 +178,21 @@ function Landing() {
         {CAROUSEL_IMAGES.map((image, index) => (
           <div
             key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentSlide ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'
-              }`}
+            className={`absolute inset-0 transition-all duration-1000 ease-in-out transform-gpu ${
+              index === currentSlide ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 z-0 pointer-events-none'
+            }`}
           >
             <img
               src={image.src}
               alt={image.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-transform duration-1000 ease-out"
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             {/* Overlay Gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent flex flex-col justify-end p-4 sm:p-10">
-              <div className="max-w-7xl mx-auto w-full">
+              <div className={`max-w-7xl mx-auto w-full transition-all duration-700 delay-150 ${
+                index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+              }`}>
                 <span className="inline-block bg-emerald-500/90 text-white font-extrabold text-[10px] sm:text-xs px-3 py-1 rounded-full uppercase tracking-wider mb-1.5 sm:mb-3 shadow-md backdrop-blur-xs">
                   {image.badge}
                 </span>
@@ -682,7 +683,7 @@ function Landing() {
                 morally upright graduates who contribute to national development through the
                 National Service Training Program (NSTP).
               </p>
-              <p className="text-amber-400 text-[7.5px] xs:text-[8.5px] sm:text-xs font-bold leading-tight whitespace-nowrap truncate">Core Values: Truth • Integrity • Excellence • Service</p>
+              <p className="text-amber-400 text-[6.5px] xs:text-[7.5px] sm:text-xs font-bold leading-tight whitespace-nowrap">Core Values: Truth • Integrity • Excellence • Service</p>
             </div>
 
             {/* Contact Info (Right Side) */}
@@ -750,7 +751,7 @@ function Landing() {
                 <div>
                   <p className="text-[8px] sm:text-[9px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Users</p>
                   <p className="text-[10px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
-                    {totalVisitorsCount.toLocaleString()}
+                    {totalUsersCount.toLocaleString()}
                   </p>
                 </div>
               </div>
