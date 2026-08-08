@@ -197,9 +197,16 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? 'Authenticating...' : 'Sign In to Portal →'}
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-950"></div>
+                    <span>Connecting to Cloud DB...</span>
+                  </>
+                ) : (
+                  <span>Sign In to Portal →</span>
+                )}
               </button>
             </form>
 
