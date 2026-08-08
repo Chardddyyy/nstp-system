@@ -1896,9 +1896,9 @@ function Chat() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 min-h-0 overflow-y-auto px-2 py-4 overscroll-contain"
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full"
               >
-              <div className="space-y-4">
+              <div className="space-y-3 w-full max-w-full overflow-hidden">
                 {currentMessages.map((message) => {
                   const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
                   const deletedForEveryone = isMessageDeletedForEveryone(message);
@@ -1906,16 +1906,16 @@ function Chat() {
                   
                   if (deletedForMe) {
                     return (
-                      <div key={message.id} className={`flex w-full items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div key={message.id} className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} overflow-hidden max-w-full`}>
                         {/* Avatar always first in DOM — flex-row-reverse keeps it on the right for own messages */}
                         <div className="flex-shrink-0 self-end mb-1">
                           {isOwn ? (
                             (() => {
                               const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
                               return user?.profilePicture ? (
-                                <img src={user.profilePicture} alt="Me" className="w-10 h-10 object-cover rounded-full" />
+                                <img src={user.profilePicture} alt="Me" className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" />
                               ) : (
-                                <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
+                                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-base sm:text-lg`}>
                                   {avatar.icon}
                                 </div>
                               );
@@ -1923,19 +1923,19 @@ function Chat() {
                           ) : (
                             (() => {
                               const senderUser = allUsers.find(u => u.id === message.senderId) || allUsers.find(u => u.id === message.sender_id);
-                              if (!senderUser) return <div className="w-10 h-10 bg-gray-300 rounded-full" />;
+                              if (!senderUser) return <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full" />;
                               return senderUser.profilePicture ? (
-                                <img src={senderUser.profilePicture} alt={senderUser.name} className="w-10 h-10 object-cover rounded-full" />
+                                <img src={senderUser.profilePicture} alt={senderUser.name} className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" />
                               ) : (
-                                <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center text-lg">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-400 rounded-full flex items-center justify-center text-base sm:text-lg">
                                   {(senderUser.name || '?').charAt(0).toUpperCase()}
                                 </div>
                               );
                             })()
                           )}
                         </div>
-                        <div className={`max-w-[85%] px-4 py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
-                          <p className="italic text-sm">Message deleted</p>
+                        <div className={`max-w-[78%] sm:max-w-[85%] px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
+                          <p className="italic text-xs sm:text-sm">Message deleted</p>
                         </div>
                       </div>
                     );
@@ -1948,8 +1948,8 @@ function Chat() {
                     const callText = message.text || '';
                     const isJoin = callText.includes('joined the group');
                     return (
-                      <div key={message.id} className="flex justify-center my-1">
-                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm
+                      <div key={message.id} className="flex justify-center my-1 max-w-full overflow-hidden">
+                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium shadow-xs truncate max-w-[90%]
                           ${isJoin
                             ? 'bg-blue-50 text-blue-600 border border-blue-200'
                             : answered
@@ -1957,8 +1957,8 @@ function Chat() {
                               : 'bg-red-50 text-red-600 border border-red-200'
                           }`}>
                           {isJoin && <span>👋</span>}
-                          <span>{callText}</span>
-                          <span className="text-gray-400 text-[10px]">
+                          <span className="truncate">{callText}</span>
+                          <span className="text-gray-400 text-[10px] flex-shrink-0">
                             {message.created_at ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                           </span>
                         </div>
@@ -1969,7 +1969,7 @@ function Chat() {
                   return (
                     <div key={message.id}
                          data-is-own={isOwn}
-                         className={`flex w-full items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+                         className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} overflow-hidden max-w-full`}>
                       {/* Avatar */}
                       <div className="flex-shrink-0 self-end mb-1">
                         {isOwn ? (
@@ -1979,10 +1979,10 @@ function Chat() {
                               <img 
                                 src={user.profilePicture} 
                                 alt="Me" 
-                                className="w-10 h-10 object-cover rounded-full"
+                                className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full"
                               />
                             ) : (
-                              <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
+                              <div className={`w-8 h-8 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-base sm:text-lg`}>
                                 {avatar.icon}
                               </div>
                             );
@@ -1999,14 +1999,14 @@ function Chat() {
                                   <img 
                                     src={senderUser.profilePicture} 
                                     alt={senderUser.name || 'User'} 
-                                    className="w-10 h-10 object-cover rounded-full"
+                                    className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full"
                                   />
                                 ) : (
-                                  <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center text-lg">
+                                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-400 rounded-full flex items-center justify-center text-base sm:text-lg">
                                     {(senderUser.name || '?').charAt(0).toUpperCase()}
                                   </div>
                                 )}
-                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
                               </div>
                             );
                           })()
@@ -2014,10 +2014,10 @@ function Chat() {
                       </div>
                       
                       {/* Message Content */}
-                      <div className="group relative max-w-[85%]">
+                      <div className="group relative max-w-[78%] sm:max-w-[85%] min-w-0">
                         {/* Sender name - only for others */}
                         {!isOwn && (
-                          <span className="text-xs font-medium text-gray-500 block mb-1 ml-1">
+                          <span className="text-[11px] sm:text-xs font-medium text-gray-500 block mb-0.5 ml-1 truncate">
                             {message.senderName}
                           </span>
                         )}
@@ -2026,16 +2026,16 @@ function Chat() {
                           className={`rounded-2xl ${
                             (message.type === 'image' || message.message_type === 'image') && (message.imageUrl || message.image_url || message.file_url)
                               ? `overflow-hidden ${isOwn ? 'rounded-br-none' : 'rounded-bl-none'}`
-                              : `px-4 py-2 ${isOwn ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-100 text-gray-800 rounded-bl-none'}`
+                              : `px-3 py-1.5 sm:px-4 sm:py-2 ${isOwn ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none shadow-xs'}`
                           }`}
                         >
                           {editingMessage?.id === message.id ? (
-                            <div className="flex items-center space-x-2 px-4 py-2">
+                            <div className="flex items-center space-x-2 px-2 py-1">
                               <input
                                 type="text"
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
-                                className="flex-1 px-2 py-1 text-sm bg-white text-gray-800 rounded border"
+                                className="flex-1 px-2 py-1 text-xs sm:text-sm bg-white text-gray-800 rounded border"
                                 onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveEdit(); } }}
                               />
                               <button type="button" onClick={handleSaveEdit} className="text-green-600 hover:text-green-700 font-bold">✓</button>
@@ -2048,7 +2048,7 @@ function Chat() {
                                 <img
                                   src={message.imageUrl || message.image_url || message.file_url}
                                   alt="Shared"
-                                  className="max-w-full max-h-64 block cursor-pointer hover:opacity-90"
+                                  className="max-w-full max-h-56 sm:max-h-64 rounded-xl block cursor-pointer hover:opacity-90 object-cover"
                                   onClick={() => handleImageClick(message.imageUrl || message.image_url || message.file_url)}
                                 />
                               ) : (message.type === 'file' || message.message_type === 'file') && (message.fileName || message.file_name) ? (
@@ -2063,7 +2063,6 @@ function Chat() {
                                     }
                                     
                                     try {
-                                      // For base64 data URLs, we can use them directly
                                       if (fileUrl.startsWith('data:')) {
                                         const link = document.createElement('a');
                                         link.href = fileUrl;
@@ -2073,7 +2072,6 @@ function Chat() {
                                         document.body.removeChild(link);
                                         addNotification('File downloaded!', 'success');
                                       } else {
-                                        // For other URLs, fetch and download
                                         const response = await fetch(fileUrl);
                                         const blob = await response.blob();
                                         const blobUrl = window.URL.createObjectURL(blob);
@@ -2091,59 +2089,58 @@ function Chat() {
                                       addNotification('Failed to download file', 'error');
                                     }
                                   }}
-                                  className="flex items-center space-x-2 bg-gray-100 rounded-lg p-3 hover:bg-gray-200 transition-colors border border-gray-300 cursor-pointer text-left"
+                                  className="flex items-center space-x-2 bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors border border-gray-200 cursor-pointer text-left w-full overflow-hidden"
                                 >
-                                  <Paperclip className="w-5 h-5 text-gray-600" />
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium text-gray-800 truncate max-w-[200px]">{message.fileName || message.file_name}</span>
-                                    <span className="text-xs text-blue-600 underline">Click to download</span>
+                                  <Paperclip className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                  <div className="flex flex-col min-w-0 flex-1">
+                                    <span className="text-xs font-medium text-gray-800 truncate">{message.fileName || message.file_name}</span>
+                                    <span className="text-[10px] text-blue-600 underline">Click to download</span>
                                   </div>
                                 </button>
                               ) : (message.type === 'voice' || message.message_type === 'voice') && (message.audioUrl || message.audio_url) ? (
                                 /* Voice Messages with play button */
                                 <button type="button" 
                                   onClick={() => handlePlayVoice(message)}
-                                  className={`flex items-center space-x-3 rounded-lg p-3 transition-colors min-w-[150px] ${
+                                  className={`flex items-center space-x-2 rounded-lg p-2 transition-colors min-w-[130px] max-w-full ${
                                     isPlaying === message.id
-                                      ? 'bg-green-100 border-2 border-green-500 text-green-700' 
-                                      : 'bg-gray-100 border-2 border-gray-300 text-gray-700 hover:bg-gray-200'
+                                      ? 'bg-green-100 border border-green-500 text-green-700' 
+                                      : 'bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100'
                                   }`}
                                 >
                                   {isPlaying === message.id ? (
                                     <>
-                                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                      <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <span className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                       </div>
-                                      <div className="flex flex-col items-start">
-                                        <span className="text-sm font-medium">Playing...</span>
-                                        <div className="w-24 h-1 bg-gray-300 rounded-full mt-1 overflow-hidden">
+                                      <div className="flex flex-col items-start min-w-0">
+                                        <span className="text-xs font-medium">Playing...</span>
+                                        <div className="w-16 h-1 bg-gray-300 rounded-full mt-0.5 overflow-hidden">
                                           <div className="h-full bg-green-500 animate-pulse" style={{width: '60%'}}></div>
                                         </div>
                                       </div>
                                     </>
                                   ) : (
                                     <>
-                                      <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                                        <Play className="w-4 h-4 text-white ml-0.5" />
+                                      <div className="w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <Play className="w-3.5 h-3.5 text-white ml-0.5" />
                                       </div>
-                                      <div className="flex flex-col items-start">
-                                        <span className="text-sm font-medium">Voice Message</span>
-                                        <span className="text-xs text-gray-500">{message.duration || message.text || 'Click to play'}</span>
+                                      <div className="flex flex-col items-start min-w-0">
+                                        <span className="text-xs font-medium">Voice Note</span>
+                                        <span className="text-[10px] text-gray-500">{message.duration || message.text || 'Click to play'}</span>
                                       </div>
                                     </>
                                   )}
                                 </button>
                               ) : (
-                                <p>{message.text || message.content || ''}</p>
+                                <p className="break-words whitespace-pre-wrap overflow-hidden text-xs sm:text-sm leading-relaxed">{message.text || message.content || ''}</p>
                               )}
                             </>
                           )}
                         </div>
                         
                         {/* Time outside bubble */}
-                        <div className={`text-xs mt-1 ${isOwn ? 'text-right mr-1 text-gray-400' : 'ml-1 text-gray-400'}`}>
+                        <div className={`text-[10px] mt-0.5 ${isOwn ? 'text-right mr-1 text-gray-400' : 'ml-1 text-gray-400'}`}>
                           {(() => {
-                              // Format the time for display
                               const messageTime = message.created_at ? formatDate(message.created_at) : 
                                                   message.timestamp ? formatDate(message.timestamp) : 
                                                   message.time ? message.time : '';
@@ -2158,13 +2155,13 @@ function Chat() {
 
                         {/* Reactions */}
                         {message.reactions && Object.keys(message.reactions).length > 0 && (
-                          <div className={`flex gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`flex gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(message.reactions).map(([emoji, users]) => (
                               users.length > 0 && (
                                 <button type="button"
                                   key={emoji}
                                   onClick={() => handleReaction(message.id, emoji)}
-                                  className={`text-xs px-2 py-1 rounded-full ${users.includes(user?.id) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${users.includes(user?.id) ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
                                 >
                                   {emoji} {users.length}
                                 </button>
@@ -2173,21 +2170,22 @@ function Chat() {
                           </div>
                         )}
 
-                        {/* Message Menu */}
+                        {/* Message Menu Button */}
                         {editingMessage?.id !== message.id && (
-                          <div data-message-menu className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity`}>
+                          <div data-message-menu className={`absolute top-1 ${isOwn ? '-left-6' : '-right-6'} opacity-75 sm:opacity-0 group-hover:opacity-100 transition-opacity`}>
                             <button type="button"
                               onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
-                              className="p-1 text-gray-400 hover:text-gray-600"
+                              className="p-1 text-gray-500 hover:text-gray-700 active:scale-95 touch-manipulation cursor-pointer"
+                              title="Options"
                             >
-                              <MoreVertical className="w-4 h-4" />
+                              <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           </div>
                         )}
 
                         {/* Message Options Menu */}
                         {showMessageMenu === message.id && (
-                          <div data-message-menu className={`absolute top-6 ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]`}>
+                          <div data-message-menu className={`absolute top-7 ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-xl shadow-2xl border border-gray-200 py-1.5 z-40 min-w-[150px] max-w-[200px] animate-fade-in`}>
                             {/* Emoji Reactions */}
                             <div className="flex gap-1 px-2 py-1 border-b border-gray-100">
                               {EMOJI_LIST.map(emoji => (
