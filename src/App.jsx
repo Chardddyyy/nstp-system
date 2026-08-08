@@ -304,28 +304,36 @@ function App() {
     if (!user || window.__nstp_session_expired__) return;
     try {
       const [reportsData, conversationsData, usersData] = await Promise.all([
-        reportsAPI.getAll().catch(() => []),
-        conversationsAPI.getAll().catch(() => []),
-        usersAPI.getAll().catch(() => [])
+        reportsAPI.getAll().catch(() => null),
+        conversationsAPI.getAll().catch(() => null),
+        usersAPI.getAll().catch(() => null)
       ]);
-      setReports(reportsData);
-      setConversations(conversationsData);
-      if (usersData && usersData.length > 0) {
-        setUsers(usersData);
+
+      if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
+      if (usersData && Array.isArray(usersData) && usersData.length > 0) setUsers(usersData);
+
+      if (conversationsData && Array.isArray(conversationsData)) {
+        setConversations(conversationsData);
+        localStorage.setItem('nstp_cached_conversations', JSON.stringify(conversationsData));
       }
 
       let pending = pendingEnrollments;
       if (user.role === 'admin') {
-        const enrollmentsData = await enrollmentsAPI.getAll();
-        pending = enrollmentsData.filter(e => e.status === 'Pending');
-        setPendingEnrollments(pending);
+        const enrollmentsData = await enrollmentsAPI.getAll().catch(() => null);
+        if (enrollmentsData && Array.isArray(enrollmentsData)) {
+          pending = enrollmentsData.filter(e => e.status === 'Pending');
+          setPendingEnrollments(pending);
+        }
       }
 
+      const activeConvs = (conversationsData && Array.isArray(conversationsData)) ? conversationsData : conversations;
+      const activeReports = (reportsData && Array.isArray(reportsData)) ? reportsData : reports;
+
       if (!baselineReady.current) {
-        seedRealtimeBaseline(pending, reportsData, conversationsData, user);
+        seedRealtimeBaseline(pending, activeReports, activeConvs, user);
       } else {
-        detectRealtimeChanges(pending, reportsData, conversationsData, user);
-        await checkConversationMessages(conversationsData, user);
+        detectRealtimeChanges(pending, activeReports, activeConvs, user);
+        await checkConversationMessages(activeConvs, user);
       }
     } catch (error) {
       console.warn('Live refresh failed:', error);
@@ -436,17 +444,24 @@ function App() {
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
 
-  // Restore session from stored token on mount INSTANTLY
+  // Restore session & data from stored cache on mount INSTANTLY (0ms)
   useEffect(() => {
     const token = localStorage.getItem('nstp_token');
     const cachedUser = localStorage.getItem('nstp_cached_user');
+    const cachedConvs = localStorage.getItem('nstp_cached_conversations');
+    const cachedMsgs = localStorage.getItem('nstp_cached_messages');
+
     if (token) {
       if (cachedUser) {
-        try {
-          setUser(JSON.parse(cachedUser));
-          setLoading(false);
-        } catch {}
+        try { setUser(JSON.parse(cachedUser)); } catch {}
       }
+      if (cachedConvs) {
+        try { setConversations(JSON.parse(cachedConvs)); } catch {}
+      }
+      if (cachedMsgs) {
+        try { setMessages(JSON.parse(cachedMsgs)); } catch {}
+      }
+      setLoading(false);
       loadCurrentUser();
     } else {
       setLoading(false);
@@ -473,39 +488,52 @@ function App() {
         usersData, studentsData, reportsData, enrollmentsData,
         conversationsData, archivesData, batchData,
       ] = await Promise.all([
-        usersAPI.getAll(),
-        studentsAPI.getAll(),
-        reportsAPI.getAll(),
-        enrollmentsAPI.getAll().catch(() => []),
-        conversationsAPI.getAll().catch(() => []),
-        archivesAPI.getAll().catch(() => []),
-        archivesAPI.getCurrentBatch().catch(() => ({ year: new Date().getFullYear() })),
+        usersAPI.getAll().catch(() => null),
+        studentsAPI.getAll().catch(() => null),
+        reportsAPI.getAll().catch(() => null),
+        enrollmentsAPI.getAll().catch(() => null),
+        conversationsAPI.getAll().catch(() => null),
+        archivesAPI.getAll().catch(() => null),
+        archivesAPI.getCurrentBatch().catch(() => null),
       ]);
 
-      setUsers(usersData);
-      setStudents(studentsData);
-      setReports(reportsData);
-      setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
-      setConversations(conversationsData);
-      setArchivedYears(archivesData);
-      setCurrentBatch(batchData.year.toString());
+      if (usersData && Array.isArray(usersData)) setUsers(usersData);
+      if (studentsData && Array.isArray(studentsData)) setStudents(studentsData);
+      if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
+      if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
+      if (archivesData && Array.isArray(archivesData)) setArchivedYears(archivesData);
+      if (batchData?.year) setCurrentBatch(batchData.year.toString());
 
-      const messageResults = await Promise.all(
-        conversationsData.map(conv =>
-          conversationsAPI.getMessages(conv.id)
-            .then(msgs => ({ id: conv.id, msgs }))
-            .catch(() => ({ id: conv.id, msgs: [] }))
-        )
-      );
-      const messagesData = Object.fromEntries(messageResults.map(r => [r.id, r.msgs]));
-      setMessages(messagesData);
+      if (conversationsData && Array.isArray(conversationsData)) {
+        setConversations(conversationsData);
+        localStorage.setItem('nstp_cached_conversations', JSON.stringify(conversationsData));
+
+        const messageResults = await Promise.all(
+          conversationsData.map(conv =>
+            conversationsAPI.getMessages(conv.id)
+              .then(msgs => ({ id: conv.id, msgs }))
+              .catch(() => null)
+          )
+        );
+        const validResults = messageResults.filter(Boolean);
+        if (validResults.length > 0) {
+          setMessages(prev => {
+            const next = { ...prev };
+            validResults.forEach(r => {
+              if (r.msgs && Array.isArray(r.msgs)) next[r.id] = r.msgs;
+            });
+            localStorage.setItem('nstp_cached_messages', JSON.stringify(next));
+            return next;
+          });
+        }
+      }
 
       const activeUser = currentUser || user;
-      if (activeUser) {
+      if (activeUser && conversationsData && Array.isArray(conversationsData)) {
         resetRealtimeBaseline();
         seedRealtimeBaseline(
-          enrollmentsData.filter(e => e.status === 'Pending'),
-          reportsData,
+          (enrollmentsData || []).filter(e => e?.status === 'Pending'),
+          reportsData || [],
           conversationsData,
           activeUser
         );
