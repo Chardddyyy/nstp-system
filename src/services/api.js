@@ -49,16 +49,23 @@ async function apiCall(endpoint, options) {
 
 // Auth
 export async function loginUser(email, password) {
+  const cleanEmail = String(email).trim().toLowerCase();
+
+  // Fast 2.5s timeout so mobile users don't wait for Render cold starts
+  const fetchPromise = apiCall('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: email, password: password })
+  });
+
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('COLD_START_TIMEOUT')), 2500)
+  );
+
   try {
-    return await apiCall('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: email, password: password })
-    });
+    return await Promise.race([fetchPromise, timeoutPromise]);
   } catch (err) {
-    // If backend network request fails (e.g. GitHub Pages static mode without local backend server)
-    if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('CORS') || err.message?.includes('NetworkError') || !err.status) {
-      const cleanEmail = String(email).trim().toLowerCase();
-      
+    // If Render server is sleeping (COLD_START_TIMEOUT) or network is slow/offline
+    if (err.message === 'COLD_START_TIMEOUT' || err.name === 'TypeError' || err.message?.includes('fetch') || !err.status) {
       if (cleanEmail === 'admin@cvsu.edu.ph' && password === 'admin123') {
         const adminUser = { id: 1, name: 'System Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'All' };
         const demoToken = 'demo-jwt-admin-token';
@@ -84,7 +91,7 @@ export async function loginUser(email, password) {
         }
       } catch (_) {}
 
-      throw new Error('Invalid credentials (Offline Mode: admin@cvsu.edu.ph / admin123 or instructor@cvsu.edu.ph / instructor123)');
+      throw new Error('Invalid credentials (admin@cvsu.edu.ph / admin123 or instructor@cvsu.edu.ph / instructor123)');
     }
     throw err;
   }
