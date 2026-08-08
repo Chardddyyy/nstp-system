@@ -171,17 +171,78 @@ function Enrollment() {
   const capturePhotoFromCamera = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-    const canvas = document.createElement('canvas');
+    
+    // Create full resolution canvas from video stream (NO MIRROR EFFECT)
+    const rawW = video.videoWidth || 1280;
+    const rawH = video.videoHeight || 720;
+    const fullCanvas = document.createElement('canvas');
+    fullCanvas.width = rawW;
+    fullCanvas.height = rawH;
+    const fullCtx = fullCanvas.getContext('2d');
+    
+    // Draw un-mirrored video frame
+    fullCtx.save();
+    fullCtx.scale(1, 1);
+    fullCtx.drawImage(video, 0, 0, rawW, rawH);
+    fullCtx.restore();
+
+    // CamScanner-style Auto Document Paper Edge Detection & Bounding Box Cropping
+    const imgData = fullCtx.getImageData(0, 0, rawW, rawH);
+    const data = imgData.data;
+    let minX = rawW, maxX = 0, minY = rawH, maxY = 0;
+    let brightPixelCount = 0;
+
+    // Fast sampling (step 4) for high-luminance paper region (luminance > 135)
+    for (let y = 0; y < rawH; y += 4) {
+      for (let x = 0; x < rawW; x += 4) {
+        const idx = (y * rawW + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (lum > 135) { // paper surface brightness threshold
+          brightPixelCount++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    // Determine crop rectangle
+    let cropX = 0, cropY = 0, cropW = rawW, cropH = rawH;
+    const totalSampled = (rawW / 4) * (rawH / 4);
+
+    // If a clear paper area is detected (at least 15% of frame)
+    if (brightPixelCount > totalSampled * 0.15 && minX < maxX && minY < maxY) {
+      const padX = Math.round((maxX - minX) * 0.02);
+      const padY = Math.round((maxY - minY) * 0.02);
+      cropX = Math.max(0, minX - padX);
+      cropY = Math.max(0, minY - padY);
+      cropW = Math.min(rawW - cropX, (maxX - minX) + padX * 2);
+      cropH = Math.min(rawH - cropY, (maxY - minY) + padY * 2);
+    } else {
+      // Fallback: Crop using the viewfinder alignment box (inset 8%)
+      cropX = Math.round(rawW * 0.06);
+      cropY = Math.round(rawH * 0.06);
+      cropW = Math.round(rawW * 0.88);
+      cropH = Math.round(rawH * 0.88);
+    }
+
+    // Final high-res cropped output canvas
     const MAX = 1200;
-    let w = video.videoWidth || 1280;
-    let h = video.videoHeight || 720;
-    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, w, h);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    let outW = cropW, outH = cropH;
+    if (outW > MAX) { outH = Math.round(outH * MAX / outW); outW = MAX; }
+    if (outH > MAX) { outW = Math.round(outW * MAX / outH); outH = MAX; }
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = outW;
+    outCanvas.height = outH;
+    const outCtx = outCanvas.getContext('2d');
+    outCtx.drawImage(fullCanvas, cropX, cropY, cropW, cropH, 0, 0, outW, outH);
+
+    const dataUrl = outCanvas.toDataURL('image/jpeg', 0.88);
     setRegistrationPhoto(dataUrl);
     if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
     closeCameraModal();
@@ -503,7 +564,7 @@ function Enrollment() {
                     NSTP Portal
                   </span>
                 </div>
-                <p className="text-emerald-200 text-[9px] sm:text-xs truncate font-medium">National Service Training Program Student Enrollment</p>
+                <p className="text-emerald-200 text-[7.5px] xs:text-[8.5px] sm:text-xs font-medium whitespace-nowrap truncate max-w-[150px] xs:max-w-[210px] sm:max-w-none">National Service Training Program Student Enrollment</p>
               </div>
             </div>
             <Link
@@ -614,7 +675,7 @@ function Enrollment() {
                   NSTP Portal
                 </span>
               </div>
-              <p className="text-emerald-200 text-[9px] sm:text-xs truncate font-medium">National Service Training Program Student Enrollment</p>
+              <p className="text-emerald-200 text-[7.5px] xs:text-[8.5px] sm:text-xs font-medium whitespace-nowrap truncate max-w-[150px] xs:max-w-[210px] sm:max-w-none">National Service Training Program Student Enrollment</p>
             </div>
           </div>
 
@@ -1466,12 +1527,28 @@ function Enrollment() {
                         muted
                         autoPlay
                         className="w-full h-full object-cover"
+                        style={{ transform: 'none' }}
                       />
-                      {/* Document Frame Guide Overlay */}
-                      <div className="absolute inset-4 sm:inset-6 border-2 border-dashed border-amber-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
-                        <span className="text-[10px] bg-black/60 text-amber-300 font-bold px-2 py-1 rounded-md self-start">
-                          Align Registration Form within box
-                        </span>
+                      {/* CamScanner Document Frame & Laser Scanning Guide Overlay */}
+                      <div className="absolute inset-4 sm:inset-6 border-2 border-emerald-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3 shadow-[0_0_20px_rgba(52,211,153,0.3)]">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] bg-emerald-950/80 text-emerald-300 font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/40 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
+                            <span>CamScanner Auto Paper Edge Trace</span>
+                          </span>
+                          <span className="text-[9px] bg-black/60 text-amber-300 font-bold px-1.5 py-0.5 rounded-md">
+                            No Mirror • HD Crop
+                          </span>
+                        </div>
+
+                        {/* Animated Laser Beam */}
+                        <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_#34d399] animate-pulse my-auto"></div>
+
+                        {/* Target Corner Indicators */}
+                        <div className="flex justify-between items-end w-full text-[9px] text-emerald-200/80 font-mono">
+                          <span>📐 Align document paper inside</span>
+                          <span>Auto-Crop Active</span>
+                        </div>
                       </div>
                     </div>
 

@@ -226,21 +226,21 @@ function Landing() {
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
       <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1 sm:gap-4 text-center">
-          <div className="p-1.5 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center">
-            <p className="text-[10px] sm:text-2xl font-black text-amber-400 leading-tight">6 Credit Units</p>
-            <p className="text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight">3 Units / Sem</p>
+          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">6 Credit Units</p>
+            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">3 Units / Sem</p>
           </div>
-          <div className="p-1.5 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center">
-            <p className="text-[10px] sm:text-2xl font-black text-white leading-tight">3 Components</p>
-            <p className="text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight">ROTC • CWTS • LTS</p>
+          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-white leading-tight whitespace-nowrap">3 Components</p>
+            <p className="text-[6.5px] xs:text-[7.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap tracking-tight">ROTC • CWTS • LTS</p>
           </div>
-          <div className="p-1.5 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center">
-            <p className="text-[10px] sm:text-2xl font-black text-amber-400 leading-tight">7 Programs</p>
-            <p className="text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight">Degree Courses</p>
+          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">7 Programs</p>
+            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">Degree Courses</p>
           </div>
-          <div className="p-1.5 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all group cursor-default flex flex-col justify-center">
-            <p className="text-[10px] sm:text-2xl font-black text-white leading-tight">R.A. 9163</p>
-            <p className="text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight">Accredited Law</p>
+          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-white leading-tight whitespace-nowrap">R.A. 9163</p>
+            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">Accredited Law</p>
           </div>
         </div>
       </section>
@@ -251,28 +251,28 @@ function Landing() {
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
           {/* Dynamic Schedule Status Banner */}
-          <div className="mb-4 sm:mb-6 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
-              <div className="flex items-start space-x-3">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${enrollmentStatus.isOpen
+          <div className="mb-4 sm:mb-6 p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 text-left">
+              <div className="flex items-start space-x-2.5 sm:space-x-3">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${enrollmentStatus.isOpen
                     ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-900/50'
                     : 'bg-amber-400 text-emerald-950 shadow-lg'
                   }`}>
-                  {enrollmentStatus.isOpen ? <Sparkles className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                  {enrollmentStatus.isOpen ? <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" /> : <Clock className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-black text-white">{enrollmentStatus.headline}</h3>
-                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${enrollmentStatus.isOpen ? 'bg-amber-400 text-emerald-950 animate-pulse' : 'bg-rose-500 text-white'
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <h3 className="text-xs sm:text-base font-black text-white leading-tight">{enrollmentStatus.headline}</h3>
+                    <span className={`text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full ${enrollmentStatus.isOpen ? 'bg-amber-400 text-emerald-950 animate-pulse' : 'bg-rose-500 text-white'
                       }`}>
                       {enrollmentStatus.isOpen ? 'Active Now' : 'Closed'}
                     </span>
                   </div>
-                  <p className="text-emerald-100 text-xs mt-1 font-medium leading-relaxed">
+                  <p className="text-emerald-100 text-[10.5px] sm:text-xs mt-0.5 font-medium leading-normal">
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <p className="text-amber-300 text-[11px] font-bold mt-1.5 bg-black/20 px-2.5 py-1 rounded-lg inline-block border border-amber-400/20">
+                    <p className="text-amber-300 text-[9.5px] sm:text-[11px] font-bold mt-1 bg-black/20 px-2 py-0.5 rounded-lg inline-block border border-amber-400/20 leading-snug">
                       📢 {enrollmentStatus.customNotice}
                     </p>
                   )}
@@ -280,9 +280,9 @@ function Landing() {
               </div>
 
               {enrollmentStatus.openAtFormatted && (
-                <div className="bg-emerald-900/80 border border-emerald-700/60 p-2.5 rounded-xl text-center shrink-0 w-full sm:w-auto">
-                  <p className="text-[9px] text-amber-300 uppercase font-extrabold tracking-wider">Scheduled Opening</p>
-                  <p className="text-xs font-bold text-white mt-0.5">{enrollmentStatus.openAtFormatted}</p>
+                <div className="bg-emerald-900/80 border border-emerald-700/60 p-2 sm:p-2.5 rounded-xl text-center shrink-0 w-full sm:w-auto">
+                  <p className="text-[8px] sm:text-[9px] text-amber-300 uppercase font-extrabold tracking-wider">Scheduled Opening</p>
+                  <p className="text-[11px] sm:text-xs font-bold text-white mt-0.5">{enrollmentStatus.openAtFormatted}</p>
                 </div>
               )}
             </div>
@@ -601,7 +601,7 @@ function Landing() {
                 <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
                   <Award className="w-3.5 h-3.5 text-amber-400" /> Video Credits:
                 </p>
-                <p className="text-xs font-black text-white mt-0.5">
+                <p className="text-[10.5px] xs:text-xs font-black text-white mt-0.5 whitespace-nowrap truncate">
                   University of the Philippines Diliman (UP Diliman)
                 </p>
                 <p className="text-[9px] text-amber-200/90 font-semibold mt-0.5">
@@ -670,19 +670,19 @@ function Landing() {
         <div className="w-full px-3 sm:px-8 lg:px-12 py-5 sm:py-10">
           <div className="flex flex-row justify-between items-start gap-2.5 sm:gap-8">
             {/* About (Left Side) */}
-            <div className="w-1/2 md:w-2/3">
+            <div className="w-1/2 md:w-2/3 min-w-0">
               <div className="flex items-center space-x-1.5 sm:space-x-2.5 mb-1.5 sm:mb-2.5">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-sm border border-emerald-700">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
-                <h4 className="text-xs sm:text-xl font-black leading-tight">Cavite State University Naic</h4>
+                <h4 className="text-[10px] xs:text-xs sm:text-xl font-black leading-tight whitespace-nowrap truncate">Cavite State University Naic</h4>
               </div>
               <p className="text-emerald-200 text-[9px] sm:text-xs leading-tight sm:leading-relaxed mb-2 max-w-xl">
                 A premier institution committed to providing quality education and producing
                 morally upright graduates who contribute to national development through the
                 National Service Training Program (NSTP).
               </p>
-              <p className="text-amber-400 text-[8px] sm:text-xs font-bold leading-tight">Core Values: Truth • Integrity • Excellence • Service</p>
+              <p className="text-amber-400 text-[7.5px] xs:text-[8.5px] sm:text-xs font-bold leading-tight whitespace-nowrap truncate">Core Values: Truth • Integrity • Excellence • Service</p>
             </div>
 
             {/* Contact Info (Right Side) */}
