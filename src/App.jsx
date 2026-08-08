@@ -368,7 +368,7 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 
-  // Poll for incoming/outgoing calls every 2 seconds
+  // Poll for incoming/outgoing calls every 1 second for instant response
   useEffect(() => {
     if (!user) return;
 
@@ -385,7 +385,7 @@ function App() {
     }
 
     pollCalls();
-    const callInterval = setInterval(pollCalls, 2000);
+    const callInterval = setInterval(pollCalls, 1000);
     return () => clearInterval(callInterval);
   }, [user]);
 

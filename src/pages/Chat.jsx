@@ -1101,15 +1101,20 @@ function Chat() {
       if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
         setShowEmojiPicker(false);
       }
+      if (showAttachMenu && attachMenuRef.current && !attachMenuRef.current.contains(e.target) && !e.target.closest('[title="Add attachment"]')) {
+        setShowAttachMenu(false);
+      }
       if (showMessageMenu && !e.target.closest('[data-message-menu]')) {
         setShowMessageMenu(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [showChatMenu, showEmojiPicker, showMessageMenu]);
+  }, [showChatMenu, showEmojiPicker, showAttachMenu, showMessageMenu]);
 
   const handleEmojiSelect = (emoji) => {
     setMessageText(prev => prev + emoji);
@@ -1311,27 +1316,33 @@ function Chat() {
 
   // Handle call answered from IncomingCallOverlay (user was on a different page)
   useEffect(() => {
-    if (!pendingAnsweredCall) return;
-    const call = pendingAnsweredCall;
-    setPendingAnsweredCall(null);
-    // If inline handler already set up this call, skip to avoid double setup
-    if (currentCallIdRef.current === call.id) return;
-    setShowIncomingCall(false);
-    currentCallIdRef.current = call.id;
-    callConversationIdRef.current = call.conversation_id;
-    callTypeRef.current = call.call_type || 'voice';
-    isCallerRef.current = false;
-    setActiveCallStartTime(Date.now());
-    callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
-    startCallEndPoll(call.id, call.call_type || 'voice');
-    if (call.call_type === 'video') {
-      setShowVideoCallModal(true);
-      setVideoCallStatus('connected');
-    } else {
-      setShowCallModal(true);
-      setCallStatus('connected');
+    const handleCallAnswered = (e) => {
+      const call = e.detail || pendingAnsweredCall;
+      if (!call) return;
+      if (currentCallIdRef.current === call.id && (showCallModal || showVideoCallModal)) return;
+      setShowIncomingCall(false);
+      currentCallIdRef.current = call.id;
+      callConversationIdRef.current = call.conversation_id;
+      callTypeRef.current = call.call_type || 'voice';
+      isCallerRef.current = false;
+      setActiveCallStartTime(Date.now());
+      if (call.call_type === 'video') {
+        setShowVideoCallModal(true);
+        setVideoCallStatus('connected');
+      } else {
+        setShowCallModal(true);
+        setCallStatus('connected');
+      }
+      startCallEndPoll(call.id, call.call_type || 'voice');
+      startWebRTC(call.id, false, call.call_type || 'voice');
+    };
+
+    window.addEventListener('nstp-call-answered', handleCallAnswered);
+    if (pendingAnsweredCall) {
+      handleCallAnswered({ detail: pendingAnsweredCall });
     }
-    startWebRTC(call.id, false, call.call_type || 'voice');
+
+    return () => window.removeEventListener('nstp-call-answered', handleCallAnswered);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAnsweredCall]);
 
