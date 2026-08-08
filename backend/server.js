@@ -1605,39 +1605,53 @@ app.post('/api/conversations/:id/add-participant', authenticateToken, async (req
 // Get messages for a conversation
 app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    // Support both integer IDs and string IDs (like "1-2" or "group-all-instructors")
-    const conversationId = id;
-    
-    // Check if this is a group conversation
-    const [conversationCheck] = await pool.execute(
-      'SELECT is_group FROM conversations WHERE id = ?',
-      [conversationId]
-    );
-    
+    let { id } = req.params;
+    let targetConvId = id;
     let isAuthorized = false;
-    
-    if (conversationCheck.length > 0 && conversationCheck[0].is_group) {
-      // For group chats, check if user is a participant
-      const [participants] = await pool.execute(
-        'SELECT * FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
-        [conversationId, req.user.id]
+
+    // Handle synthetic direct conversation IDs like "1-2"
+    if (typeof id === 'string' && id.includes('-') && !isNaN(parseInt(id.split('-')[0]))) {
+      const parts = id.split('-').map(p => parseInt(p));
+      const u1 = parts[0];
+      const u2 = parts[1];
+      if (req.user.id === u1 || req.user.id === u2) {
+        isAuthorized = true;
+      }
+      const [convs] = await pool.execute(
+        'SELECT id FROM conversations WHERE (participant_1_id = ? AND participant_2_id = ?) OR (participant_1_id = ? AND participant_2_id = ?)',
+        [u1, u2, u2, u1]
       );
-      isAuthorized = participants.length > 0;
+      if (convs.length > 0) {
+        targetConvId = convs[0].id;
+      } else {
+        return res.json([]);
+      }
     } else {
-      // For direct chats, check if user is participant_1 or participant_2
-      const [conversations] = await pool.execute(
-        'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-        [conversationId, req.user.id, req.user.id]
+      // Normal integer or string group ID check
+      const [conversationCheck] = await pool.execute(
+        'SELECT is_group FROM conversations WHERE id = ?',
+        [id]
       );
-      isAuthorized = conversations.length > 0;
+      
+      if (conversationCheck.length > 0 && conversationCheck[0].is_group) {
+        const [participants] = await pool.execute(
+          'SELECT * FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
+          [id, req.user.id]
+        );
+        isAuthorized = participants.length > 0;
+      } else {
+        const [conversations] = await pool.execute(
+          'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
+          [id, req.user.id, req.user.id]
+        );
+        isAuthorized = conversations.length > 0;
+      }
     }
-    
+
     if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized to view this conversation' });
     }
-    
+
     const limit = Math.min(parseInt(req.query.limit) || 100, 200);
 
     const [messages] = await pool.execute(`
@@ -1650,7 +1664,7 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
         LIMIT ${limit}
       ) latest
       ORDER BY latest.created_at ASC
-    `, [conversationId]);
+    `, [targetConvId]);
 
     res.json(messages);
   } catch (error) {
@@ -2302,10 +2316,13 @@ app.get('/api/calls/:id', authenticateToken, async (req, res) => {
 });
 
 // Answer a call (accepts POST & PUT, allows answering any active call)
-app.all(['/api/calls/:id/answer'], authenticateToken, async (req, res) => {
+app.all('/api/calls/:id/answer', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
+    if (!id || id === 'undefined') {
+      return res.status(400).json({ message: 'Invalid call ID' });
+    }
+
     const [calls] = await pool.execute(
       'SELECT * FROM calls WHERE id = ?',
       [id]
@@ -2330,7 +2347,7 @@ app.all(['/api/calls/:id/answer'], authenticateToken, async (req, res) => {
     res.json({ message: 'Call connected', call_id: id });
   } catch (error) {
     console.error('Answer call error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + (error?.message || error) });
   }
 });
 
@@ -2448,7 +2465,7 @@ app.get('/api/calls/:id/webrtc', authenticateToken, async (req, res) => {
   }
 });
 
-app.all(['/api/calls/:id/webrtc/offer'], authenticateToken, async (req, res) => {
+app.all('/api/calls/:id/webrtc/offer', authenticateToken, async (req, res) => {
   try {
     const call = await getCallForUser(req.params.id, req.user.id);
     if (!call) {
@@ -2465,7 +2482,7 @@ app.all(['/api/calls/:id/webrtc/offer'], authenticateToken, async (req, res) => 
   }
 });
 
-app.all(['/api/calls/:id/webrtc/answer'], authenticateToken, async (req, res) => {
+app.all('/api/calls/:id/webrtc/answer', authenticateToken, async (req, res) => {
   try {
     const call = await getCallForUser(req.params.id, req.user.id);
     if (!call) {
