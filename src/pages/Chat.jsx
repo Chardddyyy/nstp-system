@@ -148,6 +148,7 @@ function Chat() {
       text: messageText
     });
     setMessageText('');
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   };
 
   const getGroupAvatar = (conversation) => {
@@ -1203,12 +1204,28 @@ function Chat() {
     }
   }, [localStream, videoCallStatus]);
 
-  // Attach remote stream to remote video element (other person's camera)
+  // Attach local & remote streams to video elements whenever call state or modals change
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, videoCallStatus, showVideoCallModal]);
+
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
     }
-  }, [remoteStream, videoCallStatus]);
+  }, [remoteStream, videoCallStatus, showVideoCallModal]);
+
+  // Reset mobile soft-keyboard viewport scroll offset
+  useEffect(() => {
+    if (!window.visualViewport) return;
+    const handleViewportReset = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    };
+    window.visualViewport.addEventListener('resize', handleViewportReset);
+    return () => window.visualViewport.removeEventListener('resize', handleViewportReset);
+  }, []);
 
   // After capturedPhoto state is set, the drawCanvasRef is now in the DOM — load the photo onto it
   useEffect(() => {
@@ -2299,6 +2316,7 @@ function Chat() {
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
+                    onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
                     placeholder="Type a message..."
                     className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-full sm:rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     onKeyDown={(e) => {
