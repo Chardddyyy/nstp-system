@@ -49,49 +49,31 @@ async function apiCall(endpoint, options) {
 
 // Auth
 export async function loginUser(email, password) {
-  const cleanEmail = String(email).trim().toLowerCase();
-
-  // Fast 2.5s timeout so mobile users don't wait for Render cold starts
-  const fetchPromise = apiCall('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email: email, password: password })
-  });
-
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('COLD_START_TIMEOUT')), 2500)
-  );
-
   try {
-    return await Promise.race([fetchPromise, timeoutPromise]);
+    const res = await apiCall('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: email, password: password })
+    });
+    if (res && res.token) {
+      localStorage.setItem('nstp_token', res.token);
+    }
+    return res;
   } catch (err) {
-    // If Render server is sleeping (COLD_START_TIMEOUT) or network is slow/offline
-    if (err.message === 'COLD_START_TIMEOUT' || err.name === 'TypeError' || err.message?.includes('fetch') || !err.status) {
+    // Fallback ONLY if server is completely offline / unreachable
+    if (err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('NetworkError') || !err.status) {
+      const cleanEmail = String(email).trim().toLowerCase();
       if (cleanEmail === 'admin@cvsu.edu.ph' && password === 'admin123') {
         const adminUser = { id: 1, name: 'System Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'All' };
         const demoToken = 'demo-jwt-admin-token';
         localStorage.setItem('nstp_token', demoToken);
         return { token: demoToken, user: adminUser };
       }
-      
       if ((cleanEmail === 'instructor@cvsu.edu.ph' || cleanEmail.includes('instructor')) && (password === 'instructor123' || password === 'admin123')) {
         const instUser = { id: 2, name: 'Prof. Juan Dela Cruz', email: cleanEmail, role: 'instructor', department: 'CWTS' };
         const demoToken = 'demo-jwt-instructor-token';
         localStorage.setItem('nstp_token', demoToken);
         return { token: demoToken, user: instUser };
       }
-
-      // Check local registered users in localStorage
-      try {
-        const localUsers = JSON.parse(localStorage.getItem('nstp_users') || '[]');
-        const found = localUsers.find(u => u.email.toLowerCase() === cleanEmail);
-        if (found) {
-          const demoToken = 'demo-jwt-' + found.id;
-          localStorage.setItem('nstp_token', demoToken);
-          return { token: demoToken, user: found };
-        }
-      } catch (_) {}
-
-      throw new Error('Invalid credentials (admin@cvsu.edu.ph / admin123 or instructor@cvsu.edu.ph / instructor123)');
     }
     throw err;
   }
@@ -487,37 +469,21 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  // Calculate Total Registered Users in system
-  let totalStudents = 0;
-  try {
-    const students = JSON.parse(localStorage.getItem('nstp_students') || '[]');
-    if (Array.isArray(students)) totalStudents = students.length;
-  } catch (_) {}
-  
-  let totalPending = 0;
-  try {
-    const pending = JSON.parse(localStorage.getItem('nstp_pending_enrollments') || '[]');
-    if (Array.isArray(pending)) totalPending = pending.length;
-  } catch (_) {}
-
-  let totalAccounts = 2; // Default Admin + Instructor
-  try {
-    const users = JSON.parse(localStorage.getItem('nstp_users') || '[]');
-    if (Array.isArray(users) && users.length > 0) totalAccounts = users.length;
-  } catch (_) {}
-
-  let totalVisitors = parseInt(localStorage.getItem('nstp_total_visitors') || '15', 10);
-  if (!sessionStorage.getItem('nstp_visited')) {
-    sessionStorage.setItem('nstp_visited', 'true');
-    totalVisitors += 1;
-    localStorage.setItem('nstp_total_visitors', totalVisitors.toString());
+  // Unique Device Tracking for Total Visitors/Users
+  let deviceId = localStorage.getItem('nstp_unique_device_id');
+  if (!deviceId) {
+    deviceId = 'dev_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+    localStorage.setItem('nstp_unique_device_id', deviceId);
+    let count = parseInt(localStorage.getItem('nstp_unique_device_count') || '15', 10);
+    count += 1;
+    localStorage.setItem('nstp_unique_device_count', count.toString());
   }
 
-  const calculatedTotalUsers = totalStudents + totalPending + totalAccounts;
+  const totalVisitors = parseInt(localStorage.getItem('nstp_unique_device_count') || '16', 10);
 
   return {
     totalVisitors,
-    totalUsers: calculatedTotalUsers > 0 ? calculatedTotalUsers : totalVisitors,
+    totalUsers: totalVisitors,
     activeOnlineCount: Math.max(1, activeCount),
     activeUsers: []
   };

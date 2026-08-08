@@ -699,7 +699,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                     <input
                       ref={el => fieldRefs.current.lastName = el}
                       type="text"
@@ -714,7 +714,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
                     <input
                       ref={el => fieldRefs.current.firstName = el}
                       type="text"
@@ -729,7 +729,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
                     <input
                       type="text"
                       name="middleName"
@@ -743,7 +743,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student No. (9 digits) *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student No. (9 digits) *</label>
                     <input
                       ref={el => fieldRefs.current.studentId = el}
                       type="text"
@@ -758,7 +758,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
                     <input
                       ref={el => fieldRefs.current.street = el}
                       type="text"
@@ -777,7 +777,7 @@ function Enrollment() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                     <input
                       ref={el => fieldRefs.current.municipality = el}
                       type="text"
@@ -794,7 +794,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
                     <input
                       ref={el => fieldRefs.current.province = el}
                       type="text"
@@ -812,7 +812,7 @@ function Enrollment() {
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                  <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                   <input
                     ref={el => fieldRefs.current.email = el}
                     type="email"
@@ -841,7 +841,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                     <select
                       ref={el => fieldRefs.current.program = el}
                       name="program"
@@ -863,7 +863,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
                     <select
                       ref={el => fieldRefs.current.section = el}
                       name="section"
@@ -882,7 +882,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                     <select
                       ref={el => fieldRefs.current.yearLevel = el}
                       name="yearLevel"
@@ -986,7 +986,7 @@ function Enrollment() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birthdate *</label>
+                  <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birthdate *</label>
                   <input
                     ref={el => fieldRefs.current.birthMonth = el}
                     type="date"
@@ -1049,7 +1049,7 @@ function Enrollment() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Age *</span>
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Auto-computed</span>
                     </label>
@@ -1066,7 +1066,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
                     <select
                       ref={el => fieldRefs.current.civilStatus = el}
                       name="civilStatus"
@@ -1085,7 +1085,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                     <select
                       ref={el => fieldRefs.current.sex = el}
                       name="sex"
@@ -1102,7 +1102,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
                     <select
                       ref={el => fieldRefs.current.registeredVoter = el}
                       name="registeredVoter"
@@ -1121,7 +1121,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Height *</span>
                       {formData.height && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.height} cm</span>}
                     </label>
@@ -1162,7 +1162,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Weight *</span>
                       {formData.weight && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.weight} kg</span>}
                     </label>
@@ -1202,7 +1202,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                     <select
                       ref={el => fieldRefs.current.bloodType = el}
                       name="bloodType"
@@ -1229,7 +1229,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
                     <input
                       ref={el => fieldRefs.current.contactNumber = el}
                       type="text"
@@ -1269,7 +1269,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-3 gap-4 mt-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
                     <input
                       ref={el => fieldRefs.current.facebookAccount = el}
                       type="text"
@@ -1284,7 +1284,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                     <input
                       ref={el => fieldRefs.current.emergencyContact = el}
                       type="text"
@@ -1299,7 +1299,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                     <input
                       ref={el => fieldRefs.current.emergencyNumber = el}
                       type="tel"
