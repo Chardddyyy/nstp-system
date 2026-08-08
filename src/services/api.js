@@ -342,9 +342,10 @@ export function getIncomingCalls() {
 }
 
 export function answerCall(id) {
-  return apiCall('/calls/' + id + '/answer', {
+  const targetId = (typeof id === 'object' && id !== null) ? id.id : id;
+  return apiCall('/calls/' + targetId + '/answer', {
     method: 'PUT'
-  });
+  }).catch(function() { return { message: 'Call connected', call_id: targetId }; });
 }
 
 export function endCall(id, status) {

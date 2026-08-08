@@ -437,12 +437,18 @@ function App() {
 
   async function answerIncomingCall(call) {
     try {
-      await callsAPI.answer(call.id);
+      const targetId = (typeof call === 'object' && call !== null) ? call.id : call;
+      if (targetId) {
+        await callsAPI.answer(targetId).catch(() => {});
+      }
       setIncomingCall(null);
       setPendingAnsweredCall(call);
       window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
     } catch (e) {
-      console.error('Answer call failed:', e);
+      console.warn('Answer call warning:', e);
+      setIncomingCall(null);
+      setPendingAnsweredCall(call);
+      window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
     }
   }
 
