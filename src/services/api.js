@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3001/api';
+const API_URL = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+  ? 'https://nstp-system.onrender.com/api'
+  : 'http://localhost:3001/api';
 
 // basic api helper
 async function apiCall(endpoint, options) {
@@ -515,9 +517,6 @@ function getClientSideTelemetry() {
 }
 
 export function pingTelemetry(data) {
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return Promise.resolve(getClientSideTelemetry());
-  }
   return fetch(`${API_URL}/telemetry/ping`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -528,9 +527,6 @@ export function pingTelemetry(data) {
 }
 
 export function getTelemetryStats() {
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return Promise.resolve(getClientSideTelemetry());
-  }
   return fetch(`${API_URL}/telemetry/stats`)
     .then(function(res) { return res.ok ? res.json() : getClientSideTelemetry(); })
     .catch(function() { return getClientSideTelemetry(); });
