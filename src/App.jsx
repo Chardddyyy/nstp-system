@@ -47,6 +47,30 @@ function ProtectedRoute({ children, allowedRoles }) {
 
 const POLL_INTERVAL_MS = 8000;
 
+function safeSetStorage(key, value) {
+  try {
+    if (key === 'nstp_cached_messages' && value && typeof value === 'object') {
+      const sanitized = {};
+      for (const convId in value) {
+        if (Array.isArray(value[convId])) {
+          sanitized[convId] = value[convId].slice(-30).map(msg => {
+            const copy = { ...msg };
+            if (copy.imageUrl?.startsWith('data:')) copy.imageUrl = null;
+            if (copy.image_url?.startsWith('data:')) copy.image_url = null;
+            if (copy.file_url?.startsWith('data:')) copy.file_url = null;
+            return copy;
+          });
+        }
+      }
+      localStorage.setItem(key, JSON.stringify(sanitized));
+    } else {
+      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+    }
+  } catch (e) {
+    console.warn(`[Storage] Storage quota exceeded for ${key}, skipping local cache:`, e);
+  }
+}
+
 function getNotificationStorageKey(role) {
   return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
 }
@@ -314,7 +338,7 @@ function App() {
 
       if (conversationsData && Array.isArray(conversationsData)) {
         setConversations(conversationsData);
-        localStorage.setItem('nstp_cached_conversations', JSON.stringify(conversationsData));
+        safeSetStorage('nstp_cached_conversations', conversationsData);
       }
 
       let pending = pendingEnrollments;
@@ -356,7 +380,7 @@ function App() {
 
   useEffect(() => {
     if (!user) return;
-    localStorage.setItem(getNotificationStorageKey(user.role), JSON.stringify(notifications));
+    safeSetStorage(getNotificationStorageKey(user.role), notifications);
   }, [notifications, user]);
 
   // Real-time polling while logged in
@@ -476,7 +500,7 @@ function App() {
     try {
       const userData = await usersAPI.getMe();
       setUser(userData);
-      localStorage.setItem('nstp_cached_user', JSON.stringify(userData));
+      safeSetStorage('nstp_cached_user', userData);
       setLoading(false);
       await loadAllData(userData);
     } catch (error) {
@@ -509,7 +533,7 @@ function App() {
 
       if (conversationsData && Array.isArray(conversationsData)) {
         setConversations(conversationsData);
-        localStorage.setItem('nstp_cached_conversations', JSON.stringify(conversationsData));
+        safeSetStorage('nstp_cached_conversations', conversationsData);
 
         const messageResults = await Promise.all(
           conversationsData.map(conv =>
@@ -525,7 +549,7 @@ function App() {
             validResults.forEach(r => {
               if (r.msgs && Array.isArray(r.msgs)) next[r.id] = r.msgs;
             });
-            localStorage.setItem('nstp_cached_messages', JSON.stringify(next));
+            safeSetStorage('nstp_cached_messages', next);
             return next;
           });
         }
@@ -553,8 +577,8 @@ function App() {
       const response = await authAPI.login(email, password);
       if (!response.token) return { success: false, message: 'Invalid server response' };
       window.__nstp_session_expired__ = false;
-      localStorage.setItem('nstp_token', response.token);
-      localStorage.setItem('nstp_cached_user', JSON.stringify(response.user));
+      safeSetStorage('nstp_token', response.token);
+      safeSetStorage('nstp_cached_user', response.user);
       setUser(response.user);
       setLoading(false);
       await loadAllData(response.user);

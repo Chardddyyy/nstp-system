@@ -231,7 +231,7 @@ function Chat() {
     // Mark conversation as read
     setReadConversations(prev => {
       const updated = { ...prev, [id]: Date.now() };
-      localStorage.setItem('nstp_read_conversations', JSON.stringify(updated));
+      try { localStorage.setItem('nstp_read_conversations', JSON.stringify(updated)); } catch {}
       return updated;
     });
 
