@@ -1,6 +1,8 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
+const fs = require('fs');
+
 function getDbConfig(options) {
   options = options || {};
   var config = {
@@ -11,6 +13,17 @@ function getDbConfig(options) {
   };
   if (options.includeDatabase !== false) {
     config.database = process.env.DB_NAME || 'nstp_system';
+  }
+  if (process.env.DB_SSL === 'true' || (process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud.com'))) {
+    const caPath = path.join(__dirname, 'ca.pem');
+    if (fs.existsSync(caPath)) {
+      config.ssl = {
+        ca: fs.readFileSync(caPath),
+        rejectUnauthorized: false
+      };
+    } else {
+      config.ssl = { rejectUnauthorized: false };
+    }
   }
   return config;
 }
