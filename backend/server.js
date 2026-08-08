@@ -15,14 +15,9 @@ var fs = require('fs');
 var app = express();
 var PORT = process.env.PORT || 3001;
 
-// ── Security: fail fast if JWT secret is the known-weak default ──────────────
-var JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET || JWT_SECRET === 'nstp-secret-key-change-in-production' || JWT_SECRET.length < 32) {
-  console.warn('[SECURITY] JWT_SECRET is missing or too weak. Using a generated fallback for this session. Set a strong 64-char random secret in backend/.env before deploying.');
-  // Deterministic per-process secret so restarts during dev don't immediately log everyone out
-  JWT_SECRET = require('crypto').randomBytes(64).toString('hex');
-}
-var JWT_EXPIRY = '8h'; // was 30d — reduced to 8 hours for security
+// ── Security: JWT Secret configuration ──────────────────────────────────────
+var JWT_SECRET = process.env.JWT_SECRET || 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
+var JWT_EXPIRY = '30d';
 
 // ── Helmet: sets 15+ security headers ────────────────────────────────────────
 app.use(helmet({

@@ -424,6 +424,8 @@ function App() {
   useEffect(() => {
     function onSessionExpired() {
       window.__nstp_session_expired__ = true;
+      localStorage.removeItem('nstp_token');
+      localStorage.removeItem('nstp_cached_user');
       const banner = document.createElement('div');
       banner.id = 'session-expired-banner';
       banner.style.cssText = [
@@ -439,6 +441,7 @@ function App() {
       }, 5000);
       setUser(null);
       setLoading(false);
+      window.location.hash = '#/login';
     }
     window.addEventListener('nstp-session-expired', onSessionExpired);
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
