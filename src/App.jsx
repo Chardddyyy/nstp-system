@@ -58,6 +58,38 @@ function App() {
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState({});
   const [archivedYears, setArchivedYears] = useState([]);
+
+  // Live Auto-Update & Auto-Restart Detection
+  useEffect(() => {
+    let currentVersion = null;
+    const versionUrl = `${BASE_PATH}version.json?t=${Date.now()}`;
+
+    // Fetch initial version
+    fetch(versionUrl)
+      .then(res => res.json())
+      .then(data => { if (data?.version) currentVersion = data.version; })
+      .catch(() => {});
+
+    const checkInterval = setInterval(() => {
+      fetch(`${BASE_PATH}version.json?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data?.version && currentVersion && data.version !== currentVersion) {
+            console.log('⚡ New system update detected:', data.version, 'Auto-restarting...');
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#059669;color:#fff;text-align:center;padding:12px 16px;font-weight:bold;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+            banner.textContent = '⚡ System Update Deployed! Auto-restarting webpage...';
+            document.body.appendChild(banner);
+            setTimeout(() => {
+              window.location.reload(true);
+            }, 1200);
+          }
+        })
+        .catch(() => {});
+    }, 10000);
+
+    return () => clearInterval(checkInterval);
+  }, []);
   const [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
   const [viewingArchive, setViewingArchive] = useState(false);
   const [archiveViewData, setArchiveViewData] = useState(null);
