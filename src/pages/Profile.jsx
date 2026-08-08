@@ -257,10 +257,10 @@ function Profile() {
       setIsEditing(false);
       setShowAvatarSelector(false);
       setNotification({ type: 'success', message: 'Profile updated successfully!' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } catch (_error) {
       setNotification({ type: 'error', message: 'Failed to save profile. Please try again.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } finally {
       setIsSaving(false);
     }
@@ -364,12 +364,12 @@ function Profile() {
   const handleUpdateInstructor = async () => {
     if (!editInstructorForm.name.trim() || !editInstructorForm.email.trim()) {
       setNotification({ type: 'error', message: 'Name and email are required.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     if (editInstructorForm.newPassword && editInstructorForm.newPassword.length < 6) {
       setNotification({ type: 'error', message: 'New password must be at least 6 characters.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     setIsSavingInstructor(true);
@@ -385,10 +385,10 @@ function Profile() {
       setShowEditInstructorModal(false);
       setEditingInstructor(null);
       setNotification({ type: 'success', message: `Instructor account "${updated.name}" updated successfully.` });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
       setNotification({ type: 'error', message: error?.message || 'Failed to update instructor.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } finally {
       setIsSavingInstructor(false);
     }
@@ -404,17 +404,17 @@ function Profile() {
   const handleAddInstructor = async () => {
     if (!instructorForm.name.trim() || !instructorForm.email.trim() || !instructorForm.password) {
       setNotification({ type: 'error', message: 'Name, email, and password are required.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     if (instructorForm.password !== instructorForm.confirmPassword) {
       setNotification({ type: 'error', message: 'Passwords do not match.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     if (instructorForm.password.length < 6) {
       setNotification({ type: 'error', message: 'Password must be at least 6 characters.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     setIsAddingInstructor(true);
@@ -432,10 +432,10 @@ function Profile() {
       setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
       setNotification({ type: 'success', message: `"${created.name}" added and joined the All Instructors group.` });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
       setNotification({ type: 'error', message: error?.message || 'Failed to add instructor.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } finally {
       setIsAddingInstructor(false);
     }
@@ -448,10 +448,10 @@ function Profile() {
       await usersAPI.delete(id);
       setInstructors(prev => prev.filter(i => i.id !== id));
       setNotification({ type: 'success', message: `Instructor "${name}" deleted.` });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
       setNotification({ type: 'error', message: error?.message || 'Failed to delete instructor.' });
-      setTimeout(() => setNotification(null), 3000);
+      setTimeout(() => setNotification(null), 1000);
     } finally {
       setDeletingInstructorId(null);
     }
@@ -505,14 +505,14 @@ function Profile() {
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Centered notification */}
         {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
+            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
               {notification.type === 'success'
-                ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1 font-semibold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-                <X className="w-4 h-4" />
+                ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
+              <span className="flex-1 font-bold">{notification.message}</span>
+              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

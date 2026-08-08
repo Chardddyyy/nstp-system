@@ -169,7 +169,7 @@ function Chat() {
       // Default group avatar
       const groupName = conversation.groupName || conversation.group_name || conversation.name || 'G';
       return (
-        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm shrink-0">
           {groupName.charAt(0).toUpperCase()}
         </div>
       );
@@ -177,11 +177,11 @@ function Chat() {
 
     // Show combined avatars for group chats - display up to 3 avatars in a cluster
     return (
-      <div className="w-14 h-14 relative flex items-center justify-center">
+      <div className="w-9 h-9 sm:w-10 sm:h-10 relative flex items-center justify-center shrink-0">
         {participantUsers.slice(0, 3).map((participant, index) => {
           const positions = [
-            { top: '0px', left: '3px' },
-            { top: '0px', right: '3px' },
+            { top: '0px', left: '1px' },
+            { top: '0px', right: '1px' },
             { bottom: '0px', left: '50%', transform: 'translateX(-50%)' }
           ];
           const pos = positions[index] || { top: '0px', left: '0px' };
@@ -192,7 +192,7 @@ function Chat() {
                 key={participant?.id || index}
                 src={participant.profilePicture}
                 alt={participant?.name || 'User'}
-                className="absolute w-7 h-7 rounded-full border-2 border-white shadow-sm object-cover"
+                className="absolute w-5 h-5 rounded-full border border-white shadow-xs object-cover"
                 style={pos}
                 title={participant?.name || 'User'}
               />
@@ -203,7 +203,7 @@ function Chat() {
           return (
             <div
               key={participant?.id || index}
-              className={`absolute w-7 h-7 ${avatar.color} rounded-full flex items-center justify-center text-xs border-2 border-white shadow-sm`}
+              className={`absolute w-5 h-5 ${avatar.color} rounded-full flex items-center justify-center text-[10px] border border-white shadow-xs`}
               style={pos}
               title={participant?.name || 'User'}
             >
@@ -212,7 +212,7 @@ function Chat() {
           );
         })}
         {(conversation.participants?.length > 3 || conversation.participantDetails?.length > 3) && (
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center text-[9px] text-white border border-white shadow-sm">
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gray-600 rounded-full flex items-center justify-center text-[8px] text-white border border-white shadow-xs">
             +{(conversation.participants?.length || conversation.participantDetails?.length || 0) - 3}
           </div>
         )}
@@ -1580,13 +1580,13 @@ function Chat() {
         <img
           src={u.profilePicture}
           alt="Profile"
-          className="w-14 h-14 object-cover rounded-full"
+          className="w-9 h-9 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs shrink-0"
         />
       );
     }
     const avatar = AVATAR_OPTIONS[u?.avatar || 'default'] || AVATAR_OPTIONS.default;
     return (
-      <div className={`w-14 h-14 ${avatar.color} rounded-full flex items-center justify-center text-2xl`}>
+      <div className={`w-9 h-9 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-sm sm:text-base shadow-xs shrink-0`}>
         {avatar.icon}
       </div>
     );
@@ -2142,7 +2142,7 @@ function Chat() {
                               return (
                                 <>
                                   <span>{messageTime}</span>
-                                  {message.edited && <span className="ml-1">(edited)</span>}
+                                  {Boolean(message.edited) && <span className="ml-1">(edited)</span>}
                                 </>
                               );
                             })()}

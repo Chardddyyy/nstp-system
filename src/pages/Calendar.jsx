@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon, Plus, X,
-  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle
+  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
@@ -331,14 +331,17 @@ function Calendar() {
                 <div
                   key={index}
                   className={`p-1 sm:p-1.5 border rounded transition-colors overflow-hidden ${
-                    !day ? 'border-transparent' : past ? 'bg-gray-100 border-gray-200 cursor-not-allowed opacity-50' : 'hover:bg-gray-50 cursor-pointer border-gray-200'
+                    !day ? 'border-transparent' : past ? 'bg-gray-100/80 border-gray-200 hover:bg-emerald-50/50 cursor-pointer opacity-80' : 'hover:bg-gray-50 cursor-pointer border-gray-200'
                   } ${isToday ? '!bg-blue-50 !border-blue-300' : ''}`}
-                  onClick={() => day && !past && setSelectedDate(day)}
+                  onClick={() => day && setSelectedDate(day)}
                 >
                   {day && (
                     <>
-                      <div className={`text-xs font-semibold mb-0.5 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
-                        {day}
+                      <div className={`text-xs font-semibold mb-0.5 flex items-center justify-between ${isToday ? 'text-blue-600' : past ? 'text-gray-500' : 'text-gray-700'}`}>
+                        <span>{day}</span>
+                        {past && dayEvents.length > 0 && (
+                          <span className="text-[9px] text-gray-400 font-normal">Past</span>
+                        )}
                       </div>
                       <div className="space-y-0.5 hidden sm:block">
                         {dayEvents.slice(0, 2).map((event, idx) => (
@@ -347,9 +350,11 @@ function Calendar() {
                             className={`text-[10px] px-1 py-0.5 rounded truncate ${
                               event.type === 'holiday'
                                 ? 'bg-red-100 text-red-700'
-                                : 'bg-green-100 text-green-700'
+                                : past
+                                  ? 'bg-gray-200/90 text-gray-700 border border-gray-300/60'
+                                  : 'bg-green-100 text-green-700'
                             }`}
-                            title={event.title}
+                            title={`${event.title}${past ? ' (Past Event - Read Only)' : ''}`}
                           >
                             {event.title}
                           </div>
@@ -366,7 +371,7 @@ function Calendar() {
                             <span
                               key={idx}
                               className={`w-1.5 h-1.5 rounded-full inline-block ${
-                                event.type === 'holiday' ? 'bg-red-400' : 'bg-green-400'
+                                event.type === 'holiday' ? 'bg-red-400' : past ? 'bg-gray-400' : 'bg-green-400'
                               }`}
                             />
                           ))}
@@ -384,88 +389,122 @@ function Calendar() {
         {/* Day Events Modal */}
         {selectedDate && (
           <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in"
             onClick={() => setSelectedDate(null)}
           >
             <div
-              className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden border border-gray-100"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Read-Only Notice Banner for Past Days */}
+              {isPastDay(selectedDate) && (
+                <div className="bg-amber-50 border-b border-amber-200/80 px-4 py-2 text-[11px] font-bold text-amber-900 flex items-center justify-between shrink-0">
+                  <span className="flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    Past Event Record (Read-Only)
+                  </span>
+                  <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase font-black">View Only</span>
+                </div>
+              )}
+
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">
+                  <h3 className="text-base sm:text-lg font-black text-gray-900">
                     {currentDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).replace(/\d+,/, `${selectedDate},`)}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">
                     {getEventsForDate(selectedDate).length === 0
-                      ? 'No events'
-                      : `${getEventsForDate(selectedDate).length} event${getEventsForDate(selectedDate).length !== 1 ? 's' : ''}`}
+                      ? 'No scheduled events on this day'
+                      : `${getEventsForDate(selectedDate).length} event${getEventsForDate(selectedDate).length !== 1 ? 's' : ''} listed`}
                   </p>
                 </div>
                 <button type="button"
-                  
                   onClick={() => setSelectedDate(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
 
               {/* Event list */}
-              <div className="overflow-y-auto flex-1 px-5 py-3 space-y-3">
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
                 {getEventsForDate(selectedDate).length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-6">No events on this day.</p>
+                  <p className="text-gray-400 text-xs font-semibold text-center py-8">No events recorded for this date.</p>
                 ) : (
                   getEventsForDate(selectedDate).map((event, idx) => (
-                    <div key={idx} className="flex items-start justify-between gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${event.type === 'holiday' ? 'bg-red-500' : 'bg-green-500'}`} />
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-800">{event.title}</p>
-                          {event.description && (
-                            <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{event.description}</p>
-                          )}
-                          {event.createdBy && (
-                            <p className="text-xs text-gray-400 mt-1">Added by {event.createdBy}</p>
-                          )}
+                    <div key={idx} className={`p-3.5 rounded-2xl border transition-all ${
+                      event.type === 'holiday'
+                        ? 'bg-red-50/60 border-red-200/80'
+                        : isPastDay(selectedDate)
+                          ? 'bg-gray-50 border-gray-200'
+                          : 'bg-emerald-50/60 border-emerald-200/80'
+                    }`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                            event.type === 'holiday' ? 'bg-red-500' : isPastDay(selectedDate) ? 'bg-gray-400' : 'bg-emerald-600'
+                          }`} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-xs sm:text-sm font-black text-gray-900">{event.title}</p>
+                              {isPastDay(selectedDate) && (
+                                <span className="text-[9px] bg-gray-200 text-gray-700 font-extrabold px-2 py-0.5 rounded-full uppercase">Past</span>
+                              )}
+                              {event.type === 'holiday' && (
+                                <span className="text-[9px] bg-red-100 text-red-700 font-extrabold px-2 py-0.5 rounded-full uppercase">Official Holiday</span>
+                              )}
+                            </div>
+                            {event.description && (
+                              <p className="text-xs text-gray-600 mt-1.5 whitespace-pre-line font-medium leading-relaxed">{event.description}</p>
+                            )}
+                            {event.createdBy && (
+                              <p className="text-[11px] text-gray-400 font-semibold mt-1.5">Organized by {event.createdBy}</p>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Allow delete ONLY if event is NOT in the past */}
+                        {event.createdBy && isAdmin && !isPastDay(selectedDate) && (
+                          <button type="button"
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="flex-shrink-0 p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+                            title="Delete event"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      {event.createdBy && isAdmin && (
-                        <button type="button"
-                          
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                          title="Delete event"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
                   ))
                 )}
               </div>
 
-              {/* Footer — admin can add event for this date */}
-              {isAdmin && (
-                <div className="px-5 py-3 border-t border-gray-100">
-                  <button type="button"
-                    
-                    disabled={isPastDay(selectedDate)}
-                    onClick={() => {
-                      const pad = (n) => String(n).padStart(2, '0');
-                      const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(selectedDate)}`;
-                      setNewEvent({ title: '', date: dateStr, description: '' });
-                      setSelectedDate(null);
-                      setShowAddEventModal(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {isPastDay(selectedDate) ? 'Cannot Add Event to Past Date' : 'Add Event for this Day'}
-                  </button>
-                </div>
-              )}
+              {/* Footer Actions */}
+              <div className="px-5 py-3.5 border-t border-gray-100 bg-gray-50/80 shrink-0">
+                {isPastDay(selectedDate) ? (
+                  <p className="text-xs text-gray-500 font-medium text-center flex items-center justify-center gap-1.5 py-1">
+                    <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Past events are locked for record-keeping and cannot be modified or deleted.</span>
+                  </p>
+                ) : (
+                  isAdmin && (
+                    <button type="button"
+                      onClick={() => {
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(selectedDate)}`;
+                        setNewEvent({ title: '', date: dateStr, description: '' });
+                        setSelectedDate(null);
+                        setShowAddEventModal(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Event for this Day
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           </div>
         )}

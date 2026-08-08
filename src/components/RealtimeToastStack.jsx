@@ -12,27 +12,26 @@ function RealtimeToastStack() {
   if (PUBLIC_ROUTES.includes(location.pathname)) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed inset-0 flex flex-col items-center justify-center z-[9999] pointer-events-none p-4 gap-2">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto bg-white border border-green-200 shadow-xl rounded-xl p-4 flex gap-3 toast-enter"
+          className="pointer-events-auto bg-emerald-900/95 text-white border border-emerald-500/40 shadow-2xl rounded-2xl px-4 py-3 flex items-center gap-3 max-w-xs w-auto animate-fade-in backdrop-blur-md"
           role="alert"
         >
-          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-            <Bell className="w-5 h-5 text-green-700" />
+          <div className="flex-shrink-0 w-6 h-6 bg-amber-400 text-emerald-950 rounded-lg flex items-center justify-center font-bold">
+            <Bell className="w-3.5 h-3.5" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-sm">{toast.title}</p>
-            <p className="text-gray-600 text-sm mt-0.5 line-clamp-2">{toast.message}</p>
+            <p className="font-extrabold text-xs text-white truncate">{toast.title}</p>
+            <p className="text-emerald-100 text-[11px] font-medium truncate mt-0.5">{toast.message}</p>
           </div>
           <button type="button"
-            
             onClick={() => dismissToast(toast.id)}
-            className="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1"
+            className="flex-shrink-0 text-emerald-200 hover:text-white p-1 cursor-pointer"
             aria-label="Dismiss"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       ))}

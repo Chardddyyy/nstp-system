@@ -270,24 +270,24 @@ function StudentManagement() {
     const idLen = formData.studentId.replace(/\D/g, '').length;
     if (idLen !== 9) {
       setNotification({ type: 'error', message: `Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     const contactLen = formData.contactNumber.replace(/\D/g, '');
     if (contactLen.length !== 11) {
       setNotification({ type: 'error', message: `Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     const emerLen = formData.emergencyNumber.replace(/\D/g, '');
     if (emerLen.length !== 11) {
       setNotification({ type: 'error', message: `Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
     if (!formData.email.includes('@')) {
       setNotification({ type: 'error', message: 'Email address must contain "@" — e.g. student@cvsu.edu.ph.' });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 1000);
       return;
     }
 
@@ -316,6 +316,8 @@ function StudentManagement() {
       sex: formData.sex || formData.gender,
       year: formData.yearLevel || formData.year,
       yearLevel: formData.yearLevel || formData.year,
+      registeredVoter: formData.registeredVoter || 'No',
+      isVoter: formData.registeredVoter || 'No',
       emergencyName: cleanEmergencyContact,
       emergencyContact: cleanEmergencyContact,
     };
@@ -336,7 +338,7 @@ function StudentManagement() {
             ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
             : raw || 'Failed to add student. Please try again.';
           setNotification({ type: 'error', message: msg });
-          setTimeout(() => setNotification(null), 6000);
+          setTimeout(() => setNotification(null), 1000);
         } finally {
           setIsAddingStudent(false);
         }
@@ -353,6 +355,13 @@ function StudentManagement() {
   const sourceStudents = viewingArchive && archiveViewData?.studentData
     ? archiveViewData.studentData
     : students;
+
+  // Derive active view student dynamically from sourceStudents so View Modal ALWAYS auto-refreshes in real-time
+  const currentViewStudent = useMemo(() => {
+    if (!viewStudent) return null;
+    const found = sourceStudents.find(s => (s.id && String(s.id) === String(viewStudent.id)) || (s.studentId && String(s.studentId) === String(viewStudent.studentId)));
+    return found || viewStudent;
+  }, [viewStudent, sourceStudents]);
 
   // Filter students based on search (across ALL student fields!), department, and course
   const filteredStudents = useMemo(() => {
@@ -418,11 +427,16 @@ function StudentManagement() {
         sex: formData.sex || formData.gender,
         year: formData.yearLevel || formData.year,
         yearLevel: formData.yearLevel || formData.year,
+        registeredVoter: formData.registeredVoter || 'No',
+        isVoter: formData.registeredVoter || 'No',
         emergencyName: cleanEmergencyContact,
         emergencyContact: cleanEmergencyContact,
       };
 
-      await updateStudent(selectedStudent.id, payload);
+      const updatedRes = await updateStudent(selectedStudent.id, payload);
+      if (updatedRes) {
+        setViewStudent(updatedRes);
+      }
       setShowEditModal(false);
       setSelectedStudent(null);
       resetFormData();
@@ -434,7 +448,7 @@ function StudentManagement() {
         ? `Student ID "${formData.studentId}" is already taken. Use a different ID.`
         : raw || 'Failed to update student. Please try again.';
       setNotification({ type: 'error', message: msg });
-      setTimeout(() => setNotification(null), 5000);
+      setTimeout(() => setNotification(null), 1000);
     } finally {
       setIsEditingStudent(false);
     }
@@ -621,14 +635,14 @@ function StudentManagement() {
 
         {/* Centered notification */}
         {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
+            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
               {notification.type === 'success'
-                ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1 font-semibold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-                <X className="w-4 h-4" />
+                ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+                : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
+              <span className="flex-1 font-bold">{notification.message}</span>
+              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1523,8 +1537,8 @@ function StudentManagement() {
           </div>
         )}
 
-        {/* View Student Modal */}
-        {showViewModal && viewStudent && (
+        {/* View Student Modal - Automatically syncs and refreshes with currentViewStudent */}
+        {showViewModal && currentViewStudent && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeViewModal}>
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
@@ -1548,24 +1562,24 @@ function StudentManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID Number</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.studentId}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.studentId}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Last Name</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
-                        {viewStudent.lastName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[0]?.trim() : viewStudent.name?.split(' ').slice(-1)[0]) || '-'}
+                        {currentViewStudent.lastName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[0]?.trim() : currentViewStudent.name?.split(' ').slice(-1)[0]) || '-'}
                       </span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">First Name</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
-                        {viewStudent.firstName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[1]?.trim().split(' ')[0] : viewStudent.name?.split(' ')[0]) || '-'}
+                        {currentViewStudent.firstName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ')[0] : currentViewStudent.name?.split(' ')[0]) || '-'}
                       </span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Middle Name</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
-                        {viewStudent.middleName || (viewStudent.name?.includes(',') ? viewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (viewStudent.name?.split(' ').length > 2 ? viewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '(None)'}
+                        {currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '(None)'}
                       </span>
                     </div>
                   </div>
@@ -1573,18 +1587,18 @@ function StudentManagement() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Email Address</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{viewStudent.email || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{currentViewStudent.email || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.contactNumber || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.contactNumber || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Facebook Profile Link</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">
-                        {viewStudent.facebookAccount ? (
-                          <a href={viewStudent.facebookAccount.startsWith('http') ? viewStudent.facebookAccount : `https://${viewStudent.facebookAccount}`} target="_blank" rel="noreferrer" className="text-emerald-700 underline hover:text-emerald-900">
-                            {viewStudent.facebookAccount}
+                        {currentViewStudent.facebookAccount ? (
+                          <a href={currentViewStudent.facebookAccount.startsWith('http') ? currentViewStudent.facebookAccount : `https://${currentViewStudent.facebookAccount}`} target="_blank" rel="noreferrer" className="text-emerald-700 underline hover:text-emerald-900">
+                            {currentViewStudent.facebookAccount}
                           </a>
                         ) : '-'}
                       </span>
@@ -1595,19 +1609,19 @@ function StudentManagement() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Street / Barangay</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.street || '-'}</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.street || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Municipality / City</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.municipality || '-'}</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.municipality || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Province</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{viewStudent.province || '-'}</span>
+                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.province || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-1 sm:col-span-3">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Full Combined Address</span>
-                      <span className="font-bold text-xs text-gray-900 mt-0.5 block">{viewStudent.address || viewStudent.homeAddress || `${viewStudent.street || ''}, ${viewStudent.municipality || ''}, ${viewStudent.province || ''}`}</span>
+                      <span className="font-bold text-xs text-gray-900 mt-0.5 block">{currentViewStudent.address || currentViewStudent.homeAddress || `${currentViewStudent.street || ''}, ${currentViewStudent.municipality || ''}, ${currentViewStudent.province || ''}`}</span>
                     </div>
                   </div>
                 </div>
@@ -1621,19 +1635,19 @@ function StudentManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.program || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.program || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Section</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.section || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.section || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{viewStudent.yearLevel || viewStudent.year || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.yearLevel || currentViewStudent.year || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Department</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{viewStudent.department || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{currentViewStudent.department || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -1647,49 +1661,55 @@ function StudentManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Month</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthMonth || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthMonth || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Day</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthDay || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthDay || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Year</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.birthYear || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthYear || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Calculated Age</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.age || '-'} yrs old</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.age || '-'} yrs old</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Sex / Gender</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.sex || viewStudent.gender || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.sex || currentViewStudent.gender || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.civilStatus || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.civilStatus || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Registered Voter Status</span>
-                      <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-1 ${
-                        (viewStudent.registeredVoter === 'Yes' || viewStudent.isVoter === 'Yes')
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : 'bg-amber-100 text-amber-900 border border-amber-300'
-                      }`}>
-                        {viewStudent.registeredVoter || viewStudent.isVoter ? `${viewStudent.registeredVoter || viewStudent.isVoter} (Voter)` : '-'}
-                      </span>
+                      {(() => {
+                        const raw = currentViewStudent.registeredVoter || currentViewStudent.isVoter || currentViewStudent.voter;
+                        const isYes = String(raw || '').trim().toLowerCase() === 'yes';
+                        return (
+                          <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-1 ${
+                            isYes
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {isYes ? 'Yes (Registered Voter)' : 'No (Not Registered)'}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.height ? `${viewStudent.height}` : '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.height ? `${currentViewStudent.height}` : '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.weight ? `${viewStudent.weight}` : '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.weight ? `${currentViewStudent.weight}` : '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{viewStudent.bloodType || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.bloodType || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -1703,17 +1723,17 @@ function StudentManagement() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Person</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyContact || viewStudent.emergencyName || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{viewStudent.emergencyNumber || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{currentViewStudent.emergencyNumber || '-'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Submitted Registration Form / Photo Document if present */}
-                {(viewStudent.registrationPhoto || viewStudent.photoUrl) && (
+                {(currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) && (
                   <div className="bg-blue-50/60 p-3.5 sm:p-5 rounded-2xl border border-blue-200/60 shadow-2xs">
                     <h4 className="text-xs sm:text-sm font-extrabold text-blue-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
                       <FileText className="w-4 h-4 text-blue-700" />
@@ -1721,14 +1741,14 @@ function StudentManagement() {
                     </h4>
                     <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-100">
                       <img
-                        src={viewStudent.registrationPhoto || viewStudent.photoUrl}
+                        src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
                         alt="Registration Proof"
                         className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-xs"
                       />
                       <div>
                         <p className="text-xs font-bold text-gray-900">Submitted Registration Document</p>
                         <a
-                          href={viewStudent.registrationPhoto || viewStudent.photoUrl}
+                          href={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
                           target="_blank"
                           rel="noreferrer"
                           className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline mt-1 inline-block"
@@ -1745,7 +1765,7 @@ function StudentManagement() {
               <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end gap-2.5">
                 <button type="button"
                   onClick={() => {
-                    const st = viewStudent;
+                    const st = currentViewStudent;
                     closeViewModal();
                     openEditModal(st);
                   }}

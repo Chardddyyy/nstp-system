@@ -107,6 +107,92 @@ function Enrollment() {
 
   const [registrationPhoto, setRegistrationPhoto] = useState(null);
   const photoInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+
+  // Live Camera Capture Modal State & WebRTC Refs
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' or 'user'
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const closeCameraModal = () => {
+    stopCameraStream();
+    setShowCameraModal(false);
+  };
+
+  const startLiveCamera = async (overrideFacing) => {
+    const mode = overrideFacing || facingMode;
+    stopCameraStream();
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (cameraInputRef.current) cameraInputRef.current.click();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      streamRef.current = stream;
+      setShowCameraModal(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(e => console.warn('Video play error:', e));
+        }
+      }, 100);
+    } catch (err) {
+      console.warn('Live camera access failed or fallback needed:', err);
+      // Fall back directly to native camera capture input
+      if (cameraInputRef.current) {
+        cameraInputRef.current.click();
+      }
+    }
+  };
+
+  const toggleCameraFacing = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    startLiveCamera(nextMode);
+  };
+
+  const capturePhotoFromCamera = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const MAX = 1200;
+    let w = video.videoWidth || 1280;
+    let h = video.videoHeight || 720;
+    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    setRegistrationPhoto(dataUrl);
+    if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+    closeCameraModal();
+  };
+
+  // Clean up camera stream on unmount
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   // True when there is saved progress from a previous session
   const hasSavedData = !!localStorage.getItem('enrollmentFormData');
@@ -143,6 +229,7 @@ function Enrollment() {
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
+    setTimeout(() => setToast(null), 1000);
   };
 
   const validateForm = () => {
@@ -502,12 +589,12 @@ function Enrollment() {
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
       {/* Toast notification */}
       {toast && (
-        <div className="fixed top-4 right-4 z-50 animate-bounce">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white font-semibold text-xs ${toast.type === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`}>
-            {toast.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-            <span className="flex-1">{toast.message}</span>
-            <button type="button" onClick={() => setToast(null)} className="text-white/80 hover:text-white flex-shrink-0 ml-1 cursor-pointer">
-              <X className="w-4 h-4" />
+        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
+          <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${toast.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
+            {toast.type === 'success' ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" /> : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
+            <span className="flex-1 font-bold">{toast.message}</span>
+            <button type="button" onClick={() => setToast(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -1278,6 +1365,15 @@ function Enrollment() {
                   className="hidden"
                 />
 
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+
                 {!registrationPhoto ? (
                   <div
                     className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${
@@ -1302,7 +1398,7 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => photoInputRef.current.click()}
+                        onClick={() => startLiveCamera()}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
@@ -1344,6 +1440,72 @@ function Enrollment() {
                 )}
                 {errors.registrationPhoto && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errors.registrationPhoto}</p>}
               </div>
+
+              {/* Live Camera Viewfinder Modal */}
+              {showCameraModal && (
+                <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+                  <div className="bg-emerald-950 rounded-3xl border border-emerald-800/80 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
+                    <div className="p-4 bg-emerald-900 flex items-center justify-between text-white border-b border-emerald-800">
+                      <div className="flex items-center gap-2">
+                        <Camera className="w-5 h-5 text-amber-400" />
+                        <h3 className="text-sm font-black">Scan / Take Photo of Registration Form</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={closeCameraModal}
+                        className="w-8 h-8 rounded-full bg-emerald-800 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="relative bg-black aspect-[4/3] flex items-center justify-center overflow-hidden">
+                      <video
+                        ref={videoRef}
+                        playsInline
+                        muted
+                        autoPlay
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Document Frame Guide Overlay */}
+                      <div className="absolute inset-4 sm:inset-6 border-2 border-dashed border-amber-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+                        <span className="text-[10px] bg-black/60 text-amber-300 font-bold px-2 py-1 rounded-md self-start">
+                          Align Registration Form within box
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-5 bg-emerald-950 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={toggleCameraFacing}
+                        className="p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+                        title="Switch Camera"
+                      >
+                        <SwitchCamera className="w-4 h-4 text-amber-400" />
+                        <span>Flip</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={capturePhotoFromCamera}
+                        className="flex-1 py-3 px-6 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black rounded-2xl shadow-lg transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Camera className="w-5 h-5" />
+                        <span>Capture Photo</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={closeCameraModal}
+                        className="p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer text-xs font-bold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Terms & Agreement Box */}
               <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-6 shadow-2xs">

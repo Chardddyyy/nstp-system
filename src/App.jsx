@@ -129,7 +129,7 @@ function App() {
 
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== item.id));
-    }, 6000);
+    }, 1000);
   }, []);
 
   const dismissToast = useCallback((toastId) => {
@@ -269,15 +269,14 @@ function App() {
   async function refreshLiveData() {
     if (!user || window.__nstp_session_expired__) return;
     try {
-      const [reportsData, conversationsData] = await Promise.all([
-        reportsAPI.getAll(),
-        conversationsAPI.getAll(),
+      const [reportsData, conversationsData, usersData] = await Promise.all([
+        reportsAPI.getAll().catch(() => []),
+        conversationsAPI.getAll().catch(() => []),
+        usersAPI.getAll().catch(() => [])
       ]);
       setReports(reportsData);
       setConversations(conversationsData);
-
-      if (!users.length) {
-        const usersData = await usersAPI.getAll();
+      if (usersData && usersData.length > 0) {
         setUsers(usersData);
       }
 

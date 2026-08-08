@@ -6,6 +6,7 @@ var helmet = require('helmet');
 var rateLimit = require('express-rate-limit');
 var pool = require('./config/database');
 var { getDbConfig } = require('./config/dbEnv');
+var { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
 
 var bcrypt = require('bcryptjs');
 var ExcelJS = require('exceljs');
@@ -215,6 +216,8 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN lastName VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN middleName VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN registeredVoter VARCHAR(20)',
+    'ALTER TABLE students ADD COLUMN registrationPhoto LONGTEXT NULL',
+    'ALTER TABLE students ADD COLUMN registration_photo LONGTEXT NULL',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -422,7 +425,12 @@ async function userCanAccessConversation(conversationId, userId) {
 app.post('/api/auth/login', async function(req, res) {
   // Rate-limit by IP to block brute-force attacks
   var ip = req.ip || (req.connection && req.connection.remoteAddress) || 'unknown';
-  var email = sanitizeStr(req.body.email, 255);
+  var rawEmail = sanitizeStr(req.body.email, 255);
+  if (!rawEmail) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+  var email = rawEmail.toLowerCase().trim();
+
   if (!checkLoginRateLimit(email)) {
     return res.status(429).json({ message: 'Too many failed attempts for this account. Try again in 15 minutes.' });
   }
@@ -430,7 +438,7 @@ app.post('/api/auth/login', async function(req, res) {
   try {
     var password = req.body.password;
 
-    if (!email || !password) {
+    if (!password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
     if (typeof password !== 'string' || password.length > 128) {
@@ -438,8 +446,8 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var result = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password FROM users WHERE email = ?',
-      [email]
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
+      [email, email + '@%', email]
     );
     var users = result[0];
 
@@ -949,10 +957,17 @@ app.get('/api/students/ched-export', authenticateToken, async (req, res) => {
 // Add student
 app.post('/api/students', authenticateToken, async (req, res) => {
   try {
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber, birthMonth, birthDay, birthYear } = req.body;
+    const {
+      studentId, name, email, department, section, semester, schoolYear, program, year, yearLevel,
+      contactNumber, address, gender, sex, birthDate, birthMonth, birthDay, birthYear,
+      age, civilStatus, bloodType, height, weight, facebookAccount,
+      emergencyName, emergencyContact, emergencyNumber,
+      firstName, lastName, middleName, registeredVoter, isVoter,
+      street, municipality, province, registrationPhoto, registration_photo
+    } = req.body;
 
     // Validate required fields
-    if (!studentId || !name || !department) {
+    if (!studentId || (!name && !lastName) || !department) {
       return res.status(400).json({ message: 'Missing required fields: studentId, name, department' });
     }
     if (!['CWTS', 'LTS', 'ROTC'].includes(department)) {
@@ -963,7 +978,6 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     }
 
     const n = (v) => (v === undefined || v === null || v === '') ? null : v;
-    // Build a valid DATE string only if all three parts are present and make a plausible date
     let safeBirthDate = n(birthDate);
     if (!safeBirthDate && n(birthMonth) && n(birthDay) && n(birthYear)) {
       const m = parseInt(birthMonth, 10);
@@ -974,12 +988,34 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       }
     }
 
+    const finalName = name || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
+    const finalGender = n(gender) || n(sex);
+    const finalYear = n(yearLevel) || n(year);
+    const finalEmergency = n(emergencyContact) || n(emergencyName);
+    const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
+    const finalPhoto = n(registrationPhoto) || n(registration_photo);
+
     const [result] = await pool.execute(
-      'INSERT INTO students (studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyContact, emergencyNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber)]
+      `INSERT INTO students (
+        studentId, name, email, department, section, semester, schoolYear, program, year,
+        contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear,
+        age, civilStatus, bloodType, height, weight, facebookAccount,
+        emergencyContact, emergencyNumber,
+        firstName, lastName, middleName, registeredVoter,
+        street, municipality, province, registrationPhoto, registration_photo
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        studentId, finalName, n(email), department, n(section), n(semester), n(schoolYear), n(program), finalYear,
+        n(contactNumber), n(address), finalGender, safeBirthDate, n(birthMonth), n(birthDay), n(birthYear),
+        n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount),
+        finalEmergency, n(emergencyNumber),
+        n(firstName), n(lastName), n(middleName), finalVoter,
+        n(street), n(municipality), n(province), finalPhoto, finalPhoto
+      ]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
+    autoSaveToGDrive('Add_Student_' + studentId);
     res.status(201).json(students[0]);
   } catch (error) {
     console.error('Add student error:', error);
@@ -994,7 +1030,14 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { studentId, name, email, department, section, semester, schoolYear, program, year, contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear, age, civilStatus, bloodType, height, weight, facebookAccount, emergencyName, emergencyNumber } = req.body;
+    const {
+      studentId, name, email, department, section, semester, schoolYear, program, year, yearLevel,
+      contactNumber, address, gender, sex, birthDate, birthMonth, birthDay, birthYear,
+      age, civilStatus, bloodType, height, weight, facebookAccount,
+      emergencyName, emergencyContact, emergencyNumber,
+      firstName, lastName, middleName, registeredVoter, isVoter,
+      street, municipality, province, registrationPhoto, registration_photo
+    } = req.body;
 
     // Instructors: verify the target student belongs to their department
     if (req.user.role !== 'admin') {
@@ -1023,12 +1066,34 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    const finalGender = n(gender) || n(sex);
+    const finalYear = n(yearLevel) || n(year);
+    const finalEmergency = n(emergencyContact) || n(emergencyName);
+    const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
+    const finalPhoto = n(registrationPhoto) || n(registration_photo);
+
     await pool.execute(
-      'UPDATE students SET studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?, program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?, birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?, height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ? WHERE id = ?',
-      [studentId, name, n(email), department, n(section), n(semester), n(schoolYear), n(program), n(year), n(contactNumber), n(address), n(gender), safeBirthDate, n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount), n(emergencyName), n(emergencyNumber), id]
+      `UPDATE students SET
+         studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?,
+         program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?,
+         birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?,
+         height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
+         firstName = ?, lastName = ?, middleName = ?, registeredVoter = ?,
+         street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?
+       WHERE id = ?`,
+      [
+        studentId, name, n(email), department, n(section), n(semester), n(schoolYear),
+        n(program), finalYear, n(contactNumber), n(address), finalGender, safeBirthDate,
+        n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType),
+        n(height), n(weight), n(facebookAccount), finalEmergency, n(emergencyNumber),
+        n(firstName), n(lastName), n(middleName), finalVoter,
+        n(street), n(municipality), n(province), finalPhoto, finalPhoto,
+        id
+      ]
     );
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);
+    autoSaveToGDrive('Edit_Student_' + (studentId || id));
     res.json(students[0]);
   } catch (error) {
     console.error('Update student error:', error);
@@ -2637,8 +2702,9 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               age, civilStatus, height, weight,
               bloodType, facebookAccount, emergencyContact, emergencyNumber,
               street, municipality, province,
-              firstName, lastName, middleName, registeredVoter
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              firstName, lastName, middleName, registeredVoter,
+              registrationPhoto, registration_photo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               enrollment.studentId,
               enrollment.student_name,
@@ -2670,6 +2736,8 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               enrollment.lastName      || null,
               enrollment.middleName    || null,
               enrollment.registeredVoter || 'No',
+              enrollment.registration_photo || enrollment.registrationPhoto || null,
+              enrollment.registration_photo || enrollment.registrationPhoto || null,
             ]
           );
         }
@@ -3041,9 +3109,9 @@ async function startServer() {
     process.exit(1);
   }
 
-  app.listen(PORT, function() {
+  app.listen(PORT, '0.0.0.0', function() {
     console.log('Server running on port ' + PORT);
-    console.log('API available at http://localhost:' + PORT + '/api');
+    console.log('API available at http://localhost:' + PORT + '/api and http://127.0.0.1:' + PORT + '/api');
   });
 
   console.log('Running schema migrations...');

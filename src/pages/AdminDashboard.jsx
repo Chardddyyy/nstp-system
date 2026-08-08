@@ -116,7 +116,7 @@ function AdminDashboard() {
 
   const showNotif = (type, message) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 4000);
+    setTimeout(() => setNotification(null), 1000);
   };
 
   const showConfirm = (message, onConfirm) => {
@@ -380,14 +380,14 @@ function AdminDashboard() {
 
       {/* Centered notification toast */}
       {notification && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-          <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
+          <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
             {notification.type === 'success'
-              ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-            <span className="flex-1">{notification.message}</span>
-            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-              <X className="w-4 h-4" />
+              ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+              : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
+            <span className="flex-1 font-bold">{notification.message}</span>
+            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -500,24 +500,24 @@ function AdminDashboard() {
                 {/* Notification Dropdown Panel */}
                 {showNotifications && (
                   <div
-                    className="notification-dropdown absolute right-0 mt-3 w-[min(26rem,90vw)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
+                    className="notification-dropdown fixed sm:absolute inset-x-2 sm:inset-auto right-2 sm:right-0 mt-1 sm:mt-3 w-auto sm:w-80 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
                     onMouseDown={(e) => e.stopPropagation()}
                     onTouchStart={(e) => e.stopPropagation()}
                   >
-                    <div className="p-3.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-                      <div className="flex items-center space-x-2">
+                    <div className="px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/90">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <button type="button"
                           onClick={handleSelectAll}
                           title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                           className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
                           {selectedNotifications.length === (notifications || []).length && notifications.length > 0
-                            ? <CheckSquare className="w-4 h-4 text-emerald-600" />
-                            : <Square className="w-4 h-4" />}
+                            ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                            : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                         </button>
-                        <h3 className="font-extrabold text-xs sm:text-sm text-gray-900">Notifications ({unreadCount} new)</h3>
+                        <h3 className="font-extrabold text-[11px] sm:text-xs text-gray-900">Notifications ({unreadCount} new)</h3>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 sm:space-x-1.5">
                         <button type="button"
                           onClick={handleMarkAllRead}
                           disabled={
@@ -525,32 +525,32 @@ function AdminDashboard() {
                               ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
                               : (notifications || []).every(n => n.read)
                           }
-                          className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer"
+                          className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
                           title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
                         >
-                          <MailOpen className="w-4 h-4" />
+                          <MailOpen className="w-3.5 h-3.5" />
                         </button>
                         <button type="button"
                           onClick={handleDeleteSelected}
                           disabled={selectedNotifications.length === 0}
-                          className="text-rose-600 hover:text-rose-700 disabled:opacity-30 transition-colors cursor-pointer"
+                          className="text-rose-600 hover:text-rose-700 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
                           title="Delete selected"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <button type="button"
                           onClick={() => { setShowNotifications(false); setSelectedNotifications([]); }}
-                          className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                          className="text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                    <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
                       {(!notifications || notifications.length === 0) ? (
-                        <div className="p-6 text-center text-gray-400 text-xs font-medium">
-                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-800" />
+                        <div className="p-4 text-center text-gray-400 text-xs font-medium">
+                          <Bell className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-emerald-800" />
                           No notifications yet
                         </div>
                       ) : (
@@ -559,7 +559,7 @@ function AdminDashboard() {
                           return (
                             <div
                               key={n.id}
-                              className={`p-3 transition-colors flex items-start space-x-2.5 ${
+                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
                                 !n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
                               }`}
                             >
@@ -571,9 +571,9 @@ function AdminDashboard() {
                                 className="mt-0.5 shrink-0 text-gray-400 hover:text-emerald-600 cursor-pointer"
                               >
                                 {isSelected ? (
-                                  <CheckSquare className="w-4 h-4 text-emerald-600" />
+                                  <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
                                 ) : (
-                                  <Square className="w-4 h-4 text-gray-300" />
+                                  <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-300" />
                                 )}
                               </button>
                               <div
@@ -581,7 +581,7 @@ function AdminDashboard() {
                                 onClick={() => handleNotificationItemClick(n)}
                               >
                                 <div className="flex items-center justify-between gap-1">
-                                  <h4 className={`text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
                                     {n.title}
                                   </h4>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -594,10 +594,10 @@ function AdminDashboard() {
                                         <MailOpen className="w-3 h-3" />
                                       </button>
                                     )}
-                                    <span className="text-[10px] text-gray-400 font-medium">{n.time}</span>
+                                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">{n.time}</span>
                                   </div>
                                 </div>
-                                <p className={`text-xs mt-0.5 line-clamp-2 ${n.read ? 'text-gray-500 font-normal' : 'text-gray-700 font-medium'}`}>
+                                <p className={`text-[10px] sm:text-xs mt-0.5 line-clamp-1 sm:line-clamp-2 ${n.read ? 'text-gray-500 font-normal' : 'text-gray-700 font-medium'}`}>
                                   {n.message}
                                 </p>
                               </div>
@@ -1485,24 +1485,46 @@ function AdminDashboard() {
                   )}
                 </div>
 
-                {/* Details — label/value rows, compact */}
-                <div className="p-3 space-y-4">
+                {/* Details — label/value rows, comprehensive */}
+                <div className="p-3.5 space-y-4">
 
                   {/* Personal */}
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Personal</p>
-                    <div className="space-y-1.5">
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
+                    </p>
+                    <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
                       {[
-                        ['Full Name', selectedEnrollment.fullName],
+                        ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
+                        ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
+                        ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
+                        ['Middle Name', selectedEnrollment.middleName || '—'],
                         ['Student ID', selectedEnrollment.studentId],
                         ['Email', selectedEnrollment.email],
-                        ['Contact', selectedEnrollment.contactNumber],
-                        ['Address', selectedEnrollment.address],
+                        ['Contact No.', selectedEnrollment.contactNumber],
                         ['Facebook', selectedEnrollment.facebookAccount || '—'],
                       ].map(([label, val]) => (
-                        <div key={label} className="flex justify-between items-start gap-3 text-sm">
-                          <span className="text-gray-400 text-xs flex-shrink-0 w-20">{label}</span>
-                          <span className="font-medium text-gray-800 text-xs text-right break-all">{val}</span>
+                        <div key={label} className="flex justify-between items-start gap-3 text-xs">
+                          <span className="text-gray-500 font-bold flex-shrink-0 w-24">{label}</span>
+                          <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Address Breakdown */}
+                  <div>
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Address Details</p>
+                    <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
+                      {[
+                        ['Complete Address', selectedEnrollment.address || selectedEnrollment.homeAddress || '—'],
+                        ['Street / Barangay', selectedEnrollment.street || '—'],
+                        ['Municipality / City', selectedEnrollment.municipality || '—'],
+                        ['Province', selectedEnrollment.province || '—'],
+                      ].map(([label, val]) => (
+                        <div key={label} className="flex justify-between items-start gap-3 text-xs">
+                          <span className="text-gray-500 font-bold flex-shrink-0 w-28">{label}</span>
+                          <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
                         </div>
                       ))}
                     </div>
@@ -1510,38 +1532,39 @@ function AdminDashboard() {
 
                   {/* Academic */}
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Academic</p>
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Academic Information</p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        ['Program', selectedEnrollment.program],
+                        ['Degree Program', selectedEnrollment.program || selectedEnrollment.course],
                         ['Section', selectedEnrollment.section || '—'],
-                        ['Year Level', selectedEnrollment.yearLevel],
-                        ['NSTP', selectedEnrollment.nstpComponent],
+                        ['Year Level', selectedEnrollment.yearLevel || selectedEnrollment.year],
+                        ['NSTP Track', selectedEnrollment.nstpComponent || selectedEnrollment.department],
                       ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
-                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+                          <p className="text-xs font-black text-emerald-950">{val || '—'}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Demographic */}
+                  {/* Demographic & Health */}
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Demographic</p>
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Demographic &amp; Health</p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         ['Birth Date', selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '—'],
-                        ['Age', selectedEnrollment.age || '—'],
-                        ['Gender', selectedEnrollment.gender || '—'],
+                        ['Age', selectedEnrollment.age ? `${selectedEnrollment.age} yrs old` : '—'],
+                        ['Sex / Gender', selectedEnrollment.sex || selectedEnrollment.gender || '—'],
                         ['Civil Status', selectedEnrollment.civilStatus || '—'],
-                        ['Height', selectedEnrollment.height ? `${selectedEnrollment.height} cm` : '—'],
-                        ['Weight', selectedEnrollment.weight ? `${selectedEnrollment.weight} kg` : '—'],
+                        ['Registered Voter', selectedEnrollment.registeredVoter || selectedEnrollment.isVoter || '—'],
+                        ['Height', selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—'],
+                        ['Weight', selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—'],
                         ['Blood Type', selectedEnrollment.bloodType || '—'],
                       ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
-                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+                          <p className="text-xs font-black text-gray-900">{val || '—'}</p>
                         </div>
                       ))}
                     </div>
@@ -1549,24 +1572,28 @@ function AdminDashboard() {
 
                   {/* Emergency Contact */}
                   <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Emergency Contact</p>
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Emergency Contact Person</p>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        ['Name', selectedEnrollment.emergencyContact],
-                        ['Number', selectedEnrollment.emergencyNumber],
+                        ['Contact Person', selectedEnrollment.emergencyContact || selectedEnrollment.emergencyName || '—'],
+                        ['Emergency No.', selectedEnrollment.emergencyNumber || '—'],
                       ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-[10px] text-gray-400 mb-0.5">{label}</p>
-                          <p className="text-xs font-semibold text-gray-800">{val}</p>
+                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+                          <p className="text-xs font-black text-gray-900">{val || '—'}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Status + date */}
-                  <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs">
-                    <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-semibold">{selectedEnrollment.status || 'Pending'}</span>
-                    <span className="text-gray-400">Submitted {new Date(selectedEnrollment.submitted_at).toLocaleDateString()}</span>
+                  {/* Submission Status & Timestamp */}
+                  <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
+                    <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-black uppercase text-[10px] tracking-wider">
+                      Status: {selectedEnrollment.status || 'Pending'}
+                    </span>
+                    <span className="text-gray-500 font-bold">
+                      Submitted: {selectedEnrollment.submitted_at ? new Date(selectedEnrollment.submitted_at).toLocaleDateString() : 'Just now'}
+                    </span>
                   </div>
                 </div>
               </div>
