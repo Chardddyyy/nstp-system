@@ -2,15 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="cvsu.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#166534" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="NSTP System" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
+    <script type="text/javascript">
+      var base = window.location.hostname.includes('github.io') ? '/nstp-system/' : '/';
+      document.write('<link rel="icon" type="image/png" href="' + base + 'cvsu.png" />');
+      document.write('<link rel="manifest" href="' + base + 'manifest.json" />');
+      document.write('<link rel="apple-touch-icon" href="' + base + 'icons/icon-192x192.png" />');
+    </script>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />

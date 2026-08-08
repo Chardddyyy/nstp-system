@@ -334,7 +334,10 @@ function App() {
       ]);
 
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
-      if (usersData && Array.isArray(usersData) && usersData.length > 0) setUsers(usersData);
+      if (usersData && Array.isArray(usersData) && usersData.length > 0) {
+        setUsers(usersData);
+        safeSetStorage('nstp_cached_all_users', usersData);
+      }
 
       if (conversationsData && Array.isArray(conversationsData)) {
         setConversations(conversationsData);
@@ -475,12 +478,16 @@ function App() {
   useEffect(() => {
     const token = localStorage.getItem('nstp_token');
     const cachedUser = localStorage.getItem('nstp_cached_user');
+    const cachedAllUsers = localStorage.getItem('nstp_cached_all_users');
     const cachedConvs = localStorage.getItem('nstp_cached_conversations');
     const cachedMsgs = localStorage.getItem('nstp_cached_messages');
 
     if (token) {
       if (cachedUser) {
         try { setUser(JSON.parse(cachedUser)); } catch {}
+      }
+      if (cachedAllUsers) {
+        try { setUsers(JSON.parse(cachedAllUsers)); } catch {}
       }
       if (cachedConvs) {
         try { setConversations(JSON.parse(cachedConvs)); } catch {}
@@ -524,7 +531,10 @@ function App() {
         archivesAPI.getCurrentBatch().catch(() => null),
       ]);
 
-      if (usersData && Array.isArray(usersData)) setUsers(usersData);
+      if (usersData && Array.isArray(usersData)) {
+        setUsers(usersData);
+        safeSetStorage('nstp_cached_all_users', usersData);
+      }
       if (studentsData && Array.isArray(studentsData)) setStudents(studentsData);
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
       if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
