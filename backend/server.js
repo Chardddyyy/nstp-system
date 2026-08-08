@@ -30,20 +30,32 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// ── Private Network Access (Chrome loopback request header) ────────────────
+app.use(function(req, res, next) {
+  if (req.headers['access-control-request-private-network']) {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
+
 // ── CORS: restrict to localhost in dev, explicit whitelist in production ──────
-var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173')
+var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://chardddyyy.github.io')
   .split(',').map(s => s.trim());
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true); // same-origin / curl / server-to-server
-    if (ALLOWED_ORIGINS.some(o => origin === o) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    if (
+      ALLOWED_ORIGINS.some(o => origin === o) ||
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
+      /\.github\.io$/.test(new URL(origin).hostname)
+    ) {
       return callback(null, true);
     }
     callback(new Error('CORS policy: origin not allowed'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network'],
 }));
 
 // ── Body size: 500 MB max for large file uploads ────────────────────────────────

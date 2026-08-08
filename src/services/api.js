@@ -396,16 +396,22 @@ export const archivesAPI = {
 };
 
 export function pingTelemetry(data) {
-  return fetch('http://localhost:3001/api/telemetry/ping', {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return Promise.resolve({ success: false });
+  }
+  return fetch(`${API_URL}/telemetry/ping`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
-  }).then(function(res) { return res.json(); }).catch(function() { return { success: false }; });
+  }).then(function(res) { return res.ok ? res.json() : { success: false }; }).catch(function() { return { success: false }; });
 }
 
 export function getTelemetryStats() {
-  return fetch('http://localhost:3001/api/telemetry/stats')
-    .then(function(res) { return res.json(); })
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return Promise.resolve(null);
+  }
+  return fetch(`${API_URL}/telemetry/stats`)
+    .then(function(res) { return res.ok ? res.json() : null; })
     .catch(function() { return null; });
 }
 
