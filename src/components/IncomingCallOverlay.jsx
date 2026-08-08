@@ -40,20 +40,25 @@ function IncomingCallOverlay() {
         </div>
         <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
           <button type="button"
-            
             onClick={async () => {
+              try {
+                const constraints = isVideo ? { audio: true, video: true } : { audio: true };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                window.__nstp_preacquired_stream__ = stream;
+              } catch (err) {
+                console.warn('Preacquire media stream error:', err);
+              }
               await answerIncomingCall(incomingCall);
               navigate('/chat');
             }}
-            className="px-4 py-2 sm:px-6 sm:py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium flex items-center gap-2"
+            className="px-6 py-3 bg-green-500 hover:bg-green-600 active:scale-95 text-white rounded-full font-semibold flex items-center gap-2 touch-manipulation cursor-pointer transition-transform shadow-lg"
           >
-            {isVideo ? <Video className="w-4 h-4 sm:w-5 sm:h-5" /> : <Phone className="w-4 h-4 sm:w-5 sm:h-5" />}
+            {isVideo ? <Video className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
             Answer
           </button>
           <button type="button"
-            
             onClick={() => declineIncomingCall(incomingCall.id)}
-            className="px-4 py-2 sm:px-6 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-medium flex items-center gap-2"
+            className="px-6 py-3 bg-red-500 hover:bg-red-600 active:scale-95 text-white rounded-full font-semibold flex items-center gap-2 touch-manipulation cursor-pointer transition-transform shadow-lg"
           >
             Decline
           </button>

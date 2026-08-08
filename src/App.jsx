@@ -608,8 +608,7 @@ function App() {
   }
 
   async function deleteMessageFunc(conversationId, messageId, forEveryone = false) {
-    await conversationsAPI.deleteMessage(conversationId, messageId, forEveryone);
-
+    // 1. Optimistically update local message state IMMEDIATELY (0ms instant response)
     updateMessageInState(conversationId, messageId, m => {
       if (forEveryone) {
         return { ...m, deleted_for_everyone: true, deletedForEveryone: true, type: 'deleted', text: '[deleted]' };
@@ -623,6 +622,13 @@ function App() {
       if (user && !deletedFor.includes(user.id)) deletedFor.push(user.id);
       return { ...m, deleted_for: JSON.stringify(deletedFor), deletedForMe: true };
     });
+
+    // 2. Perform backend API deletion asynchronously in background
+    try {
+      await conversationsAPI.deleteMessage(conversationId, messageId, forEveryone);
+    } catch (err) {
+      console.error('API deleteMessage error:', err);
+    }
 
     return { success: true };
   }

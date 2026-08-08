@@ -85,6 +85,8 @@ function Chat() {
   const [showMessageMenu, setShowMessageMenu] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showConversations, setShowConversations] = useState(true);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const attachMenuRef = useRef(null);
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -862,7 +864,11 @@ function Chat() {
       const constraints = callType === 'video' ? { audio: true, video: true } : { audio: true };
       // Stop the preview stream before creating the WebRTC stream
       stopLocalStream();
-      const stream = await navigator.mediaDevices.getUserMedia(constraints).catch(() => null);
+      let stream = window.__nstp_preacquired_stream__;
+      window.__nstp_preacquired_stream__ = null;
+      if (!stream) {
+        stream = await navigator.mediaDevices.getUserMedia(constraints).catch(() => null);
+      }
       if (!stream) { addNotification('Could not access ' + (callType === 'video' ? 'camera/microphone' : 'microphone'), 'error'); return false; }
       localStreamRef.current = stream;
       setLocalStream(stream);
@@ -1625,7 +1631,7 @@ function Chat() {
       />
 
       {/* Main Content */}
-      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden`}>
+      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] flex flex-col overflow-hidden w-full max-w-full`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
           <div className="p-3.5 lg:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-sm">
@@ -1774,19 +1780,19 @@ function Chat() {
         </div>
 
         {/* Chat Area - Full width on mobile when active */}
-        <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full min-h-0 overflow-hidden`}>
+        <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full max-w-full min-h-0 overflow-x-hidden overflow-y-hidden`}>
           {activeConversation ? (
             <>
               {/* Hidden audio element for remote WebRTC audio stream */}
               <audio ref={(el) => { if (el && remoteStream) el.srcObject = remoteStream; }} autoPlay playsInline className="hidden" />
 
               {/* Chat Header */}
-              <div className="bg-white p-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1 sm:gap-2">
+              <div className="bg-white px-2.5 py-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1.5 flex-shrink-0 w-full max-w-full overflow-hidden">
                 <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
-                  {/* Back button - only needed on mobile; both panels are always visible on desktop */}
+                  {/* Back button - only needed on mobile */}
                   <button type="button"
                     onClick={handleBackToConversations}
-                    className="p-1 sm:p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
+                    className="p-1.5 text-gray-600 hover:bg-gray-100 active:scale-95 rounded-lg flex-shrink-0 touch-manipulation cursor-pointer transition-transform"
                     aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -1795,9 +1801,9 @@ function Chat() {
                     {isGroupConversation(activeConversation) ? getGroupAvatar(activeConversation) : getUserAvatar(getConversationPartner(activeConversation))}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-gray-800 text-xs sm:text-sm lg:text-base truncate">{activePartnerName}</h3>
+                    <h3 className="font-semibold text-gray-900 text-xs sm:text-sm lg:text-base truncate leading-tight">{activePartnerName}</h3>
                     {isGroupConversation(activeConversation) ? (
-                      <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 flex items-center">
+                      <p className="text-[10px] sm:text-xs text-gray-500 flex items-center leading-tight">
                         <span className="truncate">{activeConversation.participants?.length || 2} participants</span>
                       </p>
                     ) : (
@@ -1807,8 +1813,8 @@ function Chat() {
                         const status = getUserStatus(partnerId);
                         const isOnline = status === 'online';
                         return (
-                          <p className={`text-[10px] sm:text-xs lg:text-sm flex items-center ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
-                            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 lg:mr-2 flex-shrink-0 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                          <p className={`text-[10px] sm:text-xs flex items-center leading-tight ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
+                            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 flex-shrink-0 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                             <span className="truncate">{isOnline ? 'Online' : `Last seen ${getLastSeen(partnerId)}`}</span>
                           </p>
                         );
@@ -1816,10 +1822,10 @@ function Chat() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-0.5 sm:space-x-1 lg:space-x-2 flex-shrink-0">
+                <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
                   <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('voice') : handleCall}
-                    className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
                     title="Voice Call"
                     aria-label="Voice call"
                   >
@@ -1827,7 +1833,7 @@ function Chat() {
                   </button>
                   <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('video') : handleVideoCall}
-                    className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
                     title="Video Call"
                     aria-label="Video call"
                   >
@@ -1837,7 +1843,7 @@ function Chat() {
                   <div className="relative" ref={chatMenuRef}>
                     <button type="button"
                       onClick={() => setShowChatMenu(!showChatMenu)}
-                      className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                      className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
                       title="More Options"
                       aria-label="More options"
                     >
@@ -2239,66 +2245,55 @@ function Chat() {
               </div>
               </div>
 
-              {/* Input Area */}
-              <div className="bg-white p-1.5 sm:p-2 lg:p-3 border-t border-gray-200 flex-shrink-0">
+              {/* Input Area - Ultra Sleek Single Line Height */}
+              <div className="bg-white px-2 py-1.5 sm:px-3 sm:py-2 border-t border-gray-200 flex-shrink-0 relative">
                 {/* Hidden File Inputs */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,.xml,.html,.htm,.rtf,.odt,.ods,.odp,.zip,.rar,.7z,.tar,.gz,.mp3,.mp4,.avi,.mov,.mkv,.wmv,.flv,.webm,.m4v,.wav,.flac,.aac,.ogg,.m4a,.wma,.png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.tiff,.tif,.ico,.heic,.heif,.psd,.ai,.eps"
-                  className="hidden"
-                />
-                <input
-                  type="file"
-                  ref={galleryInputRef}
-                  onChange={handleGallerySelect}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <input
-                  type="file"
-                  ref={cameraInputRef}
-                  onChange={handleCameraCapture}
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                />
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                <input type="file" ref={galleryInputRef} onChange={handleGallerySelect} accept="image/*" className="hidden" />
+                <input type="file" ref={cameraInputRef} onChange={handleCameraCapture} accept="image/*" capture="environment" className="hidden" />
                 
-                <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
-                  <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                    <button type="button"
-                      onClick={handleFileAttach}
-                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                      title="Attach File"
-                      aria-label="Attach file"
-                    >
-                      <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
+                {/* Mobile Attachment Popover */}
+                {showAttachMenu && (
+                  <div ref={attachMenuRef} className="absolute bottom-14 left-2 bg-white rounded-2xl shadow-2xl border border-emerald-100 p-2 z-40 flex flex-col gap-1 min-w-[160px] animate-fade-in sm:hidden">
+                    <button type="button" onClick={() => { handleFileAttach(); setShowAttachMenu(false); }} className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 rounded-xl active:bg-emerald-100">
+                      <Paperclip className="w-4 h-4 text-emerald-600" /> Attach File
                     </button>
-                    <button type="button"
-                      onClick={handleGallery}
-                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                      title="Gallery"
-                      aria-label="Gallery"
-                    >
-                      <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <button type="button" onClick={() => { handleGallery(); setShowAttachMenu(false); }} className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 rounded-xl active:bg-emerald-100">
+                      <Image className="w-4 h-4 text-blue-600" /> Photo Gallery
                     </button>
-                    <button type="button"
-                      onClick={handleCamera}
-                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                      title="Live Camera"
-                      aria-label="Camera"
-                    >
-                      <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <button type="button" onClick={() => { handleCamera(); setShowAttachMenu(false); }} className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 rounded-xl active:bg-emerald-100">
+                      <Camera className="w-4 h-4 text-amber-600" /> Live Camera
                     </button>
-                    <button type="button"
-                      onClick={handleVoiceToggle}
-                      className={`p-1.5 sm:p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                      title={isRecording ? 'Stop Recording' : 'Voice Message'}
-                      aria-label={isRecording ? 'Stop recording' : 'Voice message'}
-                    >
-                      <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-                      {isRecording && <span className="ml-1 text-xs hidden sm:inline">{recordingTime}s</span>}
+                    <button type="button" onClick={() => { handleVoiceToggle(); setShowAttachMenu(false); }} className="flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 rounded-xl active:bg-emerald-100">
+                      <Mic className="w-4 h-4 text-rose-600" /> Voice Message
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Mobile Single Plus Button */}
+                  <button type="button"
+                    onClick={() => setShowAttachMenu(!showAttachMenu)}
+                    className="sm:hidden p-1.5 text-gray-600 hover:bg-gray-100 active:scale-95 rounded-full touch-manipulation cursor-pointer transition-transform flex-shrink-0"
+                    title="Add attachment"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+
+                  {/* Desktop Side-by-side Attachment Buttons */}
+                  <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                    <button type="button" onClick={handleFileAttach} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0" title="Attach File">
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+                    <button type="button" onClick={handleGallery} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0" title="Gallery">
+                      <Image className="w-5 h-5" />
+                    </button>
+                    <button type="button" onClick={handleCamera} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0" title="Live Camera">
+                      <Camera className="w-5 h-5" />
+                    </button>
+                    <button type="button" onClick={handleVoiceToggle} className={`p-1.5 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title={isRecording ? 'Stop Recording' : 'Voice Message'}>
+                      <Mic className="w-5 h-5" />
+                      {isRecording && <span className="ml-1 text-xs">{recordingTime}s</span>}
                     </button>
                   </div>
 
@@ -2307,7 +2302,7 @@ function Chat() {
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 min-w-[100px] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-full sm:rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -2315,34 +2310,32 @@ function Chat() {
                       }
                     }}
                   />
-                  <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation flex-shrink-0"
                       title="Add Emoji"
-                      aria-label="Add emoji"
                     >
-                      <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <Smile className="w-5 h-5" />
                     </button>
                     
                     {/* Emoji Picker */}
                     {showEmojiPicker && (
-                      <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
+                      <div ref={emojiPickerRef} className="absolute bottom-14 right-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
                         <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
                           {emojiList.map((emoji, index) => (
                             <button key={index}
                               type="button"
                               onClick={() => handleEmojiSelect(emoji)}
-                              className="text-lg lg:text-xl hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation"
+                              className="text-lg hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation active:scale-125"
                             >
                               {emoji}
                             </button>
                           ))}
                         </div>
                         <button type="button"
-                          
                           onClick={() => setShowEmojiPicker(false)}
-                          className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 py-2 touch-manipulation"
+                          className="w-full mt-2 text-xs text-gray-500 hover:text-gray-700 py-1.5 touch-manipulation font-semibold"
                         >
                           Close
                         </button>
@@ -2351,7 +2344,7 @@ function Chat() {
                     <button type="button"
                       onClick={handleSendMessage}
                       disabled={!messageText.trim()}
-                      className="p-1.5 sm:p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
+                      className="p-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-full transition-all active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed touch-manipulation flex-shrink-0 shadow-sm"
                       aria-label="Send message"
                     >
                       <Send className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2408,73 +2401,6 @@ function Chat() {
                     alt="Full size"
                     className="max-w-full max-h-[70vh] object-contain"
                   />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Incoming Call Modal */}
-          {showIncomingCall && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 animate-fade-in">
-              <div className="bg-gray-900 rounded-lg p-6 sm:p-8 max-w-md w-full mx-auto text-center">
-                <div className="mb-4 sm:mb-6">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 animate-pulse">
-                    {incomingCallType === 'video' ? <Video className="w-8 h-8 sm:w-10 sm:h-10 text-white" /> : <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white" />}
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-white">{callerInfo?.name || activePartnerName}</h3>
-                  <p className="text-gray-400 mt-2 text-sm sm:text-base">
-                    {incomingCallType === 'video' ? 'Incoming Video Call...' : 'Incoming Voice Call...'}
-                  </p>
-                </div>
-                <div className="flex justify-center space-x-4 sm:space-x-6 mt-4 sm:mt-6">
-                  <button type="button"
-                    onClick={async () => {
-                      const call = callerInfo || incomingCall;
-                      if (!call) return;
-                      await answerIncomingCall(call);
-                      setShowIncomingCall(false);
-                      currentCallIdRef.current = call.id;
-                      callConversationIdRef.current = call.conversation_id;
-                      callTypeRef.current = call.call_type || 'voice';
-                      isCallerRef.current = false;
-                      const now = Date.now();
-                      setActiveCallStartTime(now);
-                      if (call.call_type === 'video') {
-                        setShowVideoCallModal(true);
-                        setVideoCallStatus('connected');
-                      } else {
-                        setShowCallModal(true);
-                        setCallStatus('connected');
-                      }
-                      addNotification('Call connected!', 'success');
-                      callDurationIntervalRef.current = setInterval(() => setCallTimerTick(t => t + 1), 1000);
-                      startCallEndPoll(call.id, call.call_type || 'voice');
-                      startWebRTC(call.id, false, call.call_type || 'voice');
-                      setCallerInfo(null);
-                    }}
-                    className="px-4 py-2 sm:px-6 sm:py-3 bg-green-500 hover:bg-green-600 text-white rounded-full font-medium flex items-center gap-2 touch-manipulation"
-                  >
-                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base">Answer</span>
-                  </button>
-                  <button type="button"
-                    onClick={async () => {
-                      const call = callerInfo || incomingCall;
-                      if (call) {
-                        await declineIncomingCall(call.id);
-                        // Send "Call declined" message so both sides see it
-                        const icon = call.call_type === 'video' ? '📹' : '📞';
-                        sendMessage(call.conversation_id, { sender: 'me', text: `${icon} Call declined`, type: 'system', callType: call.call_type || 'voice', answered: false });
-                      }
-                      setShowIncomingCall(false);
-                      setCallerInfo(null);
-                      addNotification('Call declined', 'info');
-                    }}
-                    className="px-4 py-2 sm:px-6 sm:py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-medium flex items-center gap-2 touch-manipulation"
-                  >
-                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base">Decline</span>
-                  </button>
                 </div>
               </div>
             </div>
