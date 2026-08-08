@@ -230,7 +230,7 @@ export function createGroup(name, participants) {
 export function getMessages(id, limit) {
   var url = '/conversations/' + id + '/messages';
   if (limit) url = url + '?limit=' + limit;
-  return apiCall(url);
+  return apiCall(url).catch(function() { return []; });
 }
 
 export function sendMessage(id, data) {

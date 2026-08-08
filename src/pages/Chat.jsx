@@ -241,9 +241,7 @@ function Chat() {
       if (msgs && Array.isArray(msgs)) {
         setMessages(prev => ({ ...prev, [id]: msgs }));
       }
-    } catch (err) {
-      console.warn('Failed to load instant messages for conversation:', id);
-    }
+    } catch (_) {}
   };
 
   const handleBackToConversations = () => {
