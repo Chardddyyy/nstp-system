@@ -1777,14 +1777,16 @@ function Chat() {
         <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full min-h-0 overflow-hidden`}>
           {activeConversation ? (
             <>
+              {/* Hidden audio element for remote WebRTC audio stream */}
+              <audio ref={(el) => { if (el && remoteStream) el.srcObject = remoteStream; }} autoPlay playsInline className="hidden" />
+
               {/* Chat Header */}
-              <div className="bg-white p-2 lg:p-4 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
+              <div className="bg-white p-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1 sm:gap-2">
+                <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
                   {/* Back button - only needed on mobile; both panels are always visible on desktop */}
                   <button type="button"
-                    
                     onClick={handleBackToConversations}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
+                    className="p-1 sm:p-2 text-gray-600 hover:bg-gray-100 rounded-lg flex-shrink-0 touch-manipulation"
                     aria-label="Back to conversations"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -1793,9 +1795,9 @@ function Chat() {
                     {isGroupConversation(activeConversation) ? getGroupAvatar(activeConversation) : getUserAvatar(getConversationPartner(activeConversation))}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-gray-800 text-sm lg:text-base truncate">{activePartnerName}</h3>
+                    <h3 className="font-semibold text-gray-800 text-xs sm:text-sm lg:text-base truncate">{activePartnerName}</h3>
                     {isGroupConversation(activeConversation) ? (
-                      <p className="text-xs lg:text-sm text-gray-500 flex items-center">
+                      <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 flex items-center">
                         <span className="truncate">{activeConversation.participants?.length || 2} participants</span>
                       </p>
                     ) : (
@@ -1805,8 +1807,8 @@ function Chat() {
                         const status = getUserStatus(partnerId);
                         const isOnline = status === 'online';
                         return (
-                          <p className={`text-xs lg:text-sm flex items-center ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
-                            <span className={`w-2 h-2 rounded-full mr-1 lg:mr-2 flex-shrink-0 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                          <p className={`text-[10px] sm:text-xs lg:text-sm flex items-center ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
+                            <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 lg:mr-2 flex-shrink-0 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                             <span className="truncate">{isOnline ? 'Online' : `Last seen ${getLastSeen(partnerId)}`}</span>
                           </p>
                         );
@@ -1814,32 +1816,32 @@ function Chat() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
+                <div className="flex items-center space-x-0.5 sm:space-x-1 lg:space-x-2 flex-shrink-0">
                   <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('voice') : handleCall}
-                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                     title="Voice Call"
                     aria-label="Voice call"
                   >
-                    <Phone className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <button type="button"
                     onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('video') : handleVideoCall}
-                    className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                    className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                     title="Video Call"
                     aria-label="Video call"
                   >
-                    <Video className="w-4 h-4 lg:w-5 lg:h-5" />
+                    <Video className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   {!isGroupConversation(activeConversation) && (
                   <div className="relative" ref={chatMenuRef}>
                     <button type="button"
                       onClick={() => setShowChatMenu(!showChatMenu)}
-                      className="p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                      className="p-1.5 sm:p-2 lg:p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
                       title="More Options"
                       aria-label="More options"
                     >
-                      <MoreVertical className="w-4 h-4 lg:w-5 lg:h-5" />
+                      <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     {showChatMenu && (
                       <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[180px]">
@@ -2238,7 +2240,7 @@ function Chat() {
               </div>
 
               {/* Input Area */}
-              <div className="bg-white p-2 lg:p-3 border-t border-gray-200 flex-shrink-0">
+              <div className="bg-white p-1.5 sm:p-2 lg:p-3 border-t border-gray-200 flex-shrink-0">
                 {/* Hidden File Inputs */}
                 <input
                   type="file"
@@ -2263,49 +2265,49 @@ function Chat() {
                   className="hidden"
                 />
                 
-                <div className="flex items-center space-x-1 lg:space-x-2">
-                  <button type="button"
-                    
-                    onClick={handleFileAttach}
-                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                    title="Attach File"
-                    aria-label="Attach file"
-                  >
-                    <Paperclip className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
-                  <button type="button"
-                    onClick={handleGallery}
-                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                    title="Gallery"
-                    aria-label="Gallery"
-                  >
-                    <Image className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
-                  <button type="button"
-                    
-                    onClick={handleCamera}
-                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                    title="Live Camera"
-                    aria-label="Camera"
-                  >
-                    <Camera className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
-                  <button type="button"
-                    
-                    onClick={handleVoiceToggle}
-                    className={`p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                    title={isRecording ? 'Stop Recording' : 'Voice Message'}
-                    aria-label={isRecording ? 'Stop recording' : 'Voice message'}
-                  >
-                    <Mic className="w-4 h-4 lg:w-5 lg:h-5" />
-                    {isRecording && <span className="ml-1 text-xs hidden sm:inline">{recordingTime}s</span>}
-                  </button>
+                <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2">
+                  <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                    <button type="button"
+                      onClick={handleFileAttach}
+                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                      title="Attach File"
+                      aria-label="Attach file"
+                    >
+                      <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button type="button"
+                      onClick={handleGallery}
+                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                      title="Gallery"
+                      aria-label="Gallery"
+                    >
+                      <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button type="button"
+                      onClick={handleCamera}
+                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                      title="Live Camera"
+                      aria-label="Camera"
+                    >
+                      <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button type="button"
+                      onClick={handleVoiceToggle}
+                      className={`p-1.5 sm:p-2 rounded-lg transition-colors touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                      title={isRecording ? 'Stop Recording' : 'Voice Message'}
+                      aria-label={isRecording ? 'Stop recording' : 'Voice message'}
+                    >
+                      <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {isRecording && <span className="ml-1 text-xs hidden sm:inline">{recordingTime}s</span>}
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Type a message..."
-                    className="flex-1 px-2 lg:px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none min-w-0"
+                    className="flex-1 min-w-[100px] px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -2313,46 +2315,48 @@ function Chat() {
                       }
                     }}
                   />
-                  <button type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
-                    title="Add Emoji"
-                    aria-label="Add emoji"
-                  >
-                    <Smile className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
-                  
-                  {/* Emoji Picker */}
-                  {showEmojiPicker && (
-                    <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
-                      <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-                        {emojiList.map((emoji, index) => (
-                          <button key={index}
-                            type="button"
-                            onClick={() => handleEmojiSelect(emoji)}
-                            className="text-lg lg:text-xl hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
+                  <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                    <button type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                      title="Add Emoji"
+                      aria-label="Add emoji"
+                    >
+                      <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    
+                    {/* Emoji Picker */}
+                    {showEmojiPicker && (
+                      <div ref={emojiPickerRef} className="absolute bottom-16 lg:bottom-14 right-2 lg:right-4 bg-white rounded-lg shadow-xl border border-gray-200 p-3 z-30 w-64 max-w-[calc(100vw-1rem)]">
+                        <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                          {emojiList.map((emoji, index) => (
+                            <button key={index}
+                              type="button"
+                              onClick={() => handleEmojiSelect(emoji)}
+                              className="text-lg lg:text-xl hover:bg-gray-100 rounded p-1 transition-colors touch-manipulation"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                        <button type="button"
+                          
+                          onClick={() => setShowEmojiPicker(false)}
+                          className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 py-2 touch-manipulation"
+                        >
+                          Close
+                        </button>
                       </div>
-                      <button type="button"
-                        
-                        onClick={() => setShowEmojiPicker(false)}
-                        className="w-full mt-2 text-sm text-gray-500 hover:text-gray-700 py-2 touch-manipulation"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  )}
-                  <button type="button"
-                    onClick={handleSendMessage}
-                    disabled={!messageText.trim()}
-                    className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
-                    aria-label="Send message"
-                  >
-                    <Send className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </button>
+                    )}
+                    <button type="button"
+                      onClick={handleSendMessage}
+                      disabled={!messageText.trim()}
+                      className="p-1.5 sm:p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation flex-shrink-0"
+                      aria-label="Send message"
+                    >
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
