@@ -183,22 +183,43 @@ async function ensureUserColumns() {
   userColumnsMigrated = true;
 }
 
-async function ensureAuditLogs() {
+async function ensureCallsTableAndColumns() {
   try {
     await pool.execute(`
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      CREATE TABLE IF NOT EXISTS calls (
         id INT PRIMARY KEY AUTO_INCREMENT,
-        action VARCHAR(100) NOT NULL,
-        user_id INT,
-        detail TEXT,
-        ip VARCHAR(45),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_audit_user (user_id),
-        INDEX idx_audit_created (created_at),
-        INDEX idx_audit_action (action)
+        conversation_id INT,
+        caller_id INT NOT NULL,
+        receiver_id INT NULL,
+        group_call_id VARCHAR(100) NULL,
+        call_type VARCHAR(20) DEFAULT 'voice',
+        status VARCHAR(20) DEFAULT 'ringing',
+        offer_sdp TEXT NULL,
+        answer_sdp TEXT NULL,
+        caller_ice TEXT NULL,
+        receiver_ice TEXT NULL,
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        connected_at TIMESTAMP NULL,
+        ended_at TIMESTAMP NULL,
+        duration INT DEFAULT 0
       )
     `);
   } catch (_) {}
+
+  var alters = [
+    'ALTER TABLE calls ADD COLUMN connected_at TIMESTAMP NULL',
+    'ALTER TABLE calls ADD COLUMN ended_at TIMESTAMP NULL',
+    'ALTER TABLE calls ADD COLUMN duration INT DEFAULT 0',
+    'ALTER TABLE calls ADD COLUMN offer_sdp TEXT NULL',
+    'ALTER TABLE calls ADD COLUMN answer_sdp TEXT NULL',
+    'ALTER TABLE calls ADD COLUMN caller_ice TEXT NULL',
+    'ALTER TABLE calls ADD COLUMN receiver_ice TEXT NULL',
+    'ALTER TABLE calls ADD COLUMN group_call_id VARCHAR(100) NULL',
+    'ALTER TABLE calls ADD COLUMN conversation_id INT NULL'
+  ];
+  for (var i = 0; i < alters.length; i++) {
+    try { await pool.execute(alters[i]); } catch (_) {}
+  }
 }
 
 async function ensureStudentColumns() {
@@ -2294,10 +2315,17 @@ app.all(['/api/calls/:id/answer'], authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Call not found' });
     }
     
-    await pool.execute(
-      'UPDATE calls SET status = "connected", connected_at = IFNULL(connected_at, NOW()) WHERE id = ?',
-      [id]
-    );
+    try {
+      await pool.execute(
+        'UPDATE calls SET status = "connected", connected_at = NOW() WHERE id = ?',
+        [id]
+      );
+    } catch (_) {
+      await pool.execute(
+        'UPDATE calls SET status = "connected" WHERE id = ?',
+        [id]
+      );
+    }
     
     res.json({ message: 'Call connected', call_id: id });
   } catch (error) {
@@ -3117,6 +3145,7 @@ async function startServer() {
   console.log('Running schema migrations...');
   await Promise.all([
     ensureAuditLogs(),
+    ensureCallsTableAndColumns(),
     ensureMessageRestoreColumns(),
     ensureConversationSchema(),
     ensureWebRTCColumns(),
