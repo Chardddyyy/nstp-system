@@ -1725,8 +1725,11 @@ function Chat() {
                     <button key={contact.id}
                       type="button"
                       onClick={async () => {
-                        await startConversation(contact);
                         setShowContacts(false);
+                        const conv = await startConversation(contact);
+                        if (conv?.id) {
+                          handleSetActiveConversation(conv.id);
+                        }
                       }}
                       className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100 transition-colors text-left"
                     >

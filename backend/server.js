@@ -1361,9 +1361,44 @@ app.post('/api/reports/:id/comments', authenticateToken, async (req, res) => {
 
 // ===== CONVERSATION & MESSAGE ROUTES =====
 
+// Helper to auto-ensure all admin/instructor users are in the "All Instructors" group chat
+async function ensureAllInstructorsGroup() {
+  try {
+    let [rows] = await pool.execute(
+      "SELECT id FROM conversations WHERE is_group = TRUE AND (group_name = 'All Instructors' OR group_name LIKE '%Instructor%') LIMIT 1"
+    );
+    let groupId;
+    if (rows.length > 0) {
+      groupId = rows[0].id;
+    } else {
+      groupId = 'group-all-instructors';
+      try {
+        await pool.execute(
+          "INSERT INTO conversations (id, is_group, group_name) VALUES (?, TRUE, 'All Instructors')",
+          [groupId]
+        );
+      } catch (_) {}
+    }
+    const [staff] = await pool.execute("SELECT id FROM users WHERE role IN ('admin','instructor')");
+    for (const s of staff) {
+      await pool.execute(
+        'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
+        [groupId, s.id]
+      );
+    }
+    return groupId;
+  } catch (err) {
+    console.warn('ensureAllInstructorsGroup warning:', err?.message);
+  }
+}
+
 // Get all conversations for current user
 app.get('/api/conversations', authenticateToken, async (req, res) => {
   try {
+    if (req.user.role === 'admin' || req.user.role === 'instructor') {
+      await ensureAllInstructorsGroup();
+    }
+
     // Get one-on-one conversations
     const [directConversations] = await pool.execute(`
       SELECT c.*,
@@ -1393,17 +1428,25 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
       ORDER BY c.last_message_time DESC
     `, [req.user.id]);
 
-    // Format direct conversations
-    const formattedDirectConversations = directConversations.map(c => {
+    // Format direct conversations and deduplicate by partner ID
+    const seenPartners = new Set();
+    const formattedDirectConversations = [];
+
+    for (const c of directConversations) {
       const isUserParticipant1 = c.participant_1_id === req.user.id;
+      const partnerId = isUserParticipant1 ? c.participant_2_id : c.participant_1_id;
       const otherParticipantName = isUserParticipant1 ? c.participant_2_name : c.participant_1_name;
-      return {
-        ...c,
-        with: otherParticipantName,
-        participants: [c.participant_1_id, c.participant_2_id],
-        isGroup: false
-      };
-    });
+
+      if (!seenPartners.has(partnerId)) {
+        seenPartners.add(partnerId);
+        formattedDirectConversations.push({
+          ...c,
+          with: otherParticipantName,
+          participants: [c.participant_1_id, c.participant_2_id],
+          isGroup: false
+        });
+      }
+    }
 
     // Format group conversations
     const formattedGroupConversations = await Promise.all(groupConversations.map(async c => {
@@ -1440,58 +1483,41 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
 app.post('/api/conversations', authenticateToken, async (req, res) => {
   try {
     const { withUserId } = req.body;
-    
-    // Create conversation ID from both user IDs sorted numerically.
-    // Must use a numeric comparator — the default sort() is lexicographic
-    // and would mis-sort IDs like [2, 12] → "12-2" ≠ "2-12".
-    const ids = [Number(req.user.id), Number(withUserId)].sort(function(a, b) { return a - b; });
-    const conversationId = ids.join('-');
-    
-    // Check if conversation exists
+    const u1 = Number(req.user.id);
+    const u2 = Number(withUserId);
+
+    if (!u2 || isNaN(u2)) {
+      return res.status(400).json({ message: 'Invalid target user' });
+    }
+
+    // Check if direct conversation already exists between u1 and u2
     const [existing] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
-      [conversationId]
+      'SELECT * FROM conversations WHERE (is_group = FALSE OR is_group IS NULL) AND ((participant_1_id = ? AND participant_2_id = ?) OR (participant_1_id = ? AND participant_2_id = ?))',
+      [u1, u2, u2, u1]
     );
-    
+
     if (existing.length > 0) {
-      // Get other participant info for existing conversation
-      const [otherUsers] = await pool.execute(
-        'SELECT id, name FROM users WHERE id = ?',
-        [withUserId]
-      );
-      const otherParticipantName = otherUsers[0]?.name || 'Unknown';
-      
+      const [otherUsers] = await pool.execute('SELECT id, name FROM users WHERE id = ?', [u2]);
       return res.json({
         ...existing[0],
-        with: otherParticipantName,
+        with: otherUsers[0]?.name || 'Unknown',
         participants: [existing[0].participant_1_id, existing[0].participant_2_id]
       });
     }
-    
-    // Create new conversation
-    await pool.execute(
-      'INSERT INTO conversations (id, participant_1_id, participant_2_id) VALUES (?, ?, ?)',
-      [conversationId, ids[0], ids[1]]
+
+    // Create new direct conversation
+    const [result] = await pool.execute(
+      'INSERT INTO conversations (is_group, participant_1_id, participant_2_id) VALUES (FALSE, ?, ?)',
+      [u1, u2]
     );
-    
-    const [conversations] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
-      [conversationId]
-    );
-    
-    // Get other participant info
-    const [otherUsers] = await pool.execute(
-      'SELECT id, name FROM users WHERE id = ?',
-      [withUserId]
-    );
-    const otherParticipantName = otherUsers[0]?.name || 'Unknown';
-    
-    const newConversation = conversations[0];
-    
+
+    const [newConvs] = await pool.execute('SELECT * FROM conversations WHERE id = ?', [result.insertId]);
+    const [otherUsers] = await pool.execute('SELECT id, name FROM users WHERE id = ?', [u2]);
+
     res.status(201).json({
-      ...newConversation,
-      with: otherParticipantName,
-      participants: [newConversation.participant_1_id, newConversation.participant_2_id]
+      ...newConvs[0],
+      with: otherUsers[0]?.name || 'Unknown',
+      participants: [u1, u2]
     });
   } catch (error) {
     console.error('Create conversation error:', error);
@@ -1543,28 +1569,8 @@ app.post('/api/conversations/group', authenticateToken, async (req, res) => {
 // Get or create the stable "All Instructors" group (idempotent)
 app.get('/api/conversations/all-instructors-group', authenticateToken, async (req, res) => {
   try {
-    // Find existing group
-    const [rows] = await pool.execute(
-      "SELECT id, group_name FROM conversations WHERE is_group = TRUE AND group_name = 'All Instructors' LIMIT 1"
-    );
-    if (rows.length > 0) return res.json({ id: rows[0].id, groupName: rows[0].group_name });
-
-    // None found — create it with all current admins + instructors
-    const [staff] = await pool.execute("SELECT id FROM users WHERE role IN ('admin','instructor')");
-    if (staff.length < 1) return res.status(404).json({ message: 'No staff found' });
-
-    const groupId = `group-all-instructors-${Date.now()}`;
-    await pool.execute(
-      'INSERT INTO conversations (id, is_group, group_name, created_by) VALUES (?, TRUE, ?, ?)',
-      [groupId, 'All Instructors', req.user.id]
-    );
-    for (const s of staff) {
-      await pool.execute(
-        'INSERT IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (?, ?)',
-        [groupId, s.id]
-      );
-    }
-    res.status(201).json({ id: groupId, groupName: 'All Instructors' });
+    const groupId = await ensureAllInstructorsGroup();
+    res.json({ id: groupId, groupName: 'All Instructors' });
   } catch (error) {
     console.error('Get/create All Instructors group error:', error);
     res.status(500).json({ message: 'Server error' });

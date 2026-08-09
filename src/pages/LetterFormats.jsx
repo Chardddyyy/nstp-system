@@ -1,15 +1,18 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
-import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu } from 'lucide-react';
+import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File } from 'lucide-react';
 
 export default function LetterFormats() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Blank state — no pre-filled sample templates
+  const [activeTab, setActiveTab] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Local storage persistence for custom uploaded letter formats
   const [templates, setTemplates] = useState(() => {
     try {
       const saved = localStorage.getItem('nstp_letter_templates');
@@ -19,48 +22,83 @@ export default function LetterFormats() {
     }
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
 
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState('Official Letter');
-  const [content, setContent] = useState('');
+  const [department, setDepartment] = useState('All');
+  const [description, setDescription] = useState('');
+  const [attachedFile, setAttachedFile] = useState(null); // { name, type, size, data }
 
+  const [viewingFile, setViewingFile] = useState(null);
   const [notification, setNotification] = useState(null);
+  const fileInputRef = useRef(null);
 
   const showNotify = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      showNotify('File size exceeds 10MB limit', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedFile({
+        name: file.name,
+        type: file.type,
+        size: (file.size / 1024).toFixed(1) + ' KB',
+        data: reader.result
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveTemplate = (e) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim() || !description.trim()) {
+      showNotify('Title and Description are required', 'error');
+      return;
+    }
 
     let updated;
     if (editingTemplate) {
-      updated = templates.map(t => t.id === editingTemplate.id ? { ...t, title, category, content, updatedAt: new Date().toISOString() } : t);
-      showNotify('Template updated successfully!');
+      updated = templates.map(t => t.id === editingTemplate.id ? {
+        ...t,
+        title,
+        department,
+        description,
+        file: attachedFile || t.file,
+        updatedAt: new Date().toISOString()
+      } : t);
+      showNotify('Letter format updated!');
     } else {
       const newT = {
         id: Date.now().toString(),
         title,
-        category,
-        content,
-        createdBy: user?.name || 'Instructor',
+        department,
+        description,
+        file: attachedFile,
+        createdBy: user?.name || 'Admin',
         createdAt: new Date().toISOString()
       };
       updated = [newT, ...templates];
-      showNotify('New letter template created!');
+      showNotify('Letter format created successfully!');
     }
 
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
 
     setTitle('');
-    setContent('');
-    setCategory('Official Letter');
+    setDescription('');
+    setDepartment('All');
+    setAttachedFile(null);
     setEditingTemplate(null);
     setShowAddModal(false);
   };
@@ -69,18 +107,21 @@ export default function LetterFormats() {
     const updated = templates.filter(t => t.id !== id);
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
-    showNotify('Template deleted', 'info');
+    showNotify('Format deleted', 'info');
   };
 
-  const handleDownloadLetter = (t) => {
-    const blob = new Blob([t.content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
+  const handleDownloadAttachment = (t) => {
+    if (!t.file?.data) {
+      showNotify('No attached file to download', 'error');
+      return;
+    }
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `${t.title.replace(/\s+/g, '_')}.txt`;
+    a.href = t.file.data;
+    a.download = t.file.name || `${t.title.replace(/\s+/g, '_')}_Attachment`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    showNotify(`Downloaded ${t.title}`);
+    document.body.removeChild(a);
+    showNotify(`Downloaded ${t.file.name}`);
   };
 
   const handleLogout = () => {
@@ -88,10 +129,12 @@ export default function LetterFormats() {
     navigate('/login');
   };
 
-  const filteredTemplates = templates.filter(t =>
-    t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTemplates = templates.filter(t => {
+    const deptMatch = activeTab === 'All' || t.department === 'All' || t.department === activeTab;
+    const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        t.description.toLowerCase().includes(searchTerm.toLowerCase());
+    return deptMatch && searchMatch;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50/50 text-gray-900 font-sans max-w-full overflow-x-hidden">
@@ -129,8 +172,8 @@ export default function LetterFormats() {
                 <FileCheck className="w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-base sm:text-2xl font-black tracking-tight text-white">Letter Formats &amp; Templates</h1>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Manage, draft, and export official NSTP letters and communications</p>
+                <h1 className="text-base sm:text-2xl font-black tracking-tight text-white">Letter Formats &amp; Attachments</h1>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
               </div>
             </div>
 
@@ -138,56 +181,79 @@ export default function LetterFormats() {
               type="button"
               onClick={() => {
                 setTitle('');
-                setContent('');
-                setCategory('Official Letter');
+                setDescription('');
+                setDepartment('All');
+                setAttachedFile(null);
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
               className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 text-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Create Letter Template</span>
+              <span>Create Letter Format</span>
             </button>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        {/* Filter Tabs & Search */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6">
+          {/* Department Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-2xl shadow-2xs overflow-x-auto">
+            {['All', 'ROTC', 'CWTS', 'LTS'].map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === tab
+                    ? 'bg-emerald-800 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                {tab === 'All' ? 'All Departments' : tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Box */}
+          <div className="relative min-w-[240px]">
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search templates by title or category..."
+              placeholder="Search by title or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 transition-all shadow-2xs"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
             />
           </div>
         </div>
 
-        {/* Blank / Empty State or Template Cards Grid */}
+        {/* Empty State vs Card Grid */}
         {filteredTemplates.length === 0 ? (
           <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-gray-200/80 shadow-sm max-w-xl mx-auto my-6">
             <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
               <FileText className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-black text-emerald-950">No Letter Formats Created Yet</h3>
+            <h3 className="text-lg font-black text-emerald-950">No Letter Formats Found</h3>
             <p className="text-gray-500 text-xs sm:text-sm mt-1 mb-6 leading-relaxed">
-              The letter formats list is currently empty. Click the button below to add your custom official letter template or form document.
+              {searchTerm || activeTab !== 'All'
+                ? `No letter formats match your filter "${activeTab}" or search query.`
+                : 'The letter format list is empty. Click the button below to upload or create a letter format.'}
             </p>
             <button
               type="button"
               onClick={() => {
                 setTitle('');
-                setContent('');
-                setCategory('Official Letter');
+                setDescription('');
+                setDepartment('All');
+                setAttachedFile(null);
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
               className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-md active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4 text-amber-400" />
-              <span>Add First Template</span>
+              <span>Add Letter Format</span>
             </button>
           </div>
         ) : (
@@ -195,9 +261,14 @@ export default function LetterFormats() {
             {filteredTemplates.map((item) => (
               <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {item.category}
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                      item.department === 'ROTC' ? 'bg-red-50 text-red-700 border-red-200' :
+                      item.department === 'CWTS' ? 'bg-green-50 text-green-700 border-green-200' :
+                      item.department === 'LTS' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {item.department === 'All' ? 'All Departments' : item.department}
                     </span>
                     <span className="text-[10px] text-gray-400 font-medium">
                       {new Date(item.createdAt).toLocaleDateString()}
@@ -205,20 +276,46 @@ export default function LetterFormats() {
                   </div>
 
                   <h3 className="text-base font-black text-emerald-950 mb-2 leading-tight">{item.title}</h3>
-                  <p className="text-xs text-gray-600 line-clamp-4 font-mono bg-gray-50 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap leading-relaxed">
-                    {item.content}
+                  <p className="text-xs text-gray-600 font-medium bg-gray-50/80 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap leading-relaxed mb-3">
+                    {item.description}
                   </p>
+
+                  {/* Attachment Box */}
+                  {item.file && (
+                    <div className="bg-emerald-50/70 border border-emerald-200/70 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <File className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-emerald-950 truncate">{item.file.name}</p>
+                          <p className="text-[10px] text-emerald-700 font-medium">{item.file.size}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setViewingFile(item.file)}
+                          className="p-1.5 text-emerald-800 hover:bg-emerald-200/60 rounded-lg transition-colors cursor-pointer"
+                          title="View File"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAttachment(item)}
+                          className="p-1.5 text-emerald-800 hover:bg-emerald-200/60 rounded-lg transition-colors cursor-pointer"
+                          title="Download File"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadLetter(item)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-900 cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download</span>
-                  </button>
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    By {item.createdBy}
+                  </span>
 
                   <div className="flex items-center gap-1">
                     <button
@@ -226,12 +323,13 @@ export default function LetterFormats() {
                       onClick={() => {
                         setEditingTemplate(item);
                         setTitle(item.title);
-                        setCategory(item.category);
-                        setContent(item.content);
+                        setDepartment(item.department);
+                        setDescription(item.description);
+                        setAttachedFile(item.file || null);
                         setShowAddModal(true);
                       }}
                       className="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                      title="Edit Template"
+                      title="Edit"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
@@ -240,7 +338,7 @@ export default function LetterFormats() {
                       type="button"
                       onClick={() => handleDeleteTemplate(item.id)}
                       className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                      title="Delete Template"
+                      title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -259,7 +357,7 @@ export default function LetterFormats() {
                 <div className="flex items-center space-x-2.5">
                   <FileCheck className="w-5 h-5 text-amber-400" />
                   <h3 className="text-base font-black tracking-tight">
-                    {editingTemplate ? 'Edit Letter Template' : 'Create Letter Template'}
+                    {editingTemplate ? 'Edit Letter Format' : 'Create Letter Format'}
                   </h3>
                 </div>
                 <button type="button" onClick={() => setShowAddModal(false)} className="text-emerald-200 hover:text-white p-1 rounded-lg transition-colors cursor-pointer">
@@ -267,13 +365,13 @@ export default function LetterFormats() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveTemplate} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              <form onSubmit={handleSaveTemplate} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Template Title *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Letter Title *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Excused Absence Form"
+                    placeholder="e.g. ROTC Absence & Medical Clearance Form"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
@@ -281,30 +379,69 @@ export default function LetterFormats() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Category *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
                   <select
-                    value={category}
-                    onChange={e => setCategory(e.target.value)}
+                    value={department}
+                    onChange={e => setDepartment(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
                   >
-                    <option value="Official Letter">Official Letter</option>
-                    <option value="Absence Request">Absence Request</option>
-                    <option value="Field Work Request">Field Work Request</option>
-                    <option value="Certificate Format">Certificate Format</option>
-                    <option value="General Notice">General Notice</option>
+                    <option value="All">All Departments</option>
+                    <option value="ROTC">ROTC</option>
+                    <option value="CWTS">CWTS</option>
+                    <option value="LTS">LTS</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Letter Content / Body *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description &amp; Guidelines *</label>
                   <textarea
                     required
-                    rows={8}
-                    placeholder="Enter the official body text of the letter..."
-                    value={content}
-                    onChange={e => setContent(e.target.value)}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 leading-relaxed"
+                    rows={4}
+                    placeholder="Enter description, instructions, or template body guidelines..."
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 leading-relaxed font-medium"
                   />
+                </div>
+
+                {/* File Attachment Upload */}
+                <div>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Attach Official Document / Form (Optional)</label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
+                    className="hidden"
+                  />
+                  
+                  {attachedFile ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Paperclip className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-emerald-950 truncate">{attachedFile.name}</p>
+                          <p className="text-[10px] text-emerald-700 font-medium">{attachedFile.size}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAttachedFile(null)}
+                        className="text-rose-600 hover:text-rose-800 text-xs font-bold p-1 hover:bg-rose-50 rounded-lg"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full py-3 px-4 border-2 border-dashed border-gray-300 hover:border-emerald-500 rounded-xl bg-gray-50 hover:bg-emerald-50/50 text-gray-600 hover:text-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Paperclip className="w-4 h-4 text-emerald-700" />
+                      <span>Choose PDF, Word Document, Image, or File</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
@@ -319,10 +456,42 @@ export default function LetterFormats() {
                     type="submit"
                     className="px-5 py-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
                   >
-                    {editingTemplate ? 'Update Template' : 'Save Template'}
+                    {editingTemplate ? 'Update Format' : 'Save Format'}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* View Attachment Preview Modal */}
+        {viewingFile && (
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setViewingFile(null)}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="bg-emerald-900 text-white p-4 flex items-center justify-between shrink-0">
+                <p className="text-xs font-bold truncate">{viewingFile.name}</p>
+                <button type="button" onClick={() => setViewingFile(null)} className="text-white/80 hover:text-white p-1 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-gray-100">
+                {viewingFile.type?.startsWith('image/') ? (
+                  <img src={viewingFile.data} alt={viewingFile.name} className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
+                ) : (
+                  <div className="text-center p-8 bg-white rounded-2xl border border-gray-200 max-w-md">
+                    <File className="w-16 h-16 text-emerald-700 mx-auto mb-3" />
+                    <p className="font-bold text-sm text-gray-900 mb-1">{viewingFile.name}</p>
+                    <p className="text-xs text-gray-500 mb-4">{viewingFile.size}</p>
+                    <a
+                      href={viewingFile.data}
+                      download={viewingFile.name}
+                      className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all"
+                    >
+                      <Download className="w-4 h-4" /> Download File
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

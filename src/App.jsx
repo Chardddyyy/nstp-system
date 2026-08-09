@@ -776,11 +776,28 @@ function App() {
   // ── Chat management ───────────────────────────────────────────────────────────
 
   async function startConversationFunc(withUser) {
-    const conversation = await conversationsAPI.create(withUser.id);
-    if (!conversations.some(c => c.id === conversation.id)) {
-      setConversations(prev => [conversation, ...prev]);
-      setMessages(prev => ({ ...prev, [conversation.id]: [] }));
+    if (!withUser?.id) return null;
+    const targetUserId = Number(withUser.id);
+
+    const existing = conversations.find(c =>
+      !c.isGroup && !c.is_group && (
+        Number(c.participant_1_id) === targetUserId ||
+        Number(c.participant_2_id) === targetUserId ||
+        c.participants?.includes(targetUserId) ||
+        c.with === withUser.name
+      )
+    );
+
+    if (existing) {
+      return existing;
     }
+
+    const conversation = await conversationsAPI.create(targetUserId);
+    setConversations(prev => {
+      if (prev.some(c => String(c.id) === String(conversation.id))) return prev;
+      return [conversation, ...prev];
+    });
+    setMessages(prev => ({ ...prev, [conversation.id]: prev[conversation.id] || [] }));
     return conversation;
   }
 
