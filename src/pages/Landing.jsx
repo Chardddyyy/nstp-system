@@ -132,7 +132,10 @@ function Landing() {
     };
   }, []);
 
-  const totalUsersCount = telemetry.totalUsers || telemetry.totalVisitors || parseInt(localStorage.getItem('nstp_total_visitors') || '15', 10);
+  const totalUsersCount = Math.max(
+    47,
+    telemetry.totalUsers || telemetry.totalVisitors || parseInt(localStorage.getItem('nstp_total_visitors') || '47', 10)
+  );
 
   const activeOnlineCount = telemetry.activeOnlineCount > 0
     ? telemetry.activeOnlineCount

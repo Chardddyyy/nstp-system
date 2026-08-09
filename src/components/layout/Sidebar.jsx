@@ -40,10 +40,10 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay - clicking outside sidebar closes it on all screen sizes */}
       {open && (
         <div
-          className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xs z-40"
           onClick={onClose}
         />
       )}

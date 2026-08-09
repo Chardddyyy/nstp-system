@@ -507,12 +507,12 @@ function getClientSideTelemetry() {
   if (!deviceId) {
     deviceId = 'dev_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
     localStorage.setItem('nstp_unique_device_id', deviceId);
-    let count = parseInt(localStorage.getItem('nstp_unique_device_count') || '15', 10);
+    let count = parseInt(localStorage.getItem('nstp_unique_device_count') || '47', 10);
     count += 1;
     localStorage.setItem('nstp_unique_device_count', count.toString());
   }
 
-  const totalVisitors = parseInt(localStorage.getItem('nstp_unique_device_count') || '16', 10);
+  const totalVisitors = Math.max(47, parseInt(localStorage.getItem('nstp_unique_device_count') || '47', 10));
 
   return {
     totalVisitors,
