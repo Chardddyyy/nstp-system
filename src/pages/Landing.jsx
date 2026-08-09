@@ -223,10 +223,10 @@ function Landing() {
           ))}
         </div>
 
-        {/* Floating Animated Arrow Down Indicator on Mobile View (Bottom Right) */}
-        <div className="absolute bottom-3 right-3 z-20 pointer-events-none animate-bounce sm:hidden">
-          <div className="w-8 h-8 rounded-full bg-emerald-950/80 border border-amber-400/60 flex items-center justify-center text-amber-400 shadow-lg backdrop-blur-xs">
-            <ChevronDown className="w-5 h-5" />
+        {/* Floating Animated Arrow Down Indicator on Mobile View (Absolute Bottom Right) */}
+        <div className="absolute bottom-1 right-2 z-30 pointer-events-none animate-bounce sm:hidden">
+          <div className="w-7 h-7 rounded-full bg-emerald-950/90 border border-amber-400/80 flex items-center justify-center text-amber-400 shadow-xl backdrop-blur-xs">
+            <ChevronDown className="w-4 h-4" />
           </div>
         </div>
       </section>
@@ -322,8 +322,9 @@ function Landing() {
       </section>
 
       {/* History, Mission, and Vision Section - Compact Mobile Spacing */}
-      <section className="py-8 sm:py-16 px-4 bg-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-8 sm:py-16 px-4 bg-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
           {/* History */}
           <div className="mb-8 sm:mb-16">
             <div className="text-center mb-5 sm:mb-8">
@@ -376,8 +377,9 @@ function Landing() {
       </section>
 
       {/* Interactive NSTP Components Section - 3 Side-by-side Cards on Mobile */}
-      <section className="py-6 sm:py-16 px-3 sm:px-4 bg-gray-50 border-t border-gray-100">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-6 sm:py-16 px-3 sm:px-4 bg-gray-50/90 border-t border-gray-100 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-4 sm:mb-12">
             <span className="bg-emerald-100 text-emerald-800 text-[9px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Program Components</span>
             <h2 className="text-base sm:text-4xl font-black text-gray-900 mt-1 sm:mt-2">Explore NSTP Offerings</h2>
@@ -510,8 +512,9 @@ function Landing() {
       )}
 
       {/* Step-by-Step Online Enrollment Guide - 3 Side-by-side Steps on Mobile */}
-      <section className="py-6 sm:py-16 px-3 sm:px-4 bg-white border-t border-gray-100">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-6 sm:py-16 px-3 sm:px-4 bg-white border-t border-gray-100 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-4 sm:mb-12">
             <span className="bg-amber-100 text-amber-900 text-[9px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Easy 3-Step Process</span>
             <h2 className="text-base sm:text-4xl font-black text-gray-900 mt-1 sm:mt-2">How to Enroll Online</h2>
@@ -675,8 +678,9 @@ function Landing() {
       </section>
 
       {/* Footer - Edge-to-Edge Desktop Layout */}
-      <footer className="bg-emerald-950 text-white">
-        <div className="w-full px-3 sm:px-8 lg:px-12 py-5 sm:py-10">
+      <footer className="bg-emerald-950 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="w-full px-3 sm:px-8 lg:px-12 py-5 sm:py-10 relative z-10">
           <div className="flex flex-row justify-between items-start gap-2.5 sm:gap-8">
             {/* About (Left Side) */}
             <div className="w-1/2 md:w-2/3 min-w-0">
