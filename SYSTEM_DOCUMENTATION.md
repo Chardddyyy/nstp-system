@@ -36,6 +36,7 @@ Lahat ng mga larawan, logo, media assets, at external URLs na ginamit sa sistema
 
 ### 🎨 Frontend Framework & UI Engine
 * **React 19 (Vite 7)**: SPA architecture para sa mabilis na pag-load nang walang full page reloads.
+* **Bootstrap 5 (v5.3.3)**: Front-end framework para sa UI components, badges, alerts, responsive grid structure, at modal utilities.
 * **Tailwind CSS v4**: Modern CSS utility system para sa sleek dark/emerald design system, responsive grid layouts, at micro-animations.
 * **Lucide React**: Vector SVG icon library.
 * **React Router DOM v7**: Dynamic routing at Role-based Protected Route System.
@@ -135,6 +136,7 @@ Ang mga sumusunod ay ang pormal na talaan ng mga sanggunian (APA 7th Edition Sty
 * Google Maps. (2026). *Map location of Cavite State University - Naic Campus* [Digital map]. Alphabet Inc. https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic
 
 ### 💻 Open Source Software & Technical References
+* Bootstrap Core Team. (2024). *Bootstrap: Powerful, extensible, and feature-packed frontend toolkit* (Version 5.3.3) [Computer software]. Otto & Thornton, Open Source Community. https://getbootstrap.com
 * Express Core Team. (2024). *Express: Fast, unopinionated, minimalist web framework for Node.js* (Version 4.19.0) [Computer software]. OpenJS Foundation. https://expressjs.com
 * Lucide Contributors. (2024). *Lucide React: Beautiful & consistent icon toolkit* (Version 0.344.0) [Computer software]. Lucide Open Source Community. https://lucide.dev
 * Meta Open Source. (2024). *React: JavaScript library for building user interfaces* (Version 19.0.0) [Computer software]. Meta Platforms, Inc. https://react.dev

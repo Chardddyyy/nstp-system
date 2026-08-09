@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "bootstrap": "^5.3.8",
     "express-validator": "^7.3.1",
     "heic2any": "^0.0.4",
     "lucide-react": "^0.577.0",
