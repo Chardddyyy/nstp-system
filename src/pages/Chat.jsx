@@ -1825,7 +1825,7 @@ function Chat() {
               <audio ref={(el) => { if (el && remoteStream) el.srcObject = remoteStream; }} autoPlay playsInline className="hidden" />
 
               {/* Chat Header */}
-              <div className="bg-white px-2.5 py-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1.5 flex-shrink-0 w-full max-w-full overflow-hidden">
+              <div className="bg-white px-2.5 py-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1.5 flex-shrink-0 w-full max-w-full relative z-30">
                 <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
                   {/* Back button - only needed on mobile */}
                   <button type="button"
@@ -1888,22 +1888,22 @@ function Chat() {
                       <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     {showChatMenu && (
-                      <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[180px]">
+                      <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-2xl border border-gray-200/90 py-1.5 z-[999] min-w-[190px] font-bold text-xs sm:text-sm animate-fade-in">
                         <button type="button"
                           onClick={handleClearChat}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+                          className="w-full text-left px-4 py-2.5 hover:bg-gray-100 text-gray-700 transition-colors cursor-pointer"
                         >
                           Clear Chat
                         </button>
                         <button type="button"
                           onClick={handleDeleteConversation}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
+                          className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
                         >
                           Delete Conversation
                         </button>
                         <button type="button"
                           onClick={handleBlockUser}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${isBlocked ? 'text-green-600' : 'text-red-600'}`}
+                          className={`w-full text-left px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer ${isBlocked ? 'text-emerald-700 font-extrabold' : 'text-rose-600'}`}
                         >
                           {isBlocked ? 'Unblock User' : 'Block User'}
                         </button>
