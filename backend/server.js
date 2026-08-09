@@ -3172,23 +3172,31 @@ app.use(function(err, req, res, next) {
   });
 });
 
+// ── Health Check Endpoints for Render Deployment ──────────────────────────────
+app.get('/', function(req, res) {
+  res.status(200).json({ status: 'online', service: 'CvSU Naic NSTP API Server', version: '1.0.0' });
+});
+
+app.get('/api/ping', function(req, res) {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 async function startServer() {
   var db = getDbConfig();
-  try {
-    await pool.execute('SELECT 1');
-    console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
-    // Raise packet limit so base64 images/files fit (64 MB)
-    try { await pool.execute('SET GLOBAL max_allowed_packet = 67108864'); } catch (_) {}
-  } catch (err) {
-    console.error('Database NOT connected:', err.message);
-    console.error('Start XAMPP MySQL, then run: cd backend && npm run setup-db');
-    process.exit(1);
-  }
 
+  // Start listening immediately so Render health checks pass on boot
   app.listen(PORT, '0.0.0.0', function() {
     console.log('Server running on port ' + PORT);
     console.log('API available at http://localhost:' + PORT + '/api and http://127.0.0.1:' + PORT + '/api');
   });
+
+  try {
+    await pool.execute('SELECT 1');
+    console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
+    try { await pool.execute('SET GLOBAL max_allowed_packet = 67108864'); } catch (_) {}
+  } catch (err) {
+    console.error('Database connection warning:', err.message);
+  }
 
   console.log('Running schema migrations...');
   await Promise.all([
