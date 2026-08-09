@@ -686,7 +686,10 @@ function StudentManagement() {
 
               <div className="min-w-0 flex-1">
                 <h2 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">Student Management</h2>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update roster'}</p>
+                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                  <span className="hidden sm:inline">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update roster'}</span>
+                  <span className="sm:hidden">{isAdmin ? 'Student records & CHED' : 'Student roster'}</span>
+                </p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">

@@ -535,8 +535,14 @@ function Profile() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">User Profile &amp; Account</h1>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Manage personal credentials &amp; profile</p>
+                <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+                  <span className="hidden sm:inline">User Profile &amp; Account</span>
+                  <span className="sm:hidden">My Profile</span>
+                </h1>
+                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                  <span className="hidden sm:inline">Manage personal credentials &amp; profile</span>
+                  <span className="sm:hidden">Account Details</span>
+                </p>
               </div>
             </div>
             <button type="button"

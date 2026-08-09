@@ -351,7 +351,8 @@ function Reports() {
                   {isAdmin ? 'Report Assignments' : 'My Reports'}
                 </h1>
                 <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                  {isAdmin ? 'Create & manage requirements' : 'Submit & monitor required files'}
+                  <span className="hidden sm:inline">{isAdmin ? 'Create & manage requirements' : 'Submit & monitor required files'}</span>
+                  <span className="sm:hidden">{isAdmin ? 'Manage reports' : 'My submissions'}</span>
                 </p>
               </div>
             </div>

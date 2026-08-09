@@ -237,8 +237,11 @@ function InstructorDashboard() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">{user?.department} Instructor Portal</h2>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Welcome back, {user?.name || 'Instructor'} 👋</p>
+                <h2 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+                  <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
+                  <span className="sm:hidden">{user?.department} Portal</span>
+                </h2>
+                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Welcome, {user?.name || 'Instructor'} 👋</p>
               </div>
             </div>
 
@@ -367,17 +370,18 @@ function InstructorDashboard() {
                 )}
               </div>
 
-              {/* User Profile Button - Displays Avatar, Name & Role on Mobile */}
+              {/* User Profile Button - Compact Avatar on Mobile, Full Pill on Desktop */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1 sm:space-x-3 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 sm:px-3.5 py-1 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white p-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                title="View Profile"
               >
-                <div className="shrink-0">
+                <div className="shrink-0 w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
                   {getUserAvatar()}
                 </div>
-                <div className="block text-left min-w-0 overflow-hidden">
-                  <p className="font-bold text-[9px] sm:text-xs text-white leading-tight truncate max-w-[70px] sm:max-w-none">{user?.name || 'Instructor'}</p>
-                  <p className="text-[7px] sm:text-[10px] text-amber-300 font-semibold uppercase tracking-wider truncate">{user?.department} Instructor</p>
+                <div className="hidden sm:block text-left min-w-0 overflow-hidden">
+                  <p className="font-bold text-xs text-white leading-tight truncate">{user?.name || 'Instructor'}</p>
+                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider truncate">{user?.department} Instructor</p>
                 </div>
               </Link>
             </div>
