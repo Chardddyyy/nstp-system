@@ -373,15 +373,15 @@ function InstructorDashboard() {
               {/* User Profile Button - Compact Avatar on Mobile, Full Pill on Desktop */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white p-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
-                <div className="shrink-0 w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
+                <div className="shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
                   {getUserAvatar()}
                 </div>
-                <div className="hidden sm:block text-left min-w-0 overflow-hidden">
-                  <p className="font-bold text-xs text-white leading-tight truncate">{user?.name || 'Instructor'}</p>
-                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider truncate">{user?.department} Instructor</p>
+                <div className="text-left min-w-0">
+                  <p className="font-bold text-[11px] sm:text-xs text-white leading-tight truncate max-w-[100px] sm:max-w-none">{user?.name || 'Instructor'}</p>
+                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
                 </div>
               </Link>
             </div>
@@ -448,30 +448,31 @@ function InstructorDashboard() {
         {/* Content Section Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
           {/* My Students Card */}
-          <div className="bg-white rounded-2xl shadow-md border border-emerald-100/60 p-3.5 sm:p-6">
-            <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-gray-100">
-              <h3 className="text-base sm:text-lg font-extrabold text-gray-900 flex items-center">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs sm:text-sm mr-2 shadow-2xs">
+          <div className="bg-white rounded-2xl shadow-md border border-emerald-100/60 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100">
+              <h3 className="text-xs sm:text-base font-extrabold text-gray-900 flex items-center min-w-0 truncate mr-1">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs sm:text-sm mr-1.5 sm:mr-2 shadow-2xs shrink-0">
                   🎓
                 </div>
-                My {user?.department || ''} Students
+                <span className="truncate">My {user?.department || ''} Students</span>
               </h3>
-              <Link to="/students" className="text-emerald-700 hover:text-emerald-800 text-xs font-extrabold flex items-center gap-1 active:scale-95 transition-all">
-                View All &rarr;
+              <Link to="/students" className="text-emerald-700 hover:text-emerald-800 text-[11px] sm:text-xs font-extrabold flex items-center gap-1 active:scale-95 transition-all shrink-0">
+                <span>View All</span>
+                <span>&rarr;</span>
               </Link>
             </div>
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {recentStudents.length === 0 ? (
                 <p className="text-xs text-gray-500 text-center py-6">No enrolled students assigned yet.</p>
               ) : (
                 recentStudents.map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50/80 hover:bg-emerald-50/40 rounded-xl border border-gray-200/60 transition-all group">
-                    <div className="flex items-center space-x-2.5 min-w-0">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
+                  <div key={student.id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50/80 hover:bg-emerald-50/40 rounded-xl border border-gray-200/60 transition-all group">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <div className="w-7 h-7 sm:w-9 sm:h-9 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
                         {(student.name || 'S').charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-extrabold text-xs sm:text-sm text-gray-900 truncate group-hover:text-emerald-800 transition-colors">{student.name}</p>
+                        <p className="font-extrabold text-xs text-gray-900 truncate group-hover:text-emerald-800 transition-colors">{student.name}</p>
                         <p className="text-[10px] text-gray-500 font-medium truncate">{student.studentId} • {student.program || 'NSTP'}</p>
                       </div>
                     </div>
@@ -492,16 +493,17 @@ function InstructorDashboard() {
           </div>
 
           {/* Recent Reports Card */}
-          <div className="bg-white rounded-2xl shadow-md border border-emerald-100/60 p-3.5 sm:p-6">
-            <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-gray-100">
-              <h3 className="text-base sm:text-lg font-extrabold text-gray-900 flex items-center">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs sm:text-sm mr-2 shadow-2xs">
+          <div className="bg-white rounded-2xl shadow-md border border-emerald-100/60 p-3 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-100">
+              <h3 className="text-xs sm:text-base font-extrabold text-gray-900 flex items-center min-w-0 truncate mr-1">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs sm:text-sm mr-1.5 sm:mr-2 shadow-2xs shrink-0">
                   📄
                 </div>
-                Recent Department Reports
+                <span className="truncate">Recent Department Reports</span>
               </h3>
-              <Link to="/reports" className="text-amber-800 hover:text-amber-900 text-xs font-extrabold flex items-center gap-1 active:scale-95 transition-all">
-                Open Reports &rarr;
+              <Link to="/reports" className="text-amber-800 hover:text-amber-900 text-[11px] sm:text-xs font-extrabold flex items-center gap-1 active:scale-95 transition-all shrink-0">
+                <span>Open Reports</span>
+                <span>&rarr;</span>
               </Link>
             </div>
             <div className="space-y-2.5">

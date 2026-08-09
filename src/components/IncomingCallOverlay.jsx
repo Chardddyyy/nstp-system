@@ -94,6 +94,10 @@ function IncomingCallOverlay() {
             <button
               type="button"
               onClick={async () => {
+                const currentCall = incomingCall;
+                answerIncomingCall(currentCall);
+                navigate('/chat');
+
                 try {
                   const constraints = isVideo ? { audio: true, video: true } : { audio: true };
                   const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -101,8 +105,6 @@ function IncomingCallOverlay() {
                 } catch (err) {
                   console.warn('Preacquire media stream error:', err);
                 }
-                await answerIncomingCall(incomingCall);
-                navigate('/chat');
               }}
               className="px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95 text-white rounded-2xl font-black flex items-center gap-2 text-xs sm:text-sm touch-manipulation cursor-pointer transition-all shadow-lg shadow-emerald-950/40"
             >

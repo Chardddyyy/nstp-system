@@ -611,15 +611,15 @@ function AdminDashboard() {
               {/* User Profile - Compact Avatar on Mobile, Full Pill on Desktop */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white p-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
-                <div className="shrink-0 w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
+                <div className="shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
                   {getUserAvatar()}
                 </div>
-                <div className="hidden sm:block text-left min-w-0 overflow-hidden">
-                  <p className="font-bold text-xs text-white leading-tight truncate">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider truncate">Admin</p>
+                <div className="text-left min-w-0">
+                  <p className="font-bold text-[11px] sm:text-xs text-white leading-tight truncate max-w-[100px] sm:max-w-none">{user?.name || 'Admin'}</p>
+                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
                 </div>
               </button>
             </div>

@@ -136,6 +136,7 @@ function App() {
   const [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
   const [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
   const outgoingCallIdRef = useRef(null);
+  const handledCallIdsRef = useRef(new Set());
 
   const baselineReady = useRef(false);
   const seenEnrollmentIds = useRef(new Set());
@@ -414,7 +415,8 @@ function App() {
     async function pollCalls() {
       try {
         const incomingList = await callsAPI.getIncoming();
-        setIncomingCall(incomingList.length > 0 ? incomingList[0] : null);
+        const activeList = incomingList.filter(c => !handledCallIdsRef.current.has(String(c.id)));
+        setIncomingCall(activeList.length > 0 ? activeList[0] : null);
 
         if (outgoingCallIdRef.current) {
           const outgoing = await callsAPI.getById(outgoingCallIdRef.current);
@@ -439,28 +441,30 @@ function App() {
   }
 
   async function declineIncomingCall(callId) {
+    if (callId) handledCallIdsRef.current.add(String(callId));
+    setIncomingCall(null);
     try {
       await callsAPI.end(callId, 'declined');
     } catch (e) {
       console.warn('Decline call failed:', e);
     }
-    setIncomingCall(null);
   }
 
   async function answerIncomingCall(call) {
-    try {
-      const targetId = (typeof call === 'object' && call !== null) ? call.id : call;
-      if (targetId) {
-        await callsAPI.answer(targetId).catch(() => {});
+    const targetId = (typeof call === 'object' && call !== null) ? call.id : call;
+    if (targetId) handledCallIdsRef.current.add(String(targetId));
+    
+    // Immediately dismiss incoming call overlay & stop ringtone synchronously
+    setIncomingCall(null);
+    setPendingAnsweredCall(call);
+    window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
+
+    if (targetId) {
+      try {
+        await callsAPI.answer(targetId);
+      } catch (e) {
+        console.warn('Answer call warning:', e);
       }
-      setIncomingCall(null);
-      setPendingAnsweredCall(call);
-      window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
-    } catch (e) {
-      console.warn('Answer call warning:', e);
-      setIncomingCall(null);
-      setPendingAnsweredCall(call);
-      window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
     }
   }
 
