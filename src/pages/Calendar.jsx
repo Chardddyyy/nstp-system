@@ -216,7 +216,7 @@ function Calendar() {
 
   // Get user avatar display
   return (
-    <div className="h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 overflow-hidden flex flex-col">
+    <div className="h-[100dvh] max-h-[100dvh] bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 overflow-hidden flex flex-col">
 
       <Sidebar
         open={sidebarOpen}
@@ -226,7 +226,7 @@ function Calendar() {
       />
 
       {/* Main Content */}
-      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Centered notification */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
@@ -243,7 +243,7 @@ function Calendar() {
         )}
 
         {/* Hero Header Card - Unified CvSU Naic Header */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-2 sm:mb-6 w-full">
           <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
             <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
@@ -259,11 +259,11 @@ function Calendar() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
                   <span className="hidden sm:inline">NSTP Activity Calendar</span>
                   <span className="sm:hidden">Activity Calendar</span>
                 </h1>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   <span className="hidden sm:inline">{isAdmin ? 'Schedule & organize campus events' : 'View official NSTP activities'}</span>
                   <span className="sm:hidden">{isAdmin ? 'Schedule events' : 'NSTP Activities'}</span>
                 </p>
@@ -272,9 +272,9 @@ function Calendar() {
             {isAdmin && (
               <button type="button"
                 onClick={() => setShowAddEventModal(true)}
-                className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center text-xs sm:text-sm cursor-pointer shrink-0"
+                className="flex items-center space-x-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-sm cursor-pointer shrink-0"
               >
-                <Plus className="w-4 h-4 text-emerald-950" />
+                <Plus className="w-3.5 h-3.5 text-emerald-950" />
                 <span>Add Event</span>
               </button>
             )}
@@ -282,7 +282,7 @@ function Calendar() {
         </div>
 
         {/* Calendar Component — fills remaining viewport height */}
-        <div className="flex-1 bg-white rounded-xl shadow-md p-3 lg:p-5 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 bg-white rounded-xl shadow-md p-2 sm:p-3 lg:p-5 flex flex-col overflow-hidden min-h-0">
           <div className="flex-shrink-0 flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-800">
               {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}

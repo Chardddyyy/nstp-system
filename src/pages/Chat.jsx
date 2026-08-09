@@ -1010,7 +1010,7 @@ function Chat() {
   }, []);
 
   // ── Group call ─────────────────────────────────────────────────────
-  const handleGroupCall = async (type) => {
+  const _handleGroupCall = async (type) => {
     if (!activeConversation) return;
     try {
       const callData = await callsAPI.initiate(activeConversation.id, type);
@@ -1029,7 +1029,7 @@ function Chat() {
   };
 
   // ── Voice call ─────────────────────────────────────────────────────
-  const handleCall = async () => {
+  const _handleCall = async () => {
     if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
     try {
       const callData = await callsAPI.initiate(activeConversation.id, 'voice');
@@ -1074,7 +1074,7 @@ function Chat() {
   };
 
   // ── Video call ─────────────────────────────────────────────────────
-  const handleVideoCall = async () => {
+  const _handleVideoCall = async () => {
     if (isBlocked) { addNotification('Cannot call a blocked user.', 'error'); return; }
     try {
       const callData = await callsAPI.initiate(activeConversation.id, 'video');
@@ -1913,22 +1913,6 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
-                  <button type="button"
-                    onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('voice') : handleCall}
-                    className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
-                    title="Voice Call"
-                    aria-label="Voice call"
-                  >
-                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <button type="button"
-                    onClick={isGroupConversation(activeConversation) ? () => handleGroupCall('video') : handleVideoCall}
-                    className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
-                    title="Video Call"
-                    aria-label="Video call"
-                  >
-                    <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
                   {!isGroupConversation(activeConversation) && (
                   <div className="relative" ref={chatMenuRef}>
                     <button type="button"

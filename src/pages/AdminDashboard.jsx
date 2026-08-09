@@ -609,15 +609,15 @@ function AdminDashboard() {
               {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1 sm:space-x-2 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-1 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
-                <div className="shrink-0 w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
+                <div className="shrink-0 w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center rounded-full overflow-hidden">
                   {getUserAvatar()}
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="font-bold text-[10px] sm:text-xs text-white leading-tight truncate max-w-[70px] sm:max-w-none">{user?.name || 'Admin'}</p>
-                  <p className="text-[8px] sm:text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
+                  <p className="font-bold text-[9px] sm:text-xs text-white leading-tight truncate max-w-[55px] sm:max-w-none">{user?.name || 'Admin'}</p>
+                  <p className="text-[7.5px] sm:text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
                 </div>
               </button>
             </div>
