@@ -114,7 +114,7 @@ function App() {
               document.body.appendChild(banner);
 
               setTimeout(() => {
-                window.location.href = `${window.location.pathname}?v=${data.version}`;
+                window.location.reload();
               }, 1000);
             }
           }
