@@ -157,25 +157,25 @@ export default function LetterFormats() {
         )}
 
         {/* Hero Banner - Unified CvSU Naic Header */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6 w-full">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10 w-full">
-            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1 w-full">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8 shadow-2xl border border-emerald-800/40 relative mb-5 sm:mb-8 w-full">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sm:gap-6 relative z-10 w-full">
+            <div className="flex items-center space-x-3 sm:space-x-5 min-w-0 flex-1 w-full">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2.5 sm:p-3 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-2xl shrink-0 transition-all cursor-pointer shadow-sm active:scale-95"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Menu className="w-6 h-6 sm:w-7 sm:h-7" />
               </button>
 
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white rounded-2xl p-1 sm:p-1.5 flex items-center justify-center overflow-hidden shrink-0 shadow-lg border-2 border-emerald-600">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
-                <p className="text-emerald-200 text-xs sm:text-base font-medium truncate mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
+                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">Letter Formats &amp; Attachments</h1>
+                <p className="text-emerald-200 text-xs sm:text-base lg:text-lg font-semibold mt-1">Download or upload official forms for ROTC, CWTS, and LTS</p>
               </div>
             </div>
 
@@ -190,9 +190,9 @@ export default function LetterFormats() {
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
-              className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-5 py-3 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-xs sm:text-sm shrink-0"
+              className="flex items-center space-x-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-6 py-3.5 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-sm sm:text-base shrink-0"
             >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-950" />
+              <Plus className="w-5 h-5 text-emerald-950 stroke-[3]" />
               <span className="whitespace-nowrap">Create Letter Format</span>
             </button>
             )}
