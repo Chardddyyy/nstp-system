@@ -148,6 +148,21 @@ function requireAdmin(req, res, next) {
 }
 
 // ── Audit log ─────────────────────────────────────────────────────────────────
+async function ensureAuditLogs() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        action VARCHAR(100) NOT NULL,
+        user_id INT NULL,
+        detail TEXT NULL,
+        ip VARCHAR(45) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (_) {}
+}
+
 // Creates the table if missing, then writes a single log row. Non-blocking.
 async function auditLog(action, userId, detail, ip) {
   try {
@@ -3134,6 +3149,15 @@ app.get('/api/telemetry/stats', async function(req, res) {
   } catch (err) {
     console.error('Telemetry stats error:', err);
     res.status(500).json({ message: 'Error retrieving telemetry' });
+  }
+});
+
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.execute('SELECT 1');
+    res.json({ status: 'OK' });
+  } catch (error) {
+    res.status(503).json({ status: 'Unavailable' });
   }
 });
 
