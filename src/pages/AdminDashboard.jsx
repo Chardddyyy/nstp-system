@@ -1470,12 +1470,23 @@ function AdminDashboard() {
                   </p>
                   {selectedEnrollment.registration_photo ? (
                     <div>
-                      <img
-                        src={selectedEnrollment.registration_photo}
-                        alt="Registration form"
-                        className="w-full max-h-64 sm:max-h-80 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in"
-                        onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
-                      />
+                      {typeof selectedEnrollment.registration_photo === 'string' && selectedEnrollment.registration_photo.startsWith('data:application/pdf') ? (
+                        <div
+                          className="w-full p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center cursor-pointer hover:bg-emerald-100/60 transition-all flex flex-col items-center justify-center gap-2"
+                          onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
+                        >
+                          <FileText className="w-10 h-10 text-emerald-700" />
+                          <span className="text-xs font-bold text-emerald-950">PDF Document Submitted</span>
+                          <span className="text-[10px] text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-300">Tap to open &amp; download PDF</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={selectedEnrollment.registration_photo}
+                          alt="Registration form"
+                          className="w-full max-h-64 sm:max-h-80 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in"
+                          onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
+                        />
+                      )}
                       <p className="text-xs text-gray-400 mt-1 text-center">Tap to view full size</p>
                     </div>
                   ) : (
@@ -1641,13 +1652,32 @@ function AdminDashboard() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 flex items-center justify-center overflow-auto p-2" onClick={e => e.stopPropagation()}>
-              <img
-                src={photoViewer}
-                alt="Registration form"
-                className="max-w-full max-h-full object-contain rounded"
-                style={{ touchAction: 'pinch-zoom' }}
-              />
+            <div className="flex-1 flex flex-col items-center justify-center overflow-hidden p-2" onClick={e => e.stopPropagation()}>
+              {typeof photoViewer === 'string' && photoViewer.startsWith('data:application/pdf') ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-xl p-4">
+                  <iframe
+                    src={photoViewer}
+                    title="Registration Form PDF"
+                    className="w-full h-[75vh] rounded-lg border border-gray-700 bg-white"
+                  />
+                  <div className="mt-3 flex items-center gap-3">
+                    <a
+                      href={photoViewer}
+                      download="Registration_Form.pdf"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" /> Download PDF File
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={photoViewer}
+                  alt="Registration form"
+                  className="max-w-full max-h-full object-contain rounded"
+                  style={{ touchAction: 'pinch-zoom' }}
+                />
+              )}
             </div>
           </div>
         )}

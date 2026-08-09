@@ -1737,20 +1737,27 @@ function StudentManagement() {
                       CvSU Registration Form Proof
                     </h4>
                     <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-100">
-                      <img
-                        src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                        alt="Registration Proof"
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-xs"
-                      />
+                      {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? (
+                        <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-800 font-bold text-xs shrink-0">
+                          PDF
+                        </div>
+                      ) : (
+                        <img
+                          src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
+                          alt="Registration Proof"
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-xs"
+                        />
+                      )}
                       <div>
                         <p className="text-xs font-bold text-gray-900">Submitted Registration Document</p>
                         <a
                           href={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
                           target="_blank"
                           rel="noreferrer"
+                          download={typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? 'Registration_Form.pdf' : undefined}
                           className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline mt-1 inline-block"
                         >
-                          View Full Image ↗
+                          {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? 'Download / View PDF File ↗' : 'View Full Image ↗'}
                         </a>
                       </div>
                     </div>

@@ -174,7 +174,7 @@ function Landing() {
       </header>
 
       {/* Hero Carousel Section - Compact Mobile Height */}
-      <section className="relative h-[200px] xs:h-[250px] sm:h-[380px] md:h-[500px] overflow-hidden bg-gray-900">
+      <section className="relative h-[220px] xs:h-[270px] sm:h-[380px] md:h-[500px] overflow-hidden bg-gray-900">
         {CAROUSEL_IMAGES.map((image, index) => (
           <div
             key={index}
@@ -222,11 +222,18 @@ function Landing() {
             />
           ))}
         </div>
+
+        {/* Animated Scroll Down Arrow Indicator on Mobile */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none animate-bounce sm:hidden">
+          <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded-full border border-amber-400/30">Scroll Down</span>
+          <ChevronRight className="w-4 h-4 text-amber-400 rotate-90" />
+        </div>
       </section>
 
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
-      <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1 sm:gap-4 text-center">
+      <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1 sm:gap-4 text-center relative z-10">
           <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
             <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">6 Credit Units</p>
             <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">3 Units / Sem</p>
@@ -248,7 +255,7 @@ function Landing() {
 
       {/* High-Impact Enrollment Schedule & CTA Section */}
       <section className="py-8 sm:py-12 px-3 sm:px-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800/80">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
           {/* Dynamic Schedule Status Banner */}

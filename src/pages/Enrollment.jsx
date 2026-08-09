@@ -357,12 +357,12 @@ function Enrollment() {
     e.target.value = '';
   };
 
-  // Capitalize First Letter of Every Word (Upper Case Every Word)
+  // Capitalize First Letter of Every Word (Upper Case Every Word only)
   const toTitleCase = (str) => {
     if (!str) return '';
     return str
       .split(' ')
-      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
       .join(' ');
   };
 
@@ -375,7 +375,7 @@ function Enrollment() {
       // Only allow digits, max 9
       newValue = value.replace(/\D/g, '').slice(0, 9);
     } else if (name === 'contactNumber' || name === 'emergencyNumber') {
-      // Only allow digits, max 11
+      // Strictly ban letters and special characters - digits only, max 11
       newValue = value.replace(/\D/g, '').slice(0, 11);
     } else if (name === 'age') {
       // Only allow numbers
@@ -398,11 +398,14 @@ function Enrollment() {
     } else if (name === 'birthYear') {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
-    } else if (['firstName', 'lastName', 'middleName', 'municipality', 'province', 'emergencyContact'].includes(name)) {
-      // Disallow numbers and special characters; automatically Capitalize First Letter of each word
-      newValue = toTitleCase(value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
-    } else if (name === 'street') {
-      newValue = toTitleCase(value);
+    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact'].includes(name)) {
+      // Strictly ban numbers and special characters; Title Case only (First Letter Upper, rest lower)
+      const cleanLetters = value.replace(/[^a-zA-Z\s'-]/g, '');
+      newValue = toTitleCase(cleanLetters);
+    } else if (['street', 'municipality', 'province'].includes(name)) {
+      // Address fields: Title Case only (First Letter Upper, rest lower)
+      const cleanAddress = value.replace(/[^a-zA-Z0-9\s.,'-]/g, '');
+      newValue = toTitleCase(cleanAddress);
     }
 
     const updatedFormData = { ...formData, [name]: newValue };
