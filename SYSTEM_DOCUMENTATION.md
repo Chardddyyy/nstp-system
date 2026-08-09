@@ -1,126 +1,122 @@
 # 📘 CvSU Naic NSTP Record & Report Management System
-## 📄 Opisyal na Dokumentasyon ng Sistema (System Documentation)
+## 📄 Opisyal at Kumpletong Dokumentasyon ng Sistema (System Documentation & Asset References)
 
 ---
 
 ## 📌 1. Pangkalahatang Impormasyon (System Overview)
-Ang **CvSU Naic NSTP Record & Report Management System** ay isang web-based platform na ginawa para sa **Cavite State University - Naic Campus National Service Training Program (NSTP) Office**. 
+Ang **CvSU Naic NSTP Record & Report Management System** ay isang makabagong, web-based platform na sadyang idinisenyo para sa **Cavite State University - Naic Campus National Service Training Program (NSTP) Office**.
 
-Layunin nitong i-automate at gawing mabilis, ligtas, at digital ang mga sumusunod na proseso:
-* **Online Enrollment** ng mga bagong mag-aaral (Freshmen) para sa tatlong NSTP components (**CWTS, LTS, at ROTC**).
-* **Student & Masterlist Management** para sa pag-organisa ng libo-libong mag-aaral ayon sa Batch, Course, Component, at Section.
-* **Attendance & Telemetry Analytics** para sa real-time online tracking ng mga aktibong bisita at estudyante.
-* **Reports, Grading, & Announcements** para sa pagsusumite ng mga proyekto, pagbibigay ng marka, at pagpapakalat ng opisyal na anunsyo.
-
----
-
-## 🛠️ 2. Mga Teknolohiya at Tools na Ginamit (Tech Stack & Tools)
-
-### 🎨 Frontend (Client-side Interface)
-| Teknolohiya / Package | Deskripsyon / Para Saan |
-| :--- | :--- |
-| **React 19 (Vite 7)** | Modern single-page application (SPA) framework para sa mabilis at interactive na user interface. |
-| **Tailwind CSS v4** | Utility-first CSS engine na ginamit sa pagdisenyo ng responsive UI sa Desktop at Cellphone view. |
-| **Lucide React** | Modern vector SVG icon pack para sa malinaw at sleek na visual icons. |
-| **React Router DOM v7** | Para sa page navigation, dynamic routing, at pag-lock ng private pages (Auth Protection). |
-| **XLSX (SheetJS)** | Ginamit sa pag-generate at pag-export ng Excel Masterlists para sa CHED at CvSU reports. |
-| **Heic2any** | Awtomatikong nagmo-convert ng iPhone `.HEIC` photo uploads papuntang `.JPEG/PNG` para sa ID photos. |
-| **XSS Sanitizer** | Panseguridad laban sa Cross-Site Scripting (XSS) attacks sa mga input fields ng mga user. |
+Layunin nitong i-automate, gawing mabilis, ligtas, at digital ang lahat ng proseso at talaan ng NSTP:
+* **Online Student Registration & Enrollment**: Pagpaparehistro ng mga bagong mag-aaral (Freshmen) sa tatlong NSTP components (**CWTS, LTS, at ROTC**) gamit ang automatic HEIC-to-JPEG conversion para sa mga kuha sa iPhone, PDF document viewer, at input validation para sa mga pangalang may letrang **ñ / Ñ**.
+* **Student Roster & CHED Export**: Pag-organisa ng libo-libong mag-aaral ayon sa Batch Year, Program (`BSIT`, `BSCS`, `BSFAS`, `BSBA`, `BSEd`, `BEED`, `BSHM`), Component (`CWTS`, `LTS`, `ROTC`), at Section. May tampok na **CHED Excel Masterlist Exporter**.
+* **Real-time Messaging & Video Calling**: Chat system na sumusuporta sa direct messaging, All-Instructors Group Chat, attachment image sharing, at P2P WebRTC Audio/Video calling.
+* **Reports, Letter Formats, & Calendar**: Paglikha at pagpasa ng mga report requirements, opisyal na pormat ng liham (Letter Formats), at kalendaryo ng mga gawain at pista opisyal.
 
 ---
 
-### ⚙️ Backend (Server-side & API)
-| Teknolohiya / Package | Deskripsyon / Para Saan |
-| :--- | :--- |
-| **Node.js + Express.js** | Backend server runtime at RESTful API routing engine ng buong system. |
-| **MySQL / MariaDB** | Relational Database Management System (RDBMS) na nagtatabi ng lahat ng data ng estudyante, grades, attendance, at accounts. |
-| **JWT (jsonwebtoken)** | Token-based authentication na may 8-hour session expiration para sa ligtas na pag-login. |
-| **BcryptJS** | Strong password hashing algorithm para protektado ang mga passkeys ng Admin, Instructors, at Students. |
-| **Helmet.js** | Nagse-set ng 15+ HTTP security headers laban sa web vulnerabilities. |
-| **Express Rate Limit** | Proteksyon laban sa DDoS attacks at brute-force login attempts. |
-| **ExcelJS** | Advanced Node.js Excel engine na lumilikha ng formatted at styled Excel masterlists. |
+## 🖼️ 2. Talaan ng mga Sanggunian at Asset (Media & Image References)
+
+Lahat ng mga larawan, logo, media assets, at external URLs na ginamit sa sistema ay opisyal na nakatala sa ibaba:
+
+| Media Asset / File Path | Uri / Format | Deskripsyon at Pinagmulan (Source / Usage) |
+| :--- | :--- | :--- |
+| `file:///public/cvsu.png` | PNG Image | **Opisyal na Seal ng Cavite State University (CvSU)**. Ginamit bilang brand logo sa Header ng lahat ng pahina (`AdminDashboard`, `InstructorDashboard`, `StudentManagement`, `Reports`, `Chat`, `Calendar`, `LetterFormats`, `Profile`). |
+| `file:///public/cvsunaiccampus.png` | PNG Image | **Larawan ng CvSU Naic Main Campus Entrance**. Ginamit sa Hero Section ng Landing Page. |
+| `file:///public/cwts-cover.jpg` | JPG Image | **Civic Welfare Training Service (CWTS) Banner Photo**. Larawan ng mga estudyanteng nag-a-outreach at community service. |
+| `file:///public/lts-cover.jpg` | JPG Image | **Literacy Training Service (LTS) Banner Photo**. Larawan ng mga estudyanteng nagtuturo ng literacy at numeracy sa mga kabataan. |
+| `file:///public/IMG_9578.JPG` | JPG Image | **Reserve Officers' Training Corps (ROTC) Cadets Photo**. Larawan ng mga ROTC cadets sa military training at Sunday drills. |
+| `file:///public/nstp-orientation.mp4` | MP4 Video | **Opisyal na Audio-Visual Orientation Video** ng CvSU Naic NSTP Office na pwedeng i-play sa Landing Page. |
+| `Google Maps Location Link` | External URL | Link papuntang CvSU Naic Campus sa Google Maps: [CvSU Naic Google Maps](https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic). |
+| `Google Apps Script Webhook` | API Endpoint | Webhook URL para sa awtomatikong pag-backup ng records papuntang **Google Drive Sheet / Storage**. |
+| `file:///public/favicon.ico` & `file:///public/icons/` | App Icons | Web Icons para sa Browser Favicon at Progressive Web App (PWA) manifest support (`192x192` at `512x512` PNG). |
 
 ---
 
-## 👥 3. Sinu-sino Ang Mga Gumagamit (User Roles & Access Levels)
+## 🛠️ 3. Mga Teknolohiya at Tools na Ginamit (Tech Stack & Architecture)
 
-### 👑 1. Super Admin (NSTP Director / System Admin)
-* **Access Level**: Buong kontrol sa buong sistema.
-* **Mga Tungkulin**:
-  * Pagtanggap (Approve) o Pagtanggi (Reject) sa mga online enrollment applications.
-  * Pag-manage ng mga Instructor accounts (Magdagdag, mag-edit, o mag-deactivate ng instructor).
-  * Pag-generate ng DND/CHED NSTP Serial Numbers.
-  * Pag-export ng Opisyal na Masterlist sa Excel.
-  * Pagbura (Delete) ng lumang Batch records at pag-manage ng Active Academic Year.
+### 🎨 Frontend Framework & UI Engine
+* **React 19 (Vite 7)**: SPA architecture para sa mabilis na pag-load nang walang full page reloads.
+* **Tailwind CSS v4**: Modern CSS utility system para sa sleek dark/emerald design system, responsive grid layouts, at micro-animations.
+* **Lucide React**: Vector SVG icon library.
+* **React Router DOM v7**: Dynamic routing at Role-based Protected Route System.
+* **Heic2any Library**: Automatic client-side conversion ng `.HEIC` photos mula sa iOS devices papuntang `.JPEG` bago i-upload.
 
-### 👨‍🏫 2. Instructor / Coordinator (ROTC, CWTS, LTS Instructors)
-* **Access Level**: Nakatutok sa kanilang hawak na Component at Section.
-* **Mga Tungkulin**:
-  * Pagtingin sa listahan ng mga estudyanteng nakatala sa kanilang section.
-  * Pag-tsek ng Attendance (Present, Late, Absent).
-  * Pag-evaluate at pag-encode ng mga Marka (Grades: Passed, Failed, Incomplete).
-  * Pag-post ng mga Anunsyo (Announcements) at Pagpasa ng mga Requirements.
-
-### 🎓 3. Student Enrollee / Enrolled Student
-* **Access Level**: Personal student portal.
-* **Mga Tungkulin**:
-  * Pagpasa ng Online Enrollment Form kasama ang ID photo at Student Details.
-  * Pagtingin sa status ng Enrollment (Pending, Approved, Enrolled).
-  * Pag-submit ng mga Performance Reports at Requirements.
-  * Pag-check ng personal na Attendance Record at Final Grades.
-
-### 🌐 4. Guest / Public Visitor
-* **Access Level**: Public Landing Page.
-* **Mga Tungkulin**:
-  * Pagtingin sa impormasyon tungkol sa CvSU Naic NSTP (Mission, Vision, History).
-  * Pag-explore sa tatlong NSTP Components (CWTS, LTS, ROTC).
-  * Pagbasa sa Step-by-Step Enrollment Guide at FAQ.
-  * Real-time monitoring ng Live Visitors Telemetry Counter.
+### ⚙️ Backend API & Database Infrastructure
+* **Node.js & Express.js**: RESTful API Web Server.
+* **MySQL 8.0 / MariaDB**: Relational Database Engine na may `mysql2/promise` connection pool.
+* **JWT (JSON Web Tokens)**: Secure token-based authentication system.
+* **BcryptJS**: Password hashing algorithm (12 salt rounds) para sa proteksyon ng passkeys.
+* **Helmet.js & Express Rate Limit**: Proteksyon sa HTTP headers at rate limiting (3,000 requests per 15 min global limit).
+* **ExcelJS & XLSX (SheetJS)**: Automated formatting at generation ng CHED NSTP Excel enrollment masterlists.
 
 ---
 
-## ✨ 4. Mga Pangunahing Module ng Sistema (Key System Modules)
+## 🗄️ 4. Estruktura ng Database Schema (MySQL Database Tables)
 
-1. **📝 Online Enrollment & Section Auto-Match Module**
-   * Pinahihintulutan ang bagong mag-aaral na mag-enroll online gamit ang kanilang 9-digit Student ID, CvSU Email, at Degree Program. Awtomatikong naitatala ang kanilang napiling component.
+Ang database ay binubuo ng mga sumusunod na talahanayan (Tables):
 
-2. **📊 Batch & Masterlist Management Module**
-   * Nagbibigay ng kumpletong talaan ng mga estudyante na pwedeng i-filter ayon sa Batch (e.g., Batch 2026), Course (BSIT, BSERE, BSHM, etc.), Component (CWTS, LTS, ROTC), at Status.
-
-3. **🔢 Automated Serial Number Generator**
-   * Awtomatikong nagko-compute at nag-a-assign ng opisyal na NSTP Serial Number base sa Format ng CHED at Department of National Defense.
-
-4. **📡 Real-Time Telemetry & Active Online Users Tracker**
-   * Naka-integrate ang backend polling at JSON store para maipakita ang eksaktong bilang ng kasalukuyang online users atkabuuang bisita sa sistema.
-
-5. **📅 Announcement Hub & Activity Calendar**
-   * Interaktibong kalendaryo at announcement board para sa mga opisyal na pagsasanay, Sunday drills, at community outreach events.
+1. **`users`**: Impormasyon ng mga Admin at Instructor accounts (Email, Hashed Password, Role, Department, Avatar, Profile Picture).
+2. **`students`**: Masterlist ng mga aprubadong estudyante kasama ang kumpletong CHED fields (First/Middle/Last Name, Street, Municipality, Province, Birthdate, Age, Voter Status, Program, Section, Department, at Registration Photo).
+3. **`enrollments`**: Talaan ng mga bago at pending na registration form submissions.
+4. **`reports`**: Mfa inaatas na requirements at report assignments ng Admin para sa mga Instructors.
+5. **`report_submissions`**: Mga isinumiteng report files at attachment ng mga Instructors.
+6. **`report_comments`**: Balitaktakan at komento ng Admin at Instructor sa bawat report.
+7. **`conversations` & `conversation_participants`**: Talaan ng mga direct messages at All-Instructors Group Chat.
+8. **`messages`**: Mga mensahe, larawang ipinadala, at reactions sa chat.
+9. **`calls`**: Signal table para sa WebRTC Peer-to-Peer Audio & Video calling.
+10. **`archives`**: Naka-archive na lumang Batch Years (Read-only historical data).
+11. **`audit_logs`**: System audit trail (Timestamp, User ID, Action, IP Address, at Details).
 
 ---
 
-## 💡 5. Rekomendasyon para sa Dokumentasyon at Susunod na Pagpapaganda (Future Enhancements)
+## 📂 5. Estruktura ng mga Files sa System (Directory Structure)
 
-Para sa mga susunod na bersyon ng sistema o para sa Thesis / System Defense Presentation, inirerekomenda na idagdag ang mga sumusunod:
+```
+nstp-system/
+├── backend/
+│   ├── config/
+│   │   ├── database.js          # Connection pool (Connection limit: 10)
+│   │   └── dbEnv.js             # Environment SSL & DB Host configurations
+│   ├── database/
+│   │   └── schema.sql           # Database tables single source of truth
+│   ├── scripts/                 # Utility scripts (seed data, migration helpers)
+│   ├── server.js                # Main Express REST API server & auto-migrations
+│   └── .env                     # Local environment variables
+├── public/                      # Static media assets (Logos, Banners, Video)
+├── src/
+│   ├── assets/                  # CSS & static resources
+│   ├── components/              # Shared UI components (Sidebar, Modals, Overlays)
+│   ├── context/                 # AuthContext & state management
+│   ├── pages/
+│   │   ├── AdminDashboard.jsx   # Super Admin Portal & Analytics
+│   │   ├── InstructorDashboard.jsx # Instructor Class Roster & Metrics
+│   │   ├── StudentManagement.jsx # Student Masterlist & CHED Excel Exporter
+│   │   ├── Reports.jsx          # Requirements & Submission Hub
+│   │   ├── Chat.jsx             # Real-time Chat & WebRTC Video Calls
+│   │   ├── Calendar.jsx         # Academic Activities & Holiday Tracker
+│   │   ├── LetterFormats.jsx    # Official Templates & Attachment Downloads
+│   │   ├── Profile.jsx          # Profile Settings & Account Management
+│   │   ├── Landing.jsx          # Public Landing Page & Enrollment Guide
+│   │   ├── Enrollment.jsx       # Student Online Registration Form
+│   │   └── Login.jsx            # Portal Authentication Page
+│   ├── services/
+│   │   └── api.js               # Frontend API helper & HTTP endpoints
+│   ├── App.jsx                  # Main React Routing & App Provider
+│   └── main.jsx                 # Entry point & global error handlers
+└── SYSTEM_DOCUMENTATION.md      # Opisyal na Dokumentasyon
+```
 
-1. **📲 SMS & Email Notification System (Twilio / Nodemailer)**:
-   * Awtomatikong magpapadala ng SMS o Email sa estudyante kapag na-approve na ang kanyang enrollment o kapag may bagong anunsyo ang instructor.
+---
 
-2. **📷 Mobile QR Code Scanner for Attendance**:
-   * Paggamit ng QR code sa mobile camera ng Instructor para sa mabilis na roll-call attendance tuwing Sunday NSTP activities.
+## 🛡️ 6. Panseguridad at Input Validation Rules (Security & Quality Assurance)
 
-3. **🔐 Multi-Factor Authentication (MFA / 2FA)**:
-   * Pagdaragdag ng One-Time Password (OTP) via Email para sa seguridad ng Admin at Instructor accounts.
-
-4. **🪪 Automated Digital NSTP Student ID Card Generator**:
-   * Awtomatikong pag-generate ng downloadable PDF/PNG Student ID na may QR Code para sa bawat na-approve na estudyante.
-
-5. **💾 Automated Database Backup & Cloud Storage**:
-   * Awtomatikong pag-backup ng MySQL database papuntang Google Drive o Cloud Storage araw-araw para maiwasan ang data loss.
-
-6. **📜 Audit Trail / Activity Logs**:
-   * Pag-record ng bawat kilos sa system (halimbawa: kung sinong Admin ang nag-approve ng student o nagbura ng batch) kasama ang Timestamp at IP Address.
+* **Filipino Character & Diacritics Support**: Pinapayagan ang letrang **`ñ`** at **`Ñ`** sa mga pangalan at tirahan gamit ang regex: `/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g`.
+* **Proper Word Title Casing**: Pinaiiral ang `toTitleCase` function na nagpapanatili ng unang letrang Uppercase bawat salita habang ipinagbabawal ang ALL-CAPS inputs.
+* **Contact Number Validation**: Digits-only regex (`/\D/g`) para sa mga numero ng telepono.
+* **DOM Password Form Compliance**: Lahat ng password fields sa `Profile.jsx` ay nakapaloob sa `<form>` element para sa accessibility at password manager standards.
+* **0-404 Asset Bundle Guarantee**: Ang lahat ng mga pahina ay naka-bundle nang buo upang maiwasan ang mga 404 Chunk Load errors sa mga bagong deployments.
 
 ---
 
 *Inihanda para sa: Cavite State University Naic - National Service Training Program Office*  
-*Petsa ng Dokumentasyon: Agosto 2026*
+*Huling Na-update: Agosto 2026*
