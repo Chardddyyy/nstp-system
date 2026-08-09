@@ -145,7 +145,7 @@ export default function LetterFormats() {
         user={user}
       />
 
-      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Notification Toast */}
         {notification && (
           <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
