@@ -1638,7 +1638,7 @@ app.post('/api/conversations/:id/add-participant', authenticateToken, async (req
 app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     let { id } = req.params;
-    let targetConvId = id;
+    let targetConvIds = [id];
     let isAuthorized = false;
 
     // Handle synthetic direct conversation IDs like "1-2"
@@ -1654,14 +1654,14 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
         [u1, u2, u2, u1]
       );
       if (convs.length > 0) {
-        targetConvId = convs[0].id;
+        targetConvIds = Array.from(new Set([id, `${u1}-${u2}`, `${u2}-${u1}`, ...convs.map(c => String(c.id))]));
       } else {
-        return res.json([]);
+        targetConvIds = Array.from(new Set([id, `${u1}-${u2}`, `${u2}-${u1}`]));
       }
     } else {
       // Normal integer or string group ID check
       const [conversationCheck] = await pool.execute(
-        'SELECT is_group FROM conversations WHERE id = ?',
+        'SELECT is_group, participant_1_id, participant_2_id FROM conversations WHERE id = ?',
         [id]
       );
       
@@ -1671,6 +1671,15 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
           [id, req.user.id]
         );
         isAuthorized = participants.length > 0;
+      } else if (conversationCheck.length > 0) {
+        const p1 = conversationCheck[0].participant_1_id;
+        const p2 = conversationCheck[0].participant_2_id;
+        if (req.user.id === p1 || req.user.id === p2) {
+          isAuthorized = true;
+          if (p1 && p2) {
+            targetConvIds = Array.from(new Set([id, `${p1}-${p2}`, `${p2}-${p1}`]));
+          }
+        }
       } else {
         const [conversations] = await pool.execute(
           'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
@@ -1838,6 +1847,7 @@ app.post('/api/conversations/:conversationId/messages/:messageId/reactions', aut
 app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    let targetConvId = id;
     const { text, type, image_url, file_url, file_name, audio_url, duration } = req.body;
 
     // Reject oversized text messages (64 KB is more than enough for any real message)
@@ -1845,34 +1855,56 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
       return res.status(400).json({ message: 'Message text is too long (max 64 KB).' });
     }
 
-    // Check if this is a group conversation
-    const [conversationCheck] = await pool.execute(
-      'SELECT is_group FROM conversations WHERE id = ?',
-      [id]
-    );
-    
     let isAuthorized = false;
-    
-    if (conversationCheck.length > 0 && conversationCheck[0].is_group) {
-      // For group chats, check if user is a participant
-      const [participants] = await pool.execute(
-        'SELECT * FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
-        [id, req.user.id]
+
+    // Handle synthetic direct conversation IDs like "1-2"
+    if (typeof id === 'string' && id.includes('-') && !isNaN(parseInt(id.split('-')[0]))) {
+      const parts = id.split('-').map(p => parseInt(p));
+      const u1 = parts[0];
+      const u2 = parts[1];
+      if (req.user.id === u1 || req.user.id === u2) {
+        isAuthorized = true;
+      }
+      const [existing] = await pool.execute(
+        'SELECT id FROM conversations WHERE (participant_1_id = ? AND participant_2_id = ?) OR (participant_1_id = ? AND participant_2_id = ?)',
+        [u1, u2, u2, u1]
       );
-      isAuthorized = participants.length > 0;
+      if (existing.length > 0) {
+        targetConvId = existing[0].id;
+      } else {
+        const sortedId = [u1, u2].sort((a, b) => a - b).join('-');
+        await pool.execute(
+          'INSERT INTO conversations (id, is_group, participant_1_id, participant_2_id) VALUES (?, FALSE, ?, ?)',
+          [sortedId, u1, u2]
+        );
+        targetConvId = sortedId;
+      }
     } else {
-      // For direct chats, check if user is participant_1 or participant_2
-      const [conversations] = await pool.execute(
-        'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
-        [id, req.user.id, req.user.id]
+      // Check if this is a group conversation
+      const [conversationCheck] = await pool.execute(
+        'SELECT is_group FROM conversations WHERE id = ?',
+        [id]
       );
-      isAuthorized = conversations.length > 0;
+
+      if (conversationCheck.length > 0 && conversationCheck[0].is_group) {
+        const [participants] = await pool.execute(
+          'SELECT * FROM conversation_participants WHERE conversation_id = ? AND user_id = ?',
+          [id, req.user.id]
+        );
+        isAuthorized = participants.length > 0;
+      } else {
+        const [conversations] = await pool.execute(
+          'SELECT * FROM conversations WHERE id = ? AND (participant_1_id = ? OR participant_2_id = ?)',
+          [id, req.user.id, req.user.id]
+        );
+        isAuthorized = conversations.length > 0;
+      }
     }
-    
+
     if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    
+
     // Convert undefined to null for optional fields
     const safeType = type || 'text';
     const safeText = text !== undefined ? text : null;
@@ -1881,29 +1913,29 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
     const safeFileName = file_name !== undefined ? file_name : null;
     const safeAudioUrl = audio_url !== undefined ? audio_url : null;
     const safeDuration = duration !== undefined ? duration : null;
-    
+
     // Insert message with all possible fields
     const [result] = await pool.execute(
       `INSERT INTO messages (conversation_id, sender_id, text, type, image_url, file_url, file_name, audio_url, duration) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, req.user.id, safeText, safeType, safeImageUrl, safeFileUrl, safeFileName, safeAudioUrl, safeDuration]
+      [targetConvId, req.user.id, safeText, safeType, safeImageUrl, safeFileUrl, safeFileName, safeAudioUrl, safeDuration]
     );
-    
+
     // Update conversation last message
     const lastMessagePreview = safeText || 
       (safeType === 'image' ? '📷 Image' : 
        safeType === 'file' ? `📎 ${safeFileName || 'File'}` : 
        safeType === 'voice' ? '🎤 Voice message' : 'Message');
-    
+
     try {
       await pool.execute(
         'UPDATE conversations SET last_message = ?, last_message_time = NOW(), last_sender_id = ? WHERE id = ?',
-        [lastMessagePreview, req.user.id, id]
+        [lastMessagePreview, req.user.id, targetConvId]
       );
     } catch (e) {
       await pool.execute(
         'UPDATE conversations SET last_message = ?, last_message_time = NOW() WHERE id = ?',
-        [lastMessagePreview, id]
+        [lastMessagePreview, targetConvId]
       );
     }
     
