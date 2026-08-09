@@ -157,27 +157,27 @@ export default function LetterFormats() {
         )}
 
         {/* Hero Banner - Unified CvSU Naic Header */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 relative z-10">
-            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-[11px] sm:text-2xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
+                  <h1 className="text-sm xs:text-base sm:text-2xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
                 </div>
-                <p className="text-emerald-200 text-[9px] sm:text-sm font-medium truncate mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
+                <p className="text-emerald-200 text-xs sm:text-sm font-medium truncate mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
               </div>
             </div>
 
@@ -191,9 +191,9 @@ export default function LetterFormats() {
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl shadow-md transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl sm:rounded-2xl shadow-md transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              <Plus className="w-4 h-4 text-emerald-950" />
+              <Plus className="w-4.5 h-4.5 text-emerald-950" />
               <span>Create Letter Format</span>
             </button>
           </div>
@@ -208,7 +208,7 @@ export default function LetterFormats() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === tab
                     ? 'bg-emerald-800 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -227,7 +227,7 @@ export default function LetterFormats() {
               placeholder="Search by title or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
             />
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function LetterFormats() {
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
-              className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all shadow-md active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4 text-amber-400" />
               <span>Add Letter Format</span>
@@ -266,7 +266,7 @@ export default function LetterFormats() {
               <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
                       item.department === 'ROTC' ? 'bg-red-50 text-red-700 border-red-200' :
                       item.department === 'CWTS' ? 'bg-green-50 text-green-700 border-green-200' :
                       item.department === 'LTS' ? 'bg-purple-50 text-purple-700 border-purple-200' :
@@ -274,42 +274,44 @@ export default function LetterFormats() {
                     }`}>
                       {item.department === 'All' ? 'All Departments' : item.department}
                     </span>
-                    <span className="text-[10px] text-gray-400 font-medium">
+                    <span className="text-xs text-gray-400 font-medium">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </span>
                   </div>
 
-                  <h3 className="text-base font-black text-emerald-950 mb-2 leading-tight">{item.title}</h3>
-                  <p className="text-xs text-gray-600 font-medium bg-gray-50/80 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap leading-relaxed mb-3">
+                  <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-2 leading-tight">{item.title}</h3>
+                  <p className="text-xs sm:text-sm text-gray-700 font-medium bg-gray-50/90 p-3.5 rounded-xl border border-gray-100 whitespace-pre-wrap leading-relaxed mb-3">
                     {item.description}
                   </p>
 
                   {/* Attachment Box */}
                   {item.file && (
-                    <div className="bg-emerald-50/70 border border-emerald-200/70 rounded-xl p-2.5 flex items-center justify-between gap-2">
+                    <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <File className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <File className="w-5 h-5 text-emerald-700 shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-emerald-950 truncate">{item.file.name}</p>
-                          <p className="text-[10px] text-emerald-700 font-medium">{item.file.size}</p>
+                          <p className="text-xs sm:text-sm font-bold text-emerald-950 truncate">{item.file.name}</p>
+                          <p className="text-xs text-emerald-700 font-medium">{item.file.size}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 mt-1 sm:mt-0">
                         <button
                           type="button"
                           onClick={() => setViewingFile(item.file)}
-                          className="p-1.5 text-emerald-800 hover:bg-emerald-200/60 rounded-lg transition-colors cursor-pointer"
+                          className="px-2.5 py-1 text-xs font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                           title="View File"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>View</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDownloadAttachment(item)}
-                          className="p-1.5 text-emerald-800 hover:bg-emerald-200/60 rounded-lg transition-colors cursor-pointer"
+                          className="px-2.5 py-1 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
                           title="Download File"
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          <Download className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Download</span>
                         </button>
                       </div>
                     </div>

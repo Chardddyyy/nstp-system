@@ -1670,9 +1670,9 @@ function Chat() {
       <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden w-full max-w-full relative`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
-          <div className="p-3.5 lg:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
+          <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-md border-b border-emerald-800/40">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                 <button type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
                   className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
@@ -1681,34 +1681,42 @@ function Chat() {
                   <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-lg sm:rounded-xl p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
 
-                <h2 className="text-xs sm:text-base lg:text-lg font-black text-white tracking-tight truncate">
-                  {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
-                </h2>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-sm xs:text-base sm:text-2xl font-black tracking-tight text-white truncate">
+                      {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
+                    </h1>
+                  </div>
+                  <p className="text-emerald-200 text-xs sm:text-sm font-medium truncate mt-0.5">
+                    {showContacts ? 'Browse instructors & staff contacts' : 'Instant messaging & group communications'}
+                  </p>
+                </div>
               </div>
+
               {/* Toggle between conversations and contacts */}
               <button type="button"
                 onClick={() => setShowContacts(v => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${showContacts ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 shadow-sm' : 'bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100'}`}
+                className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer shrink-0 ${showContacts ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 shadow-md' : 'bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 border border-emerald-700/60'}`}
                 title={showContacts ? 'Back to chats' : 'View all contacts'}
               >
                 {showContacts
-                  ? <><MessageSquare className="w-3.5 h-3.5" /> Chats</>
-                  : <><Users className="w-3.5 h-3.5" /> Contacts</>}
+                  ? <><MessageSquare className="w-4 h-4" /> <span>Chats</span></>
+                  : <><Users className="w-4 h-4" /> <span>Contacts</span></>}
               </button>
             </div>
             {!showContacts && (
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 lg:pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm border border-emerald-800/40 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-gray-900 font-medium"
                 />
               </div>
             )}
