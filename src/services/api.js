@@ -9,6 +9,9 @@ function getPrimaryApiUrl() {
   return 'http://localhost:3001/api';
 }
 
+const API_URL = getPrimaryApiUrl();
+export { getPrimaryApiUrl, API_URL };
+
 // basic api helper
 async function apiCall(endpoint, options) {
   var baseUrl = getPrimaryApiUrl();
@@ -520,7 +523,8 @@ function getClientSideTelemetry() {
 }
 
 export function pingTelemetry(data) {
-  return fetch(`${API_URL}/telemetry/ping`, {
+  var url = getPrimaryApiUrl() + '/telemetry/ping';
+  return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -530,7 +534,8 @@ export function pingTelemetry(data) {
 }
 
 export function getTelemetryStats() {
-  return fetch(`${API_URL}/telemetry/stats`)
+  var url = getPrimaryApiUrl() + '/telemetry/stats';
+  return fetch(url)
     .then(function(res) { return res.ok ? res.json() : getClientSideTelemetry(); })
     .catch(function() { return getClientSideTelemetry(); });
 }
