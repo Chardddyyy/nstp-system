@@ -1523,12 +1523,13 @@ app.post('/api/conversations', authenticateToken, async (req, res) => {
     }
 
     // Create new direct conversation
-    const [result] = await pool.execute(
-      'INSERT INTO conversations (is_group, participant_1_id, participant_2_id) VALUES (FALSE, ?, ?)',
-      [u1, u2]
+    const convId = [u1, u2].sort((a, b) => a - b).join('-');
+    await pool.execute(
+      'INSERT INTO conversations (id, is_group, participant_1_id, participant_2_id) VALUES (?, FALSE, ?, ?)',
+      [convId, u1, u2]
     );
 
-    const [newConvs] = await pool.execute('SELECT * FROM conversations WHERE id = ?', [result.insertId]);
+    const [newConvs] = await pool.execute('SELECT * FROM conversations WHERE id = ?', [convId]);
     const [otherUsers] = await pool.execute('SELECT id, name FROM users WHERE id = ?', [u2]);
 
     res.status(201).json({
