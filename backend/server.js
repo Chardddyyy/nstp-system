@@ -119,6 +119,8 @@ function authenticateToken(req, res, next) {
   var token = null;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.slice(7);
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
   }
 
   if (!token) {
