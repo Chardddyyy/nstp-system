@@ -6,6 +6,10 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   // Use root path for dev, /nstp-system/ for production
   base: process.env.NODE_ENV === 'production' ? '/nstp-system/' : '/',
+  server: {
+    host: true,
+    port: 5173
+  },
   plugins: [
     react(), 
     tailwindcss()

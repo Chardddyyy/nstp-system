@@ -76,14 +76,14 @@ var globalLimiter = rateLimit({
 app.use(globalLimiter);
 
 // ── Enrollment rate limiter ───────────────────────────────────────────────────
-// Set to 500/hour per IP so campus-wide NAT (all students sharing one public IP)
-// can all enroll without hitting the limit. Still blocks automated spam (>500/hr).
+// Set to 3000/hour per IP so campus-wide NAT (all students sharing one public IP)
+// can all enroll without hitting the limit. Still blocks automated brute spam (>3000/hr).
 var enrollmentLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 500,
+  max: 3000,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: 'Too many enrollment submissions from this IP. Please try again later.' },
+  message: { message: 'Too many enrollment submissions from this IP network. Please try again later.' },
 });
 
 // ── In-memory login rate limiter ─────────────────────────────────────────────
@@ -304,9 +304,12 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
     'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
     'ALTER TABLE enrollments ADD COLUMN registeredVoter VARCHAR(20)',
+    'CREATE INDEX idx_enrollments_studentid ON enrollments (studentId)',
+    'CREATE INDEX idx_enrollments_email ON enrollments (email)',
+    'CREATE INDEX idx_enrollments_status ON enrollments (status)',
   ];
   for (var i = 0; i < alters.length; i++) {
-    try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
+    try { await pool.execute(alters[i]); } catch (e) { /* column or index already exists */ }
   }
   enrollmentColumnsMigrated = true;
 }
@@ -2616,6 +2619,35 @@ app.get('/api/enrollments', authenticateToken, async (req, res) => {
   }
 });
 
+// ── In-Memory Concurrency Queue for High-Load Enrollments ────────────────────
+var MAX_CONCURRENT_ENROLLMENTS = 25;
+var activeEnrollmentCount = 0;
+var enrollmentTaskQueue = [];
+
+function enqueueEnrollmentTask(taskFn) {
+  return new Promise((resolve, reject) => {
+    const wrappedTask = () => {
+      activeEnrollmentCount++;
+      taskFn()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          activeEnrollmentCount--;
+          if (enrollmentTaskQueue.length > 0) {
+            const nextTask = enrollmentTaskQueue.shift();
+            nextTask();
+          }
+        });
+    };
+
+    if (activeEnrollmentCount < MAX_CONCURRENT_ENROLLMENTS) {
+      wrappedTask();
+    } else {
+      enrollmentTaskQueue.push(wrappedTask);
+    }
+  });
+}
+
 // Submit enrollment
 app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
   // Ensure all required columns exist (runs once, then cached)
@@ -2631,21 +2663,28 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
         return res.status(400).json({ message: `Missing required field: ${field}` });
       }
     }
-    const sid = sanitizeStr(body.studentId, 20);
-    if (!/^\d{9}$/.test(sid)) {
-      return res.status(400).json({ message: 'Student ID must be exactly 9 digits' });
+    const sidRaw = sanitizeStr(body.studentId, 20).trim();
+    const sidDigits = sidRaw.replace(/\D/g, '');
+    const sid = (sidDigits.length >= 8 && sidDigits.length <= 12) ? sidDigits : sidRaw;
+    if (!/^\d{8,12}$/.test(sid)) {
+      return res.status(400).json({ message: 'Student ID must be between 8 and 12 digits (e.g. 202410123)' });
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email))) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email).trim())) {
       return res.status(400).json({ message: 'Invalid email address' });
     }
-    const contact = sanitizeStr(body.contactNumber, 20);
-    if (!/^\d{11}$/.test(contact)) {
-      return res.status(400).json({ message: 'Contact Number must be exactly 11 digits' });
+
+    let contactDigits = String(body.contactNumber || '').replace(/\D/g, '');
+    if (contactDigits.length === 12 && contactDigits.startsWith('63')) contactDigits = '0' + contactDigits.slice(2);
+    if (!/^\d{11}$/.test(contactDigits)) {
+      return res.status(400).json({ message: 'Contact Number must be 11 digits (e.g. 09171234567)' });
     }
-    const emerNum = sanitizeStr(body.emergencyNumber, 20);
-    if (!/^\d{11}$/.test(emerNum)) {
-      return res.status(400).json({ message: 'Emergency Number must be exactly 11 digits' });
+
+    let emerDigits = String(body.emergencyNumber || '').replace(/\D/g, '');
+    if (emerDigits.length === 12 && emerDigits.startsWith('63')) emerDigits = '0' + emerDigits.slice(2);
+    if (!/^\d{11}$/.test(emerDigits)) {
+      return res.status(400).json({ message: 'Emergency Number must be 11 digits (e.g. 09181234567)' });
     }
+
     const validComponents = ['CWTS', 'LTS', 'ROTC'];
     if (!validComponents.includes(body.nstpComponent)) {
       return res.status(400).json({ message: 'Invalid NSTP component' });
@@ -2654,7 +2693,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     try {
       const [dupCheck] = await pool.execute(
         "SELECT id FROM enrollments WHERE (studentId = ? OR email = ?) AND status = 'Pending'",
-        [sanitizeStr(body.studentId, 20), sanitizeStr(body.email, 100)]
+        [sid, sanitizeStr(body.email, 100).trim()]
       );
       if (dupCheck && dupCheck.length > 0) {
         return res.status(409).json({ message: 'An enrollment for this Student ID or Email is already pending review.' });
@@ -2679,44 +2718,60 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     const finalAddress = street ? `${street}, ${municipality || ''}, ${province || ''}`.replace(/, ,/g, ',').replace(/,\s*$/, '') : (homeAddress || address);
     const finalEmergencyContact = emergencyName || emergencyContact;
     const finalVoter = registeredVoter || isVoter || 'No';
+
+    let finalBirthDate = null;
+    if (birthDate && /^\d{4}-\d{2}-\d{2}$/.test(String(birthDate))) {
+      finalBirthDate = String(birthDate);
+    } else if (birthYear && birthMonth && birthDay) {
+      const m = String(birthMonth).padStart(2, '0');
+      const d = String(birthDay).padStart(2, '0');
+      const y = String(birthYear).trim();
+      if (/^\d{4}$/.test(y) && /^\d{2}$/.test(m) && /^\d{2}$/.test(d)) {
+        finalBirthDate = `${y}-${m}-${d}`;
+      }
+    }
+
     // Cap photo at ~5 MB base64 (≈ 6.7 MB string)
     if (registrationPhoto && String(registrationPhoto).length > 7_000_000) {
       return res.status(400).json({ message: 'Registration photo is too large. Maximum 5 MB.' });
     }
     const photo = registrationPhoto || null;
 
-    let insertId = null;
-    try {
-      const [result] = await pool.execute(
-        `INSERT INTO enrollments
-         (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
-          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-          gender, height, weight, facebookAccount, bloodType, address,
-          street, municipality, province,
-          program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
-          birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
-          finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
-          street || null, municipality || null, province || null,
-          program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo, finalVoter
-        ]
-      );
-      insertId = result.insertId;
-    } catch (insertErr) {
-      console.warn('Full enrollment insert warning:', insertErr.message);
-      if (insertErr.code === 'ER_DUP_ENTRY' || insertErr.errno === 1062) {
-        return res.status(409).json({ message: 'An enrollment record with this Student ID or Email already exists.' });
+    let insertId = await enqueueEnrollmentTask(async () => {
+      try {
+        const [result] = await pool.execute(
+          `INSERT INTO enrollments
+           (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
+            birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
+            gender, height, weight, facebookAccount, bloodType, address,
+            street, municipality, province,
+            program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            name || null, firstName, lastName, middleName || null, String(email).trim(), nstpComponent || 'CWTS', sid, contactDigits,
+            finalBirthDate, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
+            finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
+            street || null, municipality || null, province || null,
+            program, section, yearLevel, finalEmergencyContact || null, emerDigits, 'Pending', photo, finalVoter
+          ]
+        );
+        return result.insertId;
+      } catch (insertErr) {
+        console.warn('Full enrollment insert warning:', insertErr.message);
+        if (insertErr.code === 'ER_DUP_ENTRY' || insertErr.errno === 1062) {
+          const err = new Error('An enrollment record with this Student ID or Email already exists.');
+          err.status = 409;
+          throw err;
+        }
+        // Self-healing fallback insert with core columns
+        const [fbResult] = await pool.execute(
+          `INSERT INTO enrollments (student_name, firstName, lastName, email, department, studentId, contactNumber, program, section, yearLevel, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+          [name || `${lastName}, ${firstName}`, firstName, lastName, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
+        );
+        return fbResult.insertId;
       }
-      // Self-healing fallback insert with core columns
-      const [fbResult] = await pool.execute(
-        `INSERT INTO enrollments (student_name, firstName, lastName, email, department, studentId, contactNumber, program, section, yearLevel, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-        [name || `${lastName}, ${firstName}`, firstName, lastName, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
-      );
-      insertId = fbResult.insertId;
-    }
+    });
 
     res.status(201).json({
       id: insertId,
@@ -2736,7 +2791,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error('Submit enrollment error:', error);
-    if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+    if (error.status === 409 || error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
       return res.status(409).json({ message: 'An enrollment record with this Student ID or Email already exists.' });
     }
     res.status(500).json({ message: error.message || 'Failed to submit enrollment' });
@@ -3158,13 +3213,15 @@ app.get('/api/telemetry/stats', async function(req, res) {
     var dbStudents = (studentRows[0] && studentRows[0].count) || 0;
     var dbUsers = (userRows[0] && userRows[0].count) || 0;
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var totalUsageCount = totalUniqueVisitors.size;
+    var totalUsageCount = Math.max(totalRegisteredUsers, totalUniqueVisitors.size);
+    var activeOnlineCount = Math.max(activeSessions.size, activeList.length);
 
     res.json({
       totalVisitors: totalUsageCount,
       totalRegisteredUsers: totalRegisteredUsers,
+      totalUsers: totalRegisteredUsers > 0 ? totalRegisteredUsers : totalUsageCount,
       totalStudents: dbStudents,
-      activeOnlineCount: activeList.length,
+      activeOnlineCount: activeOnlineCount,
       activeUsers: activeList
     });
   } catch (err) {

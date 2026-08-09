@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useContext, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';

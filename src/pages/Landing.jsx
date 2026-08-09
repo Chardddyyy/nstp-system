@@ -133,14 +133,9 @@ function Landing() {
     };
   }, []);
 
-  const totalUsersCount = Math.max(
-    47,
-    telemetry.totalUsers || telemetry.totalVisitors || parseInt(localStorage.getItem('nstp_total_visitors') || '47', 10)
-  );
+  const totalUsersCount = telemetry.totalRegisteredUsers || telemetry.totalUsers || telemetry.totalVisitors || 0;
 
-  const activeOnlineCount = telemetry.activeOnlineCount > 0
-    ? telemetry.activeOnlineCount
-    : 1;
+  const activeOnlineCount = telemetry.activeOnlineCount || 1;
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);

@@ -250,33 +250,35 @@ function Enrollment() {
       }
     });
 
-    // Student ID - exactly 9 digits
-    if (formData.studentId && !/^\d{9}$/.test(formData.studentId)) {
-      const idLen = formData.studentId.replace(/\D/g, '').length;
-      newErrors.studentId = idLen < 9
-        ? `Student ID is too short — ${idLen} digit${idLen !== 1 ? 's' : ''} entered, need exactly 9`
-        : `Student ID is too long — ${idLen} digit${idLen !== 1 ? 's' : ''} entered, need exactly 9`;
+    // Student ID - 8 to 12 digits
+    const sidDigits = (formData.studentId || '').replace(/\D/g, '');
+    if (formData.studentId && (sidDigits.length < 8 || sidDigits.length > 12)) {
+      newErrors.studentId = sidDigits.length < 8
+        ? `Student ID is too short — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, need at least 8`
+        : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12`;
     }
 
     // Email - must match full format e.g. student@cvsu.edu.ph
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email — must be in the format student@cvsu.edu.ph';
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = 'Invalid email — must be in valid format (e.g. student@cvsu.edu.ph)';
     }
 
-    // Contact Number - exactly 11 digits
-    if (formData.contactNumber && !/^\d{11}$/.test(formData.contactNumber)) {
-      const cLen = formData.contactNumber.replace(/\D/g, '').length;
-      newErrors.contactNumber = cLen < 11
-        ? `Contact Number is too short — ${cLen} digit${cLen !== 1 ? 's' : ''} entered, need exactly 11`
-        : `Contact Number is too long — ${cLen} digit${cLen !== 1 ? 's' : ''} entered, need exactly 11`;
+    // Contact Number - 11 digits
+    let cDigits = (formData.contactNumber || '').replace(/\D/g, '');
+    if (cDigits.length === 12 && cDigits.startsWith('63')) cDigits = '0' + cDigits.slice(2);
+    if (formData.contactNumber && cDigits.length !== 11) {
+      newErrors.contactNumber = cDigits.length < 11
+        ? `Contact Number is too short — ${cDigits.length} digit${cDigits.length !== 1 ? 's' : ''} entered, need 11`
+        : `Contact Number is too long — ${cDigits.length} digit${cDigits.length !== 1 ? 's' : ''} entered, need 11`;
     }
 
-    // Emergency Number - exactly 11 digits
-    if (formData.emergencyNumber && !/^\d{11}$/.test(formData.emergencyNumber)) {
-      const eLen = formData.emergencyNumber.replace(/\D/g, '').length;
-      newErrors.emergencyNumber = eLen < 11
-        ? `Emergency Number is too short — ${eLen} digit${eLen !== 1 ? 's' : ''} entered, need exactly 11`
-        : `Emergency Number is too long — ${eLen} digit${eLen !== 1 ? 's' : ''} entered, need exactly 11`;
+    // Emergency Number - 11 digits
+    let eDigits = (formData.emergencyNumber || '').replace(/\D/g, '');
+    if (eDigits.length === 12 && eDigits.startsWith('63')) eDigits = '0' + eDigits.slice(2);
+    if (formData.emergencyNumber && eDigits.length !== 11) {
+      newErrors.emergencyNumber = eDigits.length < 11
+        ? `Emergency Number is too short — ${eDigits.length} digit${eDigits.length !== 1 ? 's' : ''} entered, need 11`
+        : `Emergency Number is too long — ${eDigits.length} digit${eDigits.length !== 1 ? 's' : ''} entered, need 11`;
     }
 
     // Birth Date validation
@@ -347,14 +349,14 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1200;
+        const MAX = 1000;
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.78));
+        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.70));
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
       // Fallback for formats the browser can't decode in canvas (e.g. HEIC on desktop)
@@ -459,8 +461,24 @@ function Enrollment() {
       const cleanProvince = toTitleCase(formData.province.trim());
       const cleanEmergencyContact = toTitleCase(formData.emergencyContact.trim());
 
+      const cleanStudentId = (formData.studentId || '').replace(/\D/g, '').trim();
+      let cleanContact = (formData.contactNumber || '').replace(/\D/g, '').trim();
+      if (cleanContact.length === 12 && cleanContact.startsWith('63')) cleanContact = '0' + cleanContact.slice(2);
+
+      let cleanEmer = (formData.emergencyNumber || '').replace(/\D/g, '').trim();
+      if (cleanEmer.length === 12 && cleanEmer.startsWith('63')) cleanEmer = '0' + cleanEmer.slice(2);
+
+      const m = String(formData.birthMonth || '').padStart(2, '0');
+      const d = String(formData.birthDay || '').padStart(2, '0');
+      const y = String(formData.birthYear || '').trim();
+      const cleanBirthDate = (y && m && d) ? `${y}-${m}-${d}` : null;
+
       const enrollmentData = {
         ...formData,
+        studentId: cleanStudentId || formData.studentId.trim(),
+        contactNumber: cleanContact || formData.contactNumber.trim(),
+        emergencyNumber: cleanEmer || formData.emergencyNumber.trim(),
+        email: formData.email.trim(),
         lastName: cleanLastName,
         firstName: cleanFirstName,
         middleName: cleanMiddleName,
@@ -469,7 +487,7 @@ function Enrollment() {
         province: cleanProvince,
         emergencyContact: cleanEmergencyContact,
         fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim(),
-        birthDate: `${formData.birthYear}-${formData.birthMonth.padStart(2, '0')}-${formData.birthDay.padStart(2, '0')}`,
+        birthDate: cleanBirthDate,
         status: 'Pending',
         registrationPhoto,
       };

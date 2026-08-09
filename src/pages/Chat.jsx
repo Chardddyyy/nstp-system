@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { callsAPI } from '../services/api';
+import { callsAPI, conversationsAPI } from '../services/api';
 import heic2any from 'heic2any';
 import {
   User, Users, Send, Search,
@@ -65,8 +65,8 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
 function Chat() {
   const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations,
           editMessage, deleteMessage, addReaction, clearMessages, deleteConversation, startConversation,
-          incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
-          answerIncomingCall, declineIncomingCall,
+          _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
+          setMessages,
           pendingAnsweredCall, setPendingAnsweredCall } = useAuth();
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
@@ -805,9 +805,6 @@ function Chat() {
   const [selectedImageUrl, setSelectedImageUrl] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [_blockedBy, setBlockedBy] = useState(null);
-  const [showIncomingCall, setShowIncomingCall] = useState(false);
-  const [incomingCallType, setIncomingCallType] = useState(null); // 'voice' or 'video'
-  const [callerInfo, setCallerInfo] = useState(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalData, setConfirmModalData] = useState({
@@ -998,6 +995,7 @@ function Chat() {
       setPendingAnsweredCall(null);
       handleJoinAnsweredCall(call);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAnsweredCall]);
 
   useEffect(() => {
@@ -1008,6 +1006,7 @@ function Chat() {
     };
     window.addEventListener('nstp-call-answered', handleCallAnsweredEvent);
     return () => window.removeEventListener('nstp-call-answered', handleCallAnsweredEvent);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Group call ─────────────────────────────────────────────────────
@@ -1350,21 +1349,12 @@ function Chat() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outgoingCallStatus]);
 
-  // Show incoming call UI when App.jsx detects a new call for this user
-  useEffect(() => {
-    if (!incomingCall) { setShowIncomingCall(false); return; }
-    setShowIncomingCall(true);
-    setIncomingCallType(incomingCall.call_type || 'voice');
-    setCallerInfo(incomingCall);
-  }, [incomingCall]);
-
   // Handle call answered from IncomingCallOverlay (user was on a different page)
   useEffect(() => {
     const handleCallAnswered = (e) => {
       const call = e.detail || pendingAnsweredCall;
       if (!call) return;
       if (currentCallIdRef.current === call.id && (showCallModal || showVideoCallModal)) return;
-      setShowIncomingCall(false);
       currentCallIdRef.current = call.id;
       callConversationIdRef.current = call.conversation_id;
       callTypeRef.current = call.call_type || 'voice';

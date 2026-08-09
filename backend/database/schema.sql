@@ -201,7 +201,9 @@ CREATE TABLE IF NOT EXISTS enrollments (
   reviewed_at      TIMESTAMP NULL,
   FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_enrollments_status (status),
-  INDEX idx_enrollments_department (department)
+  INDEX idx_enrollments_department (department),
+  INDEX idx_enrollments_studentid (studentId),
+  INDEX idx_enrollments_email (email)
 );
 
 -- offer_sdp / answer_sdp are the active column names used by server.js.

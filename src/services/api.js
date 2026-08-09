@@ -1,18 +1,24 @@
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
-    var override = localStorage.getItem('nstp_api_url');
-    if (override) return override;
-    
     var host = window.location.hostname;
-    // Auto-detect local network IP, localhost, or localtunnel
+
+    // Clear bad 'localhost' override if accessing from a mobile/external device
+    var override = localStorage.getItem('nstp_api_url');
+    if (override) {
+      if (host !== 'localhost' && host !== '127.0.0.1' && override.includes('localhost')) {
+        localStorage.removeItem('nstp_api_url');
+      } else {
+        return override;
+      }
+    }
+    
+    // Auto-detect local network IP (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), localhost, or localtunnel
     if (
       host === 'localhost' ||
       host === '127.0.0.1' ||
       host.endsWith('.local') ||
       host.endsWith('.loca.lt') ||
-      /^192\.168\./.test(host) ||
-      /^10\./.test(host) ||
-      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)
+      /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host)
     ) {
       return window.location.protocol + '//' + host + ':3001/api';
     }
@@ -30,11 +36,9 @@ function getLocalFallbackUrl(endpoint) {
       host === '127.0.0.1' ||
       host.endsWith('.local') ||
       host.endsWith('.loca.lt') ||
-      /^192\.168\./.test(host) ||
-      /^10\./.test(host) ||
-      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)
+      /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host)
     ) {
-      return window.location.protocol + '//' + host + ':3001/api' + endpoint;
+      return window.location.protocol + '//' + host + ':3001/api' + (endpoint || '');
     }
   }
   return null;
@@ -548,21 +552,12 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  // Unique Device Tracking for Total Visitors/Users
-  let deviceId = localStorage.getItem('nstp_unique_device_id');
-  if (!deviceId) {
-    deviceId = 'dev_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-    localStorage.setItem('nstp_unique_device_id', deviceId);
-    let count = parseInt(localStorage.getItem('nstp_unique_device_count') || '47', 10);
-    count += 1;
-    localStorage.setItem('nstp_unique_device_count', count.toString());
-  }
-
-  const totalVisitors = Math.max(47, parseInt(localStorage.getItem('nstp_unique_device_count') || '47', 10));
+  const cachedTotal = parseInt(localStorage.getItem('nstp_cached_total_users') || '47', 10);
 
   return {
-    totalVisitors,
-    totalUsers: totalVisitors,
+    totalVisitors: cachedTotal,
+    totalRegisteredUsers: cachedTotal,
+    totalUsers: cachedTotal,
     activeOnlineCount: Math.max(1, activeCount),
     activeUsers: []
   };
@@ -582,7 +577,19 @@ export function pingTelemetry(data) {
 export function getTelemetryStats() {
   var url = getPrimaryApiUrl() + '/telemetry/stats';
   return fetch(url)
-    .then(function(res) { return res.ok ? res.json() : getClientSideTelemetry(); })
+    .then(function(res) {
+      if (res.ok) {
+        return res.json().then(function(data) {
+          if (data && (data.totalRegisteredUsers || data.totalUsers)) {
+            try {
+              localStorage.setItem('nstp_cached_total_users', String(data.totalRegisteredUsers || data.totalUsers));
+            } catch (_) {}
+          }
+          return data;
+        });
+      }
+      return getClientSideTelemetry();
+    })
     .catch(function() { return getClientSideTelemetry(); });
 }
 

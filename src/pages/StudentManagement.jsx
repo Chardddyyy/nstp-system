@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import { getPrimaryApiUrl } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   Users, Calendar, Plus, Search, Filter,
@@ -203,9 +204,7 @@ function StudentManagement() {
     try {
       const dept = isAdmin ? exportDept : (user?.department || 'CWTS');
       const token = localStorage.getItem('nstp_token');
-      const API_URL = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-        ? 'https://nstp-system.onrender.com/api'
-        : 'http://localhost:3001/api';
+      const API_URL = getPrimaryApiUrl();
       const params = new URLSearchParams({
         department: dept,
         sem: exportSem,
@@ -362,7 +361,7 @@ function StudentManagement() {
       if (!student) return false;
 
       // Comprehensive search across ALL student info fields (email, bloodtype, section, name, address, phone, etc.)
-      const matchesSearch = !query || Object.entries(student).some(([key, val]) => {
+      const matchesSearch = !query || Object.entries(student).some(([_key, val]) => {
         if (val === null || val === undefined) return false;
         if (typeof val === 'object') return false;
         return String(val).toLowerCase().includes(query);
