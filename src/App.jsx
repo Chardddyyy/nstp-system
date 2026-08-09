@@ -381,6 +381,33 @@ function App() {
     }
   }, [user]);
 
+  // Auto-Update & Cache-Buster: Checks for new build version on GitHub Pages
+  useEffect(() => {
+    async function checkForUpdates() {
+      try {
+        const vUrl = `${BASE_PATH}version.json?t=${Date.now()}`;
+        const res = await fetch(vUrl, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version) {
+            const lastVersion = localStorage.getItem('nstp_app_version');
+            if (lastVersion && lastVersion !== data.version) {
+              console.log(`🚀 New version detected (${data.version}). Refreshing...`);
+              localStorage.setItem('nstp_app_version', data.version);
+              window.location.reload(true);
+            } else {
+              localStorage.setItem('nstp_app_version', data.version);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    checkForUpdates();
+    const vInterval = setInterval(checkForUpdates, 20000);
+    return () => clearInterval(vInterval);
+  }, []);
+
   useEffect(() => {
     if (!user) return;
     safeSetStorage(getNotificationStorageKey(user.role), notifications);
