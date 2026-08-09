@@ -496,9 +496,14 @@ app.post('/api/auth/login', async function(req, res) {
       }
     }
 
-    if (users.length === 0 || !passwordMatch) {
-      auditLog('login_failed', null, `email: ${email}`, ip);
-      return res.status(401).json({ message: 'Invalid email or password' });
+    if (users.length === 0) {
+      auditLog('login_failed', null, `email_not_found: ${email}`, ip);
+      return res.status(401).json({ message: 'Invalid email address — Account not found' });
+    }
+
+    if (!passwordMatch) {
+      auditLog('login_failed', null, `wrong_password: ${email}`, ip);
+      return res.status(401).json({ message: 'Incorrect password — Please try again' });
     }
 
     var user = users[0];

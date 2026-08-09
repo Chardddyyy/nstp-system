@@ -1295,26 +1295,23 @@ function StudentManagement() {
                   {/* Age, Civil Status, Sex, Registered Voter */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
-                        <span>Age *</span>
-                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">Auto</span>
-                      </label>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
                       <input
                         type="text"
                         name="age"
                         readOnly
                         placeholder="Auto-computed"
                         value={formData.age || ''}
-                        className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
+                        className="w-full h-10 px-3 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Civil Status *</label>
                       <select
                         name="civilStatus"
                         value={formData.civilStatus || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
                         <option value="">Status *</option>
@@ -1325,12 +1322,12 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Sex *</label>
                       <select
                         name="sex"
                         value={formData.sex || formData.gender || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
                         <option value="">Sex *</option>
@@ -1339,12 +1336,12 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Registered Voter *</label>
                       <select
                         name="registeredVoter"
                         value={formData.registeredVoter || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
                         <option value="">Voter Status *</option>

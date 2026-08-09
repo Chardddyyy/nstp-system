@@ -129,14 +129,6 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
             <span>Calendar</span>
           </button>
 
-          <button type="button"
-            onClick={() => { if (!archiveMode) go('/letter-formats'); }}
-            disabled={archiveMode}
-            className={archiveMode ? archiveNavClass() : navClass('/letter-formats')}
-          >
-            <FileCheck className="w-5 h-5" />
-            <span>Letter Formats</span>
-          </button>
 
           <button type="button"
             onClick={() => { if (!archiveMode) go('/profile'); }}
@@ -151,7 +143,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         {/* Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-emerald-800/60 bg-emerald-950/40">
           <button type="button" onClick={onLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-rose-950/30 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 border border-rose-900/40 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
+            className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

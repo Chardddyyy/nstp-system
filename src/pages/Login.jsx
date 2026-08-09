@@ -15,10 +15,21 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(cleanEmail, password);
       if (result.success) {
         if (result.role === 'admin') {
           navigate('/admin/dashboard');

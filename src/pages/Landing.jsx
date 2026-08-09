@@ -236,8 +236,8 @@ function Landing() {
             <p className="text-[6.5px] xs:text-[7.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap tracking-tight">ROTC • CWTS • LTS</p>
           </div>
           <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
-            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">7 Programs</p>
-            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">Degree Courses</p>
+            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">2 Semesters</p>
+            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">1 Academic Year</p>
           </div>
           <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
             <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-white leading-tight whitespace-nowrap">R.A. 9163</p>

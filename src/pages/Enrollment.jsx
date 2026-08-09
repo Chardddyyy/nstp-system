@@ -496,7 +496,7 @@ function Enrollment() {
                     NSTP Portal
                   </span>
                 </div>
-                <p className="text-emerald-200 text-[7.5px] xs:text-[8.5px] sm:text-xs font-medium whitespace-nowrap truncate max-w-[150px] xs:max-w-[210px] sm:max-w-none">National Service Training Program Student Enrollment</p>
+                <p className="text-emerald-200 text-[8px] xs:text-[9px] sm:text-xs font-medium leading-tight">National Service Training Program Student Enrollment</p>
               </div>
             </div>
             <Link
@@ -607,7 +607,7 @@ function Enrollment() {
                   NSTP Portal
                 </span>
               </div>
-              <p className="text-emerald-200 text-[7.5px] xs:text-[8.5px] sm:text-xs font-medium whitespace-nowrap truncate max-w-[150px] xs:max-w-[210px] sm:max-w-none">National Service Training Program Student Enrollment</p>
+              <p className="text-emerald-200 text-[8px] xs:text-[9px] sm:text-xs font-medium leading-tight">National Service Training Program Student Enrollment</p>
             </div>
           </div>
 
@@ -1049,10 +1049,7 @@ function Enrollment() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
-                      <span>Age *</span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Auto-computed</span>
-                    </label>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
                     <input
                       ref={el => fieldRefs.current.age = el}
                       type="text"
