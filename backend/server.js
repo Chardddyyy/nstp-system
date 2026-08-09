@@ -1695,17 +1695,18 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
 
     const limit = Math.min(parseInt(req.query.limit) || 100, 200);
 
+    const placeholders = targetConvIds.map(() => '?').join(',');
     const [messages] = await pool.execute(`
       SELECT * FROM (
         SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
         FROM messages m
         JOIN users u ON m.sender_id = u.id
-        WHERE m.conversation_id = ?
+        WHERE m.conversation_id IN (${placeholders})
         ORDER BY m.created_at DESC
         LIMIT ${limit}
       ) latest
       ORDER BY latest.created_at ASC
-    `, [targetConvId]);
+    `, targetConvIds);
 
     res.json(messages);
   } catch (error) {
