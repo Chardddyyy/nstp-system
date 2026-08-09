@@ -118,5 +118,33 @@ nstp-system/
 
 ---
 
+## 📚 7. Opisyal na Sanggunian (APA 7th Edition References)
+
+Ang mga sumusunod ay ang pormal na talaan ng mga sanggunian (APA 7th Edition Style) para sa mga legal basis, institutional assets, software frameworks, at mga larawan/media na ginamit sa pagbuo ng **CvSU Naic NSTP Record & Report Management System**:
+
+### 🏛️ Legal & Institutional Framework References
+* Commission on Higher Education. (2021). *Revised implementing rules and regulations of the National Service Training Program (NSTP)* (CHED Memorandum Order No. 01, Series of 2021). Office of the President of the Philippines, CHED.
+* Cavite State University - Naic. (2024). *CvSU Naic official logo and campus imagery* [Graphics & photographs]. CvSU Naic Information & Communications Technology Office. https://cvsu.edu.ph
+* Republic Act No. 9163. (2002). *An Act establishing the National Service Training Program (NSTP) for tertiary level students, amending for the purpose Republic Act No. 7077 and Presidential Decree No. 1706, and for other purposes*. Congress of the Philippines. https://www.officialgazette.gov.ph/2002/01/23/republic-act-no-9163/
+
+### 🖼️ Media Assets & Mapping References
+* Cavite State University - Naic. (2024). *CvSU Naic Main Entrance Gate* [Photograph]. CvSU Naic Public Affairs Office. `file:///public/cvsunaiccampus.png`
+* Cavite State University - Naic. (2024). *Civic Welfare Training Service (CWTS) community outreach activities* [Photograph]. CvSU Naic NSTP Office. `file:///public/cwts-cover.jpg`
+* Cavite State University - Naic. (2024). *Literacy Training Service (LTS) child literacy program* [Photograph]. CvSU Naic NSTP Office. `file:///public/lts-cover.jpg`
+* Cavite State University - Naic. (2024). *Reserve Officers' Training Corps (ROTC) cadet training formation* [Photograph]. CvSU Naic ROTC Unit. `file:///public/IMG_9578.JPG`
+* Google Maps. (2026). *Map location of Cavite State University - Naic Campus* [Digital map]. Alphabet Inc. https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic
+
+### 💻 Open Source Software & Technical References
+* Express Core Team. (2024). *Express: Fast, unopinionated, minimalist web framework for Node.js* (Version 4.19.0) [Computer software]. OpenJS Foundation. https://expressjs.com
+* Lucide Contributors. (2024). *Lucide React: Beautiful & consistent icon toolkit* (Version 0.344.0) [Computer software]. Lucide Open Source Community. https://lucide.dev
+* Meta Open Source. (2024). *React: JavaScript library for building user interfaces* (Version 19.0.0) [Computer software]. Meta Platforms, Inc. https://react.dev
+* Node.js Project. (2024). *Node.js cross-platform JavaScript runtime environment* (Version 20.0.0) [Computer software]. OpenJS Foundation. https://nodejs.org
+* SheetJS LLC. (2024). *SheetJS Community Edition: Spreadsheet data parser and exporter* (Version 0.18.5) [Computer software]. SheetJS. https://sheetjs.com
+* Tailwind Labs Inc. (2024). *Tailwind CSS: Utility-first CSS framework* (Version 4.0.0) [Computer software]. Tailwind Labs. https://tailwindcss.com
+* Vite Core Team. (2024). *Vite: Next-generation frontend tooling* (Version 6.0.0) [Computer software]. Vite Project. https://vitejs.dev
+
+---
+
 *Inihanda para sa: Cavite State University Naic - National Service Training Program Office*  
 *Huling Na-update: Agosto 2026*
+

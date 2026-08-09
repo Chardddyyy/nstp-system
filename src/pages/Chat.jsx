@@ -1774,12 +1774,14 @@ function Chat() {
                     const partner = getConversationPartner(conversation);
                     const conversationMessages = messages[conversation.id] || [];
                     const lastReadTime = readConversations[conversation.id] || 0;
+                    const userCreatedTime = user?.created_at ? new Date(user.created_at).getTime() : 0;
+                    const effectiveReadTime = lastReadTime || userCreatedTime || Date.now();
                     
-                    // Count unread messages (messages that arrived after last read time and not from current user)
+                    // Count unread messages (messages that arrived after effective read time and not from current user)
                     const unreadCount = conversationMessages.filter(msg => {
                       const msgTime = new Date(msg.created_at || msg.timestamp || Date.now()).getTime();
                       const isOwnMessage = msg.senderId === user?.id || msg.sender_id === user?.id;
-                      return msgTime > lastReadTime && !isOwnMessage;
+                      return msgTime > effectiveReadTime && !isOwnMessage;
                     }).length;
                     
                     // Check if there are new messages (red dot indicator)

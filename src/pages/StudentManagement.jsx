@@ -112,7 +112,7 @@ function StudentManagement() {
     if (!str || typeof str !== 'string') return '';
     return str
       .split(' ')
-      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
       .join(' ');
   };
 
@@ -123,19 +123,7 @@ function StudentManagement() {
     if (name === 'studentId') {
       newValue = value.replace(/\D/g, '').slice(0, 9);
     } else if (name === 'contactNumber' || name === 'emergencyNumber') {
-      let digits = value.replace(/\D/g, '');
-      if (!digits || digits === '0') {
-        newValue = '09';
-      } else if (!digits.startsWith('09')) {
-        if (digits.startsWith('9')) {
-          newValue = '0' + digits;
-        } else {
-          newValue = '09' + digits;
-        }
-      } else {
-        newValue = digits;
-      }
-      newValue = newValue.slice(0, 11);
+      newValue = value.replace(/\D/g, '').slice(0, 11);
     } else if (name === 'age') {
       newValue = value.replace(/\D/g, '');
     } else if (name === 'bloodType') {
@@ -154,9 +142,9 @@ function StudentManagement() {
       if (newValue.length === 4 && parseInt(newValue) > currentYear) {
         newValue = currentYear.toString();
       }
-    } else if (['firstName', 'lastName', 'middleName', 'municipality', 'province', 'emergencyContact', 'emergencyName'].includes(name)) {
-      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
-    } else if (name === 'street') {
+    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact', 'emergencyName'].includes(name)) {
+      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g, ''));
+    } else if (['street', 'municipality', 'province'].includes(name)) {
       newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, ''));
     }
 

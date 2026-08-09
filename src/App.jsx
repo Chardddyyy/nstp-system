@@ -206,7 +206,7 @@ function App() {
     pending.forEach(e => seenEnrollmentIds.current.add(e.id));
 
     reportsList.forEach(report => {
-      if (currentUser.role === 'instructor' && report.department === currentUser.department) {
+      if (currentUser.role === 'instructor' && (report.department === 'All' || report.department === currentUser.department)) {
         seenReportIds.current.add(report.id);
       }
       (report.submissions || []).forEach(sub => {

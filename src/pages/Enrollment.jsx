@@ -101,6 +101,7 @@ function Enrollment() {
   const [errors, setErrors] = useState({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [pendingTrack, setPendingTrack] = useState(null);
   const [toast, setToast] = useState(null);
   const [errorBanner, setErrorBanner] = useState([]);
   const errorTimerRef = useRef(null);
@@ -944,9 +945,9 @@ function Enrollment() {
                     <div
                       key={item.id}
                       onClick={() => {
-                        const upd = { ...formData, nstpComponent: item.id };
-                        setFormData(upd);
-                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                        if (formData.nstpComponent !== item.id) {
+                          setPendingTrack(item);
+                        }
                       }}
                       className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${
                         formData.nstpComponent === item.id 
@@ -1630,6 +1631,59 @@ function Enrollment() {
                 className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
               >
                 I Understand &amp; Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Track Selection Confirmation Modal */}
+      {pendingTrack && (
+        <div 
+          className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in"
+          onClick={() => setPendingTrack(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md border border-emerald-100 overflow-hidden text-center p-6 sm:p-8 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-emerald-900 border border-amber-300 flex items-center justify-center mx-auto mb-4 shadow-inner">
+              <Award className="w-8 h-8 text-emerald-700" />
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-black text-emerald-950 mb-2">
+              Kumpirmahin ang Napiling Component / Confirm Selected Track
+            </h3>
+            
+            <p className="text-gray-600 text-xs sm:text-sm font-medium leading-relaxed mb-4">
+              Sigurado ka ba na <strong className="text-emerald-900 font-black">{pendingTrack.title} ({pendingTrack.subtitle})</strong> ang napili mong NSTP Track Component?
+            </p>
+
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-6 text-left text-xs font-semibold text-emerald-900">
+              <span className="font-extrabold uppercase tracking-wider text-[10px] text-emerald-700 block mb-1">Katangian ng Napiling Track:</span>
+              <p className="text-emerald-800 leading-normal">{pendingTrack.desc}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingTrack(null)}
+                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer"
+              >
+                Baguhin / Change Track
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const upd = { ...formData, nstpComponent: pendingTrack.id };
+                  setFormData(upd);
+                  localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
+                  setPendingTrack(null);
+                  showToast(`Matagumpay na napili ang ${pendingTrack.title}!`, 'success');
+                }}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                Kumpirmahin / Confirm Track
               </button>
             </div>
           </div>

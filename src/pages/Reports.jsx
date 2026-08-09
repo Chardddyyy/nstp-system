@@ -48,37 +48,6 @@ function Reports() {
     attachment: null
   });
 
-  // Report templates for instructors
-  const reportTemplates = [
-    { 
-      title: 'Activity Schedule', 
-      description: 'Submit monthly/weekly activity schedule for NSTP component activities. Include dates, venues, and expected participants.' 
-    },
-    { 
-      title: 'Daily Time Report (DTR)', 
-      description: 'Submit Daily Time Report for NSTP instructors. Include time in/out and activities conducted.' 
-    },
-    { 
-      title: 'Grading Sheet', 
-      description: 'Submit student grading sheet for the semester. Include student names, scores, and final grades.' 
-    },
-    { 
-      title: 'Attendance Report', 
-      description: 'Submit student attendance report for NSTP sessions. Include dates and attendance status.' 
-    },
-    { 
-      title: 'Activity Documentation', 
-      description: 'Submit documentation of conducted NSTP activities. Include photos, narratives, and attendance.' 
-    },
-    { 
-      title: 'Progress Report', 
-      description: 'Submit monthly progress report on NSTP program implementation and student development.' 
-    },
-    { 
-      title: 'Other Documents', 
-      description: 'Submit other required NSTP-related documents as specified by the NSTP Office.' 
-    }
-  ];
   const submitFileRef = useRef(null);
 
   const handleLogout = () => {
@@ -626,24 +595,6 @@ function Reports() {
 
               {/* Form Body */}
               <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Template (Optional)</label>
-                  <select
-                    onChange={(e) => {
-                      const template = reportTemplates.find(t => t.title === e.target.value);
-                      if (template) {
-                        setCreateForm({...createForm, title: template.title, description: template.description});
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                  >
-                    <option value="">-- Select a template --</option>
-                    {reportTemplates.map((template, idx) => (
-                      <option key={idx} value={template.title}>{template.title}</option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-gray-500 mt-1">Select a pre-configured template or write custom instructions</p>
-                </div>
 
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Title *</label>

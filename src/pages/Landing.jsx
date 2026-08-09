@@ -107,8 +107,9 @@ function Landing() {
 
   // Real-time Telemetry & Active Online Users state
   const [telemetry, setTelemetry] = useState({
-    totalVisitors: 0,
-    activeOnlineCount: 0,
+    totalVisitors: 47,
+    totalUsers: 47,
+    activeOnlineCount: 1,
     activeUsers: []
   });
 

@@ -661,7 +661,13 @@ function Profile() {
                     id="profile-name"
                     name="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    onChange={(e) => {
+                      const cleanName = e.target.value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g, '')
+                        .split(' ')
+                        .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
+                        .join(' ');
+                      setFormData({...formData, name: cleanName});
+                    }}
                     disabled={!isEditing}
                     autoComplete="name"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
@@ -689,9 +695,13 @@ function Profile() {
                       id="profile-phone"
                       name="phone"
                       value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      onChange={(e) => {
+                        const cleanPhone = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        setFormData({...formData, phone: cleanPhone});
+                      }}
                       disabled={!isEditing}
-                      placeholder="+63 912 345 6789"
+                      placeholder="09123456789"
+                      maxLength={11}
                       autoComplete="tel"
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
                     />
@@ -803,6 +813,14 @@ function Profile() {
                 </h3>
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }} className="space-y-4">
+                <input
+                  type="text"
+                  name="username"
+                  value={user?.email || ''}
+                  autoComplete="username"
+                  className="hidden"
+                  readOnly
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
                   <div className="relative">
@@ -888,6 +906,7 @@ function Profile() {
               </div>
 
               <div className="space-y-3">
+                <input type="text" name="username" value={f.email || ''} autoComplete="username" className="hidden" readOnly />
                 {/* Role */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
@@ -1018,6 +1037,7 @@ function Profile() {
 
             {/* Form Body */}
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto">
+              <input type="text" name="username" value={editInstructorForm.email || ''} autoComplete="username" className="hidden" readOnly />
               {/* Account Role */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Account Role</label>
