@@ -780,27 +780,8 @@ function StudentManagement() {
             </div>
           </div>
 
-          {/* Quick Program Filter Tabs Pill Row for Easy Tapping */}
-          <div className="mt-3 pt-3 border-t border-emerald-100/60 flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            <span className="text-[10px] sm:text-xs font-black uppercase text-emerald-900 tracking-wider shrink-0 mr-1">Program:</span>
-            {['All', 'BSIT', 'BSCS', 'BSFAS', 'BSBA', 'BSED', 'BEED', 'BSHM'].map(prog => {
-              const active = filterCourse === prog;
-              return (
-                <button
-                  key={prog}
-                  type="button"
-                  onClick={() => setFilterCourse(prog)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-extrabold transition-all shrink-0 cursor-pointer ${
-                    active
-                      ? 'bg-emerald-700 text-white shadow-xs'
-                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
-                  }`}
-                >
-                  {prog === 'All' ? 'All Programs' : prog === 'BSED' ? 'BSEd' : prog}
-                </button>
-              );
-            })}
-          </div>
+
+
         </div>
 
         {/* Students Table */}

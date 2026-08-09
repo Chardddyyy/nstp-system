@@ -158,7 +158,7 @@ export default function LetterFormats() {
 
         {/* Hero Banner - Unified CvSU Naic Header */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 relative z-10">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button
                 type="button"
@@ -174,13 +174,12 @@ export default function LetterFormats() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-sm xs:text-base sm:text-2xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
-                </div>
+                <h1 className="text-sm sm:text-2xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
                 <p className="text-emerald-200 text-xs sm:text-sm font-medium truncate mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
               </div>
             </div>
 
+            {(user?.role === 'admin' || user?.role === 'instructor') && (
             <button
               type="button"
               onClick={() => {
@@ -191,11 +190,12 @@ export default function LetterFormats() {
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl sm:rounded-2xl shadow-md transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              className="w-full lg:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl sm:rounded-2xl shadow-md transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              <Plus className="w-4.5 h-4.5 text-emerald-950" />
+              <Plus className="w-4 h-4 text-emerald-950" />
               <span>Create Letter Format</span>
             </button>
+            )}
           </div>
         </div>
 
