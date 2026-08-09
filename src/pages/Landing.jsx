@@ -136,8 +136,7 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white relative">
-      {/* Page-wide Radial Background Overlay (Extends down to the very bottom on mobile and desktop) */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#059669_1.2px,transparent_1.2px)] [background-size:16px_16px] z-0"></div>
+
 
       {/* Sticky Glassmorphic Header - Edge-to-Edge Desktop Layout */}
       <header className="sticky top-0 z-50 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
@@ -176,8 +175,8 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero Carousel Section - Compact Mobile Height */}
-      <section className="relative h-[220px] xs:h-[270px] sm:h-[380px] md:h-[500px] overflow-hidden bg-gray-900">
+      {/* Hero Carousel Section - Spacious Mobile & Desktop Height */}
+      <section className="relative h-[320px] xs:h-[380px] sm:h-[450px] md:h-[540px] overflow-hidden bg-gray-900">
         {CAROUSEL_IMAGES.map((image, index) => (
           <div
             key={index}
@@ -236,7 +235,6 @@ function Landing() {
 
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
       <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1 sm:gap-4 text-center relative z-10">
           <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
             <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">6 Credit Units</p>
@@ -259,7 +257,6 @@ function Landing() {
 
       {/* High-Impact Enrollment Schedule & CTA Section */}
       <section className="py-8 sm:py-12 px-3 sm:px-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800/80">
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
           {/* Dynamic Schedule Status Banner */}
@@ -326,7 +323,6 @@ function Landing() {
 
       {/* History, Mission, and Vision Section - Compact Mobile Spacing */}
       <section className="py-8 sm:py-16 px-4 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           {/* History */}
           <div className="mb-8 sm:mb-16">
@@ -381,7 +377,6 @@ function Landing() {
 
       {/* Interactive NSTP Components Section - 3 Side-by-side Cards on Mobile */}
       <section className="py-6 sm:py-16 px-3 sm:px-4 bg-gray-50/90 border-t border-gray-100 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-4 sm:mb-12">
             <span className="bg-emerald-100 text-emerald-800 text-[9px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Program Components</span>
@@ -516,7 +511,6 @@ function Landing() {
 
       {/* Step-by-Step Online Enrollment Guide - 3 Side-by-side Steps on Mobile */}
       <section className="py-6 sm:py-16 px-3 sm:px-4 bg-white border-t border-gray-100 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#059669_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-4 sm:mb-12">
             <span className="bg-amber-100 text-amber-900 text-[9px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Easy 3-Step Process</span>
@@ -569,7 +563,6 @@ function Landing() {
 
       {/* NSTP Video Orientation & Educational Overview Section */}
       <section className="py-8 sm:py-16 px-4 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-t border-emerald-800/80">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="text-center mb-6 sm:mb-10">
             <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] sm:text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
@@ -682,7 +675,6 @@ function Landing() {
 
       {/* Footer - Edge-to-Edge Desktop Layout */}
       <footer className="bg-emerald-950 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="w-full px-3 sm:px-8 lg:px-12 py-5 sm:py-10 relative z-10">
           <div className="flex flex-row justify-between items-start gap-2.5 sm:gap-8">
             {/* About (Left Side) */}
