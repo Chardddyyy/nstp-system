@@ -85,35 +85,45 @@ function App() {
   const [messages, setMessages] = useState({});
   const [archivedYears, setArchivedYears] = useState([]);
 
-  // Live Auto-Update & Auto-Restart Detection
+  // Live Auto-Update & Auto-Restart Detection (Brave Mobile Cache Buster)
   useEffect(() => {
-    let currentVersion = null;
-    const versionUrl = `${BASE_PATH}version.json?t=${Date.now()}`;
+    let currentVersion = localStorage.getItem('nstp_app_version') || null;
+    const getVUrl = () => `${BASE_PATH}version.json?t=${Date.now()}`;
 
-    // Fetch initial version
-    fetch(versionUrl)
-      .then(res => res.json())
-      .then(data => { if (data?.version) currentVersion = data.version; })
-      .catch(() => {});
-
-    const checkInterval = setInterval(() => {
-      fetch(`${BASE_PATH}version.json?t=${Date.now()}`)
+    const checkVersion = () => {
+      fetch(getVUrl(), { cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } })
         .then(res => res.json())
         .then(data => {
-          if (data?.version && currentVersion && data.version !== currentVersion) {
-            console.log('⚡ New system update detected:', data.version, 'Auto-restarting...');
-            const banner = document.createElement('div');
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#059669;color:#fff;text-align:center;padding:12px 16px;font-weight:bold;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
-            banner.textContent = '⚡ System Update Deployed! Auto-restarting webpage...';
-            document.body.appendChild(banner);
-            setTimeout(() => {
-              window.location.reload(true);
-            }, 1200);
+          if (data?.version) {
+            if (!currentVersion) {
+              currentVersion = data.version;
+              localStorage.setItem('nstp_app_version', data.version);
+            } else if (data.version !== currentVersion) {
+              console.log('⚡ New system update detected:', data.version, 'Purging cache & restarting...');
+              localStorage.setItem('nstp_app_version', data.version);
+              
+              if ('caches' in window) {
+                caches.keys().then(names => {
+                  names.forEach(name => caches.delete(name));
+                });
+              }
+
+              const banner = document.createElement('div');
+              banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#059669;color:#fff;text-align:center;padding:12px 16px;font-weight:bold;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+              banner.textContent = '⚡ System Update Deployed! Auto-restarting webpage...';
+              document.body.appendChild(banner);
+
+              setTimeout(() => {
+                window.location.href = `${window.location.pathname}?v=${data.version}`;
+              }, 1000);
+            }
           }
         })
         .catch(() => {});
-    }, 10000);
+    };
 
+    checkVersion();
+    const checkInterval = setInterval(checkVersion, 12000);
     return () => clearInterval(checkInterval);
   }, []);
   const [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
@@ -381,32 +391,7 @@ function App() {
     }
   }, [user]);
 
-  // Auto-Update & Cache-Buster: Checks for new build version on GitHub Pages
-  useEffect(() => {
-    async function checkForUpdates() {
-      try {
-        const vUrl = `${BASE_PATH}version.json?t=${Date.now()}`;
-        const res = await fetch(vUrl, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.version) {
-            const lastVersion = localStorage.getItem('nstp_app_version');
-            if (lastVersion && lastVersion !== data.version) {
-              console.log(`🚀 New version detected (${data.version}). Refreshing...`);
-              localStorage.setItem('nstp_app_version', data.version);
-              window.location.reload(true);
-            } else {
-              localStorage.setItem('nstp_app_version', data.version);
-            }
-          }
-        }
-      } catch (_) {}
-    }
 
-    checkForUpdates();
-    const vInterval = setInterval(checkForUpdates, 20000);
-    return () => clearInterval(vInterval);
-  }, []);
 
   useEffect(() => {
     if (!user) return;
