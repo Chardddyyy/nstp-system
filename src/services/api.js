@@ -1,10 +1,18 @@
-const API_URL = (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-  ? 'https://nstp-system.onrender.com/api'
-  : 'http://localhost:3001/api';
+function getPrimaryApiUrl() {
+  if (typeof window !== 'undefined') {
+    var override = localStorage.getItem('nstp_api_url');
+    if (override) return override;
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return 'https://nstp-system.onrender.com/api';
+    }
+  }
+  return 'http://localhost:3001/api';
+}
 
 // basic api helper
 async function apiCall(endpoint, options) {
-  var url = API_URL + endpoint;
+  var baseUrl = getPrimaryApiUrl();
+  var url = baseUrl + endpoint;
   var config = {
     headers: {
       'Content-Type': 'application/json'
@@ -26,7 +34,28 @@ async function apiCall(endpoint, options) {
     config.headers.Authorization = 'Bearer ' + token;
   }
 
-  var response = await fetch(url, config);
+  var response;
+  try {
+    response = await fetch(url, config);
+    if (!response.ok && response.status === 500 && baseUrl.includes('onrender.com')) {
+      var fallbackUrl = 'http://localhost:3001/api' + endpoint;
+      var fbResponse = await fetch(fallbackUrl, config).catch(function() { return null; });
+      if (fbResponse && fbResponse.ok) {
+        localStorage.setItem('nstp_api_url', 'http://localhost:3001/api');
+        response = fbResponse;
+      }
+    }
+  } catch (err) {
+    if (baseUrl.includes('onrender.com')) {
+      var fbUrl = 'http://localhost:3001/api' + endpoint;
+      response = await fetch(fbUrl, config);
+      if (response && response.ok) {
+        localStorage.setItem('nstp_api_url', 'http://localhost:3001/api');
+      }
+    } else {
+      throw err;
+    }
+  }
 
   if (!response.ok) {
     var error = await response.json().catch(function() { return {}; });
