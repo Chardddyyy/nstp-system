@@ -234,29 +234,30 @@ function Landing() {
       </div>
 
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
-      <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1 sm:gap-4 text-center relative z-10">
-          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
-            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">6 Credit Units</p>
-            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">3 Units / Sem</p>
+      <section className="bg-emerald-900 text-white border-y border-emerald-800 py-4 sm:py-9 px-2 sm:px-4 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto grid grid-cols-4 gap-1.5 sm:gap-4 text-center relative z-10">
+          <div className="p-2 sm:p-5 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[11px] xs:text-xs sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">6 Credit Units</p>
+            <p className="text-[8.5px] xs:text-[9.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">3 Units / Sem</p>
           </div>
-          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
-            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-white leading-tight whitespace-nowrap">3 Components</p>
-            <p className="text-[6.5px] xs:text-[7.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap tracking-tight">ROTC • CWTS • LTS</p>
+          <div className="p-2 sm:p-5 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[11px] xs:text-xs sm:text-2xl font-black text-white leading-tight whitespace-nowrap">3 Components</p>
+            <p className="text-[8px] xs:text-[9px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap tracking-tight">ROTC • CWTS • LTS</p>
           </div>
-          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
-            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">2 Semesters</p>
-            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">1 Academic Year</p>
+          <div className="p-2 sm:p-5 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[11px] xs:text-xs sm:text-2xl font-black text-amber-400 leading-tight whitespace-nowrap">2 Semesters</p>
+            <p className="text-[8.5px] xs:text-[9.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">1 Academic Year</p>
           </div>
-          <div className="p-1 sm:p-3.5 bg-white/5 rounded-lg sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
-            <p className="text-[9px] xs:text-[10px] sm:text-2xl font-black text-white leading-tight whitespace-nowrap">R.A. 9163</p>
-            <p className="text-[7px] xs:text-[8px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">Accredited Law</p>
+          <div className="p-2 sm:p-5 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex flex-col justify-center items-center">
+            <p className="text-[11px] xs:text-xs sm:text-2xl font-black text-white leading-tight whitespace-nowrap">R.A. 9163</p>
+            <p className="text-[8.5px] xs:text-[9.5px] sm:text-xs text-emerald-200 font-semibold mt-0.5 leading-tight whitespace-nowrap">Accredited Law</p>
           </div>
         </div>
       </section>
 
       {/* High-Impact Enrollment Schedule & CTA Section */}
       <section className="py-8 sm:py-12 px-3 sm:px-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800/80">
+        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
           {/* Dynamic Schedule Status Banner */}
