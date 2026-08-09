@@ -135,7 +135,10 @@ function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white relative">
+      {/* Page-wide Radial Background Overlay (Extends down to the very bottom on mobile and desktop) */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#059669_1.2px,transparent_1.2px)] [background-size:16px_16px] z-0"></div>
+
       {/* Sticky Glassmorphic Header - Edge-to-Edge Desktop Layout */}
       <header className="sticky top-0 z-50 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
         <div className="w-full px-3 sm:px-8 lg:px-12 py-2 sm:py-3.5 flex justify-between items-center gap-1.5 sm:gap-2">
@@ -222,14 +225,14 @@ function Landing() {
             />
           ))}
         </div>
-
-        {/* Floating Animated Arrow Down Indicator on Mobile View (Absolute Bottom Right) */}
-        <div className="absolute bottom-1 right-2 z-30 pointer-events-none animate-bounce sm:hidden">
-          <div className="w-7 h-7 rounded-full bg-emerald-950/90 border border-amber-400/80 flex items-center justify-center text-amber-400 shadow-xl backdrop-blur-xs">
-            <ChevronDown className="w-4 h-4" />
-          </div>
-        </div>
       </section>
+
+      {/* Floating Animated Arrow Down Indicator on Mobile View (Floating Bottom Right of Screen) */}
+      <div className="fixed bottom-5 right-4 z-40 pointer-events-none animate-bounce sm:hidden">
+        <div className="w-9 h-9 rounded-full bg-emerald-950/90 border-2 border-amber-400 text-amber-400 shadow-2xl flex items-center justify-center backdrop-blur-md">
+          <ChevronDown className="w-5 h-5 stroke-[2.5]" />
+        </div>
+      </div>
 
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
       <section className="bg-emerald-900 text-white border-y border-emerald-800 py-2.5 sm:py-6 px-2 sm:px-4 relative overflow-hidden">
