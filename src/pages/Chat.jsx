@@ -1717,27 +1717,27 @@ function Chat() {
         {/* Conversations List - Hidden on mobile when chat is active */}
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
           <div className="p-3 sm:p-4">
-            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 w-full">
-              <div className="flex items-center justify-between gap-2.5 mb-3 relative z-10 w-full">
-                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 w-full">
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 w-full">
+              <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 mb-3 relative z-10 w-full">
+                <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
                   <button type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
-                    className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
+                    className="p-1 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
                     title="Toggle menu"
                   >
-                    <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                   </button>
 
-                  <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                  <div className="w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                     <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <h1 className="text-xs sm:text-xl lg:text-2xl font-black tracking-tight text-white truncate">
+                    <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
                       {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
                     </h1>
-                    <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                      {showContacts ? 'Browse instructors & staff contacts' : 'Instant messaging & group communications'}
+                    <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                      {showContacts ? 'Browse contacts' : 'Instant messaging'}
                     </p>
                   </div>
                 </div>
