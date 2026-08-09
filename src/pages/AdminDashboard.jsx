@@ -468,12 +468,11 @@ function AdminDashboard() {
               <div className="w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
-
-              <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+              <div className="min-w-0 flex-1 pr-1">
+                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
                   {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                 </h1>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'} 👋`}
                 </p>
               </div>
@@ -487,9 +486,9 @@ function AdminDashboard() {
                   className="relative p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0"
                   title="Notifications"
                 >
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Bell className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[9px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[8px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
                       {unreadCount}
                     </span>
                   )}
@@ -503,10 +502,9 @@ function AdminDashboard() {
                     onTouchStart={(e) => e.stopPropagation()}
                   >
                     <div className="px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/90">
-                      <div className="flex items-center space-x-1 sm:space-x-2">
+                      <div className="flex items-center space-x-1.5 sm:space-x-2">
                         <button type="button"
                           onClick={handleSelectAll}
-                          title={selectedNotifications.length === (notifications || []).length && notifications.length > 0 ? 'Deselect all' : 'Select all'}
                           className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
                           {selectedNotifications.length === (notifications || []).length && notifications.length > 0
@@ -608,18 +606,18 @@ function AdminDashboard() {
                 )}
               </div>
 
-              {/* User Profile - Compact Avatar on Mobile, Full Pill on Desktop */}
+              {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1 sm:space-x-2.5 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-1.5 py-1 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
-                <div className="shrink-0 w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
+                <div className="shrink-0 w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full overflow-hidden">
                   {getUserAvatar()}
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="font-bold text-[11px] sm:text-xs text-white leading-tight truncate max-w-[100px] sm:max-w-none">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
+                  <p className="font-bold text-[10px] sm:text-xs text-white leading-tight truncate max-w-[70px] sm:max-w-none">{user?.name || 'Admin'}</p>
+                  <p className="text-[8px] sm:text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
                 </div>
               </button>
             </div>

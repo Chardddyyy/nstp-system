@@ -524,7 +524,7 @@ function Profile() {
             <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
                 <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
@@ -535,11 +535,11 @@ function Profile() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
                   <span className="hidden sm:inline">User Profile &amp; Account</span>
                   <span className="sm:hidden">My Profile</span>
                 </h1>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   <span className="hidden sm:inline">Manage personal credentials &amp; profile</span>
                   <span className="sm:hidden">Account Details</span>
                 </p>
@@ -548,13 +548,13 @@ function Profile() {
             <button type="button"
               onClick={() => isEditing ? handleSave() : setIsEditing(true)}
               disabled={isSaving}
-              className={`flex items-center space-x-2 px-5 py-2.5 rounded-2xl transition-all duration-200 w-full sm:w-auto justify-center font-black shadow-md active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-60 shrink-0 ${
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center font-bold shadow-md active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-60 shrink-0 ${
                 isEditing
                   ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20'
                   : 'bg-emerald-800/90 hover:bg-emerald-700 text-white border border-emerald-700/60'
               }`}
             >
-              {isEditing ? <Save className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {isEditing ? <Save className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
             </button>
           </div>

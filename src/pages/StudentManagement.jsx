@@ -670,11 +670,12 @@ function StudentManagement() {
 
         {/* Hero Header Card - Unified CvSU Naic Aesthetics */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
-            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
-              <button type="button"
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3 relative z-10">
+            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1 w-full sm:w-auto">
+              <button
+                type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
                 <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
@@ -685,36 +686,36 @@ function StudentManagement() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">Student Management</h2>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Student Management</h2>
+                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   <span className="hidden sm:inline">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update roster'}</span>
                   <span className="sm:hidden">{isAdmin ? 'Student records & CHED' : 'Student roster'}</span>
                 </p>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t border-emerald-700/40 sm:border-t-0">
               <button type="button"
                 onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
                 title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
-                className="flex items-center space-x-2 px-4 py-2.5 rounded-2xl transition-all duration-200 w-full sm:w-auto justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-md hover:shadow-lg active:scale-95 text-xs sm:text-sm cursor-pointer shrink-0"
+                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-sm cursor-pointer shrink-0"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-950" />
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950" />
                 <span>Export CHED Excel</span>
               </button>
               {isAdmin && (
-              <button type="button"
-                onClick={() => !viewingArchive && setShowAddModal(true)}
-                disabled={viewingArchive}
-                title={viewingArchive ? 'Exit archive view to add students' : ''}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 w-full sm:w-auto justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
-              >
-                <Plus className="w-5 h-5" />
-                <span>Add Student</span>
-              </button>
-            )}
+                <button type="button"
+                  onClick={() => !viewingArchive && setShowAddModal(true)}
+                  disabled={viewingArchive}
+                  title={viewingArchive ? 'Exit archive view to add students' : ''}
+                  className={`flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 text-[11px] sm:text-sm ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
+                >
+                  <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                  <span>Add Student</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
         {/* Mobile-Responsive Filters */}
         <div className="bg-white/90 backdrop-blur-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-4 sm:mb-6">
