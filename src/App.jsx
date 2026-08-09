@@ -5,18 +5,33 @@ import RealtimeToastStack from './components/RealtimeToastStack';
 import IncomingCallOverlay from './components/IncomingCallOverlay';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
 
-// Route Lazy Loading for Sub-Second Mobile Load Times
-const Landing = lazy(() => import('./pages/Landing'));
-const Login = lazy(() => import('./pages/Login'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const InstructorDashboard = lazy(() => import('./pages/InstructorDashboard'));
-const StudentManagement = lazy(() => import('./pages/StudentManagement'));
-const Reports = lazy(() => import('./pages/Reports'));
-const Chat = lazy(() => import('./pages/Chat'));
-const Profile = lazy(() => import('./pages/Profile'));
-const Calendar = lazy(() => import('./pages/Calendar'));
-const Enrollment = lazy(() => import('./pages/Enrollment'));
-const LetterFormats = lazy(() => import('./pages/LetterFormats'));
+// Robust Lazy Loading Wrapper that recovers from stale deployment 404 chunk errors
+function safeLazy(importFn) {
+  return lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      const pageKey = 'nstp_chunk_reload_' + window.location.pathname;
+      if (!sessionStorage.getItem(pageKey)) {
+        sessionStorage.setItem(pageKey, Date.now().toString());
+        window.location.reload();
+      }
+      throw error;
+    }
+  });
+}
+
+const Landing = safeLazy(() => import('./pages/Landing'));
+const Login = safeLazy(() => import('./pages/Login'));
+const AdminDashboard = safeLazy(() => import('./pages/AdminDashboard'));
+const InstructorDashboard = safeLazy(() => import('./pages/InstructorDashboard'));
+const StudentManagement = safeLazy(() => import('./pages/StudentManagement'));
+const Reports = safeLazy(() => import('./pages/Reports'));
+const Chat = safeLazy(() => import('./pages/Chat'));
+const Profile = safeLazy(() => import('./pages/Profile'));
+const Calendar = safeLazy(() => import('./pages/Calendar'));
+const Enrollment = safeLazy(() => import('./pages/Enrollment'));
+const LetterFormats = safeLazy(() => import('./pages/LetterFormats'));
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;

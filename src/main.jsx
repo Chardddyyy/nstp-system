@@ -2,8 +2,13 @@ import ReactDOM from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// Prevent Inspect Element, Right Click, and DevTools Shortcuts
+// Auto-reload page when new deployment replaces chunk assets (prevents 404 chunk load errors)
 if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    window.location.reload();
+  });
+
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
   document.addEventListener('keydown', (e) => {
