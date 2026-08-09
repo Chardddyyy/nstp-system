@@ -761,8 +761,16 @@ function Landing() {
                   <Mail className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
                 </li>
                 <li className="flex items-center justify-end space-x-1 sm:space-x-2">
-                  <span className="truncate">Naic, Cavite, Philippines</span>
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors flex items-center justify-end space-x-1 sm:space-x-2 truncate hover:underline"
+                    title="View Cavite State University Naic Campus on Google Maps"
+                  >
+                    <span className="truncate">Naic, Cavite, Philippines</span>
+                    <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+                  </a>
                 </li>
                 <li className="flex items-center justify-end space-x-1 sm:space-x-2">
                   <span>(046) 890-5138</span>

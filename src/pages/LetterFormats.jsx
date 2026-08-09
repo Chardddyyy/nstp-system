@@ -156,24 +156,28 @@ export default function LetterFormats() {
           </div>
         )}
 
-        {/* Hero Banner */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl border border-emerald-800/40 relative mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-center space-x-3">
+        {/* Hero Banner - Unified CvSU Naic Header */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 relative z-10">
+            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                <FileCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+
+              <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
-              <div>
-                <h1 className="text-base sm:text-2xl font-black tracking-tight text-white">Letter Formats &amp; Attachments</h1>
-                <p className="text-emerald-200 text-xs sm:text-sm font-medium mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-[11px] sm:text-2xl font-black tracking-tight text-white truncate">Letter Formats &amp; Attachments</h1>
+                </div>
+                <p className="text-emerald-200 text-[9px] sm:text-sm font-medium truncate mt-0.5">Download or upload official forms for ROTC, CWTS, and LTS</p>
               </div>
             </div>
 
@@ -187,9 +191,9 @@ export default function LetterFormats() {
                 setEditingTemplate(null);
                 setShowAddModal(true);
               }}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 text-xs flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl shadow-md transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-emerald-950" />
               <span>Create Letter Format</span>
             </button>
           </div>

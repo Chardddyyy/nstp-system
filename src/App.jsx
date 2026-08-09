@@ -875,7 +875,13 @@ function App() {
     if (!user) return [];
     return conversations.filter(c => {
       if (c.participant_1_id === user.id || c.participant_2_id === user.id) return true;
-      if (c.isGroup && Array.isArray(c.participants)) return c.participants.includes(user.id);
+      const isGroup = c.isGroup || c.is_group;
+      if (isGroup) {
+        const groupName = c.groupName || c.group_name || c.name || '';
+        if (groupName === 'All Instructors' || groupName.includes('Instructor')) return true;
+        if (Array.isArray(c.participants) && c.participants.includes(user.id)) return true;
+        return true; // Any group chat retrieved for user is valid
+      }
       return false;
     });
   }, [conversations, user]);

@@ -1672,15 +1672,20 @@ function Chat() {
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
           <div className="p-3.5 lg:p-4 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-2.5">
+              <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
                 <button type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
-                  className="p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
+                  className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
                   title="Toggle menu"
                 >
-                  <Menu className="w-4 h-4" />
+                  <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
-                <h2 className="text-base lg:text-lg font-black text-white tracking-tight">
+
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white rounded-lg sm:rounded-xl p-0.5 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+                </div>
+
+                <h2 className="text-xs sm:text-base lg:text-lg font-black text-white tracking-tight truncate">
                   {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
                 </h2>
               </div>

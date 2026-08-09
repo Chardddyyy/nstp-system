@@ -518,25 +518,27 @@ function Profile() {
           </div>
         )}
 
-        {/* Hero Header Card - Compact Mobile Layout */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 relative z-10">
-            <div className="flex items-center gap-3">
+        {/* Hero Header Card - Unified CvSU Naic Header */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 sm:gap-3 relative z-10">
+            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-2xl font-black tracking-tight text-white">User Profile &amp; Account</h2>
-                  <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] uppercase font-extrabold tracking-wider px-2 py-0.5 rounded-full hidden sm:inline-block">
-                    CvSU Naic
-                  </span>
+
+              <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-[11px] sm:text-2xl font-black tracking-tight text-white truncate">User Profile &amp; Account</h1>
                 </div>
-                <p className="text-emerald-200 text-[11px] sm:text-xs font-medium mt-0.5">Manage your personal credentials, profile picture &amp; system options</p>
+                <p className="text-emerald-200 text-[9px] sm:text-sm font-medium truncate mt-0.5">Manage your personal credentials, profile picture &amp; system options</p>
               </div>
             </div>
             <button type="button"
