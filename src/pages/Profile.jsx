@@ -802,7 +802,7 @@ function Profile() {
                   Change Password
                 </h3>
               </div>
-              <div className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
                   <div className="relative">
@@ -817,7 +817,6 @@ function Profile() {
                       autoComplete="current-password"
                     />
                     <button type="button"
-                      
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                     >
@@ -853,15 +852,13 @@ function Profile() {
                     />
                   </div>
                 </div>
-                <button type="button"
-                  
-                  onClick={handlePasswordChange}
+                <button type="submit"
                   disabled={isChangingPassword}
                   className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
                   {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>

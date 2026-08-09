@@ -3137,14 +3137,14 @@ app.get('/api/telemetry/stats', async function(req, res) {
   }
 });
 
-app.get('/api/health', async (req, res) => {
-  // Don't expose DB version or stack info in production
-  try {
-    await pool.execute('SELECT 1');
-    res.json({ status: 'OK' });
-  } catch (error) {
-    res.status(503).json({ status: 'Unavailable' });
-  }
+// Global error handling middleware
+app.use(function(err, req, res, next) {
+  console.error('Unhandled server error:', err);
+  if (res.headersSent) return next(err);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    code: err.code || 'SERVER_ERROR'
+  });
 });
 
 async function startServer() {
