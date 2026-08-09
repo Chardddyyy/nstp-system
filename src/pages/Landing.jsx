@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar, Play, Film, Video } from 'lucide-react';
+import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar, Play, Film, Video } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTelemetryStats } from '../services/api';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
@@ -39,6 +39,7 @@ function Landing() {
 
   // Live Enrollment Timed Schedule Status
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
+  const [isAtBottom, setIsAtBottom] = useState(false);
 
   useEffect(() => {
     const updateSchedule = () => setEnrollmentStatus(calculateEnrollmentStatus());
@@ -49,6 +50,32 @@ function Landing() {
       clearInterval(interval);
     };
   }, []);
+
+  // Detect scroll position to dynamically flip floating arrow button
+  useEffect(() => {
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const scrollY = window.scrollY;
+      const documentHeight = document.documentElement.scrollHeight;
+      if (windowHeight + scrollY >= documentHeight - 120) {
+        setIsAtBottom(true);
+      } else {
+        setIsAtBottom(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleFloatingArrowClick = () => {
+    if (isAtBottom) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    }
+  };
 
   // Video Auto Pause / Resume on Scroll
   const videoRef = useRef(null);
@@ -226,12 +253,21 @@ function Landing() {
         </div>
       </section>
 
-      {/* Floating Animated Arrow Down Indicator on Mobile View (Floating Bottom Right of Screen) */}
-      <div className="fixed bottom-5 right-4 z-40 pointer-events-none animate-bounce sm:hidden">
-        <div className="w-9 h-9 rounded-full bg-emerald-950/90 border-2 border-amber-400 text-amber-400 shadow-2xl flex items-center justify-center backdrop-blur-md">
-          <ChevronDown className="w-5 h-5 stroke-[2.5]" />
+      {/* Floating Animated Arrow Indicator on Mobile View (Dynamic Direction: Down when scrolling, Up when at bottom) */}
+      <button
+        type="button"
+        onClick={handleFloatingArrowClick}
+        aria-label={isAtBottom ? 'Scroll to top' : 'Scroll to bottom'}
+        className="fixed bottom-5 right-4 z-40 animate-bounce sm:hidden active:scale-90 transition-transform cursor-pointer"
+      >
+        <div className="w-10 h-10 rounded-full bg-emerald-950/95 border-2 border-amber-400 text-amber-400 shadow-2xl flex items-center justify-center backdrop-blur-md">
+          {isAtBottom ? (
+            <ChevronUp className="w-6 h-6 stroke-[2.5]" />
+          ) : (
+            <ChevronDown className="w-6 h-6 stroke-[2.5]" />
+          )}
         </div>
-      </div>
+      </button>
 
       {/* Accurate Quick Stats Banner - 4 Side-by-side Cards on Mobile */}
       <section className="bg-emerald-900 text-white border-y border-emerald-800 py-4 sm:py-9 px-2 sm:px-4 relative overflow-hidden">
