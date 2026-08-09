@@ -1662,15 +1662,15 @@ function Enrollment() {
             </div>
 
             <h3 className="text-lg sm:text-xl font-black text-emerald-950 mb-2">
-              Kumpirmahin ang Napiling Component / Confirm Selected Track
+              Confirm Selected NSTP Component
             </h3>
             
             <p className="text-gray-600 text-xs sm:text-sm font-medium leading-relaxed mb-4">
-              Sigurado ka ba na <strong className="text-emerald-900 font-black">{pendingTrack.title} ({pendingTrack.subtitle})</strong> ang napili mong NSTP Track Component?
+              Are you sure you want to select <strong className="text-emerald-900 font-black">{pendingTrack.title} ({pendingTrack.subtitle})</strong> as your official NSTP Track Component?
             </p>
 
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-6 text-left text-xs font-semibold text-emerald-900">
-              <span className="font-extrabold uppercase tracking-wider text-[10px] text-emerald-700 block mb-1">Katangian ng Napiling Track:</span>
+              <span className="font-extrabold uppercase tracking-wider text-[10px] text-emerald-700 block mb-1">Component Overview:</span>
               <p className="text-emerald-800 leading-normal">{pendingTrack.desc}</p>
             </div>
 
@@ -1680,7 +1680,7 @@ function Enrollment() {
                 onClick={() => setPendingTrack(null)}
                 className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl transition-all cursor-pointer"
               >
-                Baguhin / Change Track
+                Change Component
               </button>
               <button
                 type="button"
@@ -1689,11 +1689,11 @@ function Enrollment() {
                   setFormData(upd);
                   localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                   setPendingTrack(null);
-                  showToast(`Matagumpay na napili ang ${pendingTrack.title}!`, 'success');
+                  showToast(`${pendingTrack.title} component selected successfully!`, 'success');
                 }}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
               >
-                Kumpirmahin / Confirm Track
+                Confirm Component
               </button>
             </div>
           </div>

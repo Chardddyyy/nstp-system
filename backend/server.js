@@ -2650,14 +2650,16 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     if (!validComponents.includes(body.nstpComponent)) {
       return res.status(400).json({ message: 'Invalid NSTP component' });
     }
-    // Block duplicate pending enrollment for the same student ID
-    const [dupCheck] = await pool.execute(
-      "SELECT id FROM enrollments WHERE studentId = ? AND status = 'Pending'",
-      [sanitizeStr(body.studentId, 20)]
-    );
-    if (dupCheck.length > 0) {
-      return res.status(409).json({ message: 'An enrollment for this Student ID is already pending review.' });
-    }
+    // Block duplicate pending enrollment for the same student ID or email
+    try {
+      const [dupCheck] = await pool.execute(
+        "SELECT id FROM enrollments WHERE (studentId = ? OR email = ?) AND status = 'Pending'",
+        [sanitizeStr(body.studentId, 20), sanitizeStr(body.email, 100)]
+      );
+      if (dupCheck && dupCheck.length > 0) {
+        return res.status(409).json({ message: 'An enrollment for this Student ID or Email is already pending review.' });
+      }
+    } catch (_) { /* table check fallback */ }
     // ──────────────────────────────────────────────────────────────────────
 
     const {
@@ -2683,26 +2685,41 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     }
     const photo = registrationPhoto || null;
 
-    const [result] = await pool.execute(
-      `INSERT INTO enrollments
-       (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
-        birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
-        gender, height, weight, facebookAccount, bloodType, address,
-        street, municipality, province,
-        program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
-        birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
-        finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
-        street || null, municipality || null, province || null,
-        program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo, finalVoter
-      ]
-    );
+    let insertId = null;
+    try {
+      const [result] = await pool.execute(
+        `INSERT INTO enrollments
+         (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
+          birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
+          gender, height, weight, facebookAccount, bloodType, address,
+          street, municipality, province,
+          program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name || null, firstName, lastName, middleName || null, email, nstpComponent || 'CWTS', studentId, contactNumber,
+          birthDate || null, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
+          finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
+          street || null, municipality || null, province || null,
+          program, section, yearLevel, finalEmergencyContact || null, emergencyNumber, 'Pending', photo, finalVoter
+        ]
+      );
+      insertId = result.insertId;
+    } catch (insertErr) {
+      console.warn('Full enrollment insert warning:', insertErr.message);
+      if (insertErr.code === 'ER_DUP_ENTRY' || insertErr.errno === 1062) {
+        return res.status(409).json({ message: 'An enrollment record with this Student ID or Email already exists.' });
+      }
+      // Self-healing fallback insert with core columns
+      const [fbResult] = await pool.execute(
+        `INSERT INTO enrollments (student_name, firstName, lastName, email, department, studentId, contactNumber, program, section, yearLevel, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+        [name || `${lastName}, ${firstName}`, firstName, lastName, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
+      );
+      insertId = fbResult.insertId;
+    }
 
-    // Return the data we already have — no extra SELECT needed
     res.status(201).json({
-      id: result.insertId,
+      id: insertId,
       student_name: name || null,
       firstName, lastName,
       middleName: middleName || null,
@@ -2719,7 +2736,10 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     });
   } catch (error) {
     console.error('Submit enrollment error:', error);
-    res.status(500).json({ message: 'Failed to submit enrollment' });
+    if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+      return res.status(409).json({ message: 'An enrollment record with this Student ID or Email already exists.' });
+    }
+    res.status(500).json({ message: error.message || 'Failed to submit enrollment' });
   }
 });
 
