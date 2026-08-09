@@ -964,6 +964,52 @@ function Chat() {
     currentCallIdRef.current = null;
   };
 
+  const handleJoinAnsweredCall = async (call) => {
+    if (!call) return;
+    const callId = typeof call === 'object' ? call.id : call;
+    const isVideo = call?.call_type === 'video';
+    
+    currentCallIdRef.current = callId;
+    callConversationIdRef.current = call?.conversation_id || activeConversationId;
+    callTypeRef.current = isVideo ? 'video' : 'voice';
+    isCallerRef.current = false;
+
+    if (isVideo) {
+      setShowVideoCallModal(true);
+      setVideoCallStatus('connected');
+    } else {
+      setShowCallModal(true);
+      setCallStatus('connected');
+    }
+
+    setActiveCallStartTime(Date.now());
+
+    // Start WebRTC receiver peer connection
+    const success = await startWebRTC(callId, false, isVideo ? 'video' : 'voice');
+    if (!success) {
+      addNotification('Could not establish media stream', 'error');
+    }
+    startCallEndPoll(callId, isVideo ? 'video' : 'voice');
+  };
+
+  useEffect(() => {
+    if (pendingAnsweredCall) {
+      const call = pendingAnsweredCall;
+      setPendingAnsweredCall(null);
+      handleJoinAnsweredCall(call);
+    }
+  }, [pendingAnsweredCall]);
+
+  useEffect(() => {
+    const handleCallAnsweredEvent = (e) => {
+      if (e.detail) {
+        handleJoinAnsweredCall(e.detail);
+      }
+    };
+    window.addEventListener('nstp-call-answered', handleCallAnsweredEvent);
+    return () => window.removeEventListener('nstp-call-answered', handleCallAnsweredEvent);
+  }, []);
+
   // ── Group call ─────────────────────────────────────────────────────
   const handleGroupCall = async (type) => {
     if (!activeConversation) return;
