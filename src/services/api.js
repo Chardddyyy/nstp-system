@@ -2,17 +2,38 @@ function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
     var override = localStorage.getItem('nstp_api_url');
     if (override) return override;
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return 'https://nstp-system.onrender.com/api';
+    
+    var host = window.location.hostname;
+    // Auto-detect local network IP, localhost, or localtunnel
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.loca.lt') ||
+      /^192\.168\./.test(host) ||
+      /^10\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)
+    ) {
+      return window.location.protocol + '//' + host + ':3001/api';
     }
+
+    return 'https://nstp-system.onrender.com/api';
   }
   return 'http://localhost:3001/api';
+}
+
+function getLocalFallbackUrl(endpoint) {
+  if (typeof window !== 'undefined') {
+    var host = window.location.hostname;
+    return window.location.protocol + '//' + host + ':3001/api' + endpoint;
+  }
+  return 'http://localhost:3001/api' + endpoint;
 }
 
 const API_URL = getPrimaryApiUrl();
 export { getPrimaryApiUrl, API_URL };
 
-// basic api helper
+// basic api helper with fast timeout fallback
 async function apiCall(endpoint, options) {
   var baseUrl = getPrimaryApiUrl();
   var url = baseUrl + endpoint;
@@ -39,21 +60,45 @@ async function apiCall(endpoint, options) {
 
   var response;
   try {
-    response = await fetch(url, config);
+    // If connecting to remote Render server, set a 6s fast timeout controller
+    if (baseUrl.includes('onrender.com')) {
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
+      var configWithSignal = Object.assign({}, config, { signal: controller.signal });
+      
+      try {
+        response = await fetch(url, configWithSignal);
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        // Render server cold sleep or timeout: attempt local backend fallback
+        var fbUrl = getLocalFallbackUrl(endpoint);
+        var fbRes = await fetch(fbUrl, config).catch(function() { return null; });
+        if (fbRes && fbRes.ok) {
+          localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
+          response = fbRes;
+        } else {
+          throw fetchErr;
+        }
+      }
+    } else {
+      response = await fetch(url, config);
+    }
+
     if (!response.ok && response.status === 500 && baseUrl.includes('onrender.com')) {
-      var fallbackUrl = 'http://localhost:3001/api' + endpoint;
+      var fallbackUrl = getLocalFallbackUrl(endpoint);
       var fbResponse = await fetch(fallbackUrl, config).catch(function() { return null; });
       if (fbResponse && fbResponse.ok) {
-        localStorage.setItem('nstp_api_url', 'http://localhost:3001/api');
+        localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
         response = fbResponse;
       }
     }
   } catch (err) {
     if (baseUrl.includes('onrender.com')) {
-      var fbUrl = 'http://localhost:3001/api' + endpoint;
+      var fbUrl = getLocalFallbackUrl(endpoint);
       response = await fetch(fbUrl, config);
       if (response && response.ok) {
-        localStorage.setItem('nstp_api_url', 'http://localhost:3001/api');
+        localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
       }
     } else {
       throw err;
@@ -64,8 +109,6 @@ async function apiCall(endpoint, options) {
     var error = await response.json().catch(function() { return {}; });
     if ((response.status === 403 || response.status === 401) && token) {
       localStorage.removeItem('nstp_token');
-      // Dispatch event so App.jsx handles logout via React Router (no hard page reload).
-      // The flag prevents multiple polls from firing this more than once per session.
       if (!window.__nstp_session_expired__) {
         window.__nstp_session_expired__ = true;
         window.dispatchEvent(new CustomEvent('nstp-session-expired'));
