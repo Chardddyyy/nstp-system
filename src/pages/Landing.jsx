@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar, Play, Film, Video } from 'lucide-react';
+import { Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, CheckCircle2, Activity, X, UserCheck, Radio, Clock, Calendar, Play, Film, Video } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getTelemetryStats } from '../services/api';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
@@ -223,10 +223,11 @@ function Landing() {
           ))}
         </div>
 
-        {/* Animated Scroll Down Arrow Indicator on Mobile */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none animate-bounce sm:hidden">
-          <span className="text-[9px] font-black text-amber-300 uppercase tracking-widest bg-black/40 px-2 py-0.5 rounded-full border border-amber-400/30">Scroll Down</span>
-          <ChevronRight className="w-4 h-4 text-amber-400 rotate-90" />
+        {/* Floating Animated Arrow Down Indicator on Mobile View (Bottom Right) */}
+        <div className="absolute bottom-3 right-3 z-20 pointer-events-none animate-bounce sm:hidden">
+          <div className="w-8 h-8 rounded-full bg-emerald-950/80 border border-amber-400/60 flex items-center justify-center text-amber-400 shadow-lg backdrop-blur-xs">
+            <ChevronDown className="w-5 h-5" />
+          </div>
         </div>
       </section>
 
