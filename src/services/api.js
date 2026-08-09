@@ -1,17 +1,10 @@
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
+    // Purge any stale nstp_api_url from localStorage so mobile never attempts localhost
+    try { localStorage.removeItem('nstp_api_url'); } catch (_) {}
+
     var host = window.location.hostname;
 
-    // Clear bad 'localhost' override if accessing from a mobile/external device
-    var override = localStorage.getItem('nstp_api_url');
-    if (override) {
-      if (host !== 'localhost' && host !== '127.0.0.1' && override.includes('localhost')) {
-        localStorage.removeItem('nstp_api_url');
-      } else {
-        return override;
-      }
-    }
-    
     // Auto-detect local network IP (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), localhost, or localtunnel
     if (
       host === 'localhost' ||
