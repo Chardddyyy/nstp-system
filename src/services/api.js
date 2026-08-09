@@ -25,15 +25,25 @@ function getPrimaryApiUrl() {
 function getLocalFallbackUrl(endpoint) {
   if (typeof window !== 'undefined') {
     var host = window.location.hostname;
-    return window.location.protocol + '//' + host + ':3001/api' + endpoint;
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.loca.lt') ||
+      /^192\.168\./.test(host) ||
+      /^10\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)
+    ) {
+      return window.location.protocol + '//' + host + ':3001/api' + endpoint;
+    }
   }
-  return 'http://localhost:3001/api' + endpoint;
+  return null;
 }
 
 const API_URL = getPrimaryApiUrl();
 export { getPrimaryApiUrl, API_URL };
 
-// basic api helper with fast timeout fallback
+// basic api helper
 async function apiCall(endpoint, options) {
   var baseUrl = getPrimaryApiUrl();
   var url = baseUrl + endpoint;
@@ -60,19 +70,18 @@ async function apiCall(endpoint, options) {
 
   var response;
   try {
-    // If connecting to remote Render server, set a 6s fast timeout controller
-    if (baseUrl.includes('onrender.com')) {
-      var controller = new AbortController();
-      var timeoutId = setTimeout(function() { controller.abort(); }, 6000);
-      var configWithSignal = Object.assign({}, config, { signal: controller.signal });
-      
-      try {
-        response = await fetch(url, configWithSignal);
-        clearTimeout(timeoutId);
-      } catch (fetchErr) {
-        clearTimeout(timeoutId);
-        // Render server cold sleep or timeout: attempt local backend fallback
-        var fbUrl = getLocalFallbackUrl(endpoint);
+    // Generous 45s timeout for Render cold-start on free tier
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 45000);
+    var configWithSignal = Object.assign({}, config, { signal: controller.signal });
+
+    try {
+      response = await fetch(url, configWithSignal);
+      clearTimeout(timeoutId);
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      var fbUrl = getLocalFallbackUrl(endpoint);
+      if (fbUrl) {
         var fbRes = await fetch(fbUrl, config).catch(function() { return null; });
         if (fbRes && fbRes.ok) {
           localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
@@ -80,34 +89,28 @@ async function apiCall(endpoint, options) {
         } else {
           throw fetchErr;
         }
-      }
-    } else {
-      response = await fetch(url, config);
-    }
-
-    if (!response.ok && response.status === 500 && baseUrl.includes('onrender.com')) {
-      var fallbackUrl = getLocalFallbackUrl(endpoint);
-      var fbResponse = await fetch(fallbackUrl, config).catch(function() { return null; });
-      if (fbResponse && fbResponse.ok) {
-        localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
-        response = fbResponse;
+      } else {
+        throw fetchErr;
       }
     }
   } catch (err) {
-    if (baseUrl.includes('onrender.com')) {
-      var fbUrl = getLocalFallbackUrl(endpoint);
-      response = await fetch(fbUrl, config);
-      if (response && response.ok) {
+    var fbUrl2 = getLocalFallbackUrl(endpoint);
+    if (fbUrl2) {
+      var fbRes2 = await fetch(fbUrl2, config).catch(function() { return null; });
+      if (fbRes2 && fbRes2.ok) {
         localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
+        response = fbRes2;
+      } else {
+        throw err;
       }
     } else {
       throw err;
     }
   }
 
-  if (!response.ok) {
-    var error = await response.json().catch(function() { return {}; });
-    if ((response.status === 403 || response.status === 401) && token) {
+  if (!response || !response.ok) {
+    var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
+    if (response && (response.status === 403 || response.status === 401) && token) {
       localStorage.removeItem('nstp_token');
       if (!window.__nstp_session_expired__) {
         window.__nstp_session_expired__ = true;
@@ -115,7 +118,7 @@ async function apiCall(endpoint, options) {
       }
     }
     var apiErr = new Error(error.message || 'API request failed');
-    apiErr.status = response.status;
+    apiErr.status = response ? response.status : 0;
     throw apiErr;
   }
 

@@ -12,6 +12,8 @@ function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const [loadingText, setLoadingText] = useState('Connecting to Portal...');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -27,9 +29,21 @@ function Login() {
     }
 
     setLoading(true);
+    setLoadingText('Verifying credentials...');
+
+    const timer1 = setTimeout(() => {
+      setLoadingText('Waking up Cloud Server (please wait ~15s)...');
+    }, 3500);
+
+    const timer2 = setTimeout(() => {
+      setLoadingText('Connecting to Cloud Database...');
+    }, 14000);
 
     try {
       const result = await login(cleanEmail, password);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
       if (result.success) {
         if (result.role === 'admin') {
           navigate('/admin/dashboard');
@@ -41,6 +55,8 @@ function Login() {
         setPassword('');
       }
     } catch (err) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       console.error('Login error:', err);
       setError('Server connection failed. Please try again.');
       setPassword('');
@@ -213,7 +229,7 @@ function Login() {
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-950"></div>
-                    <span>Connecting to Cloud DB...</span>
+                    <span>{loadingText}</span>
                   </>
                 ) : (
                   <span>Sign In to Portal →</span>
