@@ -129,6 +129,15 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
             <span>Calendar</span>
           </button>
 
+          <button type="button"
+            onClick={() => { if (!archiveMode) go('/letter-formats'); }}
+            disabled={archiveMode}
+            className={archiveMode ? archiveNavClass() : navClass('/letter-formats')}
+          >
+            <FileCheck className="w-5 h-5" />
+            <span>Letter Formats</span>
+          </button>
+
 
           <button type="button"
             onClick={() => { if (!archiveMode) go('/profile'); }}

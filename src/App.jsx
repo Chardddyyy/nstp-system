@@ -16,6 +16,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Enrollment = lazy(() => import('./pages/Enrollment'));
+const LetterFormats = lazy(() => import('./pages/LetterFormats'));
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;
@@ -917,6 +918,7 @@ function App() {
             <Route path="/reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Reports /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Chat /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
+            <Route path="/letter-formats" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><LetterFormats /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
           </Routes>
         </Suspense>
