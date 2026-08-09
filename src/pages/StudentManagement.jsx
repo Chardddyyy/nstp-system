@@ -670,26 +670,24 @@ function StudentManagement() {
         )}
 
         {/* Hero Header Card - Unified CvSU Naic Aesthetics */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 relative z-10">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-7 shadow-xl border border-emerald-800/40 relative mb-4 sm:mb-6 w-full">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10 w-full">
+            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1 w-full">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
 
-              <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-xs sm:text-2xl font-black tracking-tight text-white truncate">Student Management</h2>
-                </div>
-                <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update your department student roster'}</p>
+                <h2 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tight text-white truncate">Student Management</h2>
+                <p className="text-emerald-200 text-xs sm:text-base font-medium truncate mt-0.5">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update your department student roster'}</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
