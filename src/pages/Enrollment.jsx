@@ -165,17 +165,22 @@ function Enrollment() {
     if (!videoRef.current) return;
     const video = videoRef.current;
     
-    // Normal HD Camera Capture (Unmirrored)
+    // Normal HD Camera Capture (Resized for fast instant submission)
     const rawW = video.videoWidth || 1280;
     const rawH = video.videoHeight || 720;
+    const MAX = 1200;
+    let w = rawW, h = rawH;
+    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+
     const canvas = document.createElement('canvas');
-    canvas.width = rawW;
-    canvas.height = rawH;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext('2d');
     
-    ctx.drawImage(video, 0, 0, rawW, rawH);
+    ctx.drawImage(video, 0, 0, w, h);
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
     setRegistrationPhoto(dataUrl);
     if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
     closeCameraModal();
@@ -323,6 +328,11 @@ function Enrollment() {
     if (!file) return;
 
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('PDF file is too large (maximum 5 MB). Please select a smaller file or take a photo.', 'error');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         setRegistrationPhoto(ev.target.result); // store raw base64 PDF
@@ -344,7 +354,7 @@ function Enrollment() {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.82));
+        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.78));
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
       // Fallback for formats the browser can't decode in canvas (e.g. HEIC on desktop)
