@@ -399,12 +399,12 @@ function Enrollment() {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
     } else if (['firstName', 'lastName', 'middleName', 'emergencyContact'].includes(name)) {
-      // Strictly ban numbers and special characters; Title Case only (First Letter Upper, rest lower)
-      const cleanLetters = value.replace(/[^a-zA-Z\s'-]/g, '');
+      // Allow letters and eñe (ñ / Ñ); Title Case only
+      const cleanLetters = value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g, '');
       newValue = toTitleCase(cleanLetters);
     } else if (['street', 'municipality', 'province'].includes(name)) {
-      // Address fields: Title Case only (First Letter Upper, rest lower)
-      const cleanAddress = value.replace(/[^a-zA-Z0-9\s.,'-]/g, '');
+      // Address fields: allow numbers, letters, and eñe (ñ / Ñ); Title Case only
+      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, '');
       newValue = toTitleCase(cleanAddress);
     }
 

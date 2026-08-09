@@ -155,9 +155,9 @@ function StudentManagement() {
         newValue = currentYear.toString();
       }
     } else if (['firstName', 'lastName', 'middleName', 'municipality', 'province', 'emergencyContact', 'emergencyName'].includes(name)) {
-      newValue = toTitleCase(value.replace(/[^a-zA-ZÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
+      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s.'-]/g, ''));
     } else if (name === 'street') {
-      newValue = toTitleCase(value);
+      newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, ''));
     }
 
     const updated = {
