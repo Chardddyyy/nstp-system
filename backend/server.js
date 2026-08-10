@@ -2749,12 +2749,26 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       homeAddress, address, street, municipality, province,
       program, section, yearLevel, nstpComponent,
       emergencyContact, emergencyNumber, emergencyName,
-      registrationPhoto, registeredVoter, isVoter
+      registrationPhoto, registeredVoter, isVoter, recaptchaToken
     } = req.body;
 
     // Anti-Troll Security: Rate Limit by IP Address (Max 4 submissions per 15 minutes)
     const clientIp = String(req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
     const userAgent = String(req.headers['user-agent'] || 'unknown').slice(0, 500);
+
+    // Optional Google reCAPTCHA v2 Token Verification with Google API
+    if (recaptchaToken) {
+      const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+      try {
+        const gRes = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(recaptchaToken)}&remoteip=${encodeURIComponent(clientIp)}`, { method: 'POST' });
+        const gData = await gRes.json();
+        if (gData && gData.success === false) {
+          console.warn('Google reCAPTCHA verification failed:', gData);
+        }
+      } catch (gErr) {
+        console.warn('Google reCAPTCHA siteverify error:', gErr.message);
+      }
+    }
 
     try {
       const [recentAttempts] = await pool.execute(

@@ -58,10 +58,36 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState(() => formData.weight || '');
 
-  // Anti-Troll Security Graphic Canvas Distorted CAPTCHA State
+  // Anti-Troll Security Google reCAPTCHA v2 & Graphic Canvas CAPTCHA State
   const captchaCanvasRef = useRef(null);
+  const [captchaMode, setCaptchaMode] = useState('google'); // 'google' | 'graphic'
+  const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
   const [captchaCode, setCaptchaCode] = useState('');
   const [userCaptchaAnswer, setUserCaptchaAnswer] = useState('');
+
+  // Load Google reCAPTCHA v2 Script
+  useEffect(() => {
+    if (captchaMode !== 'google') return;
+    
+    window.onGoogleRecaptchaSuccess = (token) => {
+      setGoogleRecaptchaToken(token);
+      setErrors(prev => ({ ...prev, captcha: '' }));
+    };
+    window.onGoogleRecaptchaExpired = () => {
+      setGoogleRecaptchaToken('');
+    };
+
+    const scriptId = 'google-recaptcha-v2-script';
+    let script = document.getElementById(scriptId);
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://www.google.com/recaptcha/api.js';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, [captchaMode]);
 
   // Function to generate a random distorted CAPTCHA code (numbers & letters)
   const generateCaptchaCode = useCallback(() => {
@@ -346,9 +372,15 @@ function Enrollment() {
       }
     }
 
-    // Security Distorted Graphic CAPTCHA Verification
-    if (!userCaptchaAnswer || userCaptchaAnswer.trim().toLowerCase() !== (captchaCode || '').toLowerCase()) {
-      newErrors.captcha = 'Security Verification Failed: Incorrect CAPTCHA code. Please type the characters shown in the image.';
+    // Security CAPTCHA Verification (Google reCAPTCHA v2 or Graphic CAPTCHA)
+    if (captchaMode === 'google') {
+      if (!googleRecaptchaToken) {
+        newErrors.captcha = 'Security Verification Failed: Please check the Google reCAPTCHA "I\'m not a robot" box.';
+      }
+    } else {
+      if (!userCaptchaAnswer || userCaptchaAnswer.trim().toLowerCase() !== (captchaCode || '').toLowerCase()) {
+        newErrors.captcha = 'Security Verification Failed: Incorrect CAPTCHA code. Please type the characters shown in the image.';
+      }
     }
 
     // Contact Number - 11 digits
@@ -578,6 +610,7 @@ function Enrollment() {
         birthDate: cleanBirthDate,
         status: 'Pending',
         registrationPhoto,
+        recaptchaToken: googleRecaptchaToken || null,
       };
 
       await submitEnrollment(enrollmentData);
@@ -1624,54 +1657,82 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Anti-Troll Security Distorted Graphic CAPTCHA Verification Card */}
+              {/* Anti-Troll Security Google reCAPTCHA v2 & Graphic CAPTCHA Card */}
               <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${errors.captcha ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' : 'bg-emerald-950/90 text-white border-emerald-800 shadow-md'}`}>
-                <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
                       <Shield className="w-4 h-4 text-amber-400" />
                     </div>
                     <div>
-                      <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll CAPTCHA Security *</h4>
-                      <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Read and type the distorted numbers &amp; letters shown in the box</p>
+                      <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll Security Verification *</h4>
+                      <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Verify that you are a real student before submitting</p>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-3">
-                  {/* Distorted HTML5 Canvas Graphic CAPTCHA Box */}
-                  <div className="relative flex items-center gap-2 bg-emerald-950 p-1.5 rounded-2xl border border-emerald-700/80 shrink-0">
-                    <canvas
-                      ref={captchaCanvasRef}
-                      width={170}
-                      height={45}
-                      className="rounded-xl border border-emerald-600/50 shadow-inner select-none cursor-pointer"
-                      onClick={generateCaptchaCode}
-                      title="Click to refresh CAPTCHA code"
-                    />
+                  <div className="flex items-center gap-1 bg-emerald-900/90 p-1 rounded-xl border border-emerald-700/60 text-xs shrink-0 self-start sm:self-auto">
                     <button
                       type="button"
-                      onClick={generateCaptchaCode}
-                      title="Generate new CAPTCHA code"
-                      className="p-2.5 bg-emerald-800 hover:bg-emerald-700 text-amber-300 hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 border border-emerald-600/50 shrink-0 flex items-center justify-center"
+                      onClick={() => setCaptchaMode('google')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${captchaMode === 'google' ? 'bg-amber-400 text-emerald-950 shadow-xs' : 'text-emerald-200 hover:text-white'}`}
                     >
-                      <RotateCcw className="w-4.5 h-4.5" />
+                      Google reCAPTCHA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCaptchaMode('graphic')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${captchaMode === 'graphic' ? 'bg-amber-400 text-emerald-950 shadow-xs' : 'text-emerald-200 hover:text-white'}`}
+                    >
+                      Graphic CAPTCHA
                     </button>
                   </div>
-
-                  <input
-                    type="text"
-                    placeholder="Type CAPTCHA code"
-                    value={userCaptchaAnswer}
-                    onChange={(e) => {
-                      setUserCaptchaAnswer(e.target.value);
-                      if (errors.captcha) setErrors(prev => ({ ...prev, captcha: '' }));
-                    }}
-                    autoComplete="off"
-                    spellCheck="false"
-                    className="w-full sm:w-48 px-4 py-3 bg-white text-gray-900 rounded-xl font-black text-sm tracking-widest border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none uppercase text-center"
-                  />
                 </div>
+
+                {captchaMode === 'google' ? (
+                  <div className="mt-3 flex flex-col items-start overflow-x-auto">
+                    <div
+                      className="g-recaptcha rounded-2xl overflow-hidden shadow-md bg-white border border-emerald-700/50"
+                      data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+                      data-callback="onGoogleRecaptchaSuccess"
+                      data-expired-callback="onGoogleRecaptchaExpired"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-3">
+                    {/* Distorted HTML5 Canvas Graphic CAPTCHA Box */}
+                    <div className="relative flex items-center gap-2 bg-emerald-950 p-1.5 rounded-2xl border border-emerald-700/80 shrink-0">
+                      <canvas
+                        ref={captchaCanvasRef}
+                        width={170}
+                        height={45}
+                        className="rounded-xl border border-emerald-600/50 shadow-inner select-none cursor-pointer"
+                        onClick={generateCaptchaCode}
+                        title="Click to refresh CAPTCHA code"
+                      />
+                      <button
+                        type="button"
+                        onClick={generateCaptchaCode}
+                        title="Generate new CAPTCHA code"
+                        className="p-2.5 bg-emerald-800 hover:bg-emerald-700 text-amber-300 hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 border border-emerald-600/50 shrink-0 flex items-center justify-center"
+                      >
+                        <RotateCcw className="w-4.5 h-4.5" />
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Type CAPTCHA code"
+                      value={userCaptchaAnswer}
+                      onChange={(e) => {
+                        setUserCaptchaAnswer(e.target.value);
+                        if (errors.captcha) setErrors(prev => ({ ...prev, captcha: '' }));
+                      }}
+                      autoComplete="off"
+                      spellCheck="false"
+                      className="w-full sm:w-48 px-4 py-3 bg-white text-gray-900 rounded-xl font-black text-sm tracking-widest border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none uppercase text-center"
+                    />
+                  </div>
+                )}
                 {errors.captcha && <p className="text-red-400 text-xs font-bold mt-2.5 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" /> {errors.captcha}</p>}
               </div>
 
