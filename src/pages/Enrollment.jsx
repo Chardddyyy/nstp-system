@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw } from 'lucide-react';
@@ -58,17 +58,10 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState(() => formData.weight || '');
 
-  // Anti-Troll Security Google reCAPTCHA v2 & Graphic Canvas CAPTCHA State
-  const captchaCanvasRef = useRef(null);
-  const [captchaMode, setCaptchaMode] = useState('google'); // 'google' | 'graphic'
+  // Google reCAPTCHA v2 State & Script Loader
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
-  const [captchaCode, setCaptchaCode] = useState('');
-  const [userCaptchaAnswer, setUserCaptchaAnswer] = useState('');
 
-  // Load Google reCAPTCHA v2 Script
   useEffect(() => {
-    if (captchaMode !== 'google') return;
-    
     window.onGoogleRecaptchaSuccess = (token) => {
       setGoogleRecaptchaToken(token);
       setErrors(prev => ({ ...prev, captcha: '' }));
@@ -87,76 +80,7 @@ function Enrollment() {
       script.defer = true;
       document.body.appendChild(script);
     }
-  }, [captchaMode]);
-
-  // Function to generate a random distorted CAPTCHA code (numbers & letters)
-  const generateCaptchaCode = useCallback(() => {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghkmprstuvwxyz';
-    let code = '';
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptchaCode(code);
-    setUserCaptchaAnswer('');
-    return code;
   }, []);
-
-  // Draw distorted characters & noise on HTML5 Canvas
-  useEffect(() => {
-    if (!captchaCode) {
-      generateCaptchaCode();
-      return;
-    }
-    const canvas = captchaCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Background gradient
-    ctx.fillStyle = '#022c22'; // deep emerald
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Distorted background noise lines
-    for (let i = 0; i < 5; i++) {
-      ctx.strokeStyle = `rgba(251, 191, 36, ${Math.random() * 0.5 + 0.3})`;
-      ctx.lineWidth = Math.random() * 2 + 1;
-      ctx.beginPath();
-      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
-      ctx.bezierCurveTo(
-        Math.random() * canvas.width, Math.random() * canvas.height,
-        Math.random() * canvas.width, Math.random() * canvas.height,
-        Math.random() * canvas.width, Math.random() * canvas.height
-      );
-      ctx.stroke();
-    }
-
-    // Random noise dots
-    for (let i = 0; i < 35; i++) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.6})`;
-      ctx.beginPath();
-      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Render rotated & wavy characters
-    const charWidth = (canvas.width - 24) / captchaCode.length;
-    for (let i = 0; i < captchaCode.length; i++) {
-      const char = captchaCode[i];
-      ctx.save();
-      const x = 14 + i * charWidth;
-      const y = canvas.height / 2 + Math.random() * 6 - 3;
-      const angle = (Math.random() - 0.5) * 0.5;
-
-      ctx.translate(x, y);
-      ctx.rotate(angle);
-      ctx.font = `black ${Math.floor(Math.random() * 5 + 22)}px sans-serif`;
-      ctx.fillStyle = i % 2 === 0 ? '#fbbf24' : '#34d399'; // alternating amber and emerald text
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(char, 0, 8);
-      ctx.restore();
-    }
-  }, [captchaCode, generateCaptchaCode]);
 
   const convertToCm = (val, unit) => {
     if (!val || String(val).trim() === '') return '';
@@ -372,15 +296,9 @@ function Enrollment() {
       }
     }
 
-    // Security CAPTCHA Verification (Google reCAPTCHA v2 or Graphic CAPTCHA)
-    if (captchaMode === 'google') {
-      if (!googleRecaptchaToken) {
-        newErrors.captcha = 'Security Verification Failed: Please check the Google reCAPTCHA "I\'m not a robot" box.';
-      }
-    } else {
-      if (!userCaptchaAnswer || userCaptchaAnswer.trim().toLowerCase() !== (captchaCode || '').toLowerCase()) {
-        newErrors.captcha = 'Security Verification Failed: Incorrect CAPTCHA code. Please type the characters shown in the image.';
-      }
+    // Security Verification - Google reCAPTCHA v2
+    if (!googleRecaptchaToken) {
+      newErrors.captcha = 'Security Verification Failed: Please check the Google reCAPTCHA "I\'m not a robot" box.';
     }
 
     // Contact Number - 11 digits
@@ -1657,99 +1575,19 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Anti-Troll Security Google reCAPTCHA v2 & Graphic CAPTCHA Card */}
-              <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${
-                errors.captcha 
-                  ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' 
-                  : 'bg-white text-gray-900 border-gray-200/90 shadow-lg shadow-gray-200/50'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    {/* Google reCAPTCHA Signature 4-Color Badge */}
-                    <div className="w-9 h-9 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs relative overflow-hidden">
-                      <Shield className="w-5 h-5 text-[#4285F4]" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs sm:text-sm font-black text-gray-900">Google Security Verification</h4>
-                        <span className="text-[10px] font-extrabold text-[#4285F4] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">reCAPTCHA v2</span>
-                      </div>
-                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Official Google Anti-Bot &amp; Spam Protection</p>
-                    </div>
-                  </div>
-
-                  {/* Mode Switcher Pills */}
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200/80 text-xs shrink-0 self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setCaptchaMode('google')}
-                      className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${captchaMode === 'google' ? 'bg-[#4285F4] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'}`}
-                    >
-                      Google reCAPTCHA
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCaptchaMode('graphic')}
-                      className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${captchaMode === 'graphic' ? 'bg-[#4285F4] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'}`}
-                    >
-                      Graphic Code
-                    </button>
-                  </div>
-                </div>
-
-                {captchaMode === 'google' ? (
-                  <div className="flex flex-col items-start overflow-x-auto py-1">
-                    <div
-                      className="g-recaptcha rounded-2xl overflow-hidden shadow-md bg-white border border-gray-200"
-                      data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
-                      data-callback="onGoogleRecaptchaSuccess"
-                      data-expired-callback="onGoogleRecaptchaExpired"
-                    />
-                    <div className="mt-2.5 flex items-center gap-2 text-[10px] text-gray-400 font-medium pl-1">
-                      <span className="font-semibold text-gray-500">Privacy Policy</span>
-                      <span>•</span>
-                      <span className="font-semibold text-gray-500">Terms of Service</span>
-                      <span>•</span>
-                      <span>Protected by Google reCAPTCHA</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2">
-                    {/* Distorted HTML5 Canvas Graphic CAPTCHA Box */}
-                    <div className="relative flex items-center gap-2 bg-emerald-950 p-1.5 rounded-2xl border border-emerald-700/80 shrink-0">
-                      <canvas
-                        ref={captchaCanvasRef}
-                        width={170}
-                        height={45}
-                        className="rounded-xl border border-emerald-600/50 shadow-inner select-none cursor-pointer"
-                        onClick={generateCaptchaCode}
-                        title="Click to refresh CAPTCHA code"
-                      />
-                      <button
-                        type="button"
-                        onClick={generateCaptchaCode}
-                        title="Generate new CAPTCHA code"
-                        className="p-2.5 bg-emerald-800 hover:bg-emerald-700 text-amber-300 hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 border border-emerald-600/50 shrink-0 flex items-center justify-center"
-                      >
-                        <RotateCcw className="w-4.5 h-4.5" />
-                      </button>
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Type CAPTCHA code"
-                      value={userCaptchaAnswer}
-                      onChange={(e) => {
-                        setUserCaptchaAnswer(e.target.value);
-                        if (errors.captcha) setErrors(prev => ({ ...prev, captcha: '' }));
-                      }}
-                      autoComplete="off"
-                      spellCheck="false"
-                      className="w-full sm:w-48 px-4 py-3 bg-gray-50 text-gray-900 rounded-xl font-black text-sm tracking-widest border border-gray-300 focus:ring-2 focus:ring-[#4285F4] focus:border-[#4285F4] outline-none uppercase text-center"
-                    />
-                  </div>
+              {/* Simple Standalone Google reCAPTCHA v2 Widget */}
+              <div className="flex flex-col items-center sm:items-start my-2 overflow-x-auto">
+                <div
+                  className="g-recaptcha rounded-2xl overflow-hidden shadow-xs border border-gray-200 bg-white"
+                  data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
+                  data-callback="onGoogleRecaptchaSuccess"
+                  data-expired-callback="onGoogleRecaptchaExpired"
+                />
+                {errors.captcha && (
+                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {errors.captcha}
+                  </p>
                 )}
-                {errors.captcha && <p className="text-red-600 text-xs font-bold mt-3 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0 text-red-600" /> {errors.captcha}</p>}
               </div>
 
               {/* Terms & Agreement Box */}
