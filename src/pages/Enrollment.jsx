@@ -58,6 +58,11 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState(() => formData.weight || '');
 
+  // Anti-Troll Security Verification State
+  const [captchaNumA, _setCaptchaNumA] = useState(() => Math.floor(Math.random() * 8) + 2);
+  const [captchaNumB, _setCaptchaNumB] = useState(() => Math.floor(Math.random() * 8) + 2);
+  const [userCaptchaAnswer, setUserCaptchaAnswer] = useState('');
+
   const convertToCm = (val, unit) => {
     if (!val || String(val).trim() === '') return '';
     const numStr = String(val).trim();
@@ -250,17 +255,32 @@ function Enrollment() {
       }
     });
 
-    // Student ID - 8 to 12 digits
+    // Student ID - 8 to 12 digits + reject fake repeating/sequential patterns
     const sidDigits = (formData.studentId || '').replace(/\D/g, '');
-    if (formData.studentId && (sidDigits.length < 8 || sidDigits.length > 12)) {
-      newErrors.studentId = sidDigits.length < 8
-        ? `Student ID is too short — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, need at least 8`
-        : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12`;
+    if (formData.studentId) {
+      if (sidDigits.length < 8 || sidDigits.length > 12) {
+        newErrors.studentId = sidDigits.length < 8
+          ? `Student ID is too short — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, need at least 8`
+          : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12`;
+      } else if (/^(\d)\1+$/.test(sidDigits) || sidDigits === '12345678' || sidDigits === '123456789' || sidDigits === '987654321') {
+        newErrors.studentId = 'Invalid Student ID — Please enter your actual university Student Number.';
+      }
     }
 
-    // Email - must match full format e.g. student@cvsu.edu.ph
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = 'Invalid email — must be in valid format (e.g. student@cvsu.edu.ph)';
+    // Email - Must be official CvSU institutional email (@cvsu.edu.ph)
+    if (formData.email) {
+      const emailTrim = formData.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+        newErrors.email = 'Invalid email — must be in valid format (e.g. student@cvsu.edu.ph)';
+      } else if (!emailTrim.endsWith('@cvsu.edu.ph')) {
+        newErrors.email = 'Official Student Email Required — must be an official @cvsu.edu.ph institutional email';
+      }
+    }
+
+    // Security Math Verification Captcha
+    const expectedCaptcha = captchaNumA + captchaNumB;
+    if (!userCaptchaAnswer || parseInt(userCaptchaAnswer, 10) !== expectedCaptcha) {
+      newErrors.captcha = `Security Verification Failed: Please answer ${captchaNumA} + ${captchaNumB} correctly.`;
     }
 
     // Contact Number - 11 digits
@@ -1535,6 +1555,38 @@ function Enrollment() {
                   </div>
                 </div>
               )}
+
+              {/* Anti-Troll Security Verification Card */}
+              <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${errors.captcha ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' : 'bg-emerald-950/90 text-white border-emerald-800 shadow-md'}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                    <Shield className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll Security Verification *</h4>
+                    <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Solve the simple verification math problem to prove you are a real student</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-3">
+                  <div className="bg-emerald-900/90 px-4 py-2.5 rounded-xl border border-emerald-700/60 font-black text-sm text-amber-300 tracking-wider flex items-center justify-center gap-2 shrink-0">
+                    <span>What is</span>
+                    <span className="bg-amber-400 text-emerald-950 px-2 py-0.5 rounded-lg text-base">{captchaNumA} + {captchaNumB}</span>
+                    <span>=?</span>
+                  </div>
+                  <input
+                    type="number"
+                    placeholder="Enter answer"
+                    value={userCaptchaAnswer}
+                    onChange={(e) => {
+                      setUserCaptchaAnswer(e.target.value);
+                      if (errors.captcha) setErrors(prev => ({ ...prev, captcha: '' }));
+                    }}
+                    className="w-full sm:w-40 px-4 py-2.5 bg-white text-gray-900 rounded-xl font-bold text-sm border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none text-center"
+                  />
+                </div>
+                {errors.captcha && <p className="text-red-400 text-xs font-bold mt-2.5 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" /> {errors.captcha}</p>}
+              </div>
 
               {/* Terms & Agreement Box */}
               <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-6 shadow-2xs">

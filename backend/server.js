@@ -308,6 +308,8 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
     'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
     'ALTER TABLE enrollments ADD COLUMN registeredVoter VARCHAR(20)',
+    'ALTER TABLE enrollments ADD COLUMN ip_address VARCHAR(45) NULL',
+    'ALTER TABLE enrollments ADD COLUMN user_agent TEXT NULL',
     'CREATE INDEX idx_enrollments_studentid ON enrollments (studentId)',
     'CREATE INDEX idx_enrollments_email ON enrollments (email)',
     'CREATE INDEX idx_enrollments_status ON enrollments (status)',
@@ -2750,6 +2752,26 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       registrationPhoto, registeredVoter, isVoter
     } = req.body;
 
+    // Anti-Troll Security: Rate Limit by IP Address (Max 4 submissions per 15 minutes)
+    const clientIp = String(req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+    const userAgent = String(req.headers['user-agent'] || 'unknown').slice(0, 500);
+
+    try {
+      const [recentAttempts] = await pool.execute(
+        `SELECT COUNT(*) as cnt FROM enrollments WHERE (ip_address = ? OR email = ?) AND submitted_at > NOW() - INTERVAL 15 MINUTE`,
+        [clientIp, String(email).trim().toLowerCase()]
+      );
+      if (recentAttempts[0]?.cnt >= 4) {
+        return res.status(429).json({ message: 'Security Protection: Too many enrollment attempts from this device/IP. Please wait 15 minutes.' });
+      }
+    } catch (_) {}
+
+    // Strict Institutional Email Verification (@cvsu.edu.ph)
+    const emailClean = String(email || '').trim().toLowerCase();
+    if (!emailClean.endsWith('@cvsu.edu.ph')) {
+      return res.status(400).json({ message: 'Official Student Email Required: Only valid @cvsu.edu.ph student emails are allowed.' });
+    }
+
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
     const finalGender = gender || sex;
     const finalAddress = street ? `${street}, ${municipality || ''}, ${province || ''}`.replace(/, ,/g, ',').replace(/,\s*$/, '') : (homeAddress || address);
@@ -2782,14 +2804,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
             birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
             gender, height, weight, facebookAccount, bloodType, address,
             street, municipality, province,
-            program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             name || null, firstName, lastName, middleName || null, String(email).trim(), nstpComponent || 'CWTS', sid, contactDigits,
             finalBirthDate, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
             finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
             street || null, municipality || null, province || null,
-            program, section, yearLevel, finalEmergencyContact || null, emerDigits, 'Pending', photo, finalVoter
+            program, section, yearLevel, finalEmergencyContact || null, emerDigits, 'Pending', photo, finalVoter, clientIp, userAgent
           ]
         );
         return result.insertId;

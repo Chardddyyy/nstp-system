@@ -1594,6 +1594,39 @@ function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Anti-Troll Security Audit Details */}
+                  <div className="bg-emerald-950 text-white rounded-2xl p-3.5 border border-emerald-800 shadow-sm space-y-2">
+                    <p className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-amber-400" /> Anti-Troll Security Audit
+                    </p>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-emerald-200 font-medium">CvSU Email Status:</span>
+                        {(selectedEnrollment.email || '').toLowerCase().endsWith('@cvsu.edu.ph') ? (
+                          <span className="bg-emerald-800 text-emerald-100 font-extrabold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3 text-amber-300" /> Verified @cvsu.edu.ph
+                          </span>
+                        ) : (
+                          <span className="bg-rose-900 text-rose-100 font-extrabold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3 text-rose-300" /> Personal Email (Unverified)
+                          </span>
+                        )}
+                      </div>
+                      {selectedEnrollment.ip_address && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-emerald-200 font-medium">IP Address:</span>
+                          <span className="font-mono text-amber-300 text-[11px] font-bold">{selectedEnrollment.ip_address}</span>
+                        </div>
+                      )}
+                      {selectedEnrollment.user_agent && (
+                        <div className="flex justify-between items-start gap-2 pt-1 border-t border-emerald-800/60 text-[10px] text-emerald-300">
+                          <span className="font-medium shrink-0">Device:</span>
+                          <span className="font-mono truncate text-right">{selectedEnrollment.user_agent}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Submission Status & Timestamp */}
                   <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
                     <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-black uppercase text-[10px] tracking-wider">
