@@ -1,9 +1,52 @@
 # 📘 CvSU Naic NSTP Record & Report Management System
-## 📄 Opisyal at Kumpletong Dokumentasyon ng Sistema (System Documentation & Asset References)
+## 📄 Opisyal na Dokumentasyon at Presentation Script para sa Oral Defense
 
 ---
 
-## 📌 1. Pangkalahatang Impormasyon (System Overview)
+## 🎙️ 1. Mabilisang Script at Presentation Guide (Babasahin Nito sa Defense)
+
+> **TIP:** Pwedeng-pwede mo itong basahin o sabihin nang direkta sa iyong panel/evaluators habang nire-presenta ang system!
+
+### 🗣️ Panimula (System Overview & Background)
+> *"Magandang araw po. Ang inihahandog po namin ay ang **CvSU Naic NSTP Record & Report Management System** — isang makabagong web-based platform na ginawa natin para sa **Cavite State University - Naic Campus NSTP Office**.*
+>
+> *Dati po, ang pagpaparehistro ng NSTP at pag-aayos ng student masterlist ay ginagawa nang mano-mano sa papel at Excel sheets, na nagdudulot ng delay sa pag-submit sa CHED at madalas na pagkawala ng mga dokumento.*
+>
+> *Sa pamamagitan ng ating bagong system, nagawa nating **fully digital, mabilis, at highly secure** ang buong proseso mula sa Student Registration hanggang sa CHED Masterlist Reporting."*
+
+---
+
+### 🗣️ Mga Pangunahing Tampok ng System (Key System Features)
+
+#### 1. 📝 Online Student Registration & Enrollment Portal
+> *"Ang mga bagong estudyante (Freshmen) ay pwedeng mag-enroll online sa tatlong NSTP components: **CWTS, LTS, at ROTC**.*
+> * * **Institutional Email Strict Enforcement:** Tanging opisyal na `@cvsu.edu.ph` student emails lamang ang pinapayagang mag-register.*
+> * * **iPhone Photo Auto-Converter:** Awtomatikong kino-convert ng system ang mga `.HEIC` photos mula sa iPhone papuntang `.JPEG` para walang error sa submission.*
+> * * **Filipino Character Support:** Buong suportado ang letrang **ñ / Ñ** at proper Title Casing para sa tamang ebidensya ng pangalan sa rekord.*
+
+#### 2. 🛡️ Multi-Layered Anti-Troll Security System
+> *"Para maiwasan ang mga nagta-try mag-enroll nang peke o nan-titrip:*
+> * * **Google reCAPTCHA v2:** May opisyal na 'I'm not a robot' Google security checkbox.*
+> * * **Student ID Pattern Check:** Binoblock ng system ang mga paulit-ulit o pekeng numero (tulad ng 11111111 o 12345678).*
+> * * **IP Rate Limiting:** Hanggang 4 na enrollment attempts lang bawat 15 minuto ang pinapayagan bawat device/IP.*
+> * * **Security Audit Box:** Nakikita ng Admin ang IP Address at Browser Details ng bawat nag-submit para sa buong accountability."*
+
+#### 3. 📊 Student Roster & 1-Click CHED Excel Masterlist Exporter
+> *"Naka-organisa ang libo-libong mag-aaral ayon sa Batch Year, Program (`BSIT`, `BSCS`, `BSFAS`, `BSBA`, `BSEd`, `BEED`, `BSHM`), Component (`CWTS`, `LTS`, `ROTC`), at Section.*
+> * Sa isang click lang ng button na **'Export CHED Excel'**, awtomatikong nagge-generate ang system ng opisyal na formatted Excel sheet na handang-handa nang isumite sa Commission on Higher Education."*
+
+#### 4. 💬 Real-time Communication & WebRTC Audio/Video Calls
+> *"May built-in communication hub ang Admin at Instructors:*
+> * * Direct messaging at **All-Instructors Group Chat**.*
+> * * Instant image and file attachment sharing.*
+> * * **P2P WebRTC Voice & Video Calls:** Pwedeng tumawag at makipag-video conference ang Admin at Instructors nang direkta sa loob ng app."*
+
+#### 5. ☁️ Automatic Google Drive Cloud Backup
+> *"Lahat ng datos (100% ng 13 MySQL database tables) ay awtomatikong binaback-up at pino-protektahan sa **Google Drive Storage** tuwing may bagong enrollment, report submission, o student status update."*
+
+---
+
+## 📌 2. Pangkalahatang Impormasyon (System Overview & Technical Architecture)
 Ang **CvSU Naic NSTP Record & Report Management System** ay isang makabagong, web-based platform na sadyang idinisenyo para sa **Cavite State University - Naic Campus National Service Training Program (NSTP) Office**.
 
 Layunin nitong i-automate, gawing mabilis, ligtas, at digital ang lahat ng proseso at talaan ng NSTP:
