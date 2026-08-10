@@ -3312,6 +3312,37 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Comprehensive System & Database Health Check Endpoint
+app.get('/api/system/health', authenticateToken, async (req, res) => {
+  try {
+    const [[usersCnt]] = await pool.execute('SELECT COUNT(*) as cnt FROM users');
+    const [[studentsCnt]] = await pool.execute('SELECT COUNT(*) as cnt FROM students');
+    const [[enrollmentsCnt]] = await pool.execute('SELECT COUNT(*) as cnt FROM enrollments');
+    const [[reportsCnt]] = await pool.execute('SELECT COUNT(*) as cnt FROM reports');
+    const [[pendingCnt]] = await pool.execute('SELECT COUNT(*) as cnt FROM enrollments WHERE status = "Pending"');
+
+    res.json({
+      status: 'Healthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        usersCount: usersCnt?.cnt || 0,
+        studentsCount: studentsCnt?.cnt || 0,
+        pendingEnrollmentsCount: pendingCnt?.cnt || 0,
+        totalEnrollmentsCount: enrollmentsCnt?.cnt || 0,
+        reportsCount: reportsCnt?.cnt || 0,
+      },
+      server: {
+        uptimeSeconds: Math.floor(process.uptime()),
+        memoryUsageMB: Math.round(process.memoryUsage().rss / (1024 * 1024)),
+        nodeVersion: process.version
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'Unhealthy', error: err.message });
+  }
+});
+
 // Global error handling middleware
 app.use(function(err, req, res, next) {
   console.error('Unhandled server error:', err);

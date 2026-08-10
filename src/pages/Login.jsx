@@ -58,7 +58,12 @@ function Login() {
       clearTimeout(timer1);
       clearTimeout(timer2);
       console.error('Login error:', err);
-      setError('Server connection failed. Please try again.');
+      const errMsg = err?.message || '';
+      if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted')) {
+        setError('Cloud server is waking up (~15s). Please tap Login again.');
+      } else {
+        setError(errMsg || 'Server connection failed. Please try again.');
+      }
       setPassword('');
     } finally {
       setLoading(false);

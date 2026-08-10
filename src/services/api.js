@@ -98,10 +98,14 @@ async function apiCall(endpoint, options) {
         localStorage.setItem('nstp_api_url', getLocalFallbackUrl(''));
         response = fbRes2;
       } else {
-        throw err;
+        var isAbort = err.name === 'AbortError' || (err.message && (err.message.includes('aborted') || err.message.includes('signal')));
+        var cleanErr = new Error(isAbort ? 'Connection timeout. Cloud server is waking up (~15s) — please try again.' : (err.message || 'Network connection failed'));
+        throw cleanErr;
       }
     } else {
-      throw err;
+      var isAbort2 = err.name === 'AbortError' || (err.message && (err.message.includes('aborted') || err.message.includes('signal')));
+      var cleanErr2 = new Error(isAbort2 ? 'Connection timeout. Cloud server is waking up (~15s) — please try again.' : (err.message || 'Network connection failed'));
+      throw cleanErr2;
     }
   }
 
