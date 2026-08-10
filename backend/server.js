@@ -2758,7 +2758,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
 
     // Optional Google reCAPTCHA v2 Token Verification with Google API
     if (recaptchaToken) {
-      const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+      const secretKey = process.env.RECAPTCHA_SECRET_KEY || '6Lc4LX4tAAAAAFucDfFzbLrrG7Sg6CsO8M5amlsF';
       try {
         const gRes = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(recaptchaToken)}&remoteip=${encodeURIComponent(clientIp)}`, { method: 'POST' });
         const gData = await gRes.json();

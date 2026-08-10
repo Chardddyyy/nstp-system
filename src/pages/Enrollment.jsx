@@ -1692,7 +1692,7 @@ function Enrollment() {
                   <div className="mt-3 flex flex-col items-start overflow-x-auto">
                     <div
                       className="g-recaptcha rounded-2xl overflow-hidden shadow-md bg-white border border-emerald-700/50"
-                      data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'}
+                      data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
                       data-callback="onGoogleRecaptchaSuccess"
                       data-expired-callback="onGoogleRecaptchaExpired"
                     />
