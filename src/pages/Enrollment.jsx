@@ -1658,47 +1658,63 @@ function Enrollment() {
               )}
 
               {/* Anti-Troll Security Google reCAPTCHA v2 & Graphic CAPTCHA Card */}
-              <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${errors.captcha ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' : 'bg-emerald-950/90 text-white border-emerald-800 shadow-md'}`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${
+                errors.captcha 
+                  ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' 
+                  : 'bg-white text-gray-900 border-gray-200/90 shadow-lg shadow-gray-200/50'
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                      <Shield className="w-4 h-4 text-amber-400" />
+                    {/* Google reCAPTCHA Signature 4-Color Badge */}
+                    <div className="w-9 h-9 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-center shrink-0 shadow-2xs relative overflow-hidden">
+                      <Shield className="w-5 h-5 text-[#4285F4]" />
                     </div>
                     <div>
-                      <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll Security Verification *</h4>
-                      <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Verify that you are a real student before submitting</p>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-black text-gray-900">Google Security Verification</h4>
+                        <span className="text-[10px] font-extrabold text-[#4285F4] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">reCAPTCHA v2</span>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Official Google Anti-Bot &amp; Spam Protection</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 bg-emerald-900/90 p-1 rounded-xl border border-emerald-700/60 text-xs shrink-0 self-start sm:self-auto">
+                  {/* Mode Switcher Pills */}
+                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200/80 text-xs shrink-0 self-start sm:self-auto">
                     <button
                       type="button"
                       onClick={() => setCaptchaMode('google')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${captchaMode === 'google' ? 'bg-amber-400 text-emerald-950 shadow-xs' : 'text-emerald-200 hover:text-white'}`}
+                      className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${captchaMode === 'google' ? 'bg-[#4285F4] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'}`}
                     >
                       Google reCAPTCHA
                     </button>
                     <button
                       type="button"
                       onClick={() => setCaptchaMode('graphic')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${captchaMode === 'graphic' ? 'bg-amber-400 text-emerald-950 shadow-xs' : 'text-emerald-200 hover:text-white'}`}
+                      className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${captchaMode === 'graphic' ? 'bg-[#4285F4] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'}`}
                     >
-                      Graphic CAPTCHA
+                      Graphic Code
                     </button>
                   </div>
                 </div>
 
                 {captchaMode === 'google' ? (
-                  <div className="mt-3 flex flex-col items-start overflow-x-auto">
+                  <div className="flex flex-col items-start overflow-x-auto py-1">
                     <div
-                      className="g-recaptcha rounded-2xl overflow-hidden shadow-md bg-white border border-emerald-700/50"
+                      className="g-recaptcha rounded-2xl overflow-hidden shadow-md bg-white border border-gray-200"
                       data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
                       data-callback="onGoogleRecaptchaSuccess"
                       data-expired-callback="onGoogleRecaptchaExpired"
                     />
+                    <div className="mt-2.5 flex items-center gap-2 text-[10px] text-gray-400 font-medium pl-1">
+                      <span className="font-semibold text-gray-500">Privacy Policy</span>
+                      <span>•</span>
+                      <span className="font-semibold text-gray-500">Terms of Service</span>
+                      <span>•</span>
+                      <span>Protected by Google reCAPTCHA</span>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2">
                     {/* Distorted HTML5 Canvas Graphic CAPTCHA Box */}
                     <div className="relative flex items-center gap-2 bg-emerald-950 p-1.5 rounded-2xl border border-emerald-700/80 shrink-0">
                       <canvas
@@ -1729,11 +1745,11 @@ function Enrollment() {
                       }}
                       autoComplete="off"
                       spellCheck="false"
-                      className="w-full sm:w-48 px-4 py-3 bg-white text-gray-900 rounded-xl font-black text-sm tracking-widest border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none uppercase text-center"
+                      className="w-full sm:w-48 px-4 py-3 bg-gray-50 text-gray-900 rounded-xl font-black text-sm tracking-widest border border-gray-300 focus:ring-2 focus:ring-[#4285F4] focus:border-[#4285F4] outline-none uppercase text-center"
                     />
                   </div>
                 )}
-                {errors.captcha && <p className="text-red-400 text-xs font-bold mt-2.5 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" /> {errors.captcha}</p>}
+                {errors.captcha && <p className="text-red-600 text-xs font-bold mt-3 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0 text-red-600" /> {errors.captcha}</p>}
               </div>
 
               {/* Terms & Agreement Box */}
