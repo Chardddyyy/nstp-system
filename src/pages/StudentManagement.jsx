@@ -719,7 +719,7 @@ function StudentManagement() {
 
         {/* Mobile-Responsive Filters */}
         <div className="bg-white/90 backdrop-blur-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-row items-center gap-2 sm:gap-3">
             <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700/60" />
@@ -727,15 +727,15 @@ function StudentManagement() {
                   type="text"
                   id="student-search"
                   name="studentSearch"
-                  placeholder="Search student name, ID, section..."
+                  placeholder="Search student..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoComplete="off"
-                  className="w-full pl-8 pr-3 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium bg-gray-50/50"
+                  className="w-full pl-8 pr-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium bg-gray-50/50"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-2.5">
+            <div className="flex flex-row gap-1.5 sm:gap-2.5 shrink-0">
               {isAdmin && (
                 <select
                   id="filter-dept"

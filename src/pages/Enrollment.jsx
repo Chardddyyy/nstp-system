@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw } from 'lucide-react';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
@@ -58,10 +58,79 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState(() => formData.weight || '');
 
-  // Anti-Troll Security Verification State
-  const [captchaNumA, _setCaptchaNumA] = useState(() => Math.floor(Math.random() * 8) + 2);
-  const [captchaNumB, _setCaptchaNumB] = useState(() => Math.floor(Math.random() * 8) + 2);
+  // Anti-Troll Security Graphic Canvas Distorted CAPTCHA State
+  const captchaCanvasRef = useRef(null);
+  const [captchaCode, setCaptchaCode] = useState('');
   const [userCaptchaAnswer, setUserCaptchaAnswer] = useState('');
+
+  // Function to generate a random distorted CAPTCHA code (numbers & letters)
+  const generateCaptchaCode = useCallback(() => {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghkmprstuvwxyz';
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setUserCaptchaAnswer('');
+    return code;
+  }, []);
+
+  // Draw distorted characters & noise on HTML5 Canvas
+  useEffect(() => {
+    if (!captchaCode) {
+      generateCaptchaCode();
+      return;
+    }
+    const canvas = captchaCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background gradient
+    ctx.fillStyle = '#022c22'; // deep emerald
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Distorted background noise lines
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(251, 191, 36, ${Math.random() * 0.5 + 0.3})`;
+      ctx.lineWidth = Math.random() * 2 + 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.bezierCurveTo(
+        Math.random() * canvas.width, Math.random() * canvas.height,
+        Math.random() * canvas.width, Math.random() * canvas.height,
+        Math.random() * canvas.width, Math.random() * canvas.height
+      );
+      ctx.stroke();
+    }
+
+    // Random noise dots
+    for (let i = 0; i < 35; i++) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Render rotated & wavy characters
+    const charWidth = (canvas.width - 24) / captchaCode.length;
+    for (let i = 0; i < captchaCode.length; i++) {
+      const char = captchaCode[i];
+      ctx.save();
+      const x = 14 + i * charWidth;
+      const y = canvas.height / 2 + Math.random() * 6 - 3;
+      const angle = (Math.random() - 0.5) * 0.5;
+
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.font = `black ${Math.floor(Math.random() * 5 + 22)}px sans-serif`;
+      ctx.fillStyle = i % 2 === 0 ? '#fbbf24' : '#34d399'; // alternating amber and emerald text
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(char, 0, 8);
+      ctx.restore();
+    }
+  }, [captchaCode, generateCaptchaCode]);
 
   const convertToCm = (val, unit) => {
     if (!val || String(val).trim() === '') return '';
@@ -277,10 +346,9 @@ function Enrollment() {
       }
     }
 
-    // Security Math Verification Captcha
-    const expectedCaptcha = captchaNumA + captchaNumB;
-    if (!userCaptchaAnswer || parseInt(userCaptchaAnswer, 10) !== expectedCaptcha) {
-      newErrors.captcha = `Security Verification Failed: Please answer ${captchaNumA} + ${captchaNumB} correctly.`;
+    // Security Distorted Graphic CAPTCHA Verification
+    if (!userCaptchaAnswer || userCaptchaAnswer.trim().toLowerCase() !== (captchaCode || '').toLowerCase()) {
+      newErrors.captcha = 'Security Verification Failed: Incorrect CAPTCHA code. Please type the characters shown in the image.';
     }
 
     // Contact Number - 11 digits
@@ -1556,33 +1624,52 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Anti-Troll Security Verification Card */}
+              {/* Anti-Troll Security Distorted Graphic CAPTCHA Verification Card */}
               <div className={`rounded-3xl p-5 sm:p-6 border transition-all ${errors.captcha ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400/20' : 'bg-emerald-950/90 text-white border-emerald-800 shadow-md'}`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
-                    <Shield className="w-4 h-4 text-amber-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll Security Verification *</h4>
-                    <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Solve the simple verification math problem to prove you are a real student</p>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                      <Shield className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-white">Anti-Troll CAPTCHA Security *</h4>
+                      <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">Read and type the distorted numbers &amp; letters shown in the box</p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-3">
-                  <div className="bg-emerald-900/90 px-4 py-2.5 rounded-xl border border-emerald-700/60 font-black text-sm text-amber-300 tracking-wider flex items-center justify-center gap-2 shrink-0">
-                    <span>What is</span>
-                    <span className="bg-amber-400 text-emerald-950 px-2 py-0.5 rounded-lg text-base">{captchaNumA} + {captchaNumB}</span>
-                    <span>=?</span>
+                  {/* Distorted HTML5 Canvas Graphic CAPTCHA Box */}
+                  <div className="relative flex items-center gap-2 bg-emerald-950 p-1.5 rounded-2xl border border-emerald-700/80 shrink-0">
+                    <canvas
+                      ref={captchaCanvasRef}
+                      width={170}
+                      height={45}
+                      className="rounded-xl border border-emerald-600/50 shadow-inner select-none cursor-pointer"
+                      onClick={generateCaptchaCode}
+                      title="Click to refresh CAPTCHA code"
+                    />
+                    <button
+                      type="button"
+                      onClick={generateCaptchaCode}
+                      title="Generate new CAPTCHA code"
+                      className="p-2.5 bg-emerald-800 hover:bg-emerald-700 text-amber-300 hover:text-white rounded-xl transition-all cursor-pointer active:scale-95 border border-emerald-600/50 shrink-0 flex items-center justify-center"
+                    >
+                      <RotateCcw className="w-4.5 h-4.5" />
+                    </button>
                   </div>
+
                   <input
-                    type="number"
-                    placeholder="Enter answer"
+                    type="text"
+                    placeholder="Type CAPTCHA code"
                     value={userCaptchaAnswer}
                     onChange={(e) => {
                       setUserCaptchaAnswer(e.target.value);
                       if (errors.captcha) setErrors(prev => ({ ...prev, captcha: '' }));
                     }}
-                    className="w-full sm:w-40 px-4 py-2.5 bg-white text-gray-900 rounded-xl font-bold text-sm border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none text-center"
+                    autoComplete="off"
+                    spellCheck="false"
+                    className="w-full sm:w-48 px-4 py-3 bg-white text-gray-900 rounded-xl font-black text-sm tracking-widest border border-emerald-300 focus:ring-2 focus:ring-amber-400 outline-none uppercase text-center"
                   />
                 </div>
                 {errors.captcha && <p className="text-red-400 text-xs font-bold mt-2.5 flex items-center gap-1.5"><AlertCircle className="w-4 h-4 shrink-0" /> {errors.captcha}</p>}

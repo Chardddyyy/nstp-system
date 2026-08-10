@@ -200,35 +200,35 @@ export default function LetterFormats() {
         </div>
 
         {/* Filter Tabs & Search */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 mb-6">
+        <div className="flex flex-row items-center justify-between gap-2 mb-6">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search letters..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+            />
+          </div>
+
           {/* Department Filter Tabs */}
-          <div className="flex items-center gap-1.5 p-1 bg-white border border-gray-200 rounded-2xl shadow-2xs overflow-x-auto">
+          <div className="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-2xs overflow-x-auto shrink-0 max-w-[50%] sm:max-w-none">
             {['All', 'ROTC', 'CWTS', 'LTS'].map(tab => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === tab
                     ? 'bg-emerald-800 text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
-                {tab === 'All' ? 'All Departments' : tab}
+                {tab}
               </button>
             ))}
-          </div>
-
-          {/* Search Box */}
-          <div className="relative min-w-[240px]">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by title or description..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
-            />
           </div>
         </div>
 

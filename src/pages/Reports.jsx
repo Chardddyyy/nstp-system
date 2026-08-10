@@ -371,7 +371,7 @@ function Reports() {
 
         {/* Filters - Side-by-Side Mobile Layout */}
         <div className="bg-white p-2.5 sm:p-4 rounded-xl sm:rounded-2xl shadow-md mb-4 sm:mb-6 border border-gray-100">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+          <div className="flex flex-row items-center gap-2 sm:gap-4">
             <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -387,7 +387,7 @@ function Reports() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
+            <div className="flex flex-row gap-1.5 sm:gap-2 shrink-0">
               {isAdmin && (
                 <select
                   id="filter-dept"
