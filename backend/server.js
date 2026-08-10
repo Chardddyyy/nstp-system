@@ -135,6 +135,9 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ message: 'Invalid token' });
     }
     req.user = user;
+    if (user && user.id) {
+      pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
+    }
     next();
   });
 }
@@ -193,6 +196,7 @@ async function ensureUserColumns() {
     'ALTER TABLE users ADD COLUMN profilePicture TEXT',
     'ALTER TABLE users ADD COLUMN phone VARCHAR(50)',
     'ALTER TABLE users ADD COLUMN bio TEXT',
+    'ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -562,7 +566,7 @@ app.post('/api/auth/login', async function(req, res) {
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture FROM users'
+      'SELECT id, email, name, role, department, avatar, profilePicture, last_active_at FROM users'
     );
     res.json(users);
   } catch (error) {

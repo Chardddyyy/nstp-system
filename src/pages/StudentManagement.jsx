@@ -693,7 +693,7 @@ function StudentManagement() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t border-emerald-700/40 sm:border-t-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button type="button"
                 onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
                 title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}

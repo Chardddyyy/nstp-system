@@ -373,15 +373,15 @@ function InstructorDashboard() {
               {/* User Profile Button - Compact Avatar on Mobile, Full Pill on Desktop */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1 sm:space-x-2 bg-emerald-800/80 hover:bg-emerald-700/90 text-white px-1 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/80 hover:bg-emerald-700/90 text-white p-1 sm:px-2.5 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-700/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
-                <div className="shrink-0 w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center rounded-full overflow-hidden">
+                <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-500/50 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0">
-                  <p className="font-bold text-[9px] sm:text-xs text-white leading-tight truncate max-w-[55px] sm:max-w-none">{user?.name || 'Instructor'}</p>
-                  <p className="text-[7.5px] sm:text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Inst` : 'Instructor'}</p>
+                <div className="text-left min-w-0 pr-0.5">
+                  <p className="font-bold text-[10px] sm:text-xs text-white leading-tight truncate max-w-[65px] sm:max-w-none">{user?.name || 'Instructor'}</p>
+                  <p className="text-[8px] sm:text-[9px] text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">{user?.department ? `${user.department} Inst` : 'Instructor'}</p>
                 </div>
               </Link>
             </div>

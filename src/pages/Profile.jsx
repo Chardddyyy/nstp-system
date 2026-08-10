@@ -768,9 +768,13 @@ function Profile() {
                           className="flex items-center justify-between py-3 gap-3 hover:bg-gray-50 px-2 rounded-lg transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 flex-shrink-0 text-sm font-bold">
-                              {inst.name?.charAt(0)?.toUpperCase() || '?'}
-                            </div>
+                            {inst.profilePicture ? (
+                              <img src={inst.profilePicture} alt={inst.name} className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30" />
+                            ) : (
+                              <div className={`w-9 h-9 rounded-full ${AVATAR_OPTIONS.find(a => a.id === inst.avatar)?.color || 'bg-emerald-700'} flex items-center justify-center text-white shrink-0 text-xs font-bold`}>
+                                {AVATAR_OPTIONS.find(a => a.id === inst.avatar)?.icon || inst.name?.charAt(0)?.toUpperCase()}
+                              </div>
+                            )}
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
                               <p className="text-xs text-gray-400 truncate">{inst.email}</p>
@@ -1022,12 +1026,16 @@ function Profile() {
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
-                  <Pencil className="w-5 h-5" />
-                </div>
+                {editingInstructor?.profilePicture ? (
+                  <img src={editingInstructor.profilePicture} alt={editingInstructor.name} className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 text-base font-bold">
+                    {AVATAR_OPTIONS.find(a => a.id === editingInstructor?.avatar)?.icon || editingInstructor?.name?.charAt(0)?.toUpperCase() || '👨‍🏫'}
+                  </div>
+                )}
                 <div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight">Instructor Details</h3>
-                  <p className="text-emerald-200 text-xs font-medium">View &amp; update instructor account information</p>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight">{editInstructorForm.name || 'Instructor Details'}</h3>
+                  <p className="text-emerald-200 text-xs font-medium">View &amp; update account information</p>
                 </div>
               </div>
               <button

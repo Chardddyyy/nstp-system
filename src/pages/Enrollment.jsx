@@ -34,7 +34,7 @@ function Enrollment() {
       program: '',
       yearLevel: '',
       section: '',
-      nstpComponent: 'CWTS',
+      nstpComponent: '',
       birthMonth: '',
       birthDay: '',
       birthYear: '',
@@ -201,7 +201,7 @@ function Enrollment() {
     setFormData({
       lastName: '', firstName: '', middleName: '', studentId: '',
       street: '', municipality: '', province: '',
-      program: '', yearLevel: '', section: '', nstpComponent: 'CWTS',
+      program: '', yearLevel: '', section: '', nstpComponent: '',
       birthMonth: '', birthDay: '', birthYear: '', age: '', civilStatus: '', sex: '',
       height: '', weight: '', bloodType: '', contactNumber: '', email: '',
       facebookAccount: '', registeredVoter: '', emergencyContact: '', emergencyNumber: ''
