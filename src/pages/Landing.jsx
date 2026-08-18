@@ -672,63 +672,7 @@ function Landing() {
         </div>
       </section>
 
-      {/* Component Details Modal */}
-      {activeComponentModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setActiveComponentModal(null)}>
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
-              <div className="flex items-center gap-3.5">
-                <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center font-bold shadow-md ${
-                  activeComponentModal === 'ROTC' ? 'bg-rose-600' : activeComponentModal === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
-                }`}>
-                  {activeComponentModal === 'ROTC' ? <Shield className="w-6 h-6" /> : activeComponentModal === 'CWTS' ? <Users className="w-6 h-6" /> : <GraduationCap className="w-6 h-6" />}
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-black text-slate-900">{activeComponentModal} Component</h3>
-                  <p className="text-xs text-slate-500 font-medium">Official CvSU Naic NSTP Module</p>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setActiveComponentModal(null)} 
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="space-y-4 text-xs text-slate-700">
-              <div className="p-4 sm:p-5 bg-slate-50 rounded-2xl border border-slate-200/80">
-                <p className="font-black text-slate-900 mb-2.5 text-xs sm:text-sm">Key Focus Areas & Activities:</p>
-                <ul className="space-y-2.5">
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{activeComponentModal === 'ROTC' ? 'Military Drill, Ceremonial Formations & Marksmanship' : activeComponentModal === 'CWTS' ? 'Community Health, Hygiene & Nutrition Outreach' : 'Basic Reading, Writing & Numeracy Modules'}</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{activeComponentModal === 'ROTC' ? 'Disaster Risk Reduction & First Aid Life Support' : activeComponentModal === 'CWTS' ? 'Tree Planting & Coastal Cleanup Drives in Naic' : 'Out-of-School Youth Literacy Support in Cavite'}</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{activeComponentModal === 'ROTC' ? 'Defense Preparedness & Leadership Ethics' : activeComponentModal === 'CWTS' ? 'Civic Leadership & Barangay Organization' : 'Early Childhood Values & Learning Mentorship'}</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  to="/enrollment"
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-center rounded-2xl transition-all shadow-lg active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2"
-                >
-                  <span>Enroll in {activeComponentModal} Track</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── 3-Step Guided Enrollment Pipeline ────────────────────────── */}
       <section id="guide" className="py-12 sm:py-20 px-4 sm:px-6 bg-white border-t border-slate-200/80">
