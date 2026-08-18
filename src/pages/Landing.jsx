@@ -2,67 +2,107 @@ import { Link } from 'react-router-dom';
 import { 
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
   Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, 
-  CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, Check
+  CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, 
+  Search, Check, Zap, HeartHandshake, School, Flame, ExternalLink
 } from 'lucide-react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats } from '../services/api';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
-// Carousel images - using actual CvSU Naic campus photos
+// Actual CvSU Naic campus photography
 const CAROUSEL_IMAGES = [
   {
     src: `${import.meta.env.BASE_URL}cvsunaiccampus.png`,
-    title: "Welcome to CvSU Naic NSTP",
-    subtitle: "Building Tomorrow's Leaders Through National Service & Civic Excellence",
+    title: "Cavite State University Naic",
+    subtitle: "Premier institution fostering character, academics, and sustainable community leadership through NSTP.",
     badge: "Official Campus Portal",
     track: "all"
   },
   {
     src: `${import.meta.env.BASE_URL}IMG_9578.JPG`,
     title: "ROTC Leadership & Defense",
-    subtitle: "Developing Military Preparedness, Discipline, Patriotism & Integrity",
+    subtitle: "Developing military preparedness, discipline, patriotism, and disaster rescue response capabilities.",
     badge: "Reserve Officers' Training Corps",
     track: "ROTC"
   },
   {
     src: `${import.meta.env.BASE_URL}cwts-cover.jpg`,
     title: "CWTS Community Service",
-    subtitle: "Serving Local Communities with Compassion, Health Care & Civic Welfare",
+    subtitle: "Empowering local coastal barangays through public health, environmental tree planting, and civic welfare.",
     badge: "Civic Welfare Training Service",
     track: "CWTS"
   },
   {
     src: `${import.meta.env.BASE_URL}lts-cover.jpg`,
     title: "LTS Literacy Program",
-    subtitle: "Empowering Children & Out-of-School Youth Through Quality Education",
+    subtitle: "Transforming youth and children's futures through dedicated numeracy, reading, and mentorship modules.",
     badge: "Literacy Training Service",
     track: "LTS"
+  }
+];
+
+const TRACK_QUIZ_OPTIONS = [
+  {
+    id: 'CWTS',
+    label: 'Community Service & Environment',
+    icon: HeartHandshake,
+    tagline: 'Civic Welfare Training Service',
+    description: 'Perfect for students passionate about tree planting, coastal cleanups, public health, disaster relief, and barangay outreach.',
+    color: 'emerald',
+    badge: 'Civic Leadership',
+    keyPoints: ['Community Sanitation & Health Outreach', 'Coastal Cleanup & Reforestation', 'Civic Project Management']
+  },
+  {
+    id: 'LTS',
+    label: 'Teaching & Child Literacy',
+    icon: GraduationCap,
+    tagline: 'Literacy Training Service',
+    description: 'Designed for students who want to teach numeracy, reading, and basic education to children and out-of-school youth in Cavite.',
+    color: 'purple',
+    badge: 'Education & Mentorship',
+    keyPoints: ['Basic Reading & Numeracy Coaching', 'Child Values Formation & Learning', 'Out-of-School Youth Tutoring']
+  },
+  {
+    id: 'ROTC',
+    label: 'Military Preparedness & Discipline',
+    icon: Shield,
+    tagline: "Reserve Officers' Training Corps",
+    description: 'Tailored for students seeking military defense preparedness, martial discipline, ceremonial drills, and emergency rescue readiness.',
+    color: 'rose',
+    badge: 'Defense & Honor',
+    keyPoints: ['Military Drills & Ceremonial Formations', 'Disaster First Aid & Rescue Life Support', 'National Defense Tactics & Ethics']
   }
 ];
 
 const FAQ_ITEMS = [
   {
     q: "Who is required to take NSTP?",
-    a: "Under Republic Act No. 9163 (NSTP Law of 2001), all male and female students enrolled in any baccalaureate degree or two-year technical-vocational course in Higher Education Institutions (HEIs) are required to complete one (1) NSTP component as a graduation requirement."
+    category: "Enrollment",
+    a: "Under Republic Act No. 9163 (NSTP Law of 2001), all male and female students enrolled in any baccalaureate degree or two-year technical-vocational course in Higher Education Institutions (HEIs) are required to complete one (1) NSTP component as a mandatory graduation requirement."
   },
   {
     q: "How many units and semesters is the NSTP course?",
-    a: "NSTP is a 6-credit-unit course taken across two (2) consecutive semesters: NSTP 1 (3 Units) during the First Semester and NSTP 2 (3 Units) during the Second Semester under the same component chosen."
+    category: "Academics",
+    a: "NSTP is a 6-credit-unit course taken across two (2) consecutive semesters: NSTP 1 (3 Units) during the First Semester and NSTP 2 (3 Units) during the Second Semester under the exact same component chosen."
   },
   {
     q: "How do I choose between CWTS, LTS, and ROTC?",
-    a: "Students may freely choose based on their interests and career goals:\n• CWTS (Civic Welfare Training Service): Focuses on community health, environmental sanitation, safety, and civic betterment.\n• LTS (Literacy Training Service): Focuses on teaching literacy and numeracy to school children and out-of-school youth.\n• ROTC (Reserve Officers' Training Corps): Focuses on military discipline, leadership, civil defense, and disaster preparedness."
+    category: "Programs",
+    a: "Students may freely choose based on their career goals and interests:\n• CWTS (Civic Welfare Training Service): Community health, coastal sanitation, tree planting, and civic welfare.\n• LTS (Literacy Training Service): Teaching literacy and numeracy to school children and out-of-school youth.\n• ROTC (Reserve Officers' Training Corps): Military discipline, defense training, leadership, and civil defense."
   },
   {
     q: "What documents are required to enroll online?",
-    a: "You need a copy/photo of your official CvSU Registration Form (Certificate of Registration / COR) showing your enrolled subjects for the semester, your 9-digit Student ID Number, and your active email address."
+    category: "Requirements",
+    a: "You need a clear digital copy/photo of your official CvSU Registration Form (Certificate of Registration / COR) showing your enrolled subjects for the semester, your 9-digit Student ID Number, and your official CvSU email address."
   },
   {
     q: "Can I transfer or shift to another NSTP component?",
-    a: "Generally, students must complete both NSTP 1 and NSTP 2 in the same component. Any exceptional request to transfer components must be requested through and approved by the NSTP Campus Coordinator before the start of the semester."
+    category: "Policies",
+    a: "Generally, students must complete both NSTP 1 and NSTP 2 in the same component. Any exceptional request to transfer components must be submitted to and approved by the NSTP Campus Coordinator before the start of the semester."
   },
   {
     q: "What should I do if the online portal is closed?",
+    category: "Enrollment",
     a: "Please check the Scheduled Opening banner on the landing page for the official enrollment window dates. If you missed the schedule or have special concerns, visit the NSTP Office located at CvSU Naic Campus."
   }
 ];
@@ -70,7 +110,10 @@ const FAQ_ITEMS = [
 function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [activeComponentModal, setActiveComponentModal] = useState(null);
+  const [selectedQuizTrack, setSelectedQuizTrack] = useState('CWTS');
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [faqSearch, setFaqSearch] = useState('');
+  const [faqCategory, setFaqCategory] = useState('All');
   const timerRef = useRef(null);
 
   // Live Enrollment Timed Schedule Status
@@ -208,14 +251,45 @@ function Landing() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-gray-900 font-sans selection:bg-emerald-600 selection:text-white relative">
+  // Filter FAQ items dynamically
+  const filteredFaqs = useMemo(() => {
+    const q = faqSearch.trim().toLowerCase();
+    return FAQ_ITEMS.filter(item => {
+      const matchCat = faqCategory === 'All' || item.category === faqCategory;
+      const matchText = !q || item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q);
+      return matchCat && matchText;
+    });
+  }, [faqSearch, faqCategory]);
 
-      {/* ── Premium Modern Glassmorphic Header ───────────────────────── */}
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white relative antialiased">
+
+      {/* ── Top Live Portal Status Banner ────────────────────────────── */}
+      <div className={`py-1.5 px-4 text-center text-xs font-bold transition-colors ${
+        enrollmentStatus.isOpen 
+          ? 'bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-emerald-50' 
+          : 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-amber-50'
+      }`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap text-[11px] sm:text-xs">
+          <span className="flex h-2 w-2 relative">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${enrollmentStatus.isOpen ? 'bg-amber-300' : 'bg-rose-300'}`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${enrollmentStatus.isOpen ? 'bg-amber-300' : 'bg-rose-300'}`}></span>
+          </span>
+          <span>{enrollmentStatus.headline}</span>
+          <span className="opacity-80">• {enrollmentStatus.subtext}</span>
+          {enrollmentStatus.isOpen ? (
+            <Link to="/enrollment" className="underline font-black hover:text-white ml-1 flex items-center gap-0.5">
+              <span>Apply now</span> &rarr;
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      {/* ── Sticky Executive Glassmorphic Header ───────────────────────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex justify-between items-center gap-3">
           
-          {/* Logo & University Identity */}
+          {/* University Identity */}
           <Link to="/" className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1 group">
             <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg ring-2 ring-amber-400/40 group-hover:scale-105 transition-transform duration-300">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -244,6 +318,15 @@ function Landing() {
               className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
             >
               <span>Programs</span>
+            </button>
+
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('quiz')} 
+              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Track Finder</span>
             </button>
             
             <button 
@@ -311,7 +394,7 @@ function Landing() {
           </div>
         </div>
 
-        {/* Mobile Modern Navigation Pills */}
+        {/* Mobile Modern Navigation Sub-Bar */}
         <div className="lg:hidden bg-emerald-950/95 border-t border-emerald-800/70 px-3 py-2 overflow-x-auto no-scrollbar flex items-center space-x-2 text-[11px] font-bold text-emerald-100">
           <button 
             type="button" 
@@ -320,6 +403,15 @@ function Landing() {
           >
             <Compass className="w-3 h-3 text-amber-400" />
             <span>Programs</span>
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => scrollToSection('quiz')} 
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
+          >
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Track Finder</span>
           </button>
           
           <button 
@@ -369,9 +461,9 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero Carousel Section with Premium Action Buttons */}
+      {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs) ───── */}
       <section 
-        className="relative h-[400px] xs:h-[450px] sm:h-[500px] md:h-[560px] lg:h-[620px] overflow-hidden bg-gray-950"
+        className="relative h-[430px] xs:h-[480px] sm:h-[530px] md:h-[600px] lg:h-[650px] overflow-hidden bg-gray-950"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -390,7 +482,7 @@ function Landing() {
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             {/* Rich Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/65 to-transparent flex flex-col justify-end p-5 sm:p-10 md:p-14 lg:p-20">
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-transparent flex flex-col justify-end p-5 sm:p-10 md:p-14 lg:p-20">
               <div className={`max-w-4xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
@@ -411,7 +503,7 @@ function Landing() {
                 <div className="mt-5 sm:mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
                   <Link
                     to="/enrollment"
-                    className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
                   >
                     <Sparkles className="w-4 h-4 text-emerald-950" />
                     <span>Apply for Enrollment</span>
@@ -419,11 +511,11 @@ function Landing() {
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('programs')}
-                    className="inline-flex items-center gap-2 bg-emerald-900/60 hover:bg-emerald-800/80 text-white font-bold px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg"
+                    onClick={() => scrollToSection('quiz')}
+                    className="inline-flex items-center gap-2 bg-emerald-900/70 hover:bg-emerald-800/90 text-white font-bold px-5 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg"
                   >
                     <Compass className="w-4 h-4 text-amber-300" />
-                    <span>Explore Tracks</span>
+                    <span>Find My NSTP Track</span>
                   </button>
                 </div>
               </div>
@@ -431,7 +523,7 @@ function Landing() {
           </div>
         ))}
 
-        {/* Carousel Desktop Left & Right Arrow Navigation */}
+        {/* Carousel Desktop Navigation */}
         <button
           type="button"
           onClick={prevSlide}
@@ -467,39 +559,163 @@ function Landing() {
         </div>
       </section>
 
-      {/* Academic Overview Stats Banner */}
-      <section className="bg-emerald-900 text-white border-y border-emerald-800 py-6 sm:py-9 px-4 sm:px-6 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5 text-center relative z-10">
+      {/* ── Modern Bento Grid Overview (Fast Stats & R.A. 9163 Highlights) ── */}
+      <section className="py-10 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
           
-          <div className="p-4 sm:p-6 bg-white/5 hover:bg-white/10 rounded-2xl sm:rounded-3xl border border-white/10 transition-all flex flex-col justify-center items-center shadow-xs">
-            <Award className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 mb-2" />
-            <p className="text-base sm:text-2xl font-black text-amber-400 leading-tight">6 Credit Units</p>
-            <p className="text-xs sm:text-sm text-emerald-200 font-semibold mt-1">3 Units / Semester</p>
+          {/* Bento Card 1: Large Academic Foundation Card */}
+          <div className="md:col-span-2 bg-gradient-to-br from-emerald-900 to-teal-950 text-white rounded-3xl p-6 sm:p-8 border border-emerald-700/60 shadow-lg relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute -right-6 -bottom-6 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black uppercase px-3 py-1 rounded-full mb-3">
+                <BookOpen className="w-3.5 h-3.5" /> Republic Act No. 9163
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                Mandatory National Service Training Program
+              </h3>
+              <p className="text-emerald-100/90 text-xs sm:text-sm mt-2 leading-relaxed">
+                Empowering Filipino tertiary students with civic consciousness, defense preparedness, ethics of service, and community leadership as required by law for graduation.
+              </p>
+            </div>
+            <div className="mt-6 pt-4 border-t border-emerald-800/80 flex items-center justify-between text-xs text-emerald-200 font-bold">
+              <span>Cavite State University Naic</span>
+              <span className="text-amber-300 font-black">6 Total Units</span>
+            </div>
           </div>
 
-          <div className="p-4 sm:p-6 bg-white/5 hover:bg-white/10 rounded-2xl sm:rounded-3xl border border-white/10 transition-all flex flex-col justify-center items-center shadow-xs">
-            <Compass className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-300 mb-2" />
-            <p className="text-base sm:text-2xl font-black text-white leading-tight">3 Components</p>
-            <p className="text-xs sm:text-sm text-emerald-200 font-semibold mt-1">CWTS • ROTC • LTS</p>
+          {/* Bento Card 2: 3 Components */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mb-3 shadow-xs">
+              <Compass className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">3 Tracks</p>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">Component Choices</h4>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                Choose between Civic Welfare (CWTS), Literacy (LTS), or Military Defense (ROTC).
+              </p>
+            </div>
           </div>
 
-          <div className="p-4 sm:p-6 bg-white/5 hover:bg-white/10 rounded-2xl sm:rounded-3xl border border-white/10 transition-all flex flex-col justify-center items-center shadow-xs">
-            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 mb-2" />
-            <p className="text-base sm:text-2xl font-black text-amber-400 leading-tight">2 Semesters</p>
-            <p className="text-xs sm:text-sm text-emerald-200 font-semibold mt-1">1 Academic Year</p>
-          </div>
-
-          <div className="p-4 sm:p-6 bg-white/5 hover:bg-white/10 rounded-2xl sm:rounded-3xl border border-white/10 transition-all flex flex-col justify-center items-center shadow-xs">
-            <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-teal-300 mb-2" />
-            <p className="text-base sm:text-2xl font-black text-white leading-tight">R.A. 9163</p>
-            <p className="text-xs sm:text-sm text-emerald-200 font-semibold mt-1">Accredited Law</p>
+          {/* Bento Card 3: 2 Semesters */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-sm hover:shadow-xl transition-all flex flex-col justify-between">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-3 shadow-xs">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">2 Semesters</p>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-0.5">Academic Duration</h4>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                NSTP 1 in the 1st Semester, followed by field execution NSTP 2 in the 2nd Semester.
+              </p>
+            </div>
           </div>
 
         </div>
       </section>
 
-      {/* Enrollment Schedule & Status Section */}
-      <section id="schedule" className="py-10 sm:py-16 px-4 sm:px-6 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-b border-emerald-800">
+      {/* ── Interactive 10-Second Track Finder (Quiz / Component Matcher) ── */}
+      <section id="quiz" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-100 to-white border-t border-slate-200/80">
+        <div className="max-w-5xl mx-auto">
+          
+          <div className="text-center mb-8 sm:mb-12">
+            <span className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Interactive Track Finder
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-2">Which NSTP Component Fits You?</h2>
+            <p className="text-slate-600 text-xs sm:text-base mt-1.5 max-w-xl mx-auto">
+              Select your primary interest below to see instant curriculum highlights and recommended courses.
+            </p>
+          </div>
+
+          {/* Interactive Selection Tabs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
+            {TRACK_QUIZ_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const isSelected = selectedQuizTrack === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSelectedQuizTrack(opt.id)}
+                  className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 text-left transition-all cursor-pointer flex items-center gap-3.5 ${
+                    isSelected 
+                      ? opt.id === 'ROTC' 
+                        ? 'border-rose-600 bg-rose-50/80 shadow-md scale-[1.02]' 
+                        : opt.id === 'CWTS'
+                          ? 'border-emerald-600 bg-emerald-50/80 shadow-md scale-[1.02]'
+                          : 'border-purple-600 bg-purple-50/80 shadow-md scale-[1.02]'
+                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
+                  }`}
+                >
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm ${
+                    opt.id === 'ROTC' ? 'bg-rose-600' : opt.id === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
+                  }`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-black text-slate-900 truncate">{opt.label}</p>
+                    <p className="text-[11px] font-bold text-slate-500">{opt.id} Track</p>
+                  </div>
+                  {isSelected && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Dynamic Result Card */}
+          {(() => {
+            const current = TRACK_QUIZ_OPTIONS.find(t => t.id === selectedQuizTrack) || TRACK_QUIZ_OPTIONS[0];
+            return (
+              <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-xl animate-fade-in">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                  <div>
+                    <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
+                      current.id === 'ROTC' ? 'bg-rose-100 text-rose-800' : current.id === 'CWTS' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {current.badge}
+                    </span>
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+                      {current.id} — {current.tagline}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                      {current.description}
+                    </p>
+                  </div>
+
+                  <Link
+                    to="/enrollment"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black px-6 py-3.5 rounded-2xl text-xs sm:text-sm shadow-md active:scale-95 transition-all shrink-0"
+                  >
+                    <span>Apply for {current.id}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Key Activities & Syllabus Highlights:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {current.keyPoints.map((pt, i) => (
+                      <div key={i} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="text-xs font-bold text-slate-700 leading-snug">{pt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+        </div>
+      </section>
+
+      {/* ── High-Impact Enrollment Schedule & Portal Action ──────────── */}
+      <section id="schedule" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
@@ -507,7 +723,7 @@ function Landing() {
           <div className="mb-8 p-5 sm:p-7 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto text-left">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-start space-x-3.5">
-                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
                   enrollmentStatus.isOpen
                     ? 'bg-emerald-500 text-white shadow-emerald-900/50'
                     : 'bg-amber-400 text-emerald-950'
@@ -543,7 +759,7 @@ function Landing() {
             </div>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black mb-3 text-white">Ready to Start Your NSTP Journey?</h2>
+          <h2 className="text-2xl sm:text-4xl font-black mb-3 text-white">Ready to Start Your NSTP Journey?</h2>
           <p className="text-emerald-100 text-xs sm:text-base mb-7 max-w-xl mx-auto font-medium leading-relaxed">
             Submit your official enrollment application for CWTS, LTS, or ROTC component online with your student credentials.
           </p>
@@ -567,177 +783,119 @@ function Landing() {
         </div>
       </section>
 
-      {/* History, Mission, and Vision Section */}
-      <section className="py-12 sm:py-20 px-4 bg-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          
-          {/* History */}
-          <div className="mb-12 sm:mb-20">
-            <div className="text-center mb-7">
-              <div className="w-14 h-14 sm:w-18 sm:h-18 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto mb-3.5 shadow-inner">
-                <BookOpen className="w-7 h-7 sm:w-9 sm:h-9" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900">Cavite State University Naic Campus</h2>
-              <p className="text-emerald-700 font-bold text-xs sm:text-base mt-1.5">National Service Training Program Office</p>
-            </div>
-            
-            <div className="max-w-3xl mx-auto text-center bg-emerald-50/60 p-6 sm:p-10 rounded-3xl border border-emerald-100 shadow-xs">
-              <p className="text-gray-700 leading-relaxed text-xs sm:text-base md:text-lg">
-                Cavite State University Naic Campus is a premier institution dedicated to providing quality tertiary education in Cavite. Through the National Service Training Program (NSTP), CvSU Naic equips students with academic competence, civic responsibility, and moral leadership to serve the nation.
-              </p>
-            </div>
-          </div>
-
-          {/* Mission and Vision */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
-            <div className="bg-emerald-50/80 rounded-3xl p-6 sm:p-10 border border-emerald-200/80 shadow-xs hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4 sm:mb-6">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center mr-4 shadow-sm shrink-0">
-                  <Target className="w-6 h-6 sm:w-7 sm:h-7" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-xl font-black text-emerald-900 leading-tight">Our Mission</h3>
-                  <p className="text-xs text-emerald-700 font-semibold">Cavite State University</p>
-                </div>
-              </div>
-              <p className="text-gray-700 leading-relaxed text-xs sm:text-sm">
-                Cavite State University shall provide excellent, equitable and relevant educational opportunities in the arts, sciences and technology through quality instruction and responsive research and development activities. It shall produce professional, skilled and morally upright individuals for global competitiveness.
-              </p>
-            </div>
-
-            <div className="bg-amber-50/80 rounded-3xl p-6 sm:p-10 border border-amber-200/80 shadow-xs hover:shadow-md transition-shadow">
-              <div className="flex items-center mb-4 sm:mb-6">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-amber-500 text-white rounded-2xl flex items-center justify-center mr-4 shadow-sm shrink-0">
-                  <Eye className="w-6 h-6 sm:w-7 sm:h-7" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-xl font-black text-amber-950 leading-tight">Our Vision</h3>
-                  <p className="text-xs text-amber-700 font-semibold">Cavite State University</p>
-                </div>
-              </div>
-              <p className="text-gray-700 leading-relaxed text-xs sm:text-sm">
-                The premier university in historic Cavite globally recognized for excellence in character development, academics, research, innovation and sustainable community engagement.
-              </p>
-            </div>
-          </div>
+      {/* ── Interactive Program Components Section ───────────────────── */}
+      <section id="programs" className="py-12 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-8 sm:mb-14">
+          <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
+            Program Components
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3">Explore NSTP Offerings</h2>
+          <p className="text-slate-600 text-xs sm:text-base mt-1.5">Tap any track below to review syllabus specifics, field activities, and enrollment criteria</p>
         </div>
-      </section>
 
-      {/* Interactive NSTP Program Components Section */}
-      <section id="programs" className="py-12 sm:py-20 px-4 sm:px-6 bg-slate-100/70 border-t border-gray-200/70 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-8 sm:mb-14">
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-              Program Components
-            </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mt-3">Explore NSTP Offerings</h2>
-            <p className="text-gray-600 text-xs sm:text-base mt-1.5">Tap any track below to review syllabus specifics, field activities, and enrollment criteria</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
+          
+          {/* ROTC Card */}
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+            onClick={() => setActiveComponentModal('ROTC')}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="w-14 h-14 bg-rose-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
+                  <Shield className="w-7 h-7" />
+                </div>
+                <span className="text-xs bg-rose-100 text-rose-800 font-black px-3 py-1 rounded-full">Defense Track</span>
+              </div>
+              
+              <h3 className="text-lg sm:text-2xl font-black text-rose-900 mb-1">ROTC</h3>
+              <p className="text-xs font-bold text-slate-500 mb-3">Reserve Officers' Training Corps</p>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
+                Military-based training designed for national defense preparedness, discipline, drills, disaster response, and leadership ethics.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
+              >
+                <span>View Details & Requirements</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
-            
-            {/* ROTC Card */}
-            <div
-              className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-              onClick={() => setActiveComponentModal('ROTC')}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-14 h-14 bg-rose-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                    <Shield className="w-7 h-7" />
-                  </div>
-                  <span className="text-xs bg-rose-100 text-rose-800 font-black px-3 py-1 rounded-full">Defense Track</span>
+          {/* CWTS Card */}
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+            onClick={() => setActiveComponentModal('CWTS')}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
+                  <Users className="w-7 h-7" />
                 </div>
-                
-                <h3 className="text-lg sm:text-2xl font-black text-rose-900 mb-1">ROTC</h3>
-                <p className="text-xs font-bold text-gray-500 mb-3">Reserve Officers' Training Corps</p>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-6">
-                  Military-based training designed for national defense preparedness, discipline, drills, disaster response, and leadership ethics.
-                </p>
+                <span className="text-xs bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full">Civic Track</span>
               </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md"
-                >
-                  <span>View Details & Requirements</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-                </button>
-              </div>
+              
+              <h3 className="text-lg sm:text-2xl font-black text-emerald-900 mb-1">CWTS</h3>
+              <p className="text-xs font-bold text-slate-500 mb-3">Civic Welfare Training Service</p>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
+                Community-driven programs contributing to general welfare, public health, coastal protection, environmental tree planting, and civic leadership.
+              </p>
             </div>
 
-            {/* CWTS Card */}
-            <div
-              className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-              onClick={() => setActiveComponentModal('CWTS')}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                    <Users className="w-7 h-7" />
-                  </div>
-                  <span className="text-xs bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full">Civic Track</span>
-                </div>
-                
-                <h3 className="text-lg sm:text-2xl font-black text-emerald-900 mb-1">CWTS</h3>
-                <p className="text-xs font-bold text-gray-500 mb-3">Civic Welfare Training Service</p>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-6">
-                  Community-driven programs contributing to general welfare, public health, coastal protection, environmental tree planting, and civic leadership.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md"
-                >
-                  <span>View Details & Requirements</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-                </button>
-              </div>
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
+              >
+                <span>View Details & Requirements</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
+              </button>
             </div>
-
-            {/* LTS Card */}
-            <div
-              className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-              onClick={() => setActiveComponentModal('LTS')}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-14 h-14 bg-purple-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                    <GraduationCap className="w-7 h-7" />
-                  </div>
-                  <span className="text-xs bg-purple-100 text-purple-800 font-black px-3 py-1 rounded-full">Literacy Track</span>
-                </div>
-                
-                <h3 className="text-lg sm:text-2xl font-black text-purple-900 mb-1">LTS</h3>
-                <p className="text-xs font-bold text-gray-500 mb-3">Literacy Training Service</p>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-6">
-                  Specialized program training college students to teach reading, writing, and numeracy to school children and out-of-school youth in Cavite.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  className="w-full py-2.5 px-4 bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md"
-                >
-                  <span>View Details & Requirements</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-                </button>
-              </div>
-            </div>
-
           </div>
+
+          {/* LTS Card */}
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+            onClick={() => setActiveComponentModal('LTS')}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <div className="w-14 h-14 bg-purple-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
+                  <GraduationCap className="w-7 h-7" />
+                </div>
+                <span className="text-xs bg-purple-100 text-purple-800 font-black px-3 py-1 rounded-full">Literacy Track</span>
+              </div>
+              
+              <h3 className="text-lg sm:text-2xl font-black text-purple-900 mb-1">LTS</h3>
+              <p className="text-xs font-bold text-slate-500 mb-3">Literacy Training Service</p>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
+                Specialized program training college students to teach reading, writing, and numeracy to school children and out-of-school youth in Cavite.
+              </p>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                className="w-full py-2.5 px-4 bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
+              >
+                <span>View Details & Requirements</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
+              </button>
+            </div>
+          </div>
+
         </div>
       </section>
 
       {/* Component Details Modal */}
       {activeComponentModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setActiveComponentModal(null)}>
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-gray-100 animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-gray-100">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
               <div className="flex items-center gap-3.5">
                 <div className={`w-12 h-12 rounded-2xl text-white flex items-center justify-center font-bold shadow-md ${
                   activeComponentModal === 'ROTC' ? 'bg-rose-600' : activeComponentModal === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
@@ -745,22 +903,22 @@ function Landing() {
                   {activeComponentModal === 'ROTC' ? <Shield className="w-6 h-6" /> : activeComponentModal === 'CWTS' ? <Users className="w-6 h-6" /> : <GraduationCap className="w-6 h-6" />}
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-black text-gray-900">{activeComponentModal} Component</h3>
-                  <p className="text-xs text-gray-500 font-medium">Official CvSU Naic NSTP Module</p>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900">{activeComponentModal} Component</h3>
+                  <p className="text-xs text-slate-500 font-medium">Official CvSU Naic NSTP Module</p>
                 </div>
               </div>
               <button 
                 type="button" 
                 onClick={() => setActiveComponentModal(null)} 
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-4 text-xs text-gray-700">
-              <div className="p-4 sm:p-5 bg-gray-50 rounded-2xl border border-gray-200/80">
-                <p className="font-black text-gray-900 mb-2.5 text-xs sm:text-sm">Key Focus Areas & Activities:</p>
+            <div className="space-y-4 text-xs text-slate-700">
+              <div className="p-4 sm:p-5 bg-slate-50 rounded-2xl border border-slate-200/80">
+                <p className="font-black text-slate-900 mb-2.5 text-xs sm:text-sm">Key Focus Areas & Activities:</p>
                 <ul className="space-y-2.5">
                   <li className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -791,15 +949,15 @@ function Landing() {
         </div>
       )}
 
-      {/* Step-by-Step Online Enrollment Guide */}
-      <section id="guide" className="py-12 sm:py-20 px-4 sm:px-6 bg-white border-t border-gray-200/70 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
+      {/* ── 3-Step Guided Enrollment Pipeline ────────────────────────── */}
+      <section id="guide" className="py-12 sm:py-20 px-4 sm:px-6 bg-white border-t border-slate-200/80">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8 sm:mb-14">
             <span className="bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
               Easy 3-Step Process
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mt-3">How to Enroll Online</h2>
-            <p className="text-gray-600 text-xs sm:text-base mt-1.5">Simple guide for incoming freshmen and transferees at Cavite State University Naic</p>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3">How to Enroll Online</h2>
+            <p className="text-slate-600 text-xs sm:text-base mt-1.5">Simple guide for incoming freshmen and transferees at Cavite State University Naic</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 relative">
@@ -810,9 +968,9 @@ function Landing() {
                 <span className="w-12 h-12 bg-emerald-700 text-white font-black text-lg rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                   1
                 </span>
-                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Select Component</h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Choose between CWTS, LTS, or ROTC according to your interests and course preferences.
+                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Select Component Track</h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Choose between CWTS, LTS, or ROTC according to your career interest and personal advocacy.
                 </p>
               </div>
             </div>
@@ -823,8 +981,8 @@ function Landing() {
                 <span className="w-12 h-12 bg-emerald-700 text-white font-black text-lg rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                   2
                 </span>
-                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Fill Application Form</h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Fill Form & Upload COR</h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   Enter student details, verify 9-digit Student ID, and attach your CvSU Registration Form (COR).
                 </p>
               </div>
@@ -836,9 +994,9 @@ function Landing() {
                 <span className="w-12 h-12 bg-emerald-700 text-white font-black text-lg rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                   3
                 </span>
-                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Coordinator Approval</h3>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  NSTP department coordinators verify your application and assign your official section.
+                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Coordinator Review</h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  NSTP department coordinators verify your application and assign your official section roster.
                 </p>
               </div>
             </div>
@@ -847,14 +1005,14 @@ function Landing() {
         </div>
       </section>
 
-      {/* Video Orientation Section */}
+      {/* ── Video Orientation Section ─────────────────────────────────── */}
       <section id="video" className="py-12 sm:py-20 px-4 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-t border-emerald-800">
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="text-center mb-8 sm:mb-12">
             <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-xs font-black uppercase tracking-wider px-4 py-1.5 rounded-full inline-flex items-center gap-2 shadow-sm">
               <Play className="w-3.5 h-3.5 fill-amber-300 text-amber-300" /> Official Video Orientation
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mt-3 tracking-tight">What is NSTP? Video Guide & Overview</h2>
+            <h2 className="text-2xl sm:text-4xl font-black text-white mt-3 tracking-tight">What is NSTP? Video Guide & Overview</h2>
             <p className="text-emerald-200 text-xs sm:text-base mt-2 max-w-2xl mx-auto font-medium leading-relaxed">
               Watch this educational video explanation to learn more about Republic Act 9163, NSTP 1 & 2 components (CWTS, LTS, ROTC), and graduation requirements.
             </p>
@@ -903,53 +1061,91 @@ function Landing() {
         </div>
       </section>
 
-      {/* Frequently Asked Questions (FAQ) Interactive Accordion */}
-      <section id="faq" className="py-12 sm:py-20 px-4 bg-gray-50 border-t border-gray-200/70">
+      {/* ── Searchable & Filterable FAQ Interactive Accordion ────────── */}
+      <section id="faq" className="py-12 sm:py-20 px-4 bg-slate-50 border-t border-slate-200/80">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-8 sm:mb-14">
+          <div className="text-center mb-6 sm:mb-10">
             <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
               Knowledge Base & FAQ
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mt-3">Frequently Asked Questions</h2>
-            <p className="text-gray-600 text-xs sm:text-base mt-1.5">Everything incoming students need to know about Republic Act No. 9163 and NSTP policies</p>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3">Frequently Asked Questions</h2>
+            <p className="text-slate-600 text-xs sm:text-base mt-1.5">Quick answers regarding enrollment, components, units, and campus policies</p>
+          </div>
+
+          {/* Interactive Search & Filter Box */}
+          <div className="mb-6 space-y-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={faqSearch}
+                onChange={(e) => setFaqSearch(e.target.value)}
+                placeholder="Search questions (e.g. graduation, CWTS, documents)..."
+                className="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+              />
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {['All', 'Enrollment', 'Academics', 'Programs', 'Requirements', 'Policies'].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFaqCategory(cat)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    faqCategory === cat 
+                      ? 'bg-emerald-800 text-white shadow-2xs' 
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Interactive Accordion List */}
-          <div className="space-y-3.5">
-            {FAQ_ITEMS.map((item, idx) => {
-              const isOpen = openFaqIndex === idx;
-              return (
-                <div 
-                  key={idx} 
-                  className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-2xs overflow-hidden transition-all duration-200"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                    className="w-full p-4 sm:p-6 flex items-center justify-between text-left gap-3.5 hover:bg-gray-50/80 transition-colors cursor-pointer"
+          <div className="space-y-3">
+            {filteredFaqs.length > 0 ? (
+              filteredFaqs.map((item, idx) => {
+                const isOpen = openFaqIndex === idx;
+                return (
+                  <div 
+                    key={idx} 
+                    className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs overflow-hidden transition-all duration-200"
                   >
-                    <span className="text-xs sm:text-sm md:text-base font-black text-gray-900 flex items-center gap-2.5">
-                      <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                      {item.q}
-                    </span>
-                    <div className={`w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-emerald-600 text-white' : ''}`}>
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left gap-3.5 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                    >
+                      <span className="text-xs sm:text-sm md:text-base font-black text-slate-900 flex items-center gap-2.5">
+                        <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                        {item.q}
+                      </span>
+                      <div className={`w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-emerald-600 text-white' : ''}`}>
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </button>
 
-                  {isOpen && (
-                    <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-1 text-xs sm:text-sm text-gray-600 leading-relaxed border-t border-gray-100 whitespace-pre-line animate-fade-in">
-                      {item.a}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    {isOpen && (
+                      <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-fade-in">
+                        {item.a}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 text-slate-500 text-xs">
+                No matching questions found for "{faqSearch}". Try another keyword or browse all topics.
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Footer Section */}
+      {/* ── Modern Executive Footer ───────────────────────────────────── */}
       <footer id="contact" className="bg-emerald-950 text-white relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
