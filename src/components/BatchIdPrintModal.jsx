@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import { X, Printer, FileText, CheckSquare, Square, Search, AlertTriangle, Layers, Info } from 'lucide-react';
+import { X, Printer, FileText, CheckSquare, Square, Search, AlertTriangle, Layers, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import NstpIdCard from './NstpIdCard';
 import { formatGradeAndSection } from '../utils/gradeSection';
@@ -14,6 +14,8 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
   const [sectionFilter, setSectionFilter] = useState(defaultSection);
   const [searchQuery, setSearchQuery] = useState('');
   const [printLayout, setPrintLayout] = useState('folding'); // 'folding' (front & back side-by-side) | 'duplex' (fronts then backs)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -39,6 +41,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
     };
   }, [isOpen, departmentFilter, sectionFilter]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, departmentFilter, sectionFilter, itemsPerPage]);
+
   if (!isOpen) return null;
 
   const filteredStudents = students.filter(s => {
@@ -51,6 +58,13 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
   });
 
   const selectedStudentsList = filteredStudents.filter(s => selectedIds.has(s.id));
+
+  // Pagination slice
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage) || 1;
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredStudents.length) {
@@ -443,25 +457,25 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
           </div>
         </div>
 
-        {/* Preview Scroll Area */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100/70 space-y-4">
+        {/* Preview Area (Paginated, Non-Scrollable Grid) */}
+        <div className="p-4 sm:p-5 flex-1 bg-slate-100/70 flex flex-col justify-between">
           {loading ? (
             <div className="p-12 text-center text-slate-500 font-bold">
               <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
               Loading student ID cards...
             </div>
-          ) : selectedStudentsList.length === 0 ? (
+          ) : filteredStudents.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 font-medium">
-              No students selected. Please check at least one student to download or print.
+              No students found matching your search or filters.
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {filteredStudents.map((st) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              {paginatedStudents.map((st) => {
                 const isSelected = selectedIds.has(st.id);
                 return (
                   <div
                     key={st.id}
-                    className={`p-3 rounded-2xl border-2 transition-all bg-white relative flex flex-col items-center gap-2 ${
+                    className={`p-2.5 sm:p-3 rounded-2xl border-2 transition-all bg-white relative flex flex-col items-center gap-1.5 ${
                       isSelected ? 'border-emerald-600 shadow-sm' : 'border-slate-200 opacity-60'
                     }`}
                   >
@@ -473,7 +487,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                           onChange={() => toggleSelectOne(st.id)}
                           className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-500 cursor-pointer"
                         />
-                        <span className="font-black text-xs text-slate-800 truncate max-w-[150px]">
+                        <span className="font-black text-xs text-slate-800 truncate max-w-[140px]">
                           {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                         </span>
                       </label>
@@ -483,12 +497,101 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                     </div>
 
                     {/* Render Portrait ID Card Preview (Front & Back Pair) */}
-                    <div className="scale-90 origin-top transform-gpu">
+                    <div className="scale-[0.82] sm:scale-[0.88] origin-top transform-gpu my-[-8px]">
                       <NstpIdCard student={st} side="both" />
                     </div>
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Pagination Controls Footer */}
+          {filteredStudents.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 font-medium">
+                <span>
+                  Showing <b className="text-slate-800 font-bold">{startIndex + 1}</b> to{' '}
+                  <b className="text-slate-800 font-bold">{Math.min(endIndex, filteredStudents.length)}</b> of{' '}
+                  <b className="text-slate-800 font-bold">{filteredStudents.length}</b> students
+                </span>
+
+                <span className="text-slate-300">|</span>
+
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] text-slate-400">Cards per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+                  >
+                    <option value={3}>3</option>
+                    <option value={6}>6</option>
+                    <option value={9}>9</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Page Number Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-xs">Previous</span>
+                </button>
+
+                <div className="flex items-center gap-1 px-1">
+                  {Array.from({ length: totalPages }).map((_, idx) => {
+                    const pageNum = idx + 1;
+                    // Show first, last, and pages around current page
+                    if (
+                      totalPages <= 5 ||
+                      pageNum === 1 ||
+                      pageNum === totalPages ||
+                      Math.abs(pageNum - safeCurrentPage) <= 1
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`w-7 h-7 rounded-xl text-xs font-black transition-colors cursor-pointer ${
+                            safeCurrentPage === pageNum
+                              ? 'bg-emerald-800 text-white shadow-xs'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      (pageNum === 2 && safeCurrentPage > 3) ||
+                      (pageNum === totalPages - 1 && safeCurrentPage < totalPages - 2)
+                    ) {
+                      return (
+                        <span key={pageNum} className="text-slate-400 px-0.5 text-xs">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <span className="hidden sm:inline text-xs">Next</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
         </div>
