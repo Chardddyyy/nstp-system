@@ -35,7 +35,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://nstp-system.onrender.com">
     <link rel="preconnect" href="https://nstp-system.onrender.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Automatically recover when a new deploy invalidates old cached chunk filenames
+      window.addEventListener('error', function(e) {
+        if (e && e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          var src = e.target.src || e.target.href || '';
+          if (src.includes('/assets/') && !sessionStorage.getItem('asset_retry_' + src)) {
+            sessionStorage.setItem('asset_retry_' + src, '1');
+            console.warn('Asset chunk 404 detected, auto-refreshing page...');
+            window.location.reload();
+          }
+        }
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>
