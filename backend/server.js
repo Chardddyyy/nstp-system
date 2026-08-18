@@ -33,25 +33,33 @@ app.use(function(req, res, next) {
   next();
 });
 
-// ── CORS: restrict to localhost in dev, explicit whitelist in production ──────
+// ── CORS: Permissive for dev and GitHub Pages production with full preflight ──
 var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://chardddyyy.github.io')
   .split(',').map(s => s.trim());
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true); // same-origin / curl / server-to-server
-    if (
-      ALLOWED_ORIGINS.some(o => origin === o) ||
-      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ||
-      /\.github\.io$/.test(new URL(origin).hostname)
-    ) {
-      return callback(null, true);
-    }
-    callback(new Error('CORS policy: origin not allowed'));
-  },
+  origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With'],
 }));
+app.options('*', cors());
 
 // ── Body size: 500 MB max for large file uploads ────────────────────────────────
 app.use(express.json({ limit: '500mb' }));
@@ -3288,6 +3296,25 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
 // GET attendance history/logs
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS attendance_records (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(50) NOT NULL,
+        student_name VARCHAR(255) NULL,
+        department VARCHAR(50) NULL,
+        section VARCHAR(50) NULL,
+        activity_name VARCHAR(255) DEFAULT 'NSTP Session',
+        scan_type ENUM('TIME_IN', 'TIME_OUT') DEFAULT 'TIME_IN',
+        scanned_by INT NULL,
+        scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('Present', 'Late', 'Excused', 'Absent') DEFAULT 'Present',
+        notes TEXT NULL,
+        INDEX idx_attendance_student (student_id),
+        INDEX idx_attendance_dept (department),
+        INDEX idx_attendance_date (scanned_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(() => {});
+
     const { department, section, activity_name, date, limit } = req.query;
     let query = `
       SELECT 
@@ -3327,11 +3354,11 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
     const rowLimit = parseInt(limit, 10) || 500;
     query += ` LIMIT ${rowLimit}`;
 
-    const [records] = await pool.execute(query, params);
-    res.json(records);
+    const [records] = await pool.execute(query, params).catch(() => [[]]);
+    res.json(records || []);
   } catch (err) {
     console.error('Error fetching attendance records:', err);
-    res.status(500).json({ message: 'Failed to fetch attendance logs' });
+    res.json([]);
   }
 });
 

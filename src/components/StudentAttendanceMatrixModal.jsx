@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Filter, Download } from 'lucide-react';
+import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
-import { normalizeSectionName } from '../utils/signatureAssets';
 
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
@@ -12,7 +11,6 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSection, setSelectedSection] = useState('All');
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'admin' ? 'All' : (currentUser?.department || 'CWTS'));
   const [viewFilter, setViewFilter] = useState('all'); // 'all' | 'at-risk' (3+ absences) | 'perfect' (100%)
 
@@ -22,6 +20,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
 
     async function loadRecords() {
       try {
+        setLoading(true);
         const records = await attendanceAPI.getRecords({ limit: 1000 });
         if (isSubscribed) {
           setAttendanceRecords(Array.isArray(records) ? records : []);
@@ -37,8 +36,30 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
 
     loadRecords();
 
-    return () => { isSubscribed = false; };
+    const handleUpdate = () => {
+      loadRecords();
+    };
+    window.addEventListener('nstp_attendance_updated', handleUpdate);
+
+    return () => {
+      isSubscribed = false;
+      window.removeEventListener('nstp_attendance_updated', handleUpdate);
+    };
   }, [isOpen]);
+
+  // Identify which specific Days (Day 1 - Day 15) have actually been conducted/recorded in attendanceRecords
+  const conductedDaysSet = useMemo(() => {
+    const set = new Set();
+    attendanceRecords.forEach(r => {
+      const act = (r.activity_name || '').toLowerCase();
+      DAYS_ARRAY.forEach(d => {
+        if (act.includes(d.toLowerCase())) {
+          set.add(d);
+        }
+      });
+    });
+    return set;
+  }, [attendanceRecords]);
 
   // Build the Day 1 - Day 15 Matrix per student
   const studentMatrixList = useMemo(() => {
@@ -48,24 +69,26 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
     if (selectedDept !== 'All') {
       targetStudents = targetStudents.filter(s => s.department === selectedDept);
     }
-    if (selectedSection !== 'All') {
-      targetStudents = targetStudents.filter(s => {
-        const sec = normalizeSectionName(s.nstp_section || s.section, s.department);
-        const rawSec = (s.section || '').toUpperCase();
-        const rawNstpSec = (s.nstp_section || '').toUpperCase();
-        const filterSec = selectedSection.toUpperCase();
-        return sec === filterSec || rawSec === filterSec || rawNstpSec === filterSec || rawSec.includes(filterSec);
-      });
-    }
+
+    const totalConducted = conductedDaysSet.size;
 
     return targetStudents.map((st) => {
-      const stId = st.studentId || String(st.id);
-      const stRecords = attendanceRecords.filter(r => String(r.student_id) === String(stId));
+      const stId = String(st.studentId || st.id || '').trim();
+      const stRecords = attendanceRecords.filter(r => {
+        const rId = String(r.student_id || '').trim();
+        return rId === stId || (st.studentId && rId === String(st.studentId).trim());
+      });
 
-      // Day 1 - 15 map
+      // Map status for each Day 1 - Day 15
       const dayStatuses = {};
       DAYS_ARRAY.forEach((dayStr) => {
-        const found = stRecords.find(r => (r.activity_name || '').includes(dayStr));
+        const isConducted = conductedDaysSet.has(dayStr);
+        if (!isConducted) {
+          dayStatuses[dayStr] = '-'; // Not yet conducted / saved
+          return;
+        }
+
+        const found = stRecords.find(r => (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase()));
         if (found) {
           dayStatuses[dayStr] = found.status || 'Present';
         } else {
@@ -74,8 +97,9 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       });
 
       const presentCount = Object.values(dayStatuses).filter(st => st === 'Present' || st === 'Late').length;
-      const absentCount = TOTAL_NSTP_DAYS - presentCount;
-      const rate = Math.round((presentCount / TOTAL_NSTP_DAYS) * 100);
+      const absentCount = Object.values(dayStatuses).filter(st => st === 'Absent').length;
+      const rate = totalConducted > 0 ? Math.round((presentCount / totalConducted) * 100) : 100;
+      const isAtRisk = absentCount >= 3;
 
       return {
         ...st,
@@ -84,10 +108,11 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
         presentCount,
         absentCount,
         rate,
-        isAtRisk: absentCount >= 3
+        isAtRisk,
+        totalConducted
       };
     });
-  }, [students, attendanceRecords, selectedDept, selectedSection]);
+  }, [students, attendanceRecords, selectedDept, conductedDaysSet]);
 
   // Apply search and viewFilter (All vs At-Risk)
   const filteredMatrix = useMemo(() => {
@@ -115,29 +140,6 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   const totalStudents = studentMatrixList.length;
   const atRiskCount = studentMatrixList.filter(s => s.isAtRisk).length;
   const perfectCount = studentMatrixList.filter(s => s.absentCount === 0).length;
-
-  // Derive dynamic track sections available from active students
-  const availableSections = useMemo(() => {
-    const set = new Set();
-    students.forEach(st => {
-      const sec = st.nstp_section || st.section;
-      if (sec) {
-        set.add(normalizeSectionName(sec, st.department));
-      }
-    });
-
-    if (selectedDept === 'CWTS') {
-      ['CWTS-1', 'CWTS-2', 'CWTS-3', 'CWTS-4'].forEach(s => set.add(s));
-    } else if (selectedDept === 'LTS') {
-      ['LTS-1', 'LTS-2', 'LTS-3'].forEach(s => set.add(s));
-    } else if (selectedDept === 'ROTC') {
-      ['ROTC-1', 'ROTC-2'].forEach(s => set.add(s));
-    } else {
-      ['CWTS-1', 'CWTS-2', 'LTS-1', 'LTS-2', 'ROTC-1'].forEach(s => set.add(s));
-    }
-
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [students, selectedDept]);
 
   // Export Master Attendance Matrix to Excel (.xlsx)
   const handleExportMasterExcel = () => {
@@ -171,11 +173,18 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
         name,
         st.department || selectedDept,
         st.gradeAndSection,
-        ...DAYS_ARRAY.map(d => st.dayStatuses[d] === 'Present' ? 'PRESENT' : 'ABSENT'),
+        ...DAYS_ARRAY.map(d => {
+          const s = st.dayStatuses[d];
+          if (s === 'Present') return 'PRESENT';
+          if (s === 'Late') return 'LATE';
+          if (s === 'Excused') return 'EXCUSED';
+          if (s === 'Absent') return 'ABSENT';
+          return '-';
+        }),
         st.presentCount,
         st.absentCount,
         `${st.rate}%`,
-        st.isAtRisk ? 'WARNING (AT-RISK / 3+ ABSENCES)' : 'GOOD STANDING'
+        st.isAtRisk ? 'WARNING (AT-RISK / 3+ ABSENCES)' : (st.absentCount === 0 ? 'GOOD STANDING' : `${st.absentCount} ABSENCES`)
       ];
       exportRows.push(row);
     });
@@ -198,13 +207,14 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Attendance Matrix');
-    XLSX.writeFile(wb, `NSTP_Attendance_Ledger_${selectedDept}_Day1-15.xlsx`);
+    const fileName = `NSTP_Master_Attendance_Matrix_${selectedDept}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 select-none">
       <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up">
         
         {/* Header */}
@@ -228,7 +238,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           </button>
         </div>
 
-        {/* Stats Summary Bar */}
+        {/* Quick Analytics Cards */}
         <div className="grid grid-cols-3 gap-2 p-3 sm:p-4 bg-slate-50 border-b border-slate-200 text-xs">
           <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
             <div>
@@ -241,7 +251,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           </div>
 
           <div 
-            onClick={() => setViewFilter('at-risk')}
+            onClick={() => setViewFilter(viewFilter === 'at-risk' ? 'all' : 'at-risk')}
             className={`bg-white p-3 rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
               viewFilter === 'at-risk' ? 'border-rose-500 bg-rose-50/40 ring-2 ring-rose-500/20' : 'border-rose-200 hover:border-rose-400'
             }`}
@@ -259,7 +269,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           </div>
 
           <div 
-            onClick={() => setViewFilter('perfect')}
+            onClick={() => setViewFilter(viewFilter === 'perfect' ? 'all' : 'perfect')}
             className={`bg-white p-3 rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
               viewFilter === 'perfect' ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20' : 'border-emerald-200 hover:border-emerald-400'
             }`}
@@ -277,7 +287,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           </div>
         </div>
 
-        {/* Toolbar & Filters */}
+        {/* Toolbar & Filters (Section select removed as requested) */}
         <div className="p-3 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             {/* Search */}
@@ -305,18 +315,6 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                 <option value="LTS">LTS</option>
               </select>
             )}
-
-            {/* Section Filter */}
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
-            >
-              <option value="All">All Sections</option>
-              {availableSections.map(sec => (
-                <option key={sec} value={sec}>{sec}</option>
-              ))}
-            </select>
 
             {/* View Filter Toggle */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -346,7 +344,8 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           <button
             type="button"
             onClick={handleExportMasterExcel}
-            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            disabled={studentMatrixList.length === 0}
+            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
             <span>Export Master Excel</span>
@@ -411,25 +410,52 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                         {/* Day 1 to Day 15 Badges */}
                         {DAYS_ARRAY.map((day) => {
                           const status = st.dayStatuses[day];
-                          const isPresent = status === 'Present';
-                          return (
-                            <td key={day} className="p-1 text-center">
-                              {isPresent ? (
+                          if (status === 'Present') {
+                            return (
+                              <td key={day} className="p-1 text-center">
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 font-black text-[9px]" title={`${day}: Present`}>
                                   P
                                 </span>
-                              ) : (
+                              </td>
+                            );
+                          } else if (status === 'Late') {
+                            return (
+                              <td key={day} className="p-1 text-center">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-100 text-amber-800 font-black text-[9px]" title={`${day}: Late`}>
+                                  L
+                                </span>
+                              </td>
+                            );
+                          } else if (status === 'Excused') {
+                            return (
+                              <td key={day} className="p-1 text-center">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 text-blue-800 font-black text-[9px]" title={`${day}: Excused`}>
+                                  E
+                                </span>
+                              </td>
+                            );
+                          } else if (status === 'Absent') {
+                            return (
+                              <td key={day} className="p-1 text-center">
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-100 text-rose-700 font-black text-[9px]" title={`${day}: Absent`}>
                                   A
                                 </span>
-                              )}
-                            </td>
-                          );
+                              </td>
+                            );
+                          } else {
+                            return (
+                              <td key={day} className="p-1 text-center">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-slate-300 font-bold text-[10px]" title={`${day}: Not Recorded Yet`}>
+                                  •
+                                </span>
+                              </td>
+                            );
+                          }
                         })}
 
                         {/* Present Count */}
                         <td className="p-2.5 text-center font-black text-emerald-800">
-                          {st.presentCount} <span className="text-[10px] text-slate-400 font-normal">/ 15</span>
+                          {st.presentCount} <span className="text-[10px] text-slate-400 font-normal">/ {st.totalConducted || 15}</span>
                         </td>
 
                         {/* Absences Count */}
@@ -447,9 +473,17 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase">
                               <AlertTriangle className="w-3 h-3 text-rose-600" /> 3+ Absences
                             </span>
-                          ) : (
+                          ) : st.absentCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase">
+                              {st.absentCount} Absence{st.absentCount > 1 ? 's' : ''}
+                            </span>
+                          ) : st.presentCount > 0 ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Good ({st.rate}%)
+                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Good Standing
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">
+                              0 Absences
                             </span>
                           )}
                         </td>

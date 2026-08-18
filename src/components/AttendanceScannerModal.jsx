@@ -175,6 +175,48 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
     }
   };
 
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Save Record into Attendance Tracker without forced file download
+  const handleSaveRecord = () => {
+    if (sessionLogs.length === 0) {
+      alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
+      return;
+    }
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+      const newRecords = sessionLogs.map(log => ({
+        id: log.id || Date.now() + Math.random(),
+        student_id: log.student_id || log.student?.studentId,
+        student_name: log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`,
+        department: log.department || log.student?.department || 'CWTS',
+        section: log.section || log.student?.section || '',
+        activity_name: fullActivityTitle,
+        scan_type: log.scan_type || scanType,
+        scanned_at: new Date().toISOString(),
+        status: 'Present'
+      }));
+
+      // Merge and deduplicate by student_id + activity_name
+      const merged = [
+        ...newRecords,
+        ...existing.filter(e => !(
+          newRecords.some(n => String(n.student_id) === String(e.student_id) && (e.activity_name || '').includes(selectedDay))
+        ))
+      ];
+
+      localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(merged));
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+      alert(`✅ Matagumpay na na-save ang attendance record para sa ${selectedDay} (${sessionLogs.length} attendees)!`);
+    } catch (err) {
+      console.error('Error saving record:', err);
+      alert('Failed to save record. Please try again.');
+    }
+  };
+
   // 1-Click Excel Attendance Export (Day 1 - 15 Formatted)
   const handleExportToExcel = () => {
     if (sessionLogs.length === 0) {
@@ -440,8 +482,8 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                 )}
               </div>
 
-              {/* Action Toolbar: Excel Export Button */}
-              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+              {/* Action Toolbar: Save Record & Optional Excel Export */}
+              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setSessionLogs([])}
@@ -451,16 +493,30 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                   Clear List
                 </button>
 
-                {/* 1-Click Auto Save & Excel Recorder Button */}
-                <button
-                  type="button"
-                  onClick={handleExportToExcel}
-                  disabled={sessionLogs.length === 0}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                >
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-                  <span>Save &amp; Export Record ({selectedDay})</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Optional Excel Export Button */}
+                  <button
+                    type="button"
+                    onClick={handleExportToExcel}
+                    disabled={sessionLogs.length === 0}
+                    className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                    title="Export as Excel File"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  {/* Primary Save Record Button */}
+                  <button
+                    type="button"
+                    onClick={handleSaveRecord}
+                    disabled={sessionLogs.length === 0}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-amber-300" />
+                    <span>{isSaved ? 'Saved!' : `Save Record (${selectedDay})`}</span>
+                  </button>
+                </div>
               </div>
             </div>
 

@@ -637,9 +637,20 @@ export const attendanceAPI = {
       throw err;
     }
   },
-  getRecords: (params) => {
+  getRecords: async (params) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return apiCall('/attendance' + qs);
+    try {
+      const records = await apiCall('/attendance' + qs);
+      if (Array.isArray(records)) {
+        localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(records));
+        return records;
+      }
+    } catch (_) {}
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+      if (Array.isArray(cached)) return cached;
+    } catch (_) {}
+    return [];
   },
   deleteRecord: (id) => apiCall('/attendance/' + id, { method: 'DELETE' }),
   getStudentIdCards: async (params) => {
