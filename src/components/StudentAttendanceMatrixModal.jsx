@@ -47,18 +47,18 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
     };
   }, [isOpen]);
 
-  // Identify which specific Days (Day 1 - Day 15) have actually been conducted/recorded in attendanceRecords
-  const conductedDaysSet = useMemo(() => {
-    const set = new Set();
+  // Identify the highest/maximum Day conducted so far (e.g. if Day 8 was conducted, maxDay is 8)
+  const maxDayConducted = useMemo(() => {
+    let max = 0;
     attendanceRecords.forEach(r => {
       const act = (r.activity_name || '').toLowerCase();
-      DAYS_ARRAY.forEach(d => {
+      DAYS_ARRAY.forEach((d, idx) => {
         if (act.includes(d.toLowerCase())) {
-          set.add(d);
+          if (idx + 1 > max) max = idx + 1;
         }
       });
     });
-    return set;
+    return max;
   }, [attendanceRecords]);
 
   // Build the Day 1 - Day 15 Matrix per student
@@ -70,7 +70,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       targetStudents = targetStudents.filter(s => s.department === selectedDept);
     }
 
-    const totalConducted = conductedDaysSet.size;
+    const totalConducted = maxDayConducted;
 
     return targetStudents.map((st) => {
       const stId = String(st.studentId || st.id || '').trim();
@@ -81,23 +81,39 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
 
       // Map status for each Day 1 - Day 15
       const dayStatuses = {};
-      DAYS_ARRAY.forEach((dayStr) => {
-        const isConducted = conductedDaysSet.has(dayStr);
-        if (!isConducted) {
-          dayStatuses[dayStr] = '-'; // Not yet conducted / saved
+      DAYS_ARRAY.forEach((dayStr, idx) => {
+        const dayNumber = idx + 1;
+
+        if (totalConducted === 0 || dayNumber > totalConducted) {
+          dayStatuses[dayStr] = '-'; // Future / Not yet conducted (NOT an absence)
           return;
         }
 
-        const found = stRecords.find(r => (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase()));
-        if (found) {
-          dayStatuses[dayStr] = found.status || 'Present';
+        // For past/current conducted days (Day 1 up to maxDayConducted):
+        const matchingRecords = stRecords.filter(r => (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase()));
+        
+        if (matchingRecords.length > 0) {
+          const hasTimeOut = matchingRecords.some(r => r.scan_type === 'TIME_OUT' || r.status === 'Present');
+          const hasTimeIn = matchingRecords.some(r => r.scan_type === 'TIME_IN');
+          const isExcused = matchingRecords.some(r => r.status === 'Excused');
+
+          if (isExcused) {
+            dayStatuses[dayStr] = 'Excused';
+          } else if (hasTimeOut) {
+            dayStatuses[dayStr] = 'Present';
+          } else if (hasTimeIn) {
+            dayStatuses[dayStr] = 'Incomplete'; // Timed in only, did not time out
+          } else {
+            dayStatuses[dayStr] = 'Absent';
+          }
         } else {
+          // If past day was conducted but student has NO record for this day, they are automatically ABSENT
           dayStatuses[dayStr] = 'Absent';
         }
       });
 
       const presentCount = Object.values(dayStatuses).filter(st => st === 'Present' || st === 'Late').length;
-      const absentCount = Object.values(dayStatuses).filter(st => st === 'Absent').length;
+      const absentCount = Object.values(dayStatuses).filter(st => st === 'Absent' || st === 'Incomplete').length;
       const rate = totalConducted > 0 ? Math.round((presentCount / totalConducted) * 100) : 100;
       const isAtRisk = absentCount >= 3;
 
@@ -112,7 +128,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
         totalConducted
       };
     });
-  }, [students, attendanceRecords, selectedDept, conductedDaysSet]);
+  }, [students, attendanceRecords, selectedDept, maxDayConducted]);
 
   // Apply search and viewFilter (All vs At-Risk)
   const filteredMatrix = useMemo(() => {
@@ -431,6 +447,14 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                               <td key={day} className="p-1 text-center">
                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 text-blue-800 font-black text-[9px]" title={`${day}: Excused`}>
                                   E
+                                </span>
+                              </td>
+                            );
+                          } else if (status === 'Incomplete') {
+                            return (
+                              <td key={day} className="p-1 text-center">
+                                <span className="inline-flex items-center justify-center px-1 h-5 rounded-md bg-amber-100 text-amber-900 font-black text-[8px]" title={`${day}: Incomplete (Timed In only, did not Time Out)`}>
+                                  INC
                                 </span>
                               </td>
                             );

@@ -57,10 +57,35 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
   const handleProcessScan = useCallback(async (rawCode) => {
     if (!rawCode || isProcessingRef.current) return;
     isProcessingRef.current = true;
+    const cleanCode = rawCode.trim();
+
+    // Enforce Rule: Student CANNOT Time Out without a valid Time In for this day
+    const existingCache = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+    const hasTimeIn = sessionLogs.some(l => (
+      (String(l.student_id) === cleanCode || l.student?.studentId === cleanCode || l.student?.nstp_serial_id === cleanCode || l.student?.qr_token === cleanCode) &&
+      l.day === selectedDay &&
+      l.scan_type === 'TIME_IN'
+    )) || existingCache.some(r => (
+      String(r.student_id) === cleanCode &&
+      (r.activity_name || '').includes(selectedDay) &&
+      r.scan_type === 'TIME_IN'
+    ));
+
+    if (scanType === 'TIME_OUT' && !hasTimeIn) {
+      playScanBeep(false);
+      setScanStatus({
+        type: 'error',
+        message: `⚠️ Bawal mag-Time Out: Kailangan munang mag-Time In bago mag-Time Out para sa ${selectedDay}.`
+      });
+      setTimeout(() => {
+        isProcessingRef.current = false;
+      }, 1500);
+      return;
+    }
 
     try {
       const res = await attendanceAPI.scan({
-        tokenOrId: rawCode.trim(),
+        tokenOrId: cleanCode,
         activity_name: fullActivityTitle,
         scan_type: scanType
       });
@@ -70,14 +95,16 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
         setLastScannedStudent(res.student);
         setScanStatus({
           type: 'already',
-          message: res.message || `Already scanned for ${selectedDay}`
+          message: res.message || `Already ${scanType === 'TIME_IN' ? 'timed-in' : 'timed-out'} for ${selectedDay}`
         });
       } else if (res.success) {
         playScanBeep(true);
         setLastScannedStudent(res.student);
         setScanStatus({
           type: 'success',
-          message: res.message || `Attendance logged for ${selectedDay}!`
+          message: scanType === 'TIME_OUT'
+            ? `🟢 Time Out complete! Present status verified for ${selectedDay}.`
+            : `🟡 Time In recorded! Student must Time Out to complete attendance for ${selectedDay}.`
         });
 
         // Prepend to session logs
@@ -86,11 +113,12 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
             ...res.record,
             student: res.student,
             day: selectedDay,
-            student_id: res.student?.studentId || res.record?.student_id || rawCode.trim(),
+            student_id: res.student?.studentId || res.record?.student_id || cleanCode,
             student_name: res.student?.name || `${res.student?.firstName || ''} ${res.student?.lastName || ''}`.trim() || res.record?.student_name,
             department: res.student?.department || res.record?.department || 'CWTS',
             section: res.student?.section || res.record?.section || '',
             scan_type: scanType,
+            status: scanType === 'TIME_OUT' ? 'Present' : 'Timed In',
             time: new Date().toLocaleTimeString(),
             date: new Date().toLocaleDateString()
           },
@@ -108,7 +136,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
         isProcessingRef.current = false;
       }, 1500); // 1.5s cooldown to prevent repeated scans of the same card
     }
-  }, [fullActivityTitle, scanType, selectedDay]);
+  }, [fullActivityTitle, scanType, selectedDay, sessionLogs]);
 
   // Stop QR Camera Scanner
   const stopCamera = useCallback(async () => {
@@ -177,7 +205,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
 
   const [isSaved, setIsSaved] = useState(false);
 
-  // Save Record into Attendance Tracker without forced file download
+  // Save Record into Attendance Tracker (Only recognizes Present if BOTH Time In and Time Out are logged)
   const handleSaveRecord = () => {
     if (sessionLogs.length === 0) {
       alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
@@ -186,17 +214,61 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
 
     try {
       const existing = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
-      const newRecords = sessionLogs.map(log => ({
-        id: log.id || Date.now() + Math.random(),
-        student_id: log.student_id || log.student?.studentId,
-        student_name: log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`,
-        department: log.department || log.student?.department || 'CWTS',
-        section: log.section || log.student?.section || '',
-        activity_name: fullActivityTitle,
-        scan_type: log.scan_type || scanType,
-        scanned_at: new Date().toISOString(),
-        status: 'Present'
-      }));
+      
+      // Group session logs by student ID to verify both TIME_IN and TIME_OUT
+      const studentMap = {};
+      sessionLogs.forEach(log => {
+        const sid = String(log.student_id || log.student?.studentId);
+        if (!studentMap[sid]) {
+          studentMap[sid] = {
+            student: log.student,
+            student_id: sid,
+            student_name: log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`,
+            department: log.department || log.student?.department || 'CWTS',
+            section: log.section || log.student?.section || '',
+            hasTimeIn: false,
+            hasTimeOut: false,
+            timeInTime: null,
+            timeOutTime: null
+          };
+        }
+        if (log.scan_type === 'TIME_IN') {
+          studentMap[sid].hasTimeIn = true;
+          studentMap[sid].timeInTime = log.time;
+        }
+        if (log.scan_type === 'TIME_OUT') {
+          studentMap[sid].hasTimeOut = true;
+          studentMap[sid].timeOutTime = log.time;
+        }
+      });
+
+      // Also check existing cache for matching TIME_IN / TIME_OUT for this selectedDay
+      existing.forEach(rec => {
+        const sid = String(rec.student_id);
+        if (studentMap[sid] && (rec.activity_name || '').includes(selectedDay)) {
+          if (rec.scan_type === 'TIME_IN') studentMap[sid].hasTimeIn = true;
+          if (rec.scan_type === 'TIME_OUT') studentMap[sid].hasTimeOut = true;
+        }
+      });
+
+      const newRecords = Object.values(studentMap).map(st => {
+        // Complete present only if BOTH Time In and Time Out exist
+        const isCompletePresent = st.hasTimeIn && st.hasTimeOut;
+        return {
+          id: Date.now() + Math.random(),
+          student_id: st.student_id,
+          student_name: st.student_name,
+          department: st.department,
+          section: st.section,
+          activity_name: fullActivityTitle,
+          scan_type: isCompletePresent ? 'TIME_OUT' : 'TIME_IN',
+          scanned_at: new Date().toISOString(),
+          status: isCompletePresent ? 'Present' : 'Incomplete'
+        };
+      });
+
+      const fullyPresentCount = newRecords.filter(r => r.status === 'Present').length;
+      const incompleteCount = newRecords.filter(r => r.status === 'Incomplete').length;
 
       // Merge and deduplicate by student_id + activity_name
       const merged = [
@@ -210,7 +282,12 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
-      alert(`✅ Matagumpay na na-save ang attendance record para sa ${selectedDay} (${sessionLogs.length} attendees)!`);
+
+      let msg = `✅ Na-save ang attendance para sa ${selectedDay}:\n• ${fullyPresentCount} Present (nakapag-Time In at Time Out)\n`;
+      if (incompleteCount > 0) {
+        msg += `• ${incompleteCount} Incomplete (naka-Time In lang pero hindi nag-Time Out - hindi pa counted as Present).`;
+      }
+      alert(msg);
     } catch (err) {
       console.error('Error saving record:', err);
       alert('Failed to save record. Please try again.');

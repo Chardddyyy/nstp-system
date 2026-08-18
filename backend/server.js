@@ -3247,21 +3247,30 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
       [student.studentId, actName, sType]
     );
 
-    if (existing.length > 0) {
-      return res.status(200).json({
-        already_scanned: true,
-        message: `${student.name || student.studentId} has already ${sType === 'TIME_IN' ? 'timed-in' : 'timed-out'} today at ${new Date(existing[0].scanned_at).toLocaleTimeString()}`,
-        student,
-        record: existing[0]
-      });
+    // If scanning TIME_OUT, require student to have timed-in first for this activity/session
+    if (sType === 'TIME_OUT') {
+      const [timeInRecord] = await pool.execute(
+        `SELECT * FROM attendance_records 
+         WHERE student_id = ? 
+           AND activity_name = ? 
+           AND scan_type = 'TIME_IN' 
+         ORDER BY scanned_at DESC LIMIT 1`,
+        [student.studentId, actName]
+      );
+      if (timeInRecord.length === 0) {
+        return res.status(400).json({
+          message: `Bawal mag-Time Out: Hindi pa nakakapag-Time In si ${student.name || student.studentId} para sa ${actName}.`
+        });
+      }
     }
 
     // Insert new attendance record
+    const statusValue = sType === 'TIME_OUT' ? 'Present' : 'Timed In';
     const [insertResult] = await pool.execute(
       `INSERT INTO attendance_records (
         student_id, student_name, department, section,
         activity_name, scan_type, scanned_by, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Present', ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         student.studentId,
         student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
@@ -3270,6 +3279,7 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
         actName,
         sType,
         req.user.id,
+        statusValue,
         notes || null
       ]
     );
