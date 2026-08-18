@@ -1,10 +1,11 @@
 import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
+import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText
+  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -23,7 +24,7 @@ function StudentManagement() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [isDownloadingIds, setIsDownloadingIds] = useState(false);
+  const [showBatchIdModal, setShowBatchIdModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagination state
@@ -61,7 +62,9 @@ function StudentManagement() {
     facebookAccount: '',
     emergencyContact: '',
     emergencyName: '',
-    emergencyNumber: ''
+    emergencyNumber: '',
+    registrationPhoto: '',
+    photo: ''
   });
 
   const [heightUnit, setHeightUnit] = useState('cm');
@@ -253,6 +256,10 @@ function StudentManagement() {
         alert(`"${fieldLabels[field] || field}" is required. Please fill it in before saving.`);
         return;
       }
+    }
+    if (!formData.registrationPhoto && !formData.photo) {
+      alert('Official 2x2 ID Photo (White Background, White Shirt) is required.');
+      return;
     }
     const idLen = formData.studentId.replace(/\D/g, '').length;
     if (idLen !== 9) {
@@ -594,128 +601,7 @@ function StudentManagement() {
     }
   };
 
-  // Direct 1-Click Word DOCX Download for Standard Elementary/Student ID Cards fitted on A4
-  const handleDirectDownloadStudentIdsDocx = async () => {
-    try {
-      setIsDownloadingIds(true);
-      let targetStudents = filteredStudents;
-      if (!targetStudents || targetStudents.length === 0) {
-        targetStudents = students.filter(s => !s.status || s.status === 'Active');
-      }
 
-      if (targetStudents.length === 0) {
-        alert('Walang active student records na mada-download.');
-        setIsDownloadingIds(false);
-        return;
-      }
-
-      let cardsHtml = '';
-      for (let i = 0; i < targetStudents.length; i += 2) {
-        const s1 = targetStudents[i];
-        const s2 = targetStudents[i + 1] || null;
-
-        const renderCardCell = (st) => {
-          if (!st) return '<td style="width: 3.37in; border: none;"></td>';
-          const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
-          const dept = (st.department || 'CWTS').toUpperCase();
-          const serial = st.nstp_serial_id || `NSTP-2026-${dept}-${String(st.studentId || st.id || '0000').slice(-4)}`;
-          const deptColor = dept === 'ROTC' ? '#991b1b' : dept === 'LTS' ? '#6b21a8' : '#065f46';
-
-          return `
-            <td style="width: 3.37in; height: 2.125in; border: 2pt solid ${deptColor}; border-radius: 8pt; padding: 6pt; vertical-align: top; background-color: #ffffff; font-family: Arial, sans-serif;">
-              <table style="width: 100%; border-collapse: collapse; border-bottom: 1.5pt solid #f59e0b; margin-bottom: 4pt;">
-                <tr>
-                  <td style="vertical-align: middle; text-align: left;">
-                    <div style="font-size: 7.5pt; font-weight: bold; color: ${deptColor}; text-transform: uppercase;">CAVITE STATE UNIVERSITY</div>
-                    <div style="font-size: 6pt; font-weight: bold; color: #475569;">NAIC CAMPUS • NSTP (${dept})</div>
-                  </td>
-                  <td style="vertical-align: middle; text-align: right;">
-                    <span style="font-size: 6.5pt; font-weight: bold; background-color: ${deptColor}; color: #ffffff; padding: 2pt 4pt; border-radius: 3pt;">${dept}</span>
-                  </td>
-                </tr>
-              </table>
-              <table style="width: 100%; border-collapse: collapse; margin-top: 2pt;">
-                <tr>
-                  <td style="width: 0.85in; vertical-align: top; text-align: center;">
-                    <div style="width: 0.8in; height: 0.95in; border: 1pt solid #cbd5e1; background-color: #f8fafc; text-align: center; line-height: 0.95in; font-size: 6pt; font-weight: bold; color: #94a3b8;">
-                      2x2 PHOTO
-                    </div>
-                  </td>
-                  <td style="vertical-align: top; padding-left: 6pt;">
-                    <div style="font-size: 6pt; font-weight: bold; color: #64748b; text-transform: uppercase;">Student Name</div>
-                    <div style="font-size: 8.5pt; font-weight: 900; color: #0f172a; line-height: 10pt; margin-bottom: 3pt;">${name}</div>
-                    <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Student No: <span style="font-weight: 900; color: #0f172a;">${st.studentId || 'N/A'}</span></div>
-                    <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Program/Sec: <span style="font-weight: 900; color: #0f172a;">${st.program || 'BS'} ${st.section ? `Sec ${st.section}` : ''}</span></div>
-                    <div style="font-size: 6pt; font-weight: bold; color: ${deptColor}; margin-top: 2pt;">Serial ID: <b>${serial}</b></div>
-                  </td>
-                </tr>
-              </table>
-              <table style="width: 100%; border-collapse: collapse; border-top: 1pt solid #e2e8f0; margin-top: 4pt; padding-top: 2pt;">
-                <tr>
-                  <td style="font-size: 5.5pt; color: #64748b;">Valid: AY 2025-2026</td>
-                  <td style="font-size: 5.5pt; text-align: right; font-weight: bold; color: ${deptColor};">OFFICIAL NSTP CADET ID</td>
-                </tr>
-              </table>
-            </td>
-          `;
-        };
-
-        cardsHtml += `
-          <tr style="height: 2.2in;">
-            ${renderCardCell(s1)}
-            <td style="width: 0.2in;"></td>
-            ${renderCardCell(s2)}
-          </tr>
-          <tr style="height: 0.15in;"><td colspan="3"></td></tr>
-        `;
-      }
-
-      const docContent = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-          <meta charset="utf-8">
-          <title>NSTP Student IDs A4</title>
-          <style>
-            @page Section1 {
-              size: 210mm 297mm;
-              margin: 10mm 10mm 10mm 10mm;
-              mso-header-margin: 0mm;
-              mso-footer-margin: 0mm;
-            }
-            div.Section1 { page: Section1; }
-            body { font-family: Arial, sans-serif; }
-            table { page-break-inside: avoid; }
-          </style>
-        </head>
-        <body>
-          <div class="Section1">
-            <div style="text-align: center; margin-bottom: 8pt;">
-              <h3 style="margin: 0; font-size: 11pt; color: #064e3b;">CAVITE STATE UNIVERSITY - NAIC CAMPUS</h3>
-              <p style="margin: 0; font-size: 8pt; color: #475569;">NATIONAL SERVICE TRAINING PROGRAM • OFFICIAL STUDENT ID CARDS (A4)</p>
-            </div>
-            <table style="width: 100%; border-collapse: collapse; margin: 0 auto;">
-              ${cardsHtml}
-            </table>
-          </div>
-        </body>
-        </html>
-      `;
-
-      const blob = new Blob(['\ufeff', docContent], { type: 'application/msword' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `NSTP_Student_IDs_${filterDept || 'All'}_A4.doc`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error downloading DOC:', err);
-    } finally {
-      setIsDownloadingIds(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">
@@ -797,16 +683,15 @@ function StudentManagement() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-              {/* Direct Download Student IDs Button (Admin Only) */}
+              {/* Batch NSTP IDs Download & Print Button (Admin Only) */}
               {isAdmin && (
                 <button type="button"
-                  onClick={handleDirectDownloadStudentIdsDocx}
-                  disabled={isDownloadingIds}
-                  title="Directly download standard student ID cards fitted on A4 (.doc format)"
-                  className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-emerald-600/50 disabled:opacity-60"
+                  onClick={() => setShowBatchIdModal(true)}
+                  title="Download or print standard student ID cards with Select All and filtering"
+                  className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-emerald-600/50"
                 >
                   <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
-                  <span>{isDownloadingIds ? 'Downloading IDs...' : 'Download Student IDs'}</span>
+                  <span>Download Student IDs</span>
                 </button>
               )}
 
@@ -1634,6 +1519,51 @@ function StudentManagement() {
                       />
                     </div>
                   </div>
+
+                  {/* 2x2 ID Photo Upload with White Background & White Shirt */}
+                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                    <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1">
+                      2x2 ID Picture (White Background, White Shirt) *
+                    </label>
+                    <p className="text-[11px] text-slate-500 mb-3">
+                      Required for official NSTP ID Card printing. Ensure clear portrait face view.
+                    </p>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-20 bg-white rounded-xl border-2 border-emerald-300 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                        {formData.registrationPhoto || formData.photo ? (
+                          <img src={formData.registrationPhoto || formData.photo} alt="2x2 Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[9px] font-bold text-slate-400 text-center">2x2 PHOTO</span>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{formData.registrationPhoto || formData.photo ? 'Change 2x2 Photo' : 'Upload 2x2 Photo'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  registrationPhoto: ev.target.result,
+                                  photo: ev.target.result
+                                }));
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -2436,6 +2366,13 @@ function StudentManagement() {
             </div>
           </div>
         )}
+
+        {/* Batch A4 NSTP ID Cards Download & Print Modal */}
+        <BatchIdPrintModal
+          isOpen={showBatchIdModal}
+          onClose={() => setShowBatchIdModal(false)}
+          defaultDepartment={isAdmin ? filterDept : (user?.department || 'CWTS')}
+        />
 
       </main>
       <ScrollToTopButton />

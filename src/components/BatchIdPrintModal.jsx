@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, FileText, CheckSquare, Square, Download, Search } from 'lucide-react';
+import { X, Printer, FileText, CheckSquare, Square, Search } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import NstpIdCard from './NstpIdCard';
+import { formatGradeAndSection } from '../utils/gradeSection';
 
 export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', defaultSection = 'All' }) {
   const [students, setStudents] = useState([]);
@@ -10,7 +11,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
   const [departmentFilter, setDepartmentFilter] = useState(defaultDepartment);
   const [sectionFilter, setSectionFilter] = useState(defaultSection);
   const [searchQuery, setSearchQuery] = useState('');
-  const [printLayout, setPrintLayout] = useState('folding'); // 'folding' (side-by-side) | 'duplex' (fronts then backs)
+  const [printLayout, setPrintLayout] = useState('folding'); // 'folding' (front & back side-by-side) | 'duplex' (fronts then backs)
 
   useEffect(() => {
     if (!isOpen) return;
@@ -67,7 +68,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
     window.print();
   };
 
-  // Export Standard Elementary/Student ID Cards fitted on A4 in Microsoft Word DOC Format
+  // Download Standard Vertical Portrait Elementary/Student ID Cards in Microsoft Word (.doc)
   const handleDownloadDocx = () => {
     if (selectedStudentsList.length === 0) return;
 
@@ -76,65 +77,64 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
       const s1 = selectedStudentsList[i];
       const s2 = selectedStudentsList[i + 1] || null;
 
-      const renderCardCell = (st) => {
-        if (!st) return '<td style="width: 3.37in; border: none;"></td>';
+      const renderPortraitCardCell = (st) => {
+        if (!st) return '<td style="width: 2.125in; border: none;"></td>';
         const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
         const dept = (st.department || 'CWTS').toUpperCase();
-        const serial = st.nstp_serial_id || `NSTP-2026-${dept}-${String(st.studentId || st.id || '0000').slice(-4)}`;
-        const deptColor = dept === 'ROTC' ? '#991b1b' : dept === 'LTS' ? '#6b21a8' : '#065f46';
+        const matriculationNo = st.nstp_serial_id || `NSTP-${dept}-2026-00001`;
+        const gradeSec = formatGradeAndSection(st);
+        const photo = st.registration_photo || st.registrationPhoto || st.photo || '';
 
         return `
-          <td style="width: 3.37in; height: 2.125in; border: 2pt solid ${deptColor}; border-radius: 8pt; padding: 6pt; vertical-align: top; background-color: #ffffff; font-family: Arial, sans-serif;">
-            <!-- Header -->
-            <table style="width: 100%; border-collapse: collapse; border-bottom: 1.5pt solid #f59e0b; margin-bottom: 4pt;">
+          <td style="width: 2.125in; height: 3.37in; border: 2pt solid #064e3b; border-radius: 8pt; padding: 4pt; vertical-align: top; background-color: #ffffff; font-family: Arial, sans-serif; text-align: center;">
+            <!-- Header with CvSU Title & Track -->
+            <table style="width: 100%; border-collapse: collapse; border-bottom: 1.5pt solid #f59e0b; background-color: #064e3b; padding: 2pt; border-radius: 4pt;">
               <tr>
-                <td style="vertical-align: middle; text-align: left;">
-                  <div style="font-size: 7.5pt; font-weight: bold; color: ${deptColor}; text-transform: uppercase;">CAVITE STATE UNIVERSITY</div>
-                  <div style="font-size: 6pt; font-weight: bold; color: #475569;">NAIC CAMPUS • NSTP (${dept})</div>
-                </td>
-                <td style="vertical-align: middle; text-align: right;">
-                  <span style="font-size: 6.5pt; font-weight: bold; background-color: ${deptColor}; color: #ffffff; padding: 2pt 4pt; border-radius: 3pt;">${dept}</span>
+                <td style="vertical-align: middle; text-align: left; padding: 2pt;">
+                  <div style="font-size: 6.5pt; font-weight: bold; color: #ffffff; text-transform: uppercase;">CAVITE STATE UNIVERSITY</div>
+                  <div style="font-size: 5pt; font-weight: bold; color: #fde047;">NAIC CAMPUS • NSTP (${dept})</div>
                 </td>
               </tr>
             </table>
 
-            <!-- Body Details -->
-            <table style="width: 100%; border-collapse: collapse; margin-top: 2pt;">
+            <!-- 2x2 Photo Box -->
+            <div style="margin: 4pt auto 2pt auto; width: 0.85in; height: 0.95in; border: 1.5pt solid #064e3b; background-color: #f8fafc; text-align: center; line-height: 0.95in; overflow: hidden;">
+              ${photo ? `<img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;" alt="Photo" />` : '<span style="font-size: 6pt; font-weight: bold; color: #94a3b8;">2x2 PHOTO</span>'}
+            </div>
+
+            <!-- Student Name -->
+            <div style="font-size: 5pt; font-weight: bold; color: #64748b; text-transform: uppercase; margin-top: 2pt;">Student Name</div>
+            <div style="font-size: 7.5pt; font-weight: 900; color: #064e3b; line-height: 8.5pt; margin-bottom: 2pt;">${name}</div>
+
+            <!-- Grade and Section & Student No. -->
+            <table style="width: 100%; border-collapse: collapse; background-color: #f8fafc; border: 0.5pt solid #cbd5e1; border-radius: 3pt; font-size: 5.5pt; margin-top: 2pt;">
               <tr>
-                <td style="width: 0.85in; vertical-align: top; text-align: center;">
-                  <div style="width: 0.8in; height: 0.95in; border: 1pt solid #cbd5e1; background-color: #f8fafc; text-align: center; line-height: 0.95in; font-size: 6pt; font-weight: bold; color: #94a3b8;">
-                    2x2 PHOTO
-                  </div>
-                </td>
-                <td style="vertical-align: top; padding-left: 6pt;">
-                  <div style="font-size: 6pt; font-weight: bold; color: #64748b; text-transform: uppercase;">Student Name</div>
-                  <div style="font-size: 8.5pt; font-weight: 900; color: #0f172a; line-height: 10pt; margin-bottom: 3pt;">${name}</div>
-                  
-                  <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Student No: <span style="font-weight: 900; color: #0f172a;">${st.studentId || 'N/A'}</span></div>
-                  <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Program/Sec: <span style="font-weight: 900; color: #0f172a;">${st.program || 'BS'} ${st.section ? `Sec ${st.section}` : ''}</span></div>
-                  <div style="font-size: 6pt; font-weight: bold; color: ${deptColor}; margin-top: 2pt;">Serial ID: <b>${serial}</b></div>
-                </td>
+                <td style="padding: 2pt; text-align: left;"><b>Student No:</b> ${st.studentId || 'N/A'}</td>
+                <td style="padding: 2pt; text-align: right;"><b>Grade & Sec:</b> <span style="font-weight: 900; color: #064e3b;">${gradeSec}</span></td>
               </tr>
             </table>
 
-            <!-- Footer Line -->
-            <table style="width: 100%; border-collapse: collapse; border-top: 1pt solid #e2e8f0; margin-top: 4pt; padding-top: 2pt;">
-              <tr>
-                <td style="font-size: 5.5pt; color: #64748b;">Valid: AY 2025-2026</td>
-                <td style="font-size: 5.5pt; text-align: right; font-weight: bold; color: ${deptColor};">OFFICIAL NSTP CADET ID</td>
-              </tr>
-            </table>
+            <!-- Matriculation Number -->
+            <div style="background-color: #ecfdf5; border: 0.5pt solid #a7f3d0; border-radius: 3pt; padding: 2pt; margin-top: 3pt;">
+              <div style="font-size: 4.8pt; font-weight: bold; color: #065f46; text-transform: uppercase;">Matriculation Number</div>
+              <div style="font-size: 6.5pt; font-weight: 900; color: #064e3b;">${matriculationNo}</div>
+            </div>
+
+            <!-- Back Info Summary -->
+            <div style="font-size: 4.5pt; color: #64748b; margin-top: 3pt; border-top: 0.5pt solid #e2e8f0; padding-top: 2pt;">
+              Emergency: ${st.emergencyNumber || st.contactNumber || 'N/A'} | AY 2025-2026
+            </div>
           </td>
         `;
       };
 
       cardsHtml += `
-        <tr style="height: 2.2in;">
-          ${renderCardCell(s1)}
-          <td style="width: 0.2in;"></td>
-          ${renderCardCell(s2)}
+        <tr style="height: 3.4in;">
+          ${renderPortraitCardCell(s1)}
+          <td style="width: 0.3in;"></td>
+          ${renderPortraitCardCell(s2)}
         </tr>
-        <tr style="height: 0.15in;"><td colspan="3"></td></tr>
+        <tr style="height: 0.2in;"><td colspan="3"></td></tr>
       `;
     }
 
@@ -145,11 +145,10 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
         <title>NSTP Student IDs A4</title>
         <style>
           @page Section1 {
-            size: 210mm 297mm; /* Standard A4 */
+            size: 210mm 297mm;
             margin: 10mm 10mm 10mm 10mm;
             mso-header-margin: 0mm;
             mso-footer-margin: 0mm;
-            mso-paper-source: 0;
           }
           div.Section1 { page: Section1; }
           body { font-family: Arial, sans-serif; }
@@ -160,7 +159,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
         <div class="Section1">
           <div style="text-align: center; margin-bottom: 8pt;">
             <h3 style="margin: 0; font-size: 11pt; color: #064e3b;">CAVITE STATE UNIVERSITY - NAIC CAMPUS</h3>
-            <p style="margin: 0; font-size: 8pt; color: #475569;">NATIONAL SERVICE TRAINING PROGRAM • OFFICIAL STUDENT ID CARDS (A4)</p>
+            <p style="margin: 0; font-size: 8pt; color: #475569;">NATIONAL SERVICE TRAINING PROGRAM • VERTICAL STUDENT ID CARDS (A4)</p>
           </div>
           <table style="width: 100%; border-collapse: collapse; margin: 0 auto;">
             ${cardsHtml}
@@ -190,11 +189,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
         <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shadow-md">
-              <Printer className="w-5 h-5" />
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black leading-tight">Standard Student ID Cards (A4 Fit)</h3>
-              <p className="text-xs text-emerald-200 font-medium">Standard elementary/student ID format with Word Document download and A4 print options</p>
+              <h3 className="text-base sm:text-lg font-black leading-tight">Download &amp; Print Student ID Cards</h3>
+              <p className="text-xs text-emerald-200 font-medium">Select students to download in Word DOC (.doc) or print standard vertical cards on A4</p>
             </div>
           </div>
 
@@ -217,7 +216,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search student or serial..."
+                placeholder="Search student or matriculation no..."
                 className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
@@ -255,9 +254,9 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   printLayout === 'folding' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
-                title="Front and Back side-by-side for easy folding and laminating"
+                title="Front and Back side-by-side"
               >
-                Folding Pair (4 Pairs/A4)
+                Side-by-Side (Front &amp; Back)
               </button>
               <button
                 type="button"
@@ -265,9 +264,9 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                   printLayout === 'duplex' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
                 }`}
-                title="8 Fronts on Page 1, 8 Backs on Page 2 for double-sided printers"
+                title="Fronts on Page 1, Backs on Page 2"
               >
-                Duplex (8 Fronts / 8 Backs)
+                Duplex Mode
               </button>
             </div>
           </div>
@@ -288,7 +287,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
               type="button"
               onClick={handleDownloadDocx}
               disabled={selectedStudentsList.length === 0}
-              title="Download standard ID cards in Microsoft Word DOC format"
+              title="Download selected student ID cards in Microsoft Word DOC format"
               className="px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-black shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <FileText className="w-4 h-4 text-blue-200" />
@@ -317,10 +316,10 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
             </div>
           ) : selectedStudentsList.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 font-medium">
-              No students selected for printing. Please select at least one student.
+              No students selected. Please check at least one student to download or print.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {filteredStudents.map((st) => {
                 const isSelected = selectedIds.has(st.id);
                 return (
@@ -338,16 +337,16 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                           onChange={() => toggleSelectOne(st.id)}
                           className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-500 cursor-pointer"
                         />
-                        <span className="font-black text-xs text-slate-800">
-                          {st.name || `${st.firstName || ''} ${st.lastName || ''}`} ({st.studentId})
+                        <span className="font-black text-xs text-slate-800 truncate max-w-[150px]">
+                          {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                         </span>
                       </label>
-                      <span className="text-[10px] font-bold text-slate-500 font-mono">
-                        {st.nstp_serial_id}
+                      <span className="text-[9px] font-bold text-emerald-900 font-mono">
+                        {formatGradeAndSection(st)}
                       </span>
                     </div>
 
-                    {/* Render ID Card Preview */}
+                    {/* Render Portrait ID Card Preview */}
                     <div className="scale-90 origin-top transform-gpu">
                       <NstpIdCard student={st} side="both" />
                     </div>
@@ -378,26 +377,26 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
               width: 194mm;
               min-height: 281mm;
               display: grid;
-              grid-template-columns: repeat(2, 85.6mm);
-              grid-gap: 6mm 10mm;
+              grid-template-columns: repeat(2, 53.98mm 53.98mm);
+              grid-gap: 5mm 6mm;
               justify-content: center;
               align-content: start;
               margin: 0 auto;
               padding: 4mm 0;
             }
             .id-card-front, .id-card-back {
-              border: 1px solid #cbd5e1 !important;
+              border: 1.5px solid #064e3b !important;
               box-shadow: none !important;
-              border-radius: 4mm !important;
+              border-radius: 3mm !important;
               page-break-inside: avoid !important;
             }
           }
         `}} />
 
         {printLayout === 'folding' ? (
-          // Folding Mode: 4 Students per page (Front & Back side-by-side)
-          Array.from({ length: Math.ceil(selectedStudentsList.length / 4) }).map((_, pageIdx) => {
-            const pageStudents = selectedStudentsList.slice(pageIdx * 4, pageIdx * 4 + 4);
+          // Folding Mode: Front & Back side-by-side
+          Array.from({ length: Math.ceil(selectedStudentsList.length / 3) }).map((_, pageIdx) => {
+            const pageStudents = selectedStudentsList.slice(pageIdx * 3, pageIdx * 3 + 3);
             return (
               <div key={pageIdx} className="a4-print-page">
                 {pageStudents.map((st) => (
@@ -414,12 +413,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
             );
           })
         ) : (
-          // Duplex Mode: 8 Fronts on Page 1, 8 Backs on Page 2
-          Array.from({ length: Math.ceil(selectedStudentsList.length / 8) }).map((_, pageIdx) => {
-            const pageStudents = selectedStudentsList.slice(pageIdx * 8, pageIdx * 8 + 8);
+          // Duplex Mode
+          Array.from({ length: Math.ceil(selectedStudentsList.length / 6) }).map((_, pageIdx) => {
+            const pageStudents = selectedStudentsList.slice(pageIdx * 6, pageIdx * 6 + 6);
             return (
               <React.Fragment key={pageIdx}>
-                {/* Page Fronts */}
                 <div className="a4-print-page">
                   {pageStudents.map((st) => (
                     <div key={`front-${st.id}`} className="flex items-center justify-center">
@@ -427,7 +425,6 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                     </div>
                   ))}
                 </div>
-                {/* Page Backs */}
                 <div className="a4-print-page">
                   {pageStudents.map((st) => (
                     <div key={`back-${st.id}`} className="flex items-center justify-center">

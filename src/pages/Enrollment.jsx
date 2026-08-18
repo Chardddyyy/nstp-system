@@ -1486,15 +1486,15 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 5: Registration Form Attachment */}
+              {/* Step 5: 2x2 ID Picture Attachment */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <FileCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-emerald-950">5. Registration Form Photo Attachment *</h3>
-                    <p className="text-xs text-gray-500 font-medium">Attach or scan a clear photo of your official CvSU Registration Form</p>
+                    <h3 className="text-base font-black text-emerald-950">5. 2x2 ID Picture (White Background &amp; White Shirt) *</h3>
+                    <p className="text-xs text-gray-500 font-medium">Attach an official 2x2 ID photo (Plain White Background, White Shirt / Collared). This photo will be automatically printed on your official NSTP ID Card.</p>
                   </div>
                 </div>
 
@@ -1510,7 +1510,7 @@ function Enrollment() {
                   ref={cameraInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
+                  capture="user"
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
@@ -1524,9 +1524,9 @@ function Enrollment() {
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Upload className="w-7 h-7" />
                     </div>
-                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload Your CvSU Registration Form</h4>
+                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Picture</h4>
                     <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
-                      Supported files: JPG, PNG, WEBP, HEIC, PDF. Ensure text and student details are clearly readable.
+                      Required: Plain <b>White Background</b> and <b>White Shirt</b>. Clear face view without sunglasses or face coverings.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
@@ -1535,7 +1535,7 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
-                        Choose from Device
+                        Choose 2x2 Photo
                       </button>
                       <button
                         type="button"
@@ -1543,22 +1543,22 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
-                        Scan / Take Photo
+                        Take 2x2 Photo
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border border-emerald-200 shrink-0 shadow-sm">
-                        <img src={registrationPhoto} alt="Uploaded form" className="w-full h-full object-cover" />
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm">
+                        <img src={registrationPhoto} alt="2x2 ID Photo" className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> Attached
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> 2x2 Photo Attached
                         </span>
-                        <h4 className="text-xs font-black text-gray-900 truncate">Registration Form Attached</h4>
-                        <p className="text-[11px] text-gray-500">Document successfully loaded and ready for submission</p>
+                        <h4 className="text-xs font-black text-gray-900 truncate">2x2 ID Picture Ready</h4>
+                        <p className="text-[11px] text-gray-500">Official photo successfully loaded for your NSTP ID card</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
