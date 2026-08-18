@@ -34,7 +34,6 @@ function InstructorDashboard() {
   const [archivedYears, setArchivedYears] = useState([]);
   const [archiveViewData, setArchiveViewData] = useState(null);
   const [isArchiving, setIsArchiving] = useState(false);
-  const [archiveToast, setArchiveToast] = useState(null);
 
   const loadArchivedYears = async () => {
     try {
@@ -78,12 +77,9 @@ function InstructorDashboard() {
         letterTemplates = raw ? JSON.parse(raw) : [];
       } catch {}
       await archivesAPI.archiveBatch(currYear, { letterTemplates });
-      setArchiveToast({ type: 'success', message: `${user?.department || 'Department'} Batch ${currYear} archived successfully!` });
       loadArchivedYears();
-      setTimeout(() => setArchiveToast(null), 3000);
     } catch (err) {
-      setArchiveToast({ type: 'error', message: err.message || 'Failed to archive batch' });
-      setTimeout(() => setArchiveToast(null), 3000);
+      alert(err.message || 'Failed to archive batch');
     } finally {
       setIsArchiving(false);
     }
@@ -613,18 +609,6 @@ function InstructorDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Toast Notification */}
-        {archiveToast && (
-          <div className="fixed bottom-5 right-5 z-50 animate-bounce-in max-w-sm">
-            <div className={`p-4 rounded-2xl shadow-xl flex items-center gap-3 border text-white text-xs font-bold ${
-              archiveToast.type === 'error' ? 'bg-rose-900 border-rose-700' : 'bg-emerald-900 border-emerald-700'
-            }`}>
-              {archiveToast.type === 'error' ? <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" /> : <CheckCircle className="w-5 h-5 text-amber-400 shrink-0" />}
-              <span>{archiveToast.message}</span>
-            </div>
-          </div>
-        )}
 
         {/* Archive Modal - Historical Department Batches */}
         {showArchiveModal && (

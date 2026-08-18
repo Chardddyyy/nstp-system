@@ -242,7 +242,6 @@ function AdminDashboard() {
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [photoViewer, setPhotoViewer] = useState(null);
-  const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
   // Online Enrollment Portal Status Switch (stored in localStorage)
@@ -255,19 +254,15 @@ function AdminDashboard() {
     const next = !_enrollmentOpen;
     _setEnrollmentOpen(next);
     localStorage.setItem('nstp_enrollment_open', JSON.stringify(next));
-    setNotification({
-      type: 'success',
-      message: `Online Enrollment is now ${next ? 'OPEN' : 'CLOSED'}`
-    });
-    setTimeout(() => setNotification(null), 3000);
   };
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
   const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
   const [analyticsViewMode, setAnalyticsViewMode] = useState('chart');
 
   const showNotif = (type, message) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), 1000);
+    if (type === 'error') {
+      alert(message);
+    }
   };
 
   const showConfirm = (message, onConfirm) => {
@@ -528,21 +523,6 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 page-enter">
-
-      {/* Centered notification toast */}
-      {notification && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-          <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
-            {notification.type === 'success'
-              ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-              : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
-            <span className="flex-1 font-bold">{notification.message}</span>
-            <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Centered confirm dialog */}
       {confirmDialog && (

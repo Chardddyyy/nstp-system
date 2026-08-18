@@ -126,7 +126,6 @@ function Enrollment() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [pendingTrack, setPendingTrack] = useState(null);
-  const [toast, setToast] = useState(null);
   const [errorBanner, setErrorBanner] = useState([]);
   const errorTimerRef = useRef(null);
 
@@ -251,8 +250,9 @@ function Enrollment() {
   };
 
   const showToast = (message, type = 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 1000);
+    if (type === 'error') {
+      alert(message);
+    }
   };
 
   const validateForm = () => {
@@ -700,18 +700,6 @@ function Enrollment() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
-      {/* Toast notification */}
-      {toast && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-          <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${toast.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
-            {toast.type === 'success' ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" /> : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
-            <span className="flex-1 font-bold">{toast.message}</span>
-            <button type="button" onClick={() => setToast(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Sticky Glassmorphic Header - Scaled Miniature Match */}
       <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">

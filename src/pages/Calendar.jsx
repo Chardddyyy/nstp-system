@@ -23,7 +23,6 @@ function Calendar() {
     return saved ? JSON.parse(saved) : [];
   });
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '' });
-  const [notification, setNotification] = useState(null);
   
   // Philippine Holidays 2024-2030
   const philippineHolidays = [
@@ -218,8 +217,6 @@ function Calendar() {
       setNewEvent({ title: '', date: '', description: '' });
       setEditingEvent(null);
       setShowAddEventModal(false);
-      setNotification({ type: 'success', message: 'Event updated successfully!' });
-      setTimeout(() => setNotification(null), 3000);
     } else {
       const event = {
         id: Date.now(),
@@ -247,8 +244,6 @@ function Calendar() {
 
       setNewEvent({ title: '', date: '', description: '' });
       setShowAddEventModal(false);
-      setNotification({ type: 'success', message: 'Event added successfully!' });
-      setTimeout(() => setNotification(null), 3000);
     }
   };
 
@@ -267,8 +262,6 @@ function Calendar() {
     const updatedEvents = events.filter(e => e.id !== eventId);
     setEvents(updatedEvents);
     localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
-    setNotification({ type: 'success', message: 'Event deleted successfully!' });
-    setTimeout(() => setNotification(null), 3000);
   };
 
   const changeMonth = (direction) => {
@@ -288,20 +281,6 @@ function Calendar() {
 
       {/* Main Content */}
       <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Centered notification */}
-        {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-white text-sm font-medium max-w-sm w-full mx-4 ${notification.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-              {notification.type === 'success'
-                ? <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
-              <span className="flex-1 font-semibold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Hero Header Card - Unified CvSU Naic Header */}
         <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-2 sm:mb-6 w-full">

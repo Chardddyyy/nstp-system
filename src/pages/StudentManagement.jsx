@@ -22,7 +22,6 @@ function StudentManagement() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
-  const [notification, setNotification] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -223,62 +222,54 @@ function StudentManagement() {
       a.download = `CHED_NSTP_EnrollmentList_${dept}_${new Date().toISOString().slice(0,10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      setNotification({ type: 'success', message: 'CHED Enrollment List downloaded.' });
-      setTimeout(() => setNotification(null), 3000);
       setShowExportModal(false);
     } catch {
-      setNotification({ type: 'error', message: 'CHED export failed. Please try again.' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('CHED export failed. Please try again.');
     }
   };
 
-  const handleAddStudent = async () => {
+  const handleAddStudent = () => {
+    // Comprehensive frontend validation
     const requiredFields = [
-      'lastName', 'firstName', 'studentId', 'street', 'municipality', 'province', 'email',
-      'program', 'yearLevel', 'section', 'department',
-      'birthMonth', 'birthDay', 'birthYear', 'age', 'civilStatus', 'sex', 'registeredVoter',
-      'height', 'weight', 'bloodType', 'contactNumber', 'facebookAccount',
-      'emergencyContact', 'emergencyNumber'
+      'studentId', 'lastName', 'firstName', 'email', 'contactNumber',
+      'birthMonth', 'birthDay', 'birthYear', 'age', 'sex', 'civilStatus',
+      'street', 'municipality', 'province', 'program', 'yearLevel', 'section', 'department',
+      'facebookAccount', 'emergencyContact', 'emergencyNumber'
     ];
+
     const fieldLabels = {
-      lastName: 'Last Name', firstName: 'First Name', studentId: 'Student ID',
-      street: 'Street / Barangay', municipality: 'Municipality / City', province: 'Province',
-      email: 'Email', program: 'Program', yearLevel: 'Year Level', section: 'Section',
-      department: 'Department', birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year',
-      age: 'Age', civilStatus: 'Civil Status', sex: 'Sex', registeredVoter: 'Registered Voter',
-      height: 'Height', weight: 'Weight', bloodType: 'Blood Type', contactNumber: 'Contact Number',
+      studentId: 'Student ID', lastName: 'Last Name', firstName: 'First Name', email: 'Email Address',
+      contactNumber: 'Contact Number', birthMonth: 'Birth Month', birthDay: 'Birth Day', birthYear: 'Birth Year',
+      age: 'Age', sex: 'Sex', civilStatus: 'Civil Status', street: 'Street/Brgy',
+      municipality: 'Municipality', province: 'Province', program: 'Course/Program',
+      yearLevel: 'Year Level', section: 'Section', department: 'NSTP Component',
       facebookAccount: 'Facebook Account', emergencyContact: 'Emergency Contact Person', emergencyNumber: 'Emergency Contact Number'
     };
 
     for (const field of requiredFields) {
       const val = formData[field];
       if (!val || val.toString().trim() === '') {
-        setNotification({ type: 'error', message: `"${fieldLabels[field] || field}" is required. Please fill it in before saving.` });
-        setTimeout(() => setNotification(null), 5000);
+        alert(`"${fieldLabels[field] || field}" is required. Please fill it in before saving.`);
         return;
       }
     }
     const idLen = formData.studentId.replace(/\D/g, '').length;
     if (idLen !== 9) {
-      setNotification({ type: 'error', message: `Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 1000);
+      alert(`Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.`);
       return;
     }
     const contactLen = formData.contactNumber.replace(/\D/g, '');
     if (contactLen.length !== 11) {
-      setNotification({ type: 'error', message: `Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 1000);
+      alert(`Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.`);
       return;
     }
     const emerLen = formData.emergencyNumber.replace(/\D/g, '');
     if (emerLen.length !== 11) {
-      setNotification({ type: 'error', message: `Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.` });
-      setTimeout(() => setNotification(null), 1000);
+      alert(`Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.`);
       return;
     }
     if (!formData.email.includes('@')) {
-      setNotification({ type: 'error', message: 'Email address must contain "@" — e.g. student@cvsu.edu.ph.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Email address must contain "@" — e.g. student@cvsu.edu.ph.');
       return;
     }
 
@@ -323,15 +314,13 @@ function StudentManagement() {
           await addStudent(studentPayload);
           setShowAddModal(false);
           setCurrentPage(1);
-          setNotification({ type: 'success', message: `Student enrolled successfully under ${studentPayload.department}!` });
           resetFormData();
         } catch (error) {
           const raw = error?.message || '';
           const msg = raw.toLowerCase().includes('already exists')
             ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
             : raw || 'Failed to add student. Please try again.';
-          setNotification({ type: 'error', message: msg });
-          setTimeout(() => setNotification(null), 1000);
+          alert(msg);
         } finally {
           setIsAddingStudent(false);
         }
@@ -446,15 +435,12 @@ function StudentManagement() {
       setShowEditModal(false);
       setSelectedStudent(null);
       resetFormData();
-      setNotification({ type: 'success', message: 'Student updated successfully!' });
-      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       const raw = error?.message || '';
       const msg = raw.toLowerCase().includes('already exists')
         ? `Student ID "${formData.studentId}" is already taken. Use a different ID.`
         : raw || 'Failed to update student. Please try again.';
-      setNotification({ type: 'error', message: msg });
-      setTimeout(() => setNotification(null), 1000);
+      alert(msg);
     } finally {
       setIsEditingStudent(false);
     }
@@ -467,8 +453,6 @@ function StudentManagement() {
       message: 'Are you sure you want to delete this student? This action cannot be undone.',
       onConfirm: () => {
         deleteStudent(id);
-        setNotification({ type: 'success', message: 'Student deleted successfully!' });
-        setTimeout(() => setNotification(null), 3000);
       }
     });
   };
@@ -638,21 +622,6 @@ function StudentManagement() {
               <RotateCcw className="w-4 h-4" />
               <span>Back to Current</span>
             </button>
-          </div>
-        )}
-
-        {/* Centered notification */}
-        {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
-              {notification.type === 'success'
-                ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-                : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
-              <span className="flex-1 font-bold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         )}
 

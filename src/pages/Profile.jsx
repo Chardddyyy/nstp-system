@@ -30,7 +30,6 @@ function Profile() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [notification, setNotification] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -80,8 +79,7 @@ function Profile() {
       setCapturedImage(null);
       setShowEditor(false);
     } catch {
-      setNotification({ type: 'error', message: 'Camera access denied. Please allow camera in browser settings.' });
-      setTimeout(() => setNotification(null), 4000);
+      alert('Camera access denied. Please allow camera in browser settings.');
     }
   };
 
@@ -256,11 +254,8 @@ function Profile() {
       });
       setIsEditing(false);
       setShowAvatarSelector(false);
-      setNotification({ type: 'success', message: 'Profile updated successfully!' });
-      setTimeout(() => setNotification(null), 1000);
     } catch (_error) {
-      setNotification({ type: 'error', message: 'Failed to save profile. Please try again.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Failed to save profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -363,13 +358,11 @@ function Profile() {
 
   const handleUpdateInstructor = async () => {
     if (!editInstructorForm.name.trim() || !editInstructorForm.email.trim()) {
-      setNotification({ type: 'error', message: 'Name and email are required.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Name and email are required.');
       return;
     }
     if (editInstructorForm.newPassword && editInstructorForm.newPassword.length < 6) {
-      setNotification({ type: 'error', message: 'New password must be at least 6 characters.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('New password must be at least 6 characters.');
       return;
     }
     setIsSavingInstructor(true);
@@ -384,11 +377,8 @@ function Profile() {
       setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
       setShowEditInstructorModal(false);
       setEditingInstructor(null);
-      setNotification({ type: 'success', message: `Instructor account "${updated.name}" updated successfully.` });
-      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
-      setNotification({ type: 'error', message: error?.message || 'Failed to update instructor.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert(error?.message || 'Failed to update instructor.');
     } finally {
       setIsSavingInstructor(false);
     }
@@ -403,18 +393,15 @@ function Profile() {
 
   const handleAddInstructor = async () => {
     if (!instructorForm.name.trim() || !instructorForm.email.trim() || !instructorForm.password) {
-      setNotification({ type: 'error', message: 'Name, email, and password are required.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Name, email, and password are required.');
       return;
     }
     if (instructorForm.password !== instructorForm.confirmPassword) {
-      setNotification({ type: 'error', message: 'Passwords do not match.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Passwords do not match.');
       return;
     }
     if (instructorForm.password.length < 6) {
-      setNotification({ type: 'error', message: 'Password must be at least 6 characters.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Password must be at least 6 characters.');
       return;
     }
     setIsAddingInstructor(true);
@@ -431,11 +418,8 @@ function Profile() {
       getAllInstructorsGroup().catch(() => {});
       setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
-      setNotification({ type: 'success', message: `"${created.name}" added and joined the All Instructors group.` });
-      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
-      setNotification({ type: 'error', message: error?.message || 'Failed to add instructor.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert(error?.message || 'Failed to add instructor.');
     } finally {
       setIsAddingInstructor(false);
     }
@@ -447,11 +431,8 @@ function Profile() {
     try {
       await usersAPI.delete(id);
       setInstructors(prev => prev.filter(i => i.id !== id));
-      setNotification({ type: 'success', message: `Instructor "${name}" deleted.` });
-      setTimeout(() => setNotification(null), 1000);
     } catch (error) {
-      setNotification({ type: 'error', message: error?.message || 'Failed to delete instructor.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert(error?.message || 'Failed to delete instructor.');
     } finally {
       setDeletingInstructorId(null);
     }
@@ -459,24 +440,20 @@ function Profile() {
 
   const handlePasswordChange = async () => {
     if (formData.newPassword !== formData.confirmPassword) {
-      setNotification({ type: 'error', message: 'Passwords do not match!' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('Passwords do not match!');
       return;
     }
     if (formData.newPassword.length < 8) {
-      setNotification({ type: 'error', message: 'Password must be at least 8 characters!' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('Password must be at least 8 characters!');
       return;
     }
     setIsChangingPassword(true);
     try {
       await changePassword(formData.newPassword);
-      setNotification({ type: 'success', message: 'Password changed successfully!' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('Password changed successfully!');
       setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (_error) {
-      setNotification({ type: 'error', message: 'Failed to change password. Please try again.' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('Failed to change password. Please try again.');
     } finally {
       setIsChangingPassword(false);
     }
@@ -503,20 +480,6 @@ function Profile() {
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Centered notification */}
-        {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
-              {notification.type === 'success'
-                ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-                : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
-              <span className="flex-1 font-bold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Hero Header Card - Unified CvSU Naic Header */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">

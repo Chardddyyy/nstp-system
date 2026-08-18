@@ -23,7 +23,6 @@ function Reports() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
   const [newComment, setNewComment] = useState('');
-  const [notification, setNotification] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagination state
@@ -93,8 +92,7 @@ function Reports() {
     if (createForm.dueDate) {
       const todayStr = getTodayLocalStr();
       if (createForm.dueDate < todayStr) {
-        setNotification({ type: 'error', message: 'Due date cannot be in the past. Please select today or a future date.' });
-        setTimeout(() => setNotification(null), 1000);
+        alert('Due date cannot be in the past. Please select today or a future date.');
         return;
       }
     }
@@ -117,19 +115,15 @@ function Reports() {
     try {
       if (editingReport) {
         await updateReport(editingReport.id, reportData);
-        setNotification({ type: 'success', message: 'Report assignment updated!' });
       } else {
         await addReport(reportData);
-        setNotification({ type: 'success', message: 'Report assignment created!' });
       }
       setShowCreateModal(false);
       setEditingReport(null);
       setCurrentPage(1);
       setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
-      setTimeout(() => setNotification(null), 1000);
     } catch (_error) {
-      setNotification({ type: 'error', message: _error?.message || 'Failed to save report assignment. Please try again.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert(_error?.message || 'Failed to save report assignment. Please try again.');
     } finally {
       setIsCreatingReport(false);
     }
@@ -140,8 +134,7 @@ function Reports() {
   // Instructor submits their report
   const handleSubmitReport = async () => {
     if (!submitForm.content.trim() && !submitForm.attachment) {
-      setNotification({ type: 'error', message: 'Please enter report content or attach a file!' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Please enter report content or attach a file!');
       return;
     }
 
@@ -160,11 +153,8 @@ function Reports() {
       setShowSubmitModal(false);
       setSubmitForm({ content: '', attachment: null });
       setSelectedReport(null);
-      setNotification({ type: 'success', message: 'Report submitted successfully!' });
-      setTimeout(() => setNotification(null), 1000);
     } catch (_error) {
-      setNotification({ type: 'error', message: 'Failed to submit report. Please try again.' });
-      setTimeout(() => setNotification(null), 1000);
+      alert('Failed to submit report. Please try again.');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -204,8 +194,7 @@ function Reports() {
         comments: [...(prev.comments || []), saved]
       }));
     } catch {
-      setNotification({ type: 'error', message: 'Failed to post comment.' });
-      setTimeout(() => setNotification(null), 3000);
+      alert('Failed to post comment.');
     }
   };
 
@@ -213,8 +202,6 @@ function Reports() {
   const handleDeleteReport = (reportId) => {
     if (confirm('Are you sure you want to delete this report assignment?')) {
       deleteReport(reportId);
-      setNotification({ type: 'success', message: 'Report assignment deleted!' });
-      setTimeout(() => setNotification(null), 3000);
     }
   };
 
@@ -317,21 +304,6 @@ function Reports() {
               <RotateCcw className="w-4 h-4" />
               <span>Back to Current</span>
             </button>
-          </div>
-        )}
-
-        {/* Centered notification */}
-        {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs w-auto border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-rose-700'}`}>
-              {notification.type === 'success'
-                ? <CheckCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />
-                : <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-400" />}
-              <span className="flex-1 font-bold">{notification.message}</span>
-              <button type="button" onClick={() => setNotification(null)} className="text-white/80 hover:text-white flex-shrink-0 cursor-pointer">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         )}
 

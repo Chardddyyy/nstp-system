@@ -31,20 +31,14 @@ export default function LetterFormats() {
   const [attachedFile, setAttachedFile] = useState(null); // { name, type, size, data }
 
   const [viewingFile, setViewingFile] = useState(null);
-  const [notification, setNotification] = useState(null);
   const fileInputRef = useRef(null);
-
-  const showNotify = (message, type = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      showNotify('File size exceeds 10MB limit', 'error');
+      alert('File size exceeds 10MB limit');
       return;
     }
 
@@ -62,34 +56,41 @@ export default function LetterFormats() {
 
   const handleSaveTemplate = (e) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      showNotify('Title and Description are required', 'error');
+    if (!title.trim()) {
       return;
     }
+
+    const finalFile = attachedFile || (editingTemplate ? editingTemplate.file : null);
+    if (!finalFile) {
+      alert('Please attach an official document / file (PDF, Word, Image)');
+      return;
+    }
+
+    const targetDept = user?.role === 'instructor' && user?.department
+      ? user.department
+      : (department || 'All');
 
     let updated;
     if (editingTemplate) {
       updated = templates.map(t => t.id === editingTemplate.id ? {
         ...t,
-        title,
-        department,
-        description,
-        file: attachedFile || t.file,
+        title: title.trim(),
+        department: targetDept,
+        description: (description || '').trim(),
+        file: finalFile,
         updatedAt: new Date().toISOString()
       } : t);
-      showNotify('Letter format updated!');
     } else {
       const newT = {
         id: Date.now().toString(),
-        title,
-        department,
-        description,
-        file: attachedFile,
-        createdBy: user?.name || 'Admin',
+        title: title.trim(),
+        department: targetDept,
+        description: (description || '').trim(),
+        file: finalFile,
+        createdBy: user?.name || (user?.role === 'instructor' ? `${user.department} Instructor` : 'Admin'),
         createdAt: new Date().toISOString()
       };
       updated = [newT, ...templates];
-      showNotify('Letter format created successfully!');
     }
 
     setTemplates(updated);
@@ -107,12 +108,10 @@ export default function LetterFormats() {
     const updated = templates.filter(t => t.id !== id);
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
-    showNotify('Format deleted', 'info');
   };
 
   const handleDownloadAttachment = (t) => {
     if (!t.file?.data) {
-      showNotify('No attached file to download', 'error');
       return;
     }
     const a = document.createElement('a');
@@ -121,7 +120,6 @@ export default function LetterFormats() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    showNotify(`Downloaded ${t.file.name}`);
   };
 
   const handleLogout = () => {
@@ -141,9 +139,12 @@ export default function LetterFormats() {
       const isAllowed = t.department === 'All' || t.department === user.department;
       if (!isAllowed) return false;
     }
-    const deptMatch = activeTab === 'All' || t.department === 'All' || t.department === activeTab;
+    // Strict tab filtering:
+    // When 'All' is selected -> only templates with department === 'All'
+    // When a specific department (e.g. 'CWTS') is selected -> only templates with that department
+    const deptMatch = activeTab === 'All' ? t.department === 'All' : t.department === activeTab;
     const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        t.description.toLowerCase().includes(searchTerm.toLowerCase());
+                        (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     return deptMatch && searchMatch;
   });
 
@@ -157,16 +158,6 @@ export default function LetterFormats() {
       />
 
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
-        {/* Notification Toast */}
-        {notification && (
-          <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none p-4">
-            <div className={`pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold max-w-xs border border-white/20 animate-fade-in ${notification.type === 'success' ? 'bg-emerald-700' : 'bg-amber-700'}`}>
-              {notification.type === 'success' ? <CheckCircle className="w-4 h-4 text-amber-400 shrink-0" /> : <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
-              <span className="flex-1 font-bold">{notification.message}</span>
-            </div>
-          </div>
-        )}
-
         {/* Hero Banner - Unified CvSU Naic Header */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3 relative z-10 w-full">
@@ -397,41 +388,39 @@ export default function LetterFormats() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
-                  <select
-                    value={department}
-                    onChange={e => setDepartment(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
-                  >
-                    <option value="All">All Departments</option>
-                    {user?.role === 'instructor' && user?.department ? (
-                      <option value={user.department}>{user.department}</option>
-                    ) : (
-                      <>
-                        <option value="ROTC">ROTC</option>
-                        <option value="CWTS">CWTS</option>
-                        <option value="LTS">LTS</option>
-                      </>
-                    )}
-                  </select>
-                </div>
+                {/* Only Admin sees the Category selector; for Instructors it's automatically their department */}
+                {user?.role === 'admin' && (
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
+                    <select
+                      value={department}
+                      onChange={e => setDepartment(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
+                    >
+                      <option value="All">All Departments</option>
+                      <option value="ROTC">ROTC</option>
+                      <option value="CWTS">CWTS</option>
+                      <option value="LTS">LTS</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description &amp; Guidelines *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description &amp; Guidelines (Optional)</label>
                   <textarea
-                    required
-                    rows={4}
-                    placeholder="Enter description, instructions, or template body guidelines..."
+                    rows={3}
+                    placeholder="Enter optional description, instructions, or template body guidelines..."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 leading-relaxed font-medium"
                   />
                 </div>
 
-                {/* File Attachment Upload */}
+                {/* File Attachment Upload — Mandatory */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Attach Official Document / Form (Optional)</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Attach Official Document / Form <span className="text-rose-600">* (Required)</span>
+                  </label>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -461,10 +450,10 @@ export default function LetterFormats() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 px-4 border-2 border-dashed border-gray-300 hover:border-emerald-500 rounded-xl bg-gray-50 hover:bg-emerald-50/50 text-gray-600 hover:text-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 px-4 border-2 border-dashed border-emerald-300 hover:border-emerald-500 rounded-xl bg-emerald-50/40 hover:bg-emerald-50 text-emerald-900 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                     >
                       <Paperclip className="w-4 h-4 text-emerald-700" />
-                      <span>Choose PDF, Word Document, Image, or File</span>
+                      <span>Click to Select Document (PDF, Word, or Image) *</span>
                     </button>
                   )}
                 </div>
@@ -479,9 +468,9 @@ export default function LetterFormats() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                    className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
                   >
-                    {editingTemplate ? 'Update Format' : 'Save Format'}
+                    {editingTemplate ? 'Save Changes' : 'Save Letter Format'}
                   </button>
                 </div>
               </form>
