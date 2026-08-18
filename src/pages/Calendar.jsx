@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import {
-  Calendar as CalendarIcon, Plus, X,
+  Calendar as CalendarIcon, Plus, X, Pencil,
   ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 
 function Calendar() {
-  const { user, logout } = useAuth();
+  const { user, logout, pushNotification } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
@@ -17,6 +17,7 @@ function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
   const [events, setEvents] = useState(() => {
     const saved = localStorage.getItem('nstp_calendar_events');
     return saved ? JSON.parse(saved) : [];
@@ -182,24 +183,84 @@ function Calendar() {
     return [...holidays, ...customEvents];
   };
 
-  const handleAddEvent = () => {
+  const handleSaveEvent = () => {
     if (!newEvent.title.trim() || !newEvent.date) return;
     
-    const event = {
-      id: Date.now(),
-      title: newEvent.title,
-      date: newEvent.date,
-      description: newEvent.description.trim(),
-      type: 'event',
-      createdBy: user?.name
-    };
+    if (editingEvent) {
+      const updatedEvents = events.map(e => {
+        if (e.id === editingEvent.id) {
+          return {
+            ...e,
+            title: newEvent.title.trim(),
+            date: newEvent.date,
+            description: newEvent.description.trim(),
+            isEdited: true,
+            editedAt: new Date().toISOString(),
+            lastModifiedBy: user?.name
+          };
+        }
+        return e;
+      });
 
-    setEvents([...events, event]);
-    localStorage.setItem('nstp_calendar_events', JSON.stringify([...events, event]));
-    setNewEvent({ title: '', date: '', description: '' });
-    setShowAddEventModal(false);
-    setNotification({ type: 'success', message: 'Event added successfully!' });
-    setTimeout(() => setNotification(null), 3000);
+      setEvents(updatedEvents);
+      localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
+
+      // Push real-time notification
+      if (typeof pushNotification === 'function') {
+        pushNotification({
+          title: 'Calendar Event Updated',
+          message: `Event "${newEvent.title.trim()}" was updated for ${newEvent.date} (Edited)`,
+          type: 'calendar',
+          link: '/calendar',
+        });
+      }
+
+      setNewEvent({ title: '', date: '', description: '' });
+      setEditingEvent(null);
+      setShowAddEventModal(false);
+      setNotification({ type: 'success', message: 'Event updated successfully!' });
+      setTimeout(() => setNotification(null), 3000);
+    } else {
+      const event = {
+        id: Date.now(),
+        title: newEvent.title.trim(),
+        date: newEvent.date,
+        description: newEvent.description.trim(),
+        type: 'event',
+        createdBy: user?.name,
+        isEdited: false
+      };
+
+      const updated = [...events, event];
+      setEvents(updated);
+      localStorage.setItem('nstp_calendar_events', JSON.stringify(updated));
+
+      // Push real-time notification
+      if (typeof pushNotification === 'function') {
+        pushNotification({
+          title: 'New Calendar Activity',
+          message: `New activity "${newEvent.title.trim()}" scheduled for ${newEvent.date}`,
+          type: 'calendar',
+          link: '/calendar',
+        });
+      }
+
+      setNewEvent({ title: '', date: '', description: '' });
+      setShowAddEventModal(false);
+      setNotification({ type: 'success', message: 'Event added successfully!' });
+      setTimeout(() => setNotification(null), 3000);
+    }
+  };
+
+  const openEditEventModal = (event) => {
+    setEditingEvent(event);
+    setNewEvent({
+      title: event.title || '',
+      date: event.date || '',
+      description: event.description || ''
+    });
+    setSelectedDate(null);
+    setShowAddEventModal(true);
   };
 
   const handleDeleteEvent = (eventId) => {
@@ -452,6 +513,11 @@ function Calendar() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-xs sm:text-sm font-black text-gray-900">{event.title}</p>
+                              {event.isEdited && (
+                                <span className="text-[9px] bg-amber-100 text-amber-900 border border-amber-300 font-extrabold px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
+                                  ✏️ Edited
+                                </span>
+                              )}
                               {isPastDay(selectedDate) && (
                                 <span className="text-[9px] bg-gray-200 text-gray-700 font-extrabold px-2 py-0.5 rounded-full uppercase">Past</span>
                               )}
@@ -468,15 +534,24 @@ function Calendar() {
                           </div>
                         </div>
 
-                        {/* Allow delete ONLY if event is NOT in the past */}
+                        {/* Allow edit & delete ONLY if event is NOT in the past */}
                         {event.createdBy && isAdmin && !isPastDay(selectedDate) && (
-                          <button type="button"
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="flex-shrink-0 p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
-                            title="Delete event"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button type="button"
+                              onClick={() => openEditEventModal(event)}
+                              className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-xl transition-colors cursor-pointer"
+                              title="Edit event"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button type="button"
+                              onClick={() => handleDeleteEvent(event.id)}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+                              title="Delete event"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -497,6 +572,7 @@ function Calendar() {
                       onClick={() => {
                         const pad = (n) => String(n).padStart(2, '0');
                         const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(selectedDate)}`;
+                        setEditingEvent(null);
                         setNewEvent({ title: '', date: dateStr, description: '' });
                         setSelectedDate(null);
                         setShowAddEventModal(true);
@@ -513,9 +589,9 @@ function Calendar() {
           </div>
         )}
 
-        {/* Add Event Modal */}
+        {/* Add / Edit Event Modal */}
         {showAddEventModal && (
-          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddEventModal(false)}>
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => { setShowAddEventModal(false); setEditingEvent(null); }}>
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col border border-emerald-100/80 overflow-hidden" onClick={(e) => e.stopPropagation()}>
               {/* Header */}
               <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
@@ -524,13 +600,17 @@ function Calendar() {
                     <CalendarIcon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-black tracking-tight">Add New Event</h3>
-                    <p className="text-emerald-200 text-xs font-medium">Schedule activity or announcement</p>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">
+                      {editingEvent ? 'Edit Calendar Event' : 'Add New Event'}
+                    </h3>
+                    <p className="text-emerald-200 text-xs font-medium">
+                      {editingEvent ? 'Update scheduled activity details (will show Edited badge)' : 'Schedule activity or announcement'}
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowAddEventModal(false)}
+                  onClick={() => { setShowAddEventModal(false); setEditingEvent(null); }}
                   className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -585,18 +665,18 @@ function Calendar() {
               <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowAddEventModal(false)}
+                  onClick={() => { setShowAddEventModal(false); setEditingEvent(null); }}
                   className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={handleAddEvent}
+                  onClick={handleSaveEvent}
                   disabled={!newEvent.title.trim() || !newEvent.date}
                   className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Event
+                  {editingEvent ? 'Update Event' : 'Add Event'}
                 </button>
               </div>
             </div>

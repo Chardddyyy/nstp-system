@@ -263,6 +263,16 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   INDEX idx_audit_action (action)
 );
 
+-- Real-time Active Visitors & Telemetry Tracking
+CREATE TABLE IF NOT EXISTS active_visitors (
+  visitor_id VARCHAR(36) PRIMARY KEY,
+  page_url   VARCHAR(500) NOT NULL,
+  user_agent TEXT,
+  first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_seen  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_active_visitors_last_seen (last_seen)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SEED DATA
 -- Passwords are bcrypt-hashed (cost 12):

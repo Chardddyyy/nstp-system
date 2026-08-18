@@ -56,6 +56,7 @@ app.use(cors({
 // ── Body size: 500 MB max for large file uploads ────────────────────────────────
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
+app.use(express.text({ type: ['text/*', 'application/json', 'text/plain'], limit: '50mb' }));
 
 // ── Global rate limiter ───────────────────────────────────────────────────────
 // The app polls every 2s (calls) + 8s (live data × 4 API calls) per user.
@@ -161,6 +162,22 @@ async function ensureAuditLogs() {
         detail TEXT NULL,
         ip VARCHAR(45) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+  } catch (_) {}
+}
+
+// ── Accurate Web Telemetry: active_visitors table ────────────────────────────
+async function ensureActiveVisitorsTable() {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS active_visitors (
+        visitor_id VARCHAR(36) PRIMARY KEY,
+        page_url VARCHAR(500) NOT NULL,
+        user_agent TEXT,
+        first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_active_visitors_last_seen (last_seen)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
   } catch (_) {}
@@ -2708,6 +2725,24 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     if (!/^\d{8,12}$/.test(sid)) {
       return res.status(400).json({ message: 'Student ID must be between 8 and 12 digits (e.g. 202410123)' });
     }
+
+    // Block troll / fake / spam student numbers
+    const trollPatterns = [
+      '01234567', '12345678', '23456789', '34567890',
+      '98765432', '87654321', '76543210',
+      '123456789', '987654321', '1234567890', '0987654321',
+      '11223344', '12121212', '123123123', '10101010', '01010101'
+    ];
+    if (
+      /^(\d)\1+$/.test(sid) ||
+      trollPatterns.some(p => sid.includes(p)) ||
+      /^0{3,}/.test(sid) ||
+      /0{6,}$/.test(sid) ||
+      (!sid.startsWith('20') && !sid.startsWith('19'))
+    ) {
+      return res.status(400).json({ message: 'Invalid Student ID: Please enter a valid, authentic CvSU Student Number (e.g., 202410001).' });
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.email).trim())) {
       return res.status(400).json({ message: 'Invalid email address' });
     }
@@ -2780,10 +2815,10 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       }
     } catch (_) {}
 
-    // Strict Institutional Email Verification (@cvsu.edu.ph)
+    // Email format validation (accepts both institutional and personal emails)
     const emailClean = String(email || '').trim().toLowerCase();
-    if (!emailClean.endsWith('@cvsu.edu.ph')) {
-      return res.status(400).json({ message: 'Official Student Email Required: Only valid @cvsu.edu.ph student emails are allowed.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
+      return res.status(400).json({ message: 'Invalid Email Address: Please enter a valid email address.' });
     }
 
     const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
@@ -2866,6 +2901,16 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     console.error('Submit enrollment error:', error);
     if (error.status === 409 || error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
       return res.status(409).json({ message: 'An enrollment record with this Student ID or Email already exists.' });
+    }
+    if (error.code === 'ENOTFOUND' || (error.message && error.message.includes('ENOTFOUND'))) {
+      return res.status(503).json({
+        message: 'Cloud Database Connection Error (ENOTFOUND): Unable to reach Aiven Cloud MySQL database. Please log into console.aiven.io to verify your MySQL service is POWERED ON, or set DB_HOST=127.0.0.1 in backend/.env to use local database.'
+      });
+    }
+    if (error.code === 'ECONNREFUSED' || (error.message && error.message.includes('ECONNREFUSED'))) {
+      return res.status(503).json({
+        message: 'Database Connection Refused: MySQL server is not accepting connections. Please check your DB_PORT and firewall settings.'
+      });
     }
     res.status(500).json({ message: error.message || 'Failed to submit enrollment' });
   }
@@ -3211,6 +3256,95 @@ setInterval(function() {
   }
 }, 10000);
 
+// ── Production-Grade Accurate Custom Web Telemetry Endpoints ────────────────
+
+// POST /api/track — Heartbeat ping (Inserts new visitor or updates last_seen = NOW())
+app.post('/api/track', async function(req, res) {
+  try {
+    var data = req.body;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (_) { data = {}; }
+    }
+    var visitor_id = data && data.visitor_id;
+    var page_url = (data && data.page_url) || req.headers.referer || '/';
+    var user_agent = (data && data.user_agent) || req.headers['user-agent'] || 'Unknown';
+
+    if (!visitor_id) {
+      return res.status(400).json({ error: 'visitor_id is required' });
+    }
+
+    var query = `
+      INSERT INTO active_visitors (visitor_id, page_url, user_agent, last_seen)
+      VALUES (?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        page_url = VALUES(page_url),
+        user_agent = VALUES(user_agent),
+        last_seen = NOW()
+    `;
+
+    await pool.execute(query, [
+      String(visitor_id).slice(0, 36),
+      String(page_url).slice(0, 500),
+      String(user_agent).slice(0, 1000)
+    ]);
+
+    res.json({ success: true, message: 'Heartbeat recorded' });
+  } catch (error) {
+    console.error('[Telemetry] Track error:', error.message);
+    res.status(500).json({ error: 'Failed to record heartbeat' });
+  }
+});
+
+// POST /api/track/exit — Beacon API instant departure handler
+app.post('/api/track/exit', async function(req, res) {
+  try {
+    var data = req.body;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (_) { data = {}; }
+    }
+    var visitor_id = data && data.visitor_id;
+
+    if (visitor_id) {
+      // Instantly set last_seen to 1 minute in the past so visitor drops off the 30s active count window
+      await pool.execute(
+        `UPDATE active_visitors
+         SET last_seen = NOW() - INTERVAL 1 MINUTE
+         WHERE visitor_id = ?`,
+        [String(visitor_id).slice(0, 36)]
+      );
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('[Telemetry] Exit error:', error.message);
+    res.status(200).send('OK'); // Always return 200 for Beacon exit
+  }
+});
+
+// GET /api/active-count — Query active visitors within last 30 seconds & total visitors
+app.get('/api/active-count', async function(req, res) {
+  try {
+    var activeQuery = `SELECT COUNT(*) AS activeVisitors FROM active_visitors WHERE last_seen >= NOW() - INTERVAL 30 SECOND`;
+    var totalQuery = `SELECT COUNT(*) AS totalVisitors FROM active_visitors`;
+
+    var [activeRows] = await pool.execute(activeQuery);
+    var [totalRows] = await pool.execute(totalQuery);
+
+    var activeVisitors = (activeRows[0] && activeRows[0].activeVisitors) || 0;
+    var totalVisitors = (totalRows[0] && totalRows[0].totalVisitors) || 0;
+
+    res.json({
+      activeVisitors: activeVisitors,
+      totalVisitors: totalVisitors,
+      windowSeconds: 30,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Telemetry] Active count error:', error.message);
+    res.status(500).json({ error: 'Failed to get visitor counts' });
+  }
+});
+
 // Heartbeat ping endpoint (Public)
 app.post('/api/telemetry/ping', function(req, res) {
   var body = req.body || {};
@@ -3304,11 +3438,25 @@ app.get('/api/telemetry/stats', async function(req, res) {
 });
 
 app.get('/api/health', async (req, res) => {
+  var dbCfg = getDbConfig();
   try {
     await pool.execute('SELECT 1');
-    res.json({ status: 'OK' });
+    res.json({
+      status: 'OK',
+      database: 'Connected',
+      dbHost: dbCfg.host,
+      dbPort: dbCfg.port,
+      dbName: dbCfg.database
+    });
   } catch (error) {
-    res.status(503).json({ status: 'Unavailable' });
+    res.status(503).json({
+      status: 'Unavailable',
+      message: 'Database connection failed: ' + (error.message || 'Unable to connect to MySQL'),
+      code: error.code || 'DB_ERROR',
+      dbHost: dbCfg.host,
+      dbPort: dbCfg.port,
+      dbName: dbCfg.database
+    });
   }
 });
 
@@ -3371,50 +3519,55 @@ async function startServer() {
     console.log('API available at http://localhost:' + PORT + '/api and http://127.0.0.1:' + PORT + '/api');
   });
 
+  let dbConnected = false;
   try {
     await pool.execute('SELECT 1');
     console.log('Database connected: ' + db.host + ':' + db.port + '/' + db.database);
+    dbConnected = true;
     try { await pool.execute('SET GLOBAL max_allowed_packet = 67108864'); } catch (_) {}
   } catch (err) {
-    console.error('Database connection warning:', err.message);
+    console.error('Database connection warning (server started in degraded mode):', err.message);
   }
 
-  console.log('Running schema migrations...');
-  await Promise.all([
-    ensureAuditLogs(),
-    ensureCallsTableAndColumns(),
-    ensureMessageRestoreColumns(),
-    ensureConversationSchema(),
-    ensureWebRTCColumns(),
-    ensureUserColumns(),
-    ensureStudentColumns(),
-    ensureEnrollmentColumns(),
-    ensureReportsDeptColumn(),
-    ensureReportsBatchYear(),
-    ensureReportComments(),
-    ensureConversationLastSender()
-  ]).catch(function(err) {
-    console.warn('Schema migration warning:', err.message);
-  });
-  console.log('Migrations complete.');
+  if (dbConnected) {
+    console.log('Running schema migrations...');
+    await Promise.all([
+      ensureAuditLogs(),
+      ensureActiveVisitorsTable(),
+      ensureCallsTableAndColumns(),
+      ensureMessageRestoreColumns(),
+      ensureConversationSchema(),
+      ensureWebRTCColumns(),
+      ensureUserColumns(),
+      ensureStudentColumns(),
+      ensureEnrollmentColumns(),
+      ensureReportsDeptColumn(),
+      ensureReportsBatchYear(),
+      ensureReportComments(),
+      ensureConversationLastSender()
+    ]).catch(function(err) {
+      console.warn('Schema migration warning:', err.message);
+    });
+    console.log('Migrations complete.');
 
-  // Hash any plain-text passwords left in the users table
-  try {
-    const [allUsers] = await pool.execute('SELECT id, password FROM users');
-    for (const u of allUsers) {
-      const pw = String(u.password || '');
-      if (!pw.startsWith('$2a$') && !pw.startsWith('$2b$') && !pw.startsWith('$2y$')) {
-        const hashed = await bcrypt.hash(pw, 12);
-        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, u.id]);
-        console.log(`Hashed plain-text password for user id=${u.id}`);
-      }
-    }
-    // Self-healing: ensure admin account always retains role='admin' and NSTP Office department
+    // Hash any plain-text passwords left in the users table
     try {
-      await pool.execute("UPDATE users SET role = 'admin', department = 'NSTP Office' WHERE email = 'admin@cvsu.edu.ph'");
-    } catch (e) { /* ignore */ }
-  } catch (e) {
-    console.warn('Password hash migration warning:', e.message);
+      const [allUsers] = await pool.execute('SELECT id, password FROM users');
+      for (const u of allUsers) {
+        const pw = String(u.password || '');
+        if (!pw.startsWith('$2a$') && !pw.startsWith('$2b$') && !pw.startsWith('$2y$')) {
+          const hashed = await bcrypt.hash(pw, 12);
+          await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, u.id]);
+          console.log(`Hashed plain-text password for user id=${u.id}`);
+        }
+      }
+      // Self-healing: ensure admin account always retains role='admin' and NSTP Office department
+      try {
+        await pool.execute("UPDATE users SET role = 'admin', department = 'NSTP Office' WHERE email = 'admin@cvsu.edu.ph'");
+      } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('Password hash migration warning:', e.message);
+    }
   }
 }
 

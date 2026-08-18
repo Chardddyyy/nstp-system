@@ -213,3 +213,27 @@ input:focus, select:focus, textarea:focus {
   pointer-events: none;
   animation: ripple 0.5s linear;
 }
+
+/* ── Google reCAPTCHA Perfect Centering & Clean Border ─────────────────────── */
+.recaptcha-center-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+}
+
+.recaptcha-center-wrapper .g-recaptcha {
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 0 auto !important;
+  border-radius: 8px !important;
+}
+
+.recaptcha-center-wrapper iframe {
+  display: block !important;
+  margin: 0 auto !important;
+  border-radius: 6px !important;
+}

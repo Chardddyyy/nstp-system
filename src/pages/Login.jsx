@@ -83,12 +83,7 @@ function Login() {
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1">
-                <h1 className="text-[10px] xs:text-xs sm:text-base font-black tracking-tight truncate">Cavite State University Naic</h1>
-                <span className="inline-flex bg-amber-400/20 text-amber-300 text-[7px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
-                  NSTP Portal
-                </span>
-              </div>
+              <h1 className="text-[10px] xs:text-xs sm:text-base font-black tracking-tight truncate">Cavite State University Naic</h1>
               <p className="text-emerald-200 text-[8px] sm:text-[11px] truncate font-medium">National Service Training Program System</p>
             </div>
           </div>

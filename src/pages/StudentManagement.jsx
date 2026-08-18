@@ -314,6 +314,8 @@ function StudentManagement() {
     };
 
     setConfirmDialog({
+      confirmText: 'Confirm Track',
+      isDelete: false,
       message: `Confirm NSTP Track Selection:\n\nYou selected "${studentPayload.department}" for student "${cleanFirstName} ${cleanLastName}".\n\nAre you sure you want to enroll this student under ${studentPayload.department}?`,
       onConfirm: async () => {
         setIsAddingStudent(true);
@@ -460,6 +462,8 @@ function StudentManagement() {
 
   const handleDeleteStudent = (id) => {
     setConfirmDialog({
+      confirmText: 'Delete',
+      isDelete: true,
       message: 'Are you sure you want to delete this student? This action cannot be undone.',
       onConfirm: () => {
         deleteStudent(id);
@@ -657,12 +661,18 @@ function StudentManagement() {
           <div className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xs flex items-center justify-center z-[9998] p-4 animate-fade-in">
             <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full border border-emerald-100">
               <div className="flex items-start gap-3 mb-5">
-                <AlertCircle className="w-6 h-6 text-rose-500 flex-shrink-0 mt-0.5" />
-                <p className="text-gray-800 text-sm font-bold">{confirmDialog.message}</p>
+                <AlertCircle className={`w-6 h-6 flex-shrink-0 mt-0.5 ${confirmDialog.isDelete ? 'text-rose-500' : 'text-emerald-600'}`} />
+                <p className="text-gray-800 text-sm font-bold whitespace-pre-line">{confirmDialog.message}</p>
               </div>
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl text-xs font-bold transition-colors">Cancel</button>
-                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black transition-colors shadow-md">Delete</button>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }}
+                  className={`px-4 py-2 text-white rounded-xl text-xs font-black transition-colors shadow-md ${confirmDialog.isDelete ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                >
+                  {confirmDialog.confirmText || 'Confirm'}
+                </button>
               </div>
             </div>
           </div>
@@ -1738,38 +1748,40 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Submitted Registration Form / Photo Document if present */}
+                {/* Submitted Registration Form / Photo Document — Full Instant Inline Preview */}
                 {(currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) && (
-                  <div className="bg-blue-50/60 p-3.5 sm:p-5 rounded-2xl border border-blue-200/60 shadow-2xs">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-blue-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                      <FileText className="w-4 h-4 text-blue-700" />
-                      CvSU Registration Form Proof
-                    </h4>
-                    <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-blue-100">
-                      {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? (
-                        <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-800 font-bold text-xs shrink-0">
-                          PDF
-                        </div>
-                      ) : (
+                  <div className="bg-emerald-50/60 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-2xs">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 flex items-center gap-2 uppercase tracking-wider">
+                        <FileText className="w-4 h-4 text-emerald-700" />
+                        CvSU Registration Form Document Proof
+                      </h4>
+                      <a
+                        href={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors"
+                      >
+                        ↗ Open Full Window
+                      </a>
+                    </div>
+                    {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? (
+                      <div className="w-full rounded-xl overflow-hidden border border-emerald-300 shadow-sm bg-white">
+                        <iframe
+                          src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
+                          title="Submitted Registration Form PDF"
+                          className="w-full h-80 sm:h-96 rounded-xl"
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-xl overflow-hidden border border-gray-300 bg-gray-900/5 shadow-sm">
                         <img
                           src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                          alt="Registration Proof"
-                          className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-xs"
+                          alt="Submitted Registration Form Proof"
+                          className="w-full max-h-[420px] sm:max-h-[500px] object-contain mx-auto"
                         />
-                      )}
-                      <div>
-                        <p className="text-xs font-bold text-gray-900">Submitted Registration Document</p>
-                        <a
-                          href={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          download={typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? 'Registration_Form.pdf' : undefined}
-                          className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline mt-1 inline-block"
-                        >
-                          {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? 'Download / View PDF File ↗' : 'View Full Image ↗'}
-                        </a>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>

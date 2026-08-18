@@ -142,6 +142,7 @@ function App() {
   const seenEnrollmentIds = useRef(new Set());
   const seenSubmissionKeys = useRef(new Set());
   const seenReportIds = useRef(new Set());
+  const seenStudentIds = useRef(new Set());
   const seenConvLastMessageTime = useRef({});
 
   // Global Realtime Telemetry Heartbeat Ping
@@ -198,7 +199,7 @@ function App() {
 
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== item.id));
-    }, 1000);
+    }, 4500);
   }, []);
 
   const dismissToast = useCallback((toastId) => {
@@ -210,13 +211,15 @@ function App() {
     seenEnrollmentIds.current = new Set();
     seenSubmissionKeys.current = new Set();
     seenReportIds.current = new Set();
+    seenStudentIds.current = new Set();
     seenConvLastMessageTime.current = {};
   }
 
-  function seedRealtimeBaseline(pending, reportsList, convList, currentUser) {
-    pending.forEach(e => seenEnrollmentIds.current.add(e.id));
+  function seedRealtimeBaseline(pending, reportsList, convList, studentsList, currentUser) {
+    (pending || []).forEach(e => seenEnrollmentIds.current.add(e.id));
+    (studentsList || []).forEach(s => seenStudentIds.current.add(s.id));
 
-    reportsList.forEach(report => {
+    (reportsList || []).forEach(report => {
       if (currentUser.role === 'instructor' && (report.department === 'All' || report.department === currentUser.department)) {
         seenReportIds.current.add(report.id);
       }
@@ -225,7 +228,7 @@ function App() {
       });
     });
 
-    convList.forEach(conv => {
+    (convList || []).forEach(conv => {
       if (conv.last_message_time) {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
       }
@@ -234,31 +237,33 @@ function App() {
     baselineReady.current = true;
   }
 
-  function detectRealtimeChanges(pending, reportsList, convList, currentUser) {
+  function detectRealtimeChanges(pending, reportsList, convList, studentsList, currentUser) {
     if (!baselineReady.current || !currentUser) return;
 
     if (currentUser.role === 'admin') {
-      pending.forEach(enrollment => {
+      // 1. New Pending Enrollments
+      (pending || []).forEach(enrollment => {
         if (!seenEnrollmentIds.current.has(enrollment.id)) {
           seenEnrollmentIds.current.add(enrollment.id);
-          const enrollName = enrollment.student_name || enrollment.firstName || 'A student';
+          const enrollName = enrollment.student_name || enrollment.fullName || enrollment.firstName || 'A student';
           pushNotification({
-            title: 'New Enrollment',
-            message: `${enrollName} submitted an enrollment application`,
+            title: 'New Enrollment Application',
+            message: `${enrollName} submitted an enrollment application (${enrollment.department || 'NSTP'})`,
             type: 'enrollment',
             link: '/admin/dashboard',
           });
         }
       });
 
-      reportsList.forEach(report => {
+      // 2. New Report Submissions by Instructors
+      (reportsList || []).forEach(report => {
         (report.submissions || []).forEach(sub => {
           const subKey = `${report.id}-${sub.instructor_id}-${sub.id}`;
           if (!seenSubmissionKeys.current.has(subKey)) {
             seenSubmissionKeys.current.add(subKey);
             pushNotification({
               title: 'New Report Submission',
-              message: `Report "${report.title || 'Untitled'}" was submitted`,
+              message: `Report "${report.title || 'Untitled'}" was submitted by ${sub.instructor || sub.department || 'an instructor'}`,
               type: 'report',
               link: '/reports',
             });
@@ -268,12 +273,31 @@ function App() {
     }
 
     if (currentUser.role === 'instructor') {
-      reportsList.forEach(report => {
-        if (report.department === currentUser.department && !seenReportIds.current.has(report.id)) {
+      // 1. Check for newly approved/enrolled students assigned to this instructor's department (e.g. ROTC, CWTS, LTS)
+      (studentsList || []).forEach(student => {
+        if (!seenStudentIds.current.has(student.id)) {
+          seenStudentIds.current.add(student.id);
+          const studentDept = student.department || student.nstp_component || '';
+          if (studentDept === currentUser.department) {
+            const studentName = student.name || student.student_name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'New Student';
+            pushNotification({
+              title: `New ${currentUser.department} Student Enrolled`,
+              message: `${studentName} was assigned to ${currentUser.department} class roster`,
+              type: 'student',
+              link: '/students',
+            });
+          }
+        }
+      });
+
+      // 2. Check for newly created report assignments targeting All or this department
+      (reportsList || []).forEach(report => {
+        const isTargetDept = report.department === 'All' || report.department === currentUser.department;
+        if (isTargetDept && !seenReportIds.current.has(report.id)) {
           seenReportIds.current.add(report.id);
           pushNotification({
-            title: 'New Report Assignment',
-            message: `New report: ${report.title || 'Untitled'}`,
+            title: report.department === 'All' ? 'New General Report Assignment' : `New ${report.department} Report Assignment`,
+            message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
             type: 'report',
             link: '/reports',
           });
@@ -338,16 +362,20 @@ function App() {
   async function refreshLiveData() {
     if (!user || window.__nstp_session_expired__) return;
     try {
-      const [reportsData, conversationsData, usersData] = await Promise.all([
+      const [reportsData, conversationsData, usersData, studentsData] = await Promise.all([
         reportsAPI.getAll().catch(() => null),
         conversationsAPI.getAll().catch(() => null),
-        usersAPI.getAll().catch(() => null)
+        usersAPI.getAll().catch(() => null),
+        studentsAPI.getAll().catch(() => null)
       ]);
 
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
       if (usersData && Array.isArray(usersData) && usersData.length > 0) {
         setUsers(usersData);
         safeSetStorage('nstp_cached_all_users', usersData);
+      }
+      if (studentsData && Array.isArray(studentsData)) {
+        setStudents(studentsData);
       }
 
       if (conversationsData && Array.isArray(conversationsData)) {
@@ -366,11 +394,12 @@ function App() {
 
       const activeConvs = (conversationsData && Array.isArray(conversationsData)) ? conversationsData : conversations;
       const activeReports = (reportsData && Array.isArray(reportsData)) ? reportsData : reports;
+      const activeStudents = (studentsData && Array.isArray(studentsData)) ? studentsData : students;
 
       if (!baselineReady.current) {
-        seedRealtimeBaseline(pending, activeReports, activeConvs, user);
+        seedRealtimeBaseline(pending, activeReports, activeConvs, activeStudents, user);
       } else {
-        detectRealtimeChanges(pending, activeReports, activeConvs, user);
+        detectRealtimeChanges(pending, activeReports, activeConvs, activeStudents, user);
         await checkConversationMessages(activeConvs, user);
       }
     } catch (error) {
@@ -408,27 +437,7 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 
-  // Poll for incoming/outgoing calls every 1 second for instant response
-  useEffect(() => {
-    if (!user) return;
 
-    async function pollCalls() {
-      try {
-        const incomingList = await callsAPI.getIncoming();
-        const activeList = incomingList.filter(c => !handledCallIdsRef.current.has(String(c.id)));
-        setIncomingCall(activeList.length > 0 ? activeList[0] : null);
-
-        if (outgoingCallIdRef.current) {
-          const outgoing = await callsAPI.getById(outgoingCallIdRef.current);
-          setOutgoingCallStatus(outgoing.status);
-        }
-      } catch { /* ignore poll errors */ }
-    }
-
-    pollCalls();
-    const callInterval = setInterval(pollCalls, 1000);
-    return () => clearInterval(callInterval);
-  }, [user]);
 
   function registerOutgoingCall(callId) {
     outgoingCallIdRef.current = callId;
@@ -937,7 +946,6 @@ function App() {
     <AuthContext.Provider value={contextValue}>
       <BrowserRouter basename={BASE_PATH}>
         <RealtimeToastStack />
-        <IncomingCallOverlay />
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-xs mx-auto">

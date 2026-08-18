@@ -274,31 +274,48 @@ function Enrollment() {
       }
     });
 
-    // Student ID - 8 to 12 digits + reject fake repeating/sequential patterns
+    // Student ID - 8 to 12 digits + comprehensive troll protection
     const sidDigits = (formData.studentId || '').replace(/\D/g, '');
     if (formData.studentId) {
+      const isTrollSid = (digits) => {
+        if (!digits || digits.length < 8 || digits.length > 12) return true;
+        // All same repeating digit (e.g. 00000000, 11111111, 22222222, 99999999)
+        if (/^(\d)\1+$/.test(digits)) return true;
+        // Sequential ascending/descending patterns
+        const sequentialSpam = [
+          '01234567', '12345678', '23456789', '34567890',
+          '98765432', '87654321', '76543210',
+          '123456789', '987654321', '1234567890', '0987654321',
+          '11223344', '12121212', '123123123', '10101010', '01010101'
+        ];
+        if (sequentialSpam.some(p => digits.includes(p))) return true;
+        // Obvious fake zeroes start/end
+        if (/^0{3,}/.test(digits) || /0{6,}$/.test(digits)) return true;
+        // Authentic CvSU Student Numbers start with '20' (e.g. 202410123, 202310456) or '19'
+        if (!digits.startsWith('20') && !digits.startsWith('19')) return true;
+        return false;
+      };
+
       if (sidDigits.length < 8 || sidDigits.length > 12) {
         newErrors.studentId = sidDigits.length < 8
-          ? `Student ID is too short — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, need at least 8`
-          : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12`;
-      } else if (/^(\d)\1+$/.test(sidDigits) || sidDigits === '12345678' || sidDigits === '123456789' || sidDigits === '987654321') {
-        newErrors.studentId = 'Invalid Student ID — Please enter your actual university Student Number.';
+          ? `Student ID is too short — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, need at least 8 digits`
+          : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12 digits`;
+      } else if (isTrollSid(sidDigits)) {
+        newErrors.studentId = 'Invalid Student ID — Please enter your authentic CvSU Student Number (e.g. 202410001).';
       }
     }
 
-    // Email - Must be official CvSU institutional email (@cvsu.edu.ph)
+    // Email - Any valid email format (institutional or personal email accepted)
     if (formData.email) {
       const emailTrim = formData.email.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
-        newErrors.email = 'Invalid email — must be in valid format (e.g. student@cvsu.edu.ph)';
-      } else if (!emailTrim.endsWith('@cvsu.edu.ph')) {
-        newErrors.email = 'Official Student Email Required — must be an official @cvsu.edu.ph institutional email';
+        newErrors.email = 'Invalid email — please enter a valid email address (e.g. student@gmail.com)';
       }
     }
 
-    // Security Verification - Google reCAPTCHA v2
-    if (!googleRecaptchaToken) {
-      newErrors.captcha = 'Security Verification Failed: Please check the Google reCAPTCHA "I\'m not a robot" box.';
+    // Security Verification - Google reCAPTCHA v2 (with mobile fallback)
+    if (!googleRecaptchaToken && window.grecaptcha) {
+      newErrors.captcha = 'Security Verification: Please check the "I\'m not a robot" box.';
     }
 
     // Contact Number - 11 digits
@@ -368,14 +385,51 @@ function Enrollment() {
     if (!file) return;
 
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('PDF file is too large (maximum 5 MB). Please select a smaller file or take a photo.', 'error');
+      if (file.size > 15 * 1024 * 1024) {
+        showToast('PDF file is too large (maximum 15 MB). Please select a smaller file or take a photo.', 'error');
         e.target.value = '';
         return;
       }
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setRegistrationPhoto(ev.target.result); // store raw base64 PDF
+      reader.onload = async (ev) => {
+        const rawPdfData = ev.target.result;
+        try {
+          // Convert PDF page 1 to high-res JPEG image preview using PDF.js
+          let pdfjs = window.pdfjsLib;
+          if (!pdfjs) {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+              script.onload = () => {
+                if (window.pdfjsLib) {
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                  resolve();
+                } else reject(new Error('PDF.js unavailable'));
+              };
+              script.onerror = reject;
+              document.head.appendChild(script);
+            });
+            pdfjs = window.pdfjsLib;
+          }
+
+          const base64 = rawPdfData.split(',')[1];
+          const raw = atob(base64);
+          const uint8 = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i++) uint8[i] = raw.charCodeAt(i);
+
+          const pdf = await pdfjs.getDocument({ data: uint8 }).promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 2.0 }); // 2x high resolution
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setRegistrationPhoto(imgDataUrl);
+        } catch (err) {
+          console.warn('PDF to image preview conversion fallback:', err);
+          setRegistrationPhoto(rawPdfData); // fallback to raw base64 PDF
+        }
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
       reader.readAsDataURL(file);
@@ -387,14 +441,14 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1000;
+        const MAX = 1200;
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.70));
+        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.75));
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
       // Fallback for formats the browser can't decode in canvas (e.g. HEIC on desktop)
@@ -561,12 +615,7 @@ function Enrollment() {
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
-                  <span className="bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
-                    NSTP Portal
-                  </span>
-                </div>
+                <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
                 <p className="text-emerald-200 text-[8px] xs:text-[9px] sm:text-xs font-medium leading-tight">National Service Training Program Student Enrollment</p>
               </div>
             </div>
@@ -672,12 +721,7 @@ function Enrollment() {
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
-                <span className="hidden sm:inline-flex bg-amber-400/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-400/30">
-                  NSTP Portal
-                </span>
-              </div>
+              <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
               <p className="text-emerald-200 text-[8px] xs:text-[9px] sm:text-xs font-medium leading-tight">National Service Training Program Student Enrollment</p>
             </div>
           </div>
@@ -889,7 +933,7 @@ function Enrollment() {
                     type="email"
                     name="email"
                     required
-                    placeholder="student@cvsu.edu.ph"
+                    placeholder="student@gmail.com or student@cvsu.edu.ph"
                     value={formData.email}
                     onChange={handleChange}
                     className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.email ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
@@ -1575,16 +1619,18 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Simple Standalone Google reCAPTCHA v2 Widget */}
-              <div className="flex flex-col items-center sm:items-start my-2 overflow-x-auto">
-                <div
-                  className="g-recaptcha rounded-2xl overflow-hidden shadow-xs border border-gray-200 bg-white"
-                  data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
-                  data-callback="onGoogleRecaptchaSuccess"
-                  data-expired-callback="onGoogleRecaptchaExpired"
-                />
+              {/* Google reCAPTCHA v2 Widget - Perfectly Centered & Clean Rectangular */}
+              <div className="flex flex-col items-center justify-center my-4 w-full">
+                <div className="recaptcha-center-wrapper">
+                  <div
+                    className="g-recaptcha"
+                    data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
+                    data-callback="onGoogleRecaptchaSuccess"
+                    data-expired-callback="onGoogleRecaptchaExpired"
+                  />
+                </div>
                 {errors.captcha && (
-                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1.5">
+                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center justify-center gap-1.5 text-center">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {errors.captcha}
                   </p>
                 )}

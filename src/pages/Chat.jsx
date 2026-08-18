@@ -99,6 +99,8 @@ function Chat() {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
   const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const [isSendingMedia, setIsSendingMedia] = useState(false);
+  const isSendingMediaRef = useRef(false);
   const galleryInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -256,7 +258,7 @@ function Chat() {
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
-    if (file && activeConversation) {
+    if (file && activeConversation && !isSendingMediaRef.current) {
       // 150MB client limit (base64 adds ~33% → ~200MB on wire, matches server limit)
       const maxSize = 150 * 1024 * 1024;
       if (file.size > maxSize) {
@@ -265,6 +267,8 @@ function Chat() {
         return;
       }
       
+      isSendingMediaRef.current = true;
+      setIsSendingMedia(true);
       try {
         // Read file as base64 for download capability
         const fileData = await new Promise((resolve, reject) => {
@@ -289,6 +293,9 @@ function Chat() {
       } catch (error) {
         console.error('File upload error:', error);
         addNotification('Failed to send file. Please try again.', 'error');
+      } finally {
+        isSendingMediaRef.current = false;
+        setIsSendingMedia(false);
       }
     }
     e.target.value = '';
@@ -300,7 +307,9 @@ function Chat() {
 
   const handleGallerySelect = async (e) => {
     const file = e.target.files[0];
-    if (file && activeConversation) {
+    if (file && activeConversation && !isSendingMediaRef.current) {
+      isSendingMediaRef.current = true;
+      setIsSendingMedia(true);
       try {
         // Convert HEIC/HEIF (iPhone format) to JPEG so browsers can display it
         let readableFile = file;
@@ -333,6 +342,9 @@ function Chat() {
       } catch (error) {
         console.error('Gallery image load error:', error);
         addNotification('Failed to send image. Please try a different format.', 'error');
+      } finally {
+        isSendingMediaRef.current = false;
+        setIsSendingMedia(false);
       }
     }
     e.target.value = '';
@@ -392,9 +404,10 @@ function Chat() {
   };
 
   const handleSendPhoto = async () => {
-    if (!capturedPhoto || !activeConversation) return;
+    if (!capturedPhoto || !activeConversation || isSendingMediaRef.current) return;
+    isSendingMediaRef.current = true;
+    setIsSendingMedia(true);
     try {
-
       await sendMessage(activeConversation.id, {
         sender: 'me',
         text: '📸 Camera Photo',
@@ -402,11 +415,14 @@ function Chat() {
         imageUrl: capturedPhoto
       });
       addNotification('Photo sent!', 'success');
+      handleCloseCamera();
     } catch (error) {
       console.error('Photo send error:', error);
       addNotification('Failed to send photo', 'error');
+    } finally {
+      isSendingMediaRef.current = false;
+      setIsSendingMedia(false);
     }
-    handleCloseCamera();
   };
 
   // ── Drawing board ──────────────────────────────────────────
@@ -572,7 +588,9 @@ function Chat() {
 
   const handleDrawSend = async () => {
     const canvas = drawCanvasRef.current;
-    if (!canvas || !activeConversation) return;
+    if (!canvas || !activeConversation || isSendingMediaRef.current) return;
+    isSendingMediaRef.current = true;
+    setIsSendingMedia(true);
     flattenTextLayers(); // burn movable text onto canvas before export
     const dataUrl = canvas.toDataURL('image/png');
     setShowDrawModal(false);
@@ -583,16 +601,21 @@ function Chat() {
         type: 'image',
         imageUrl: dataUrl,
       });
+      addNotification('Drawing sent!', 'success');
     } catch {
       addNotification('Failed to send drawing.', 'error');
+    } finally {
+      isSendingMediaRef.current = false;
+      setIsSendingMedia(false);
     }
   };
 
   const handleCameraCapture = async (e) => {
     const file = e.target.files[0];
-    if (file && activeConversation) {
+    if (file && activeConversation && !isSendingMediaRef.current) {
+      isSendingMediaRef.current = true;
+      setIsSendingMedia(true);
       try {
-
         const imageData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = (evt) => resolve(evt.target.result);
@@ -610,6 +633,9 @@ function Chat() {
       } catch (error) {
         console.error('Camera capture send error:', error);
         addNotification('Failed to send photo. Please try again.', 'error');
+      } finally {
+        isSendingMediaRef.current = false;
+        setIsSendingMedia(false);
       }
     }
     e.target.value = '';
@@ -692,6 +718,23 @@ function Chat() {
         console.error('Error accessing microphone:', err);
       }
     }
+  };
+
+  const cancelVoiceRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = null;
+      if (mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      }
+    }
+    setIsRecording(false);
+    clearInterval(recordingIntervalRef.current);
+    setRecordingTime(0);
+    recordingDurationRef.current = 0;
+    addNotification('Voice recording cancelled.', 'info');
   };
 
   // Tracks blob URLs we created so we can revoke them to free memory
@@ -1957,6 +2000,38 @@ function Chat() {
                 </div>
               </div>
 
+              {/* Active Voice Recording Notification Banner - Highly Visible on Mobile & Desktop */}
+              {isRecording && (
+                <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-3 sm:px-4 py-2.5 shadow-lg flex items-center justify-between gap-2 z-40 animate-pulse border-b border-red-500 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="relative flex h-3 w-3 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                    </span>
+                    <Mic className="w-4 h-4 text-white animate-bounce shrink-0" />
+                    <span className="font-black text-xs sm:text-sm tracking-wider uppercase truncate">
+                      RECORDING VOICE MESSAGE ({Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={cancelVoiceRecording}
+                      className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-extrabold transition-colors cursor-pointer touch-manipulation"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVoiceToggle}
+                      className="px-3 py-1 bg-white text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-black transition-colors cursor-pointer shadow-xs touch-manipulation"
+                    >
+                      Send 🚀
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Messages */}
               {isBlocked && (
                 <div className="bg-red-100 border-l-4 border-red-500 p-4 mx-4 mt-4 rounded">
@@ -2376,20 +2451,51 @@ function Chat() {
                     </button>
                   </div>
 
-                  <input
-                    type="text"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
-                    placeholder="Type a message..."
-                    className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-full sm:rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                  />
+                  {isRecording ? (
+                    <div className="flex-1 flex items-center justify-between bg-red-50 border-2 border-red-500/80 rounded-2xl px-3 py-1.5 shadow-xs gap-2 min-w-0 animate-pulse">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                        </span>
+                        <Mic className="w-4 h-4 text-red-600 shrink-0 animate-bounce" />
+                        <span className="text-xs font-black text-red-700 truncate">
+                          Recording ({recordingTime}s)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={cancelVoiceRecording}
+                          className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-[11px] font-extrabold transition-colors cursor-pointer touch-manipulation"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleVoiceToggle}
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[11px] font-black transition-colors cursor-pointer shadow-xs touch-manipulation"
+                        >
+                          Send 🚀
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
+                      placeholder="Type a message..."
+                      className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-full sm:rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                  )}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -2786,8 +2892,13 @@ function Chat() {
                       <button type="button" onClick={handleRetakePhoto} className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
                         <X className="w-5 h-5" /> Retake
                       </button>
-                      <button type="button" onClick={handleSendPhoto} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2">
-                        <Send className="w-5 h-5" /> Send Photo
+                      <button 
+                        type="button" 
+                        onClick={handleSendPhoto} 
+                        disabled={isSendingMedia}
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-full font-medium text-sm sm:text-base touch-manipulation flex items-center gap-2 cursor-pointer"
+                      >
+                        <Send className="w-5 h-5" /> {isSendingMedia ? 'Sending...' : 'Send Photo'}
                       </button>
                     </>
                   )}

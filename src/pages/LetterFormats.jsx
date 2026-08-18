@@ -190,39 +190,39 @@ export default function LetterFormats() {
                   setEditingTemplate(null);
                   setShowAddModal(true);
                 }}
-                className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 w-full sm:w-auto justify-center cursor-pointer text-[11px] sm:text-xs shrink-0 pt-1 sm:pt-0 border-t border-emerald-700/40 sm:border-t-0"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-4 py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 w-full sm:w-auto cursor-pointer text-xs sm:text-sm shrink-0"
               >
-                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950" />
+                <Plus className="w-4 h-4 text-emerald-950 stroke-[2.5]" />
                 <span className="whitespace-nowrap">Create Letter Format</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Filter Tabs & Search */}
-        <div className="flex flex-row items-center justify-between gap-2 mb-6">
+        {/* Filter Tabs & Search Bar — Perfectly Aligned */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 mb-6 w-full">
           {/* Search Box */}
           <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-emerald-700/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search letters..."
+              placeholder="Search letter formats by title or description..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+              className="w-full pl-10 pr-4 h-11 sm:h-12 bg-white border border-gray-200/90 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs transition-all"
             />
           </div>
 
-          {/* Department Filter Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl sm:rounded-2xl shadow-2xs overflow-x-auto shrink-0 max-w-[50%] sm:max-w-none">
+          {/* Department Filter Tabs — Same Height as Search Box */}
+          <div className="flex items-center gap-1 p-1 bg-white border border-gray-200/90 rounded-xl sm:rounded-2xl shadow-2xs shrink-0 h-11 sm:h-12 overflow-x-auto">
             {['All', 'ROTC', 'CWTS', 'LTS'].map(tab => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 sm:px-5 h-full flex items-center justify-center rounded-lg sm:rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
                   activeTab === tab
-                    ? 'bg-emerald-800 text-white shadow-sm'
+                    ? 'bg-emerald-800 text-white shadow-xs'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
@@ -294,11 +294,11 @@ export default function LetterFormats() {
                           <p className="text-xs text-emerald-700 font-medium">{item.file.size}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 mt-1 sm:mt-0">
+                      <div className="flex items-center gap-2 shrink-0 mt-2 sm:mt-0">
                         <button
                           type="button"
                           onClick={() => setViewingFile(item.file)}
-                          className="px-2.5 py-1 text-xs font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs font-bold bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                           title="View File"
                         >
                           <Eye className="w-3.5 h-3.5 text-emerald-700" />
@@ -307,7 +307,7 @@ export default function LetterFormats() {
                         <button
                           type="button"
                           onClick={() => handleDownloadAttachment(item)}
-                          className="px-2.5 py-1 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                          className="px-3 py-1.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                           title="Download File"
                         >
                           <Download className="w-3.5 h-3.5 text-amber-300" />
@@ -323,7 +323,7 @@ export default function LetterFormats() {
                     By {item.createdBy}
                   </span>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -334,7 +334,7 @@ export default function LetterFormats() {
                         setAttachedFile(item.file || null);
                         setShowAddModal(true);
                       }}
-                      className="p-1.5 text-gray-500 hover:text-emerald-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                      className="p-2 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
                       title="Edit"
                     >
                       <Edit3 className="w-4 h-4" />
@@ -343,7 +343,7 @@ export default function LetterFormats() {
                     <button
                       type="button"
                       onClick={() => handleDeleteTemplate(item.id)}
-                      className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />

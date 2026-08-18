@@ -60,13 +60,18 @@ function Reports() {
 
   const openEditModal = (report) => {
     setEditingReport(report);
+    const rawDate = report.dueDate || report.due_date || '';
+    const formattedDate = rawDate ? String(rawDate).split('T')[0].split(' ')[0] : '';
     setCreateForm({
       title: report.title || '',
       description: report.description || '',
       department: report.department || 'All',
-      dueDate: report.dueDate || report.due_date || '',
-      referenceFile: (report.reference_file_data || report.referenceFile?.data)
-        ? { name: report.reference_file_name || report.referenceFile?.name || 'Reference File', data: report.reference_file_data || report.referenceFile?.data }
+      dueDate: formattedDate,
+      referenceFile: (report.reference_file_data || report.referenceFile?.data || report.reference_file_name || report.referenceFile?.name)
+        ? {
+            name: report.reference_file_name || report.referenceFile?.name || 'Attached Reference File',
+            data: report.reference_file_data || report.referenceFile?.data || null
+          }
         : null
     });
     setShowCreateModal(true);
@@ -606,7 +611,9 @@ function Reports() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description / Instructions *</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Description / Instructions <span className="text-gray-400 font-normal lowercase">(optional)</span>
+                  </label>
                   <textarea
                     value={createForm.description}
                     onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
@@ -689,7 +696,7 @@ function Reports() {
                 <button
                   type="button"
                   onClick={handleSaveReport}
-                  disabled={!createForm.title.trim() || !createForm.description.trim() || isCreatingReport}
+                  disabled={!createForm.title.trim() || isCreatingReport}
                   className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isCreatingReport ? (editingReport ? 'Saving Changes...' : 'Creating...') : (editingReport ? 'Update Assignment' : 'Create Assignment')}

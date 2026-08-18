@@ -6,10 +6,10 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
@@ -23,6 +23,157 @@ const AVATAR_OPTIONS = {
   red: { color: 'bg-red-500', icon: '👮' },
   yellow: { color: 'bg-yellow-500', icon: '⭐' },
 };
+
+function RegistrationDocumentPreview({ documentUrl, onExpand, isFullscreen = false }) {
+  const canvasRef = useRef(null);
+  const isPdf = typeof documentUrl === 'string' && (documentUrl.startsWith('data:application/pdf') || documentUrl.endsWith('.pdf'));
+  const [renderStatus, setRenderStatus] = useState('loading'); // 'loading' | 'rendered' | 'fallback'
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!isPdf || !documentUrl) {
+      return;
+    }
+
+    const renderPdf = async () => {
+      try {
+        let pdfjs = window.pdfjsLib;
+        if (!pdfjs) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = () => {
+              if (window.pdfjsLib) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                resolve();
+              } else reject(new Error('PDF.js missing'));
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+          pdfjs = window.pdfjsLib;
+        }
+
+        const base64Index = documentUrl.indexOf('base64,');
+        const base64Data = base64Index !== -1 ? documentUrl.substring(base64Index + 7) : documentUrl;
+        const raw = atob(base64Data);
+        const uint8 = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) uint8[i] = raw.charCodeAt(i);
+
+        const pdf = await pdfjs.getDocument({ data: uint8 }).promise;
+        const page = await pdf.getPage(1);
+        const scale = isFullscreen ? 2.2 : 1.8;
+        const viewport = page.getViewport({ scale });
+
+        if (!isMounted || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        if (isMounted) setRenderStatus('rendered');
+      } catch (err) {
+        console.warn('PDF canvas render fallback:', err);
+        if (isMounted) setRenderStatus('fallback');
+      }
+    };
+
+    renderPdf();
+    return () => { isMounted = false; };
+  }, [documentUrl, isPdf, isFullscreen]);
+
+  if (!documentUrl) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+        <p className="text-xs font-bold text-amber-800">No registration form photo submitted by applicant</p>
+      </div>
+    );
+  }
+
+  if (isPdf) {
+    if (isFullscreen) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center p-2">
+          {renderStatus === 'loading' && (
+            <div className="py-12 flex flex-col items-center justify-center text-emerald-300 gap-3">
+              <div className="w-9 h-9 border-3 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-sm font-bold">Rendering Document High-Resolution Image...</p>
+            </div>
+          )}
+          <div className="w-full h-full overflow-auto flex items-center justify-center">
+            <canvas
+              ref={canvasRef}
+              className={`max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl bg-white ${renderStatus === 'rendered' ? 'block' : 'hidden'}`}
+            />
+            {renderStatus === 'fallback' && (
+              <iframe
+                src={documentUrl}
+                title="Registration Form PDF Fullscreen"
+                className="w-full h-[80vh] rounded-xl border border-gray-700 bg-white"
+              />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-1.5">
+        <div
+          className="relative rounded-2xl overflow-hidden border border-emerald-300 shadow-md bg-white cursor-zoom-in group max-h-[500px] flex flex-col items-center justify-center p-2"
+          onClick={onExpand}
+        >
+          {renderStatus === 'loading' && (
+            <div className="py-12 flex flex-col items-center justify-center text-emerald-800 gap-2">
+              <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-bold">Rendering Registration Form Image...</p>
+            </div>
+          )}
+
+          <canvas
+            ref={canvasRef}
+            className={`w-full max-w-full max-h-[460px] object-contain rounded-xl ${renderStatus === 'rendered' ? 'block' : 'hidden'}`}
+          />
+
+          {renderStatus === 'fallback' && (
+            <iframe
+              src={documentUrl}
+              title="PDF Registration Form Preview"
+              className="w-full h-80 sm:h-96 rounded-xl border border-gray-200 bg-white"
+            />
+          )}
+
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span className="bg-white text-emerald-950 text-xs font-black px-3.5 py-1.5 rounded-full shadow-lg border border-emerald-300 flex items-center gap-1.5">
+              🔍 Click to View Fullscreen
+            </span>
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-500 text-center font-medium">
+          Instant Document Preview loaded. Click photo or button to view fullscreen.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="relative rounded-2xl overflow-hidden border border-emerald-300 bg-gray-900/5 shadow-md cursor-zoom-in group"
+      onClick={onExpand}
+    >
+      <img
+        src={documentUrl}
+        alt="Submitted Registration Form Proof"
+        className="w-full max-h-[450px] sm:max-h-[520px] object-contain mx-auto transition-transform duration-200 group-hover:scale-[1.01]"
+      />
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+        <span className="bg-white text-emerald-950 text-xs font-black px-3.5 py-1.5 rounded-full shadow-lg border border-emerald-300 flex items-center gap-1.5">
+          🔍 Click to View Fullscreen
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function AdminDashboard() {
   const { user, logout, clearBatchData, students, reports, allUsers, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
@@ -1460,37 +1611,28 @@ function AdminDashboard() {
               {/* Scrollable body */}
               <div className="flex-1 overflow-y-auto overscroll-contain">
 
-                {/* Registration Photo — full width, top */}
-                <div className="p-3 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-green-800 mb-2 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5" /> Registration Form Photo
-                  </p>
-                  {selectedEnrollment.registration_photo ? (
-                    <div>
-                      {typeof selectedEnrollment.registration_photo === 'string' && selectedEnrollment.registration_photo.startsWith('data:application/pdf') ? (
-                        <div
-                          className="w-full p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-center cursor-pointer hover:bg-emerald-100/60 transition-all flex flex-col items-center justify-center gap-2"
-                          onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
-                        >
-                          <FileText className="w-10 h-10 text-emerald-700" />
-                          <span className="text-xs font-bold text-emerald-950">PDF Document Submitted</span>
-                          <span className="text-[10px] text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-300">Tap to open &amp; download PDF</span>
-                        </div>
-                      ) : (
-                        <img
-                          src={selectedEnrollment.registration_photo}
-                          alt="Registration form"
-                          className="w-full max-h-64 sm:max-h-80 object-contain rounded-lg border border-gray-200 bg-gray-50 cursor-zoom-in"
-                          onClick={() => setPhotoViewer(selectedEnrollment.registration_photo)}
-                        />
-                      )}
-                      <p className="text-xs text-gray-400 mt-1 text-center">Tap to view full size</p>
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                      <p className="text-xs font-medium text-amber-700">No registration form photo submitted</p>
-                    </div>
-                  )}
+                {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
+                <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form
+                    </p>
+                    {(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) && (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        🔍 Expand Fullscreen
+                      </button>
+                    )}
+                  </div>
+
+                  <RegistrationDocumentPreview
+                    documentUrl={selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto}
+                    onExpand={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                    isFullscreen={false}
+                  />
                 </div>
 
                 {/* Details — label/value rows, comprehensive */}
@@ -1594,39 +1736,6 @@ function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Anti-Troll Security Audit Details */}
-                  <div className="bg-emerald-950 text-white rounded-2xl p-3.5 border border-emerald-800 shadow-sm space-y-2">
-                    <p className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-amber-400" /> Anti-Troll Security Audit
-                    </p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span className="text-emerald-200 font-medium">CvSU Email Status:</span>
-                        {(selectedEnrollment.email || '').toLowerCase().endsWith('@cvsu.edu.ph') ? (
-                          <span className="bg-emerald-800 text-emerald-100 font-extrabold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3 text-amber-300" /> Verified @cvsu.edu.ph
-                          </span>
-                        ) : (
-                          <span className="bg-rose-900 text-rose-100 font-extrabold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3 text-rose-300" /> Personal Email (Unverified)
-                          </span>
-                        )}
-                      </div>
-                      {selectedEnrollment.ip_address && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-emerald-200 font-medium">IP Address:</span>
-                          <span className="font-mono text-amber-300 text-[11px] font-bold">{selectedEnrollment.ip_address}</span>
-                        </div>
-                      )}
-                      {selectedEnrollment.user_agent && (
-                        <div className="flex justify-between items-start gap-2 pt-1 border-t border-emerald-800/60 text-[10px] text-emerald-300">
-                          <span className="font-medium shrink-0">Device:</span>
-                          <span className="font-mono truncate text-right">{selectedEnrollment.user_agent}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Submission Status & Timestamp */}
                   <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
                     <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-black uppercase text-[10px] tracking-wider">
@@ -1682,19 +1791,20 @@ function AdminDashboard() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center overflow-hidden p-2" onClick={e => e.stopPropagation()}>
-              {typeof photoViewer === 'string' && photoViewer.startsWith('data:application/pdf') ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-xl p-4">
-                  <iframe
-                    src={photoViewer}
-                    title="Registration Form PDF"
-                    className="w-full h-[75vh] rounded-lg border border-gray-700 bg-white"
-                  />
-                  <div className="mt-3 flex items-center gap-3">
+            <div className="flex-1 flex flex-col items-center justify-center overflow-auto p-2" onClick={e => e.stopPropagation()}>
+              {typeof photoViewer === 'string' && (photoViewer.startsWith('data:application/pdf') || photoViewer.endsWith('.pdf')) ? (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-xl p-2 sm:p-4">
+                  <div className="flex-1 w-full max-h-[82vh] overflow-auto flex items-center justify-center">
+                    <RegistrationDocumentPreview
+                      documentUrl={photoViewer}
+                      isFullscreen={true}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center gap-3 shrink-0">
                     <a
                       href={photoViewer}
                       download="Registration_Form.pdf"
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
                     >
                       <Download className="w-4 h-4" /> Download PDF File
                     </a>
@@ -1704,7 +1814,7 @@ function AdminDashboard() {
                 <img
                   src={photoViewer}
                   alt="Registration form"
-                  className="max-w-full max-h-full object-contain rounded"
+                  className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
                   style={{ touchAction: 'pinch-zoom' }}
                 />
               )}

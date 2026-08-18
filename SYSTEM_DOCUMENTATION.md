@@ -35,11 +35,11 @@
 > *"Naka-organisa ang libo-libong mag-aaral ayon sa Batch Year, Program (`BSIT`, `BSCS`, `BSFAS`, `BSBA`, `BSEd`, `BEED`, `BSHM`), Component (`CWTS`, `LTS`, `ROTC`), at Section.*
 > * Sa isang click lang ng button na **'Export CHED Excel'**, awtomatikong nagge-generate ang system ng opisyal na formatted Excel sheet na handang-handa nang isumite sa Commission on Higher Education."*
 
-#### 4. 💬 Real-time Communication & WebRTC Audio/Video Calls
+#### 4. 💬 Real-time Communication 
 > *"May built-in communication hub ang Admin at Instructors:*
 > * * Direct messaging at **All-Instructors Group Chat**.*
 > * * Instant image and file attachment sharing.*
-> * * **P2P WebRTC Voice & Video Calls:** Pwedeng tumawag at makipag-video conference ang Admin at Instructors nang direkta sa loob ng app."*
+
 
 #### 5. ☁️ Automatic Google Drive Cloud Backup
 > *"Lahat ng datos (100% ng 13 MySQL database tables) ay awtomatikong binaback-up at pino-protektahan sa **Google Drive Storage** tuwing may bagong enrollment, report submission, o student status update."*
@@ -52,7 +52,6 @@ Ang **CvSU Naic NSTP Record & Report Management System** ay isang makabagong, we
 Layunin nitong i-automate, gawing mabilis, ligtas, at digital ang lahat ng proseso at talaan ng NSTP:
 * **Online Student Registration & Enrollment**: Pagpaparehistro ng mga bagong mag-aaral (Freshmen) sa tatlong NSTP components (**CWTS, LTS, at ROTC**) gamit ang automatic HEIC-to-JPEG conversion para sa mga kuha sa iPhone, PDF document viewer, at input validation para sa mga pangalang may letrang **ñ / Ñ**.
 * **Student Roster & CHED Export**: Pag-organisa ng libo-libong mag-aaral ayon sa Batch Year, Program (`BSIT`, `BSCS`, `BSFAS`, `BSBA`, `BSEd`, `BEED`, `BSHM`), Component (`CWTS`, `LTS`, `ROTC`), at Section. May tampok na **CHED Excel Masterlist Exporter**.
-* **Real-time Messaging & Video Calling**: Chat system na sumusuporta sa direct messaging, All-Instructors Group Chat, attachment image sharing, at P2P WebRTC Audio/Video calling.
 * **Reports, Letter Formats, & Calendar**: Paglikha at pagpasa ng mga report requirements, opisyal na pormat ng liham (Letter Formats), at kalendaryo ng mga gawain at pista opisyal.
 
 ---
@@ -106,7 +105,6 @@ Ang database ay binubuo ng mga sumusunod na talahanayan (Tables):
 6. **`report_comments`**: Balitaktakan at komento ng Admin at Instructor sa bawat report.
 7. **`conversations` & `conversation_participants`**: Talaan ng mga direct messages at All-Instructors Group Chat.
 8. **`messages`**: Mga mensahe, larawang ipinadala, at reactions sa chat.
-9. **`calls`**: Signal table para sa WebRTC Peer-to-Peer Audio & Video calling.
 10. **`archives`**: Naka-archive na lumang Batch Years (Read-only historical data).
 11. **`audit_logs`**: System audit trail (Timestamp, User ID, Action, IP Address, at Details).
 
@@ -151,13 +149,132 @@ nstp-system/
 
 ---
 
-## 🛡️ 6. Panseguridad at Input Validation Rules (Security & Quality Assurance)
+## 🔘 6. Kompletong Talaan ng lahat ng Button Functions sa System (Page-by-Page Button Guide)
 
-* **Filipino Character & Diacritics Support**: Pinapayagan ang letrang **`ñ`** at **`Ñ`** sa mga pangalan at tirahan gamit ang regex: `/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g`.
-* **Proper Word Title Casing**: Pinaiiral ang `toTitleCase` function na nagpapanatili ng unang letrang Uppercase bawat salita habang ipinagbabawal ang ALL-CAPS inputs.
-* **Contact Number Validation**: Digits-only regex (`/\D/g`) para sa mga numero ng telepono.
-* **DOM Password Form Compliance**: Lahat ng password fields sa `Profile.jsx` ay nakapaloob sa `<form>` element para sa accessibility at password manager standards.
-* **0-404 Asset Bundle Guarantee**: Ang lahat ng mga pahina ay naka-bundle nang buo upang maiwasan ang mga 404 Chunk Load errors sa mga bagong deployments.
+### 1. 🏠 Landing Page (`Landing.jsx`)
+* **"Enroll Now" / "Mag-register Na" Button**: Nagno-navigate papuntang Online Student Registration Form (`/enrollment`).
+* **"Portal Login" / "Mag-login" Button**: Nagno-navigate papuntang Authentication Portal (`/login`).
+* **"Play Video Orientation" Button**: Nagbubukas ng modal window na nag-i-stream ng CvSU Naic NSTP Audio-Visual Orientation video (`/public/nstp-orientation.mp4`).
+
+---
+
+### 3. 📝 Online Enrollment Portal (`Enrollment.jsx`)
+* **Multi-Step Form Tab Buttons ("Personal Info", "Academic Info", "Address & Contact", "Guardian Info", "Review & Submit")**: Nagno-navigate sa bawat bahagi ng registration form habang pinaiiral ang client-side validation sa bawat step.
+* **"Upload 2x2 Photo" Button**: Nagbubukas ng file picker o camera capture. Kino-compress at kino-convert ang anumang larawan (kasama ang `.HEIC` mula sa iPhone) papuntang optimized `.JPEG` base64.
+* **"Upload ID / COR Photo" Button**: Nag-a-upload ng katibayan ng pag-enroll (Student ID o Certificate of Registration).
+* **reCAPTCHA Checkbox**: Verification mula sa Google reCAPTCHA v2 para harangan ang mga automated spam bots (may mobile fallback).
+* **"Submit Application" Button (`type="submit"`)**: Nagpapatakbo ng input sanitization (Title Case, parehong institutional `@cvsu.edu.ph` at personal email support tulad ng Gmail/Yahoo, Student ID check, preservation ng letrang ñ/Ñ), nagse-send ng `POST /api/enrollments`, nagtatala ng audit log na may IP address, nagte-trigger ng cloud backup sa Google Drive, at nagpapakita ng modal na may Reference Number.
+* **"Clear Form / Reset" Button**: Nagli-linis ng lahat ng input field at nagtatanggal ng nakasave na local draft (`enrollmentFormData`).
+
+---
+
+### 4. 👑 Admin Dashboard (`AdminDashboard.jsx`)
+* **Quick Stats Cards ("Total Students", "Pending Approvals", "Reports Submitted", "Active Instructors") Buttons**: Clickable metrics na nagdidirekta sa filtered views sa Student Management o Reports.
+* **"Approve Enrollment" Button (Checkmark Icon)**: Tumatawag sa `PUT /api/enrollments/:id/approve`. Inililipat ang estudyante mula sa `enrollments` table papuntang `students` masterlist, nag-a-assign ng active Batch Year, nagse-send ng toast notification, nagtatala ng audit log (`enrollment_approved`), at nag-e-execute ng Google Drive backup.
+* **"Reject Enrollment" Button (X Icon)**: Nagbubukas ng modal para sa dahilan ng pag-reject, tumatawag sa `PUT /api/enrollments/:id/reject`, nagtatala ng audit log, at nagse-send ng notification.
+* **"View Application Details" (Eye Icon) Button**: Nagbubukas ng modal drawer na nagpapakita ng buong registration details, 2x2 photo, COR photo, tirahan, at audit IP Address.
+* **"Manage Batch Years / Archive Year" Button**: Nagbubukas ng modal para mag-snapshot ng kasalukuyang batch year papunta sa read-only `archives` table at mag-umpisa ng bagong Academic Year.
+* **"Backup Database to Google Drive" Button**: Manwal na nagte-trigger ng agad na cloud backup webhook papunta sa Google Apps Script / Google Drive Sheet.
+* **"View System Audit Logs" Button**: Nagbubukas ng security audit trail drawer na nagpapakita ng live logs (`audit_logs` table: Timestamp, User ID, Action, IP Address, Details).
+
+---
+
+### 5. 👨‍🏫 Instructor Dashboard (`InstructorDashboard.jsx`)
+* **Department Metric Cards ("My Students", "Pending Requirements", "Recent Messages") Buttons**: Mabilis na navigation papunta sa section roster o pending reports.
+* **"Submit Required Report" Button**: Direct shortcut papuntang `/reports` na may nakapiling requirement filter.
+* **Section Selector Buttons**: Pinipili at nino-narrow down ang nakikitang datos ayon sa CWTS, LTS, o ROTC section.
+
+---
+
+### 6. 🎓 Student Management (`StudentManagement.jsx`)
+* **"Export CHED Excel Masterlist" Button**: Tumatawag sa `GET /api/students/ched-export` o gumagamit ng ExcelJS/XLSX engine para mag-generate ng opisyal na formatted `.xlsx` masterlist spreadsheet na tumutupad sa pormat ng Commission on Higher Education (CHED).
+* **"Add New Student" Button**: Nagbubukas ng modal form para sa manwal na pagdaragdag ng estudyante (Admin lang).
+* **"Edit Student" Button (Pencil Icon)**: Nagbubukas ng modal para mag-update ng program, section, o contact info (`PUT /api/students/:id`).
+* **"Delete Student" Button (Trash Icon)**: Nagpapakita ng confirmation dialog bago permanenteng burahin ang student record (`DELETE /api/students/:id`).
+* **"View Student Profile" Button (Eye Icon)**: Nagbubukas ng kumpletong modal drawer ng estudyante (2x2 photo, tirahan, emergency contact, enrollment timestamp).
+* **Clear Search ("X") Button**: Agad na nagtatanggal ng search keyword at ibinabalik ang buong roster view.
+* **Filter Dropdowns (Batch Year, Component, Program, Section)**: Live filtering ng masterlist table nang walang reload.
+* **"Sync Google Drive Backup" Button**: Nag-e-execute ng cloud backup sync ng kasalukuyang student roster.
+
+---
+
+### 7. 📑 Reports Hub (`Reports.jsx`)
+* **"Create Report Assignment" Button (Admin Only)**: Nagbubukas ng modal para sa bagong requirement (Title, Target Department: All/CWTS/LTS/ROTC, Deadline, Description, Attachment Template). Tumatawag sa `POST /api/reports`.
+* **"Submit Report" Button (Instructor)**: Nagbubukas ng submission modal para sa pag-attach ng files/images at komento. Tumatawag sa `POST /api/reports/:id/submit`.
+* **"View Submission / Review Requirements" Button**: Nagbubukas ng modal para suriin ang isinumiteng file ng instructor, oras ng submission, at approval status.
+* **"Approve Submission" Button (Admin)**: Nag-u-update ng status sa Approved, nagtatala ng audit log, at nagno-notify sa instructor.
+* **"Request Revision / Reject" Button (Admin)**: Ibinabalik ang report sa instructor na may kasamang revision instructions.
+* **"Download Attached File" Button**: Kino-convert ang base64 attachment pabalik sa totoong maida-download na file.
+* **"Post Comment" Button**: Nagdaragdag ng real-time comment sa talakayan ng requirement (`POST /api/reports/:id/comments`).
+
+---
+
+### 8. 💬 Real-Time Chat (`Chat.jsx`)
+* **"New Chat / Start DM" Button**: Nagbubukas ng modal para pumili ng Admin o Instructor na kakausapin.
+* **"All-Instructors Group Chat" Channel Button**: Lumilipat sa pang-lahatang group chat ng lahat ng faculty members.
+* **"Send Message" Button**: Nagpapadala ng text message, timestamp, at attachments (`POST /api/conversations/:id/messages`).
+* **"Attach File / Image" Button**: Pumipili ng larawan o dokumento, kino-convert sa base64, at ina-attach sa mensahe.
+
+---
+
+### 9. 📅 Calendar (`Calendar.jsx`)
+* **"Add Academic Event" Button (Admin Only)**: Nagbubukas ng modal para sa bagong event (Title, Category: Community Outreach, Submission Deadline, Holiday, Exam, Date).
+* **"Edit / Delete Event" Buttons**: Nag-u-update o nagtatanggal ng nakatakdang event.
+* **Month Navigation Buttons ("`<` Previous", "`>` Next", "Today")**: Naglilipat ng view sa nakaraang buwan, susunod na buwan, o kasalukuyang araw.
+
+---
+
+### 10. 📄 Letter Formats (`LetterFormats.jsx`)
+* **"Download Document Template" Buttons**: Agad na nagda-download ng mga pormal na template ng dokumento (Excuse Letter, Parental Consent Form, Endorsement Letter, Activity Proposal Form).
+
+---
+
+## 🛡️ 7. Simple at Madaling Intindihing Panseguridad (Security Architecture Explained Simply)
+
+Kung tatanungin ka sa defense: *"Paano gumagana ang Security ng System niyo?"*, ipaliwanag mo sa simpleng paraan gamit ang 6 na proteksyong ito:
+
+1. **🔑 Susi at Passcode (JWT Token at Session Interceptor)**
+   * Para itong **Digital ID Card / Badge**. Kapag nag-login ang Admin o Instructor, binibigyan sila ng secure token (`JWT`). Kapag nag-expire ang token, awtomatikong ilalabas ng system ang user para walang makapasok na iba.
+
+2. **🔒 Naka-Lock na Password (Bcrypt Encryption - 12 Salt Rounds)**
+   * Walang kahit sinong nakakakita ng totoong password sa database. Lahat ng password ay ginagawang magkakasunod na random characters (Hash) gamit ang **BcryptJS**. Kahit mabuksan ang database, hindi mababasa ang password.
+
+3. **🛑 Proteksyon sa Spam at Trolls (reCAPTCHA v2 & Rate Limiting)**
+   * **reCAPTCHA Checkbox**: Tinitiyak na tao at hindi bot ang nag-e-enroll.
+   * **IP Rate Limiting**: Limitado sa 4 na enrollment submissions lang bawat 15 minuto bawat IP address.
+   * **Email Support**: Tinatanggap pareho ang institutional email (`@cvsu.edu.ph`) at mga personal email (Gmail, Yahoo, etc.).
+
+4. **🔤 Malinis na Inputs at Letrang Ñ (Input Sanitization & ñ/Ñ Support)**
+   * Pinapayagan ng system ang mga totoong pangalang Pilipino na may letrang **ñ at Ñ**, habang binoblock at linilinis nito ang mga mapanirang script tags (`<script>`) o SQL commands.
+
+5. **🗄️ Proteksyon sa Database Hacking (100% Parameterized SQL Statements)**
+   * Lahat ng data queries ay gumagamit ng MySQL `?` placeholders. Pinipigilan nito ang **SQL Injection (SQLi)** o ang pagpasa ng masasamang utos sa database.
+
+6. **📊 IP Audit Trail at Google Drive Backup**
+   * **IP Logging**: Itinatala ng system ang IP Address ng bawat nagse-submit o nag-a-update ng datos para sa buong accountability.
+   * **Google Drive Backup**: Tuwing may bagong enrollment o report, awtomatikong binaback-up ang datos sa Google Drive Storage para sigurado ang 0% data loss.
+
+---
+
+## 🛠️ 8. Ginamit na Software at Open-Source Libraries (Tech Stack)
+
+* **Node.js & Express.js**: Ang backend REST API server na namamahala sa database at security.
+* **React 19 (Vite 6)**: Ang mabilis na frontend UI engine para sa Single Page Application (SPA).
+* **MySQL 8.0 & `mysql2/promise`**: Ang relational database connection pool.
+* **BcryptJS & JSONWebToken (JWT)**: Para sa password encryption at token authorization.
+* **Helmet.js & Express-Rate-Limit**: Para sa HTTP headers security at IP anti-spam protection.
+* **ExcelJS & XLSX (SheetJS)**: Para sa automated 1-click CHED Excel masterlist generation.
+* **Tailwind CSS v4 & Lucide React**: Para sa modern UI styling at vector icons.
+* **Heic2any & Canvas API**: Para sa automatic photo compression at iPhone `.HEIC` image conversion.
+
+---
+
+## 📊 9. Telemetry at Real-Time System Metrics
+
+Ang telemetry ng sistema ay nagbibigay ng eksaktong talaan para sa monitoring:
+* **Active Online Users Ping**: Nagsasagawa ng regular na telemetry check sa server (`/api/telemetry`) upang malaman kung ilang users ang kasalukuyang active.
+* **Audit Trail Telemetry**: Bawat mahalagang transaction (Login, Enrollment Submit, Report Approval, Password Change) ay nagtatala ng Exact Timestamp, Action, User ID, at Client IP Address sa `audit_logs` table.
+* **Database Pool Health**: Awtomatikong pinapamahalaan ng MySQL connection pool (10 concurrent limits) ang pag-query nang walang system overload.
 
 ---
 
