@@ -24,8 +24,9 @@
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          var basePath = l.pathname.endsWith('/') ? l.pathname.slice(0, -1) : l.pathname;
           window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
+              basePath + decoded + l.hash
           );
         }
       }(window.location));
@@ -35,7 +36,7 @@
     <link rel="dns-prefetch" href="https://nstp-system.onrender.com">
     <link rel="preconnect" href="https://nstp-system.onrender.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/nstp-system/assets/index-ukAXOJch.js"></script>
+    <script type="module" crossorigin src="/nstp-system/assets/index-DUnQDdai.js"></script>
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-hsQXmRPn.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-DMkshKsF.js">
     <link rel="stylesheet" crossorigin href="/nstp-system/assets/index-DB5gfM2e.css">
