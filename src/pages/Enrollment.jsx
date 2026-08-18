@@ -58,8 +58,10 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState(() => formData.weight || '');
 
-  // Google reCAPTCHA v2 State & Script Loader
+  // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
+  const recaptchaContainerRef = useRef(null);
+  const recaptchaWidgetIdRef = useRef(null);
 
   useEffect(() => {
     window.onGoogleRecaptchaSuccess = (token) => {
@@ -70,16 +72,62 @@ function Enrollment() {
       setGoogleRecaptchaToken('');
     };
 
-    const scriptId = 'google-recaptcha-v2-script';
-    let script = document.getElementById(scriptId);
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://www.google.com/recaptcha/api.js';
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
+
+    const renderWidget = () => {
+      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
+        if (!recaptchaContainerRef.current.hasChildNodes()) {
+          try {
+            recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
+              sitekey: siteKey,
+              callback: (token) => window.onGoogleRecaptchaSuccess(token),
+              'expired-callback': () => window.onGoogleRecaptchaExpired(),
+            });
+          } catch (e) {
+            console.warn('reCAPTCHA render notice:', e);
+          }
+        }
+      }
+    };
+
+    if (window.grecaptcha && window.grecaptcha.render) {
+      if (window.grecaptcha.ready) {
+        window.grecaptcha.ready(renderWidget);
+      } else {
+        renderWidget();
+      }
+    } else {
+      window.onRecaptchaLoaded = () => {
+        if (window.grecaptcha && window.grecaptcha.ready) {
+          window.grecaptcha.ready(renderWidget);
+        } else {
+          renderWidget();
+        }
+      };
+
+      const scriptId = 'google-recaptcha-v2-script';
+      let script = document.getElementById(scriptId);
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+      }
     }
+
+    const pollInterval = setInterval(() => {
+      if (recaptchaContainerRef.current && !recaptchaContainerRef.current.hasChildNodes()) {
+        renderWidget();
+      } else if (recaptchaContainerRef.current && recaptchaContainerRef.current.hasChildNodes()) {
+        clearInterval(pollInterval);
+      }
+    }, 300);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const convertToCm = (val, unit) => {
@@ -1611,10 +1659,8 @@ function Enrollment() {
               <div className="flex flex-col items-center justify-center my-4 w-full">
                 <div className="recaptcha-center-wrapper">
                   <div
+                    ref={recaptchaContainerRef}
                     className="g-recaptcha"
-                    data-sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg'}
-                    data-callback="onGoogleRecaptchaSuccess"
-                    data-expired-callback="onGoogleRecaptchaExpired"
                   />
                 </div>
                 {errors.captcha && (
