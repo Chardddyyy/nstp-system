@@ -678,14 +678,14 @@ function StudentManagement() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-              {/* Batch NSTP IDs (A4) Button */}
+              {/* Batch NSTP IDs Button */}
               <button type="button"
                 onClick={() => setShowBatchIdModal(true)}
-                title="Print batch official NSTP ID Cards fitted on standard A4"
+                title="Download or print standard student ID cards fitted on standard A4"
                 className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-emerald-600/50"
               >
-                <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
-                <span>Print NSTP IDs (A4)</span>
+                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
+                <span>Download Student IDs</span>
               </button>
 
               {/* QR Attendance Scanner Button */}

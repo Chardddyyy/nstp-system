@@ -458,8 +458,8 @@ function InstructorDashboard() {
               <Camera className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance & Cadet ID Tools</h3>
-              <p className="text-[11px] text-slate-500 font-medium truncate">Scan scannable QR tokens for instant check-in or print A4 batch ID cards</p>
+              <h3 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
+              <p className="text-[11px] text-slate-500 font-medium truncate">Scan scannable QR tokens for instant check-in or download standard student ID cards</p>
             </div>
           </div>
 
@@ -478,8 +478,8 @@ function InstructorDashboard() {
               onClick={() => setShowBatchIdModal(true)}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-600/50"
             >
-              <Printer className="w-4 h-4 text-amber-300" />
-              <span>Print {user?.department} IDs (A4)</span>
+              <Download className="w-4 h-4 text-amber-300" />
+              <span>Download {user?.department} IDs</span>
             </button>
           </div>
         </div>

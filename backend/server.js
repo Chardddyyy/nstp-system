@@ -240,17 +240,17 @@ async function ensureNstpIdAndAttendanceTables() {
 
     // Backfill any existing active students that don't have nstp_serial_id or qr_token yet
     const [rows] = await pool.execute(
-      "SELECT id, studentId, department, createdAt FROM students WHERE nstp_serial_id IS NULL OR qr_token IS NULL LIMIT 200"
-    );
-    for (const st of rows) {
-      const year = new Date(st.createdAt || Date.now()).getFullYear();
+      "SELECT * FROM students WHERE nstp_serial_id IS NULL OR qr_token IS NULL LIMIT 200"
+    ).catch(() => [[]]);
+    for (const st of (rows || [])) {
+      const year = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
       const dept = (st.department || 'CWTS').toUpperCase();
       const paddedId = String(st.id).padStart(4, '0');
       const serialId = `NSTP-${year}-${dept}-${paddedId}`;
-      const token = `NSTP-${st.studentId}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const token = `NSTP-${st.studentId || st.id}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       try {
         await pool.execute(
-          "UPDATE students SET nstp_serial_id = ?, qr_token = ?, id_issued_at = COALESCE(id_issued_at, NOW()) WHERE id = ?",
+          "UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?",
           [serialId, token, st.id]
         );
       } catch (_) {}
@@ -3094,17 +3094,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
 app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
   try {
     const { department, section } = req.query;
-    let query = `
-      SELECT 
-        id, studentId, name, firstName, lastName, middleName,
-        department, section, program, year, contactNumber,
-        bloodType, emergencyContact, emergencyNumber,
-        nstp_serial_id, qr_token, id_issued_at,
-        registration_photo, registrationPhoto, photo,
-        status, createdAt
-      FROM students 
-      WHERE (status IS NULL OR status = 'Active')
-    `;
+    let query = "SELECT * FROM students WHERE (status IS NULL OR status = 'Active')";
     const params = [];
 
     // Enforce instructor isolation
@@ -3121,17 +3111,15 @@ app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
       params.push(section);
     }
 
-    query += ' ORDER BY lastName ASC, firstName ASC';
-
     const [students] = await pool.execute(query, params);
 
     // Auto-fill missing serials or qr_tokens on-the-fly
-    const enriched = students.map((st) => {
-      const yr = new Date(st.createdAt || Date.now()).getFullYear();
+    const enriched = (students || []).map((st) => {
+      const yr = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
       const dep = (st.department || 'CWTS').toUpperCase();
-      const padded = String(st.studentId || st.id).slice(-4);
+      const padded = String(st.studentId || st.id || '0000').slice(-4);
       const serial = st.nstp_serial_id || `NSTP-${yr}-${dep}-${padded}`;
-      const token = st.qr_token || `NSTP-${st.studentId}-${String(st.id).padStart(4, '0')}`;
+      const token = st.qr_token || `NSTP-${st.studentId || st.id}-${String(st.id || '0').padStart(4, '0')}`;
       return {
         ...st,
         nstp_serial_id: serial,
@@ -3139,10 +3127,17 @@ app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
       };
     });
 
+    // Safe in-memory sorting by name
+    enriched.sort((a, b) => {
+      const nameA = (a.lastName || a.name || '').toLowerCase();
+      const nameB = (b.lastName || b.name || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
     res.json(enriched);
   } catch (err) {
     console.error('Error fetching student ID cards:', err);
-    res.status(500).json({ message: 'Failed to fetch student ID cards' });
+    res.status(500).json({ message: 'Failed to fetch student ID cards', error: err.message });
   }
 });
 

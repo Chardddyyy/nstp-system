@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Filter, CheckSquare, Square, Download, Search } from 'lucide-react';
+import { X, Printer, FileText, CheckSquare, Square, Download, Search } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import NstpIdCard from './NstpIdCard';
 
@@ -67,6 +67,120 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
     window.print();
   };
 
+  // Export Standard Elementary/Student ID Cards fitted on A4 in Microsoft Word DOC Format
+  const handleDownloadDocx = () => {
+    if (selectedStudentsList.length === 0) return;
+
+    let cardsHtml = '';
+    for (let i = 0; i < selectedStudentsList.length; i += 2) {
+      const s1 = selectedStudentsList[i];
+      const s2 = selectedStudentsList[i + 1] || null;
+
+      const renderCardCell = (st) => {
+        if (!st) return '<td style="width: 3.37in; border: none;"></td>';
+        const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
+        const dept = (st.department || 'CWTS').toUpperCase();
+        const serial = st.nstp_serial_id || `NSTP-2026-${dept}-${String(st.studentId || st.id || '0000').slice(-4)}`;
+        const deptColor = dept === 'ROTC' ? '#991b1b' : dept === 'LTS' ? '#6b21a8' : '#065f46';
+
+        return `
+          <td style="width: 3.37in; height: 2.125in; border: 2pt solid ${deptColor}; border-radius: 8pt; padding: 6pt; vertical-align: top; background-color: #ffffff; font-family: Arial, sans-serif;">
+            <!-- Header -->
+            <table style="width: 100%; border-collapse: collapse; border-bottom: 1.5pt solid #f59e0b; margin-bottom: 4pt;">
+              <tr>
+                <td style="vertical-align: middle; text-align: left;">
+                  <div style="font-size: 7.5pt; font-weight: bold; color: ${deptColor}; text-transform: uppercase;">CAVITE STATE UNIVERSITY</div>
+                  <div style="font-size: 6pt; font-weight: bold; color: #475569;">NAIC CAMPUS • NSTP (${dept})</div>
+                </td>
+                <td style="vertical-align: middle; text-align: right;">
+                  <span style="font-size: 6.5pt; font-weight: bold; background-color: ${deptColor}; color: #ffffff; padding: 2pt 4pt; border-radius: 3pt;">${dept}</span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Body Details -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 2pt;">
+              <tr>
+                <td style="width: 0.85in; vertical-align: top; text-align: center;">
+                  <div style="width: 0.8in; height: 0.95in; border: 1pt solid #cbd5e1; background-color: #f8fafc; text-align: center; line-height: 0.95in; font-size: 6pt; font-weight: bold; color: #94a3b8;">
+                    2x2 PHOTO
+                  </div>
+                </td>
+                <td style="vertical-align: top; padding-left: 6pt;">
+                  <div style="font-size: 6pt; font-weight: bold; color: #64748b; text-transform: uppercase;">Student Name</div>
+                  <div style="font-size: 8.5pt; font-weight: 900; color: #0f172a; line-height: 10pt; margin-bottom: 3pt;">${name}</div>
+                  
+                  <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Student No: <span style="font-weight: 900; color: #0f172a;">${st.studentId || 'N/A'}</span></div>
+                  <div style="font-size: 6pt; font-weight: bold; color: #64748b;">Program/Sec: <span style="font-weight: 900; color: #0f172a;">${st.program || 'BS'} ${st.section ? `Sec ${st.section}` : ''}</span></div>
+                  <div style="font-size: 6pt; font-weight: bold; color: ${deptColor}; margin-top: 2pt;">Serial ID: <b>${serial}</b></div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Footer Line -->
+            <table style="width: 100%; border-collapse: collapse; border-top: 1pt solid #e2e8f0; margin-top: 4pt; padding-top: 2pt;">
+              <tr>
+                <td style="font-size: 5.5pt; color: #64748b;">Valid: AY 2025-2026</td>
+                <td style="font-size: 5.5pt; text-align: right; font-weight: bold; color: ${deptColor};">OFFICIAL NSTP CADET ID</td>
+              </tr>
+            </table>
+          </td>
+        `;
+      };
+
+      cardsHtml += `
+        <tr style="height: 2.2in;">
+          ${renderCardCell(s1)}
+          <td style="width: 0.2in;"></td>
+          ${renderCardCell(s2)}
+        </tr>
+        <tr style="height: 0.15in;"><td colspan="3"></td></tr>
+      `;
+    }
+
+    const docContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>NSTP Student IDs A4</title>
+        <style>
+          @page Section1 {
+            size: 210mm 297mm; /* Standard A4 */
+            margin: 10mm 10mm 10mm 10mm;
+            mso-header-margin: 0mm;
+            mso-footer-margin: 0mm;
+            mso-paper-source: 0;
+          }
+          div.Section1 { page: Section1; }
+          body { font-family: Arial, sans-serif; }
+          table { page-break-inside: avoid; }
+        </style>
+      </head>
+      <body>
+        <div class="Section1">
+          <div style="text-align: center; margin-bottom: 8pt;">
+            <h3 style="margin: 0; font-size: 11pt; color: #064e3b;">CAVITE STATE UNIVERSITY - NAIC CAMPUS</h3>
+            <p style="margin: 0; font-size: 8pt; color: #475569;">NATIONAL SERVICE TRAINING PROGRAM • OFFICIAL STUDENT ID CARDS (A4)</p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; margin: 0 auto;">
+            ${cardsHtml}
+          </table>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', docContent], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NSTP_Student_IDs_${departmentFilter}_A4.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
       {/* ── Screen UI Container (Hidden on Print) ── */}
@@ -79,8 +193,8 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
               <Printer className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black leading-tight">Batch Printable NSTP ID Cards</h3>
-              <p className="text-xs text-emerald-200 font-medium">Standard CR80 cards formatted to fit standard A4 paper with front & back alignment</p>
+              <h3 className="text-base sm:text-lg font-black leading-tight">Standard Student ID Cards (A4 Fit)</h3>
+              <p className="text-xs text-emerald-200 font-medium">Standard elementary/student ID format with Word Document download and A4 print options</p>
             </div>
           </div>
 
@@ -159,7 +273,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button
               type="button"
               onClick={toggleSelectAll}
@@ -169,14 +283,27 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
               <span>{selectedIds.size === filteredStudents.length ? 'Deselect All' : 'Select All'} ({selectedIds.size})</span>
             </button>
 
+            {/* Download as DOCS (.doc) Button */}
+            <button
+              type="button"
+              onClick={handleDownloadDocx}
+              disabled={selectedStudentsList.length === 0}
+              title="Download standard ID cards in Microsoft Word DOC format"
+              className="px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-black shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <FileText className="w-4 h-4 text-blue-200" />
+              <span>Download DOCS (.doc)</span>
+            </button>
+
+            {/* Print A4 Sheet Button */}
             <button
               type="button"
               onClick={handlePrint}
               disabled={selectedStudentsList.length === 0}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Printer className="w-4 h-4" />
-              <span>Print {selectedStudentsList.length} Cards (A4)</span>
+              <span>Print A4 Cards</span>
             </button>
           </div>
         </div>
