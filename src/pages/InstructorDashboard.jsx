@@ -1,9 +1,11 @@
 import { useAuth } from '../context/AuthContext';
+import { archivesAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
-  User, Calendar, Menu, Bell, CheckCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen
+  User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
+  Archive, History, FileCheck, RotateCcw
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -25,6 +27,67 @@ function InstructorDashboard() {
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+
+  // Archives state for instructor
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showArchiveDetails, setShowArchiveDetails] = useState(false);
+  const [archivedYears, setArchivedYears] = useState([]);
+  const [archiveViewData, setArchiveViewData] = useState(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [archiveToast, setArchiveToast] = useState(null);
+
+  const loadArchivedYears = async () => {
+    try {
+      const data = await archivesAPI.getAll();
+      setArchivedYears(Array.isArray(data) ? data : []);
+    } catch {
+      setArchivedYears([]);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'instructor') {
+      loadArchivedYears();
+    }
+  }, [user]);
+
+  const handleOpenArchiveModal = () => {
+    loadArchivedYears();
+    setShowArchiveModal(true);
+  };
+
+  const handleViewBatch = async (batch) => {
+    try {
+      const full = await archivesAPI.getByYear(batch.year);
+      setArchiveViewData(full || batch);
+      setShowArchiveDetails(true);
+    } catch {
+      setArchiveViewData(batch);
+      setShowArchiveDetails(true);
+    }
+  };
+
+  const handleArchiveDepartmentBatch = async () => {
+    const currYear = new Date().getFullYear();
+    if (!window.confirm(`Archive ${user?.department || 'Department'} snapshot for Batch Year ${currYear}?`)) return;
+    setIsArchiving(true);
+    try {
+      let letterTemplates = [];
+      try {
+        const raw = localStorage.getItem('nstp_letter_templates');
+        letterTemplates = raw ? JSON.parse(raw) : [];
+      } catch {}
+      await archivesAPI.archiveBatch(currYear, { letterTemplates });
+      setArchiveToast({ type: 'success', message: `${user?.department || 'Department'} Batch ${currYear} archived successfully!` });
+      loadArchivedYears();
+      setTimeout(() => setArchiveToast(null), 3000);
+    } catch (err) {
+      setArchiveToast({ type: 'error', message: err.message || 'Failed to archive batch' });
+      setTimeout(() => setArchiveToast(null), 3000);
+    } finally {
+      setIsArchiving(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -388,10 +451,10 @@ function InstructorDashboard() {
           </div>
         </div>
 
-        {/* Quick Action Navigation Cards - 3 Side-by-Side on Cellphone */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
+        {/* Quick Action Navigation Cards - 4 Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-6">
           <div
-            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/students')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
@@ -401,7 +464,7 @@ function InstructorDashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-emerald-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Students</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalStudents} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
+                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalStudents} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
                 </div>
               </div>
               <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
@@ -409,7 +472,7 @@ function InstructorDashboard() {
           </div>
 
           <div
-            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/chat')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
@@ -419,7 +482,7 @@ function InstructorDashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-blue-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Messages</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
+                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
                 </div>
               </div>
               <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
@@ -427,7 +490,7 @@ function InstructorDashboard() {
           </div>
 
           <div
-            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/reports')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
@@ -437,10 +500,28 @@ function InstructorDashboard() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-amber-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Reports</p>
-                  <p className="text-[10px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
+                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
                 </div>
               </div>
               <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
+            </div>
+          </div>
+
+          <div
+            className="bg-gradient-to-r from-purple-700 to-teal-800 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            onClick={handleOpenArchiveModal}
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
+                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                  <History className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-purple-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">{user?.department || 'My'} Archives</p>
+                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{archivedYears.length} <span className="text-[8px] font-normal hidden sm:inline">Batches</span></p>
+                </div>
+              </div>
+              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-purple-900 font-semibold transition-all shrink-0">View &rarr;</span>
             </div>
           </div>
         </div>
@@ -532,6 +613,257 @@ function InstructorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Toast Notification */}
+        {archiveToast && (
+          <div className="fixed bottom-5 right-5 z-50 animate-bounce-in max-w-sm">
+            <div className={`p-4 rounded-2xl shadow-xl flex items-center gap-3 border text-white text-xs font-bold ${
+              archiveToast.type === 'error' ? 'bg-rose-900 border-rose-700' : 'bg-emerald-900 border-emerald-700'
+            }`}>
+              {archiveToast.type === 'error' ? <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" /> : <CheckCircle className="w-5 h-5 text-amber-400 shrink-0" />}
+              <span>{archiveToast.message}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Modal - Historical Department Batches */}
+        {showArchiveModal && (
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveModal(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col border border-emerald-100 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">{user?.department} Archived Batches</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Historical records for your component</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-3 max-h-[60vh]">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                  <span className="text-xs font-bold text-gray-600">Archived Academic Batches</span>
+                  <button
+                    type="button"
+                    onClick={handleArchiveDepartmentBatch}
+                    disabled={isArchiving}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isArchiving ? 'Archiving...' : `Snapshot ${user?.department} Batch`}
+                  </button>
+                </div>
+
+                {archivedYears.length === 0 ? (
+                  <div className="text-center py-10">
+                    <History className="w-12 h-12 text-emerald-200 mx-auto mb-2 opacity-50" />
+                    <p className="text-gray-500 font-bold text-sm">No archived batches found for {user?.department}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {archivedYears.sort((a, b) => b.year - a.year).map((year) => (
+                      <div
+                        key={year.year}
+                        className="flex items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
+                      >
+                        <div className="flex items-center space-x-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-sm shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                            {year.year}
+                          </div>
+                          <div>
+                            <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                {year.students} {user?.department} Students
+                              </span>
+                              <span className="text-[11px] font-bold text-gray-500">
+                                • {year.reports} Reports
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleViewBatch(year)}
+                          className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+                        >
+                          View Batch
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveModal(false)}
+                  className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Detail View Modal for Instructor */}
+        {showArchiveDetails && archiveViewData && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveDetails(false)}>
+            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-emerald-900 text-white p-4 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 className="text-base sm:text-lg font-black flex items-center">
+                  <Archive className="w-5 h-5 mr-2 text-amber-400" />
+                  {user?.department} Batch {archiveViewData.year} Archive Details
+                </h3>
+                <button type="button" onClick={() => setShowArchiveDetails(false)} className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 space-y-4">
+                {/* Department Summary */}
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2">{user?.department} Batch Summary</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
+                    <div className="bg-white rounded-xl p-3 border border-emerald-100">
+                      <p className="text-xl sm:text-2xl font-black text-emerald-800">{archiveViewData.students || 0}</p>
+                      <p className="text-xs text-gray-500 font-medium">{user?.department} Students</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 border border-emerald-100">
+                      <p className="text-xl sm:text-2xl font-black text-amber-600">{archiveViewData.reports || 0}</p>
+                      <p className="text-xs text-gray-500 font-medium">Department Reports</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 border border-emerald-100 col-span-2 sm:col-span-1">
+                      <p className="text-xl sm:text-2xl font-black text-teal-700">{archiveViewData.letterData?.length || 0}</p>
+                      <p className="text-xs text-gray-500 font-medium">Letter Formats</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Information Section */}
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-emerald-700" />
+                    {user?.department} Student Records
+                  </h4>
+                  {archiveViewData.studentData && archiveViewData.studentData.length > 0 ? (
+                    <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                      <table className="w-full text-xs">
+                        <thead className="bg-gray-100 text-gray-700 font-black">
+                          <tr>
+                            <th className="px-3.5 py-2.5 text-left">Student ID</th>
+                            <th className="px-3.5 py-2.5 text-left">Name</th>
+                            <th className="px-3.5 py-2.5 text-left">Program</th>
+                            <th className="px-3.5 py-2.5 text-left">Component</th>
+                            <th className="px-3.5 py-2.5 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {archiveViewData.studentData.map((student, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-3.5 py-2 font-mono font-bold text-gray-900">{student.studentId}</td>
+                              <td className="px-3.5 py-2 font-bold text-gray-900">{student.name}</td>
+                              <td className="px-3.5 py-2 text-gray-600">{student.program}</td>
+                              <td className="px-3.5 py-2">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
+                                  {student.department}
+                                </span>
+                              </td>
+                              <td className="px-3.5 py-2 font-medium text-gray-600">{student.status || 'Completed'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4 text-xs">No {user?.department} students recorded in this batch</p>
+                  )}
+                </div>
+
+                {/* Report Details Section */}
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-amber-600" />
+                    {user?.department} Reports &amp; Submissions
+                  </h4>
+                  {archiveViewData.reportData && archiveViewData.reportData.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {archiveViewData.reportData.map((report, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                          <div className="flex items-center justify-between mb-1">
+                            <h5 className="font-bold text-xs text-gray-900">{report.title}</h5>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900">
+                              {report.department}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mb-1 line-clamp-2">{report.description}</p>
+                          <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                            {report.due_date && <span>Due: {new Date(report.due_date).toLocaleDateString()}</span>}
+                            <span>{report.submission_count ?? 0} submission(s)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4 text-xs">No {user?.department} reports recorded in this batch</p>
+                  )}
+                </div>
+
+                {/* Letter Formats Section */}
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-teal-700" />
+                    Official Letter Formats ({user?.department} &amp; General)
+                  </h4>
+                  {archiveViewData.letterData && archiveViewData.letterData.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {archiveViewData.letterData.map((letter, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {letter.department || 'All'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2 mb-1.5">{letter.description}</p>
+                          {letter.file && (
+                            <div className="flex items-center justify-between text-[11px] bg-white p-1.5 rounded-lg border border-gray-100">
+                              <span className="truncate max-w-[150px] font-medium text-gray-700">{letter.file.name}</span>
+                              <span className="text-gray-400">{letter.file.size}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4 text-xs">No letter format records saved in this archive batch</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveDetails(false)}
+                  className="px-6 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       <ScrollToTopButton />
     </div>

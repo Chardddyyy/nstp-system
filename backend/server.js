@@ -3017,19 +3017,46 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
 
 // ARCHIVE/BATCH MANAGEMENT ENDPOINTS
 
-// GET all archived years
+// GET all archived years (with instructor department isolation)
 app.get('/api/archives', authenticateToken, async (req, res) => {
   try {
     const [archives] = await pool.execute(
       'SELECT * FROM archived_years ORDER BY year DESC'
     ).catch(() => [[]]);
+
+    const isInstructor = req.user && req.user.role === 'instructor';
+    const instructorDept = req.user?.department;
+
     res.json((archives || []).map(archive => {
       var parsedData = null;
       if (archive.data) {
         try { parsedData = JSON.parse(archive.data); } catch (e) { parsedData = null; }
       }
+
+      let students = archive.students || 0;
+      let reports = archive.reports || 0;
+
+      if (isInstructor && instructorDept && parsedData) {
+        const sData = parsedData.studentData || [];
+        const rData = parsedData.reportData || [];
+        const deptStudents = sData.filter(s => s.department === instructorDept);
+        const deptReports = rData.filter(r => r.department === 'All' || r.department === instructorDept);
+        students = deptStudents.length;
+        reports = deptReports.length;
+        parsedData = {
+          ...parsedData,
+          students: deptStudents.length,
+          reports: deptReports.length,
+          cwts: instructorDept === 'CWTS' ? deptStudents.length : 0,
+          lts: instructorDept === 'LTS' ? deptStudents.length : 0,
+          rotc: instructorDept === 'ROTC' ? deptStudents.length : 0,
+        };
+      }
+
       return {
         ...archive,
+        students,
+        reports,
         data: parsedData
       };
     }));
@@ -3039,7 +3066,7 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
   }
 });
 
-// GET specific archived year with full data
+// GET specific archived year with full data (isolated per instructor department & includes letterData)
 app.get('/api/archives/:year', authenticateToken, async (req, res) => {
   try {
     const { year } = req.params;
@@ -3057,55 +3084,62 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
     const archive = archives[0];
     const parsedData = archive.data ? JSON.parse(archive.data) : null;
 
-    // Use the stored snapshot — handle both new format (reportData) and old format (reports array)
+    // Use the stored snapshot
     const snapshotReports = parsedData?.reportData || (Array.isArray(parsedData?.reports) ? parsedData.reports : null);
     const snapshotStudents = parsedData?.studentData || (Array.isArray(parsedData?.students) ? parsedData.students : null);
-    if (snapshotReports !== null) {
-      return res.json({
-        ...archive,
-        data: parsedData,
-        studentData: snapshotStudents || [],
-        reportData: snapshotReports || []
-      });
+    const snapshotLetters = parsedData?.letterData || (Array.isArray(parsedData?.letterTemplates) ? parsedData.letterTemplates : []);
+
+    let finalStudents = snapshotStudents || [];
+    let finalReports = snapshotReports || [];
+    let finalLetters = snapshotLetters || [];
+
+    if (snapshotReports === null) {
+      // Query live tables if snapshot was not saved
+      const [students] = await pool.execute(
+        `SELECT studentId, name, department, status, program FROM students
+         WHERE schoolYear LIKE ? OR schoolYear IS NULL OR schoolYear = ''
+         ORDER BY name`,
+        [`${year}%`]
+      );
+
+      const [reports] = await pool.execute(
+        `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
+                u.name AS created_by_name,
+                (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) AS submission_count
+         FROM reports r
+         LEFT JOIN users u ON r.created_by = u.id
+         WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
+         ORDER BY r.created_at DESC`,
+        [year, year]
+      );
+      finalStudents = students;
+      finalReports = reports;
     }
 
-    // No snapshot yet — query live tables with minimal fields
-    const [students] = await pool.execute(
-      `SELECT studentId, name, department, status, program FROM students
-       WHERE schoolYear LIKE ? OR schoolYear IS NULL OR schoolYear = ''
-       ORDER BY name`,
-      [`${year}%`]
-    );
+    const isInstructor = req.user && req.user.role === 'instructor';
+    const instructorDept = req.user?.department;
 
-    const [reports] = await pool.execute(
-      `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
-              u.name AS created_by_name,
-              (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) AS submission_count
-       FROM reports r
-       LEFT JOIN users u ON r.created_by = u.id
-       WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
-       ORDER BY r.created_at DESC`,
-      [year, year]
-    );
+    if (isInstructor && instructorDept) {
+      finalStudents = finalStudents.filter(s => s.department === instructorDept);
+      finalReports = finalReports.filter(r => r.department === 'All' || r.department === instructorDept);
+      finalLetters = finalLetters.filter(l => l.department === 'All' || l.department === instructorDept);
+    }
 
-    // Auto-save snapshot so future views don't need the live tables
-    try {
-      const newData = {
-        ...(parsedData || {}),
-        studentData: students,
-        reportData: reports
-      };
-      await pool.execute(
-        'UPDATE archived_years SET data = ? WHERE year = ?',
-        [JSON.stringify(newData), year]
-      );
-    } catch (e) { /* non-fatal */ }
+    const cwtsCount = finalStudents.filter(s => s.department === 'CWTS').length;
+    const ltsCount = finalStudents.filter(s => s.department === 'LTS').length;
+    const rotcCount = finalStudents.filter(s => s.department === 'ROTC').length;
 
     res.json({
       ...archive,
+      students: finalStudents.length,
+      reports: finalReports.length,
+      cwts: cwtsCount,
+      lts: ltsCount,
+      rotc: rotcCount,
       data: parsedData,
-      studentData: students,
-      reportData: reports
+      studentData: finalStudents,
+      reportData: finalReports,
+      letterData: finalLetters
     });
   } catch (error) {
     console.error('Get archive error:', error);
@@ -3113,11 +3147,15 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
   }
 });
 
-// POST archive current batch (admin only)
-app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
+// POST archive batch (admin and instructors can snapshot)
+app.post('/api/archives', authenticateToken, async (req, res) => {
   try {
-    
-    const { year } = req.body;
+    if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const { year, letterTemplates } = req.body;
+    const archiveYear = parseInt(year, 10) || new Date().getFullYear();
 
     // Get current stats
     const [studentCount] = await pool.execute(
@@ -3126,16 +3164,16 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
 
     const [reportCount] = await pool.execute(
       'SELECT COUNT(*) as count FROM reports WHERE YEAR(created_at) = ?',
-      [year]
+      [archiveYear]
     );
 
-    // Snapshot minimal student fields — only what the archive view displays
+    // Snapshot minimal student fields
     const [studentDataRaw] = await pool.execute(
       `SELECT studentId, name, department, status, program FROM students WHERE status != "Inactive" ORDER BY name`
     );
     const studentData = studentDataRaw;
 
-    // Snapshot minimal report fields — only what the archive view renders
+    // Snapshot minimal report fields
     const [reportDataRaw] = await pool.execute(
       `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
               u.name AS created_by_name,
@@ -3144,9 +3182,12 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
        LEFT JOIN users u ON r.created_by = u.id
        WHERE r.batch_year = ? OR (r.batch_year IS NULL AND YEAR(r.created_at) = ?)
        ORDER BY r.created_at DESC`,
-      [year, year]
+      [archiveYear, archiveYear]
     );
     const reportData = reportDataRaw;
+
+    // Snapshot letter templates
+    const letterData = Array.isArray(letterTemplates) ? letterTemplates : [];
 
     const totalStudents = studentCount.reduce((sum, row) => sum + row.count, 0);
     const cwts = studentCount.find(r => r.department === 'CWTS')?.count || 0;
@@ -3162,24 +3203,27 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
        reports = VALUES(reports),
        data = VALUES(data)`,
       [
-        year,
+        archiveYear,
         totalStudents,
         reportCount[0].count,
         JSON.stringify({
-          year, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
-          studentData, reportData
+          year: archiveYear, students: totalStudents, cwts, lts, rotc, reports: reportCount[0].count,
+          studentData, reportData, letterData
         })
       ]
     );
-    await pool.execute(
-      `INSERT INTO current_batch (id, year) VALUES (1, ?)
-       ON DUPLICATE KEY UPDATE year = ?`,
-      [year + 1, year + 1]
-    );
+
+    if (req.user.role === 'admin') {
+      await pool.execute(
+        `INSERT INTO current_batch (id, year) VALUES (1, ?)
+         ON DUPLICATE KEY UPDATE year = ?`,
+        [archiveYear + 1, archiveYear + 1]
+      );
+    }
     
     res.json({ 
-      message: `Batch ${year} archived successfully`, 
-      year,
+      message: `Batch ${archiveYear} archived successfully`, 
+      year: archiveYear,
       students: totalStudents,
       reports: reportCount[0].count
     });

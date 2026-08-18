@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
@@ -129,7 +129,18 @@ export default function LetterFormats() {
     navigate('/login');
   };
 
+  const availableTabs = useMemo(() => {
+    if (user?.role === 'instructor' && user?.department) {
+      return ['All', user.department];
+    }
+    return ['All', 'ROTC', 'CWTS', 'LTS'];
+  }, [user]);
+
   const filteredTemplates = templates.filter(t => {
+    if (user?.role === 'instructor' && user?.department) {
+      const isAllowed = t.department === 'All' || t.department === user.department;
+      if (!isAllowed) return false;
+    }
     const deptMatch = activeTab === 'All' || t.department === 'All' || t.department === activeTab;
     const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         t.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -175,7 +186,9 @@ export default function LetterFormats() {
 
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Letter Formats &amp; Attachments</h1>
-                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Download or upload official forms</p>
+                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                  {user?.role === 'instructor' && user?.department ? `Official forms for All & ${user.department}` : 'Download or upload official forms'}
+                </p>
               </div>
             </div>
 
@@ -185,7 +198,7 @@ export default function LetterFormats() {
                 onClick={() => {
                   setTitle('');
                   setDescription('');
-                  setDepartment('All');
+                  setDepartment(user?.role === 'instructor' && user?.department ? user.department : 'All');
                   setAttachedFile(null);
                   setEditingTemplate(null);
                   setShowAddModal(true);
@@ -206,7 +219,7 @@ export default function LetterFormats() {
             <Search className="w-4 h-4 text-emerald-700/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search letter formats by title or description..."
+              placeholder={user?.role === 'instructor' && user?.department ? `Search ${user.department} & general letter formats...` : "Search letter formats by title or description..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 h-11 sm:h-12 bg-white border border-gray-200/90 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs transition-all"
@@ -215,7 +228,7 @@ export default function LetterFormats() {
 
           {/* Department Filter Tabs — Same Height as Search Box */}
           <div className="flex items-center gap-1 p-1 bg-white border border-gray-200/90 rounded-xl sm:rounded-2xl shadow-2xs shrink-0 h-11 sm:h-12 overflow-x-auto">
-            {['All', 'ROTC', 'CWTS', 'LTS'].map(tab => (
+            {availableTabs.map(tab => (
               <button
                 key={tab}
                 type="button"
@@ -392,9 +405,15 @@ export default function LetterFormats() {
                     className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
                   >
                     <option value="All">All Departments</option>
-                    <option value="ROTC">ROTC</option>
-                    <option value="CWTS">CWTS</option>
-                    <option value="LTS">LTS</option>
+                    {user?.role === 'instructor' && user?.department ? (
+                      <option value={user.department}>{user.department}</option>
+                    ) : (
+                      <>
+                        <option value="ROTC">ROTC</option>
+                        <option value="CWTS">CWTS</option>
+                        <option value="LTS">LTS</option>
+                      </>
+                    )}
                   </select>
                 </div>
 

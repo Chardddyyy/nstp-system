@@ -222,6 +222,8 @@ input:focus, select:focus, textarea:focus {
   width: 100% !important;
   margin: 0 auto !important;
   text-align: center !important;
+  padding: 6px 0 !important;
+  overflow-x: auto !important;
 }
 
 .recaptcha-center-wrapper .g-recaptcha {
@@ -229,11 +231,23 @@ input:focus, select:focus, textarea:focus {
   justify-content: center !important;
   align-items: center !important;
   margin: 0 auto !important;
-  border-radius: 8px !important;
+  width: 304px !important;
+  height: 78px !important;
+  min-width: 304px !important;
+  min-height: 78px !important;
+  overflow: visible !important;
+}
+
+.recaptcha-center-wrapper .g-recaptcha > div {
+  margin: 0 auto !important;
+  width: 304px !important;
+  height: 78px !important;
+  overflow: visible !important;
 }
 
 .recaptcha-center-wrapper iframe {
   display: block !important;
   margin: 0 auto !important;
-  border-radius: 6px !important;
+  border: none !important;
+  overflow: visible !important;
 }

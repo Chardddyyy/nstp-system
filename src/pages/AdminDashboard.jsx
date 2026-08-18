@@ -6,7 +6,7 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -1941,6 +1941,37 @@ function AdminDashboard() {
                     </div>
                   ) : (
                     <p className="text-gray-500 text-center py-4">Report details not available in archive</p>
+                  )}
+                </div>
+
+                {/* Letter Formats Section */}
+                <div>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center">
+                    <FileCheck className="w-5 h-5 mr-2" />
+                    Official Letter Formats &amp; Attachments
+                  </h4>
+                  {archiveViewData.letterData && archiveViewData.letterData.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {archiveViewData.letterData.map((letter, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              {letter.department || 'All'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2 mb-2">{letter.description}</p>
+                          {letter.file && (
+                            <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100">
+                              <span className="truncate max-w-[160px] font-medium text-gray-700">{letter.file.name}</span>
+                              <span className="text-gray-400">{letter.file.size}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No letter format records saved in this archive batch</p>
                   )}
                 </div>
 

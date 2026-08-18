@@ -216,20 +216,26 @@ function App() {
   }
 
   function seedRealtimeBaseline(pending, reportsList, convList, studentsList, currentUser) {
-    (pending || []).forEach(e => seenEnrollmentIds.current.add(e.id));
-    (studentsList || []).forEach(s => seenStudentIds.current.add(s.id));
+    const safePending = Array.isArray(pending) ? pending : [];
+    const safeStudents = Array.isArray(studentsList) ? studentsList : [];
+    const safeReports = Array.isArray(reportsList) ? reportsList : [];
+    const safeConvs = Array.isArray(convList) ? convList : [];
 
-    (reportsList || []).forEach(report => {
-      if (currentUser.role === 'instructor' && (report.department === 'All' || report.department === currentUser.department)) {
-        seenReportIds.current.add(report.id);
+    safePending.forEach(e => { if (e && e.id) seenEnrollmentIds.current.add(e.id); });
+    safeStudents.forEach(s => { if (s && s.id) seenStudentIds.current.add(s.id); });
+
+    safeReports.forEach(report => {
+      if (!report) return;
+      if (currentUser && currentUser.role === 'instructor' && (report.department === 'All' || report.department === currentUser.department)) {
+        if (report.id) seenReportIds.current.add(report.id);
       }
-      (report.submissions || []).forEach(sub => {
-        seenSubmissionKeys.current.add(`${report.id}-${sub.instructor_id}-${sub.id}`);
+      (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
+        if (sub) seenSubmissionKeys.current.add(`${report.id}-${sub.instructor_id}-${sub.id}`);
       });
     });
 
-    (convList || []).forEach(conv => {
-      if (conv.last_message_time) {
+    safeConvs.forEach(conv => {
+      if (conv && conv.id && conv.last_message_time) {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
       }
     });
@@ -240,9 +246,14 @@ function App() {
   function detectRealtimeChanges(pending, reportsList, convList, studentsList, currentUser) {
     if (!baselineReady.current || !currentUser) return;
 
+    const safePending = Array.isArray(pending) ? pending : [];
+    const safeStudents = Array.isArray(studentsList) ? studentsList : [];
+    const safeReports = Array.isArray(reportsList) ? reportsList : [];
+
     if (currentUser.role === 'admin') {
       // 1. New Pending Enrollments
-      (pending || []).forEach(enrollment => {
+      safePending.forEach(enrollment => {
+        if (!enrollment || !enrollment.id) return;
         if (!seenEnrollmentIds.current.has(enrollment.id)) {
           seenEnrollmentIds.current.add(enrollment.id);
           const enrollName = enrollment.student_name || enrollment.fullName || enrollment.firstName || 'A student';
@@ -256,8 +267,10 @@ function App() {
       });
 
       // 2. New Report Submissions by Instructors
-      (reportsList || []).forEach(report => {
-        (report.submissions || []).forEach(sub => {
+      safeReports.forEach(report => {
+        if (!report) return;
+        (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
+          if (!sub) return;
           const subKey = `${report.id}-${sub.instructor_id}-${sub.id}`;
           if (!seenSubmissionKeys.current.has(subKey)) {
             seenSubmissionKeys.current.add(subKey);
@@ -274,7 +287,8 @@ function App() {
 
     if (currentUser.role === 'instructor') {
       // 1. Check for newly approved/enrolled students assigned to this instructor's department (e.g. ROTC, CWTS, LTS)
-      (studentsList || []).forEach(student => {
+      safeStudents.forEach(student => {
+        if (!student || !student.id) return;
         if (!seenStudentIds.current.has(student.id)) {
           seenStudentIds.current.add(student.id);
           const studentDept = student.department || student.nstp_component || '';
@@ -291,7 +305,8 @@ function App() {
       });
 
       // 2. Check for newly created report assignments targeting All or this department
-      (reportsList || []).forEach(report => {
+      safeReports.forEach(report => {
+        if (!report || !report.id) return;
         const isTargetDept = report.department === 'All' || report.department === currentUser.department;
         if (isTargetDept && !seenReportIds.current.has(report.id)) {
           seenReportIds.current.add(report.id);
@@ -308,8 +323,9 @@ function App() {
 
   async function checkConversationMessages(convList, currentUser) {
     if (!baselineReady.current || !currentUser) return;
+    const safeConvs = Array.isArray(convList) ? convList : [];
 
-    for (const conv of convList) {
+    for (const conv of safeConvs) {
       const currTime = conv.last_message_time ? String(conv.last_message_time) : null;
       const prevTime = seenConvLastMessageTime.current[conv.id];
 
