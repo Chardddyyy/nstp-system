@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { 
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
-  Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, Sparkles, 
+  Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, 
   CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, 
-  Search, Check, Zap, HeartHandshake, School, Flame, ExternalLink
+  Search, Check, HeartHandshake, Menu, X, Layers, FileText
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats } from '../services/api';
@@ -114,6 +114,12 @@ function Landing() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
+  
+  // Navigation Dropdown & Mobile Menu State
+  const [openDropdown, setOpenDropdown] = useState(null); // 'explore' | 'guide' | null
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerNavRef = useRef(null);
+
   const timerRef = useRef(null);
 
   // Live Enrollment Timed Schedule Status
@@ -128,6 +134,17 @@ function Landing() {
       window.removeEventListener('nstp_enrollment_schedule_changed', updateSchedule);
       clearInterval(interval);
     };
+  }, []);
+
+  // Close desktop dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (headerNavRef.current && !headerNavRef.current.contains(e.target)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Detect scroll position to show back to top button
@@ -145,6 +162,8 @@ function Landing() {
   };
 
   const scrollToSection = (id) => {
+    setOpenDropdown(null);
+    setMobileMenuOpen(false);
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -264,28 +283,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white relative antialiased">
 
-      {/* ── Top Live Portal Status Banner ────────────────────────────── */}
-      <div className={`py-1.5 px-4 text-center text-xs font-bold transition-colors ${
-        enrollmentStatus.isOpen 
-          ? 'bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-emerald-50' 
-          : 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-amber-50'
-      }`}>
-        <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap text-[11px] sm:text-xs">
-          <span className="flex h-2 w-2 relative">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${enrollmentStatus.isOpen ? 'bg-amber-300' : 'bg-rose-300'}`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${enrollmentStatus.isOpen ? 'bg-amber-300' : 'bg-rose-300'}`}></span>
-          </span>
-          <span>{enrollmentStatus.headline}</span>
-          <span className="opacity-80">• {enrollmentStatus.subtext}</span>
-          {enrollmentStatus.isOpen ? (
-            <Link to="/enrollment" className="underline font-black hover:text-white ml-1 flex items-center gap-0.5">
-              <span>Apply now</span> &rarr;
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      {/* ── Sticky Executive Glassmorphic Header ───────────────────────── */}
+      {/* ── Executive Glassmorphic Header with Dropdown Navigation ──────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex justify-between items-center gap-3">
           
@@ -310,78 +308,154 @@ function Landing() {
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-1 text-xs font-bold text-emerald-100/90">
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('programs')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>Programs</span>
-            </button>
-
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('quiz')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Track Finder</span>
-            </button>
+          {/* Desktop Dropdown Navigation Bar */}
+          <nav ref={headerNavRef} className="hidden lg:flex items-center space-x-1.5 text-xs font-bold text-emerald-100/90">
             
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('schedule')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>Schedule</span>
-              {enrollmentStatus.isOpen ? (
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-              ) : null}
-            </button>
+            {/* Dropdown 1: Explore Programs */}
+            <div className="relative">
+              <button 
+                type="button" 
+                onClick={() => setOpenDropdown(openDropdown === 'explore' ? null : 'explore')}
+                className={`px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 ${
+                  openDropdown === 'explore' ? 'bg-white/15 text-white' : ''
+                }`}
+              >
+                <Compass className="w-4 h-4 text-amber-400" />
+                <span>Explore Programs</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === 'explore' ? 'rotate-180 text-amber-300' : ''}`} />
+              </button>
 
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('guide')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>How to Enroll</span>
-            </button>
+              {openDropdown === 'explore' && (
+                <div className="absolute left-0 mt-2 w-72 bg-emerald-950/95 backdrop-blur-2xl border border-emerald-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('programs')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">NSTP Components</p>
+                      <p className="text-[11px] text-emerald-200/80">CWTS, ROTC, & LTS curriculum</p>
+                    </div>
+                  </button>
 
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('video')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>Orientation</span>
-            </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('quiz')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+                      <Compass className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">Track Finder Matcher</p>
+                      <p className="text-[11px] text-emerald-200/80">10-second interactive track quiz</p>
+                    </div>
+                  </button>
 
-            <button 
-              type="button" 
-              onClick={() => scrollToSection('faq')} 
-              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>FAQ</span>
-            </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('video')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <Play className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">Video Orientation</p>
+                      <p className="text-[11px] text-emerald-200/80">Official UP Diliman & RA 9163 guide</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
 
+            {/* Dropdown 2: Student Resources */}
+            <div className="relative">
+              <button 
+                type="button" 
+                onClick={() => setOpenDropdown(openDropdown === 'guide' ? null : 'guide')}
+                className={`px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 ${
+                  openDropdown === 'guide' ? 'bg-white/15 text-white' : ''
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-emerald-300" />
+                <span>Student Resources</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === 'guide' ? 'rotate-180 text-emerald-300' : ''}`} />
+              </button>
+
+              {openDropdown === 'guide' && (
+                <div className="absolute left-0 mt-2 w-72 bg-emerald-950/95 backdrop-blur-2xl border border-emerald-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('guide')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">How to Enroll</p>
+                      <p className="text-[11px] text-emerald-200/80">Easy 3-step online application guide</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('schedule')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-black text-white text-xs group-hover:text-amber-300">Schedule & Dates</p>
+                        {enrollmentStatus.isOpen && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>}
+                      </div>
+                      <p className="text-[11px] text-emerald-200/80">Active enrollment window dates</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('faq')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">Knowledge Base & FAQ</p>
+                      <p className="text-[11px] text-emerald-200/80">Searchable answers and policies</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Direct Contact Button */}
             <button 
               type="button" 
               onClick={() => scrollToSection('contact')} 
               className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
             >
+              <Phone className="w-4 h-4 text-emerald-400" />
               <span>Contact</span>
             </button>
           </nav>
 
-          {/* Header Action Buttons */}
+          {/* Header Action Buttons & Mobile Hamburger Button */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link
               to="/enrollment"
-              className="inline-flex items-center gap-1.5 bg-emerald-800/80 hover:bg-emerald-700 text-white font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border border-emerald-600/70 active:scale-95 transition-all shadow-sm hover:shadow-md hover:border-emerald-400 shrink-0"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-800/80 hover:bg-emerald-700 text-white font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border border-emerald-600/70 active:scale-95 transition-all shadow-sm hover:shadow-md hover:border-emerald-400 shrink-0"
               title="Online Enrollment Application"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Enrollment</span>
+              <ChevronRight className="w-3.5 h-3.5 text-amber-300" />
             </Link>
 
             <Link
@@ -391,74 +465,114 @@ function Landing() {
               <span>Login</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
+
+            {/* Mobile Hamburger Toggle Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700 flex items-center justify-center text-white transition-colors cursor-pointer"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
-        {/* Mobile Modern Navigation Sub-Bar */}
-        <div className="lg:hidden bg-emerald-950/95 border-t border-emerald-800/70 px-3 py-2 overflow-x-auto no-scrollbar flex items-center space-x-2 text-[11px] font-bold text-emerald-100">
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('programs')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <Compass className="w-3 h-3 text-amber-400" />
-            <span>Programs</span>
-          </button>
+        {/* ── Mobile Slide-down Full Drawer Navigation ──────────────────── */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-4 space-y-3 animate-slide-up shadow-2xl">
+            
+            {/* Quick Actions in Mobile Drawer */}
+            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-emerald-800/80">
+              <Link
+                to="/enrollment"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2.5 px-3 bg-emerald-800 text-white font-bold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-700 shadow-sm"
+              >
+                <span>Enroll Now</span>
+                <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
+              </Link>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <span>Portal Login</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
 
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('quiz')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>Track Finder</span>
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('schedule')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <Clock className="w-3 h-3 text-emerald-400" />
-            <span>Schedule</span>
-          </button>
+            {/* Categorized Mobile Navigation Links */}
+            <div className="space-y-1.5 text-xs font-bold text-emerald-100">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1">Explore</p>
+              
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('programs')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <Layers className="w-4 h-4 text-emerald-400" />
+                <span>NSTP Components (CWTS, ROTC, LTS)</span>
+              </button>
 
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('guide')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <BookOpen className="w-3 h-3 text-amber-400" />
-            <span>Guide</span>
-          </button>
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('quiz')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <Compass className="w-4 h-4 text-amber-400" />
+                <span>Interactive Track Finder</span>
+              </button>
 
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('video')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <Play className="w-3 h-3 text-emerald-400" />
-            <span>Video</span>
-          </button>
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('video')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <Play className="w-4 h-4 text-emerald-400" />
+                <span>Video Orientation Guide</span>
+              </button>
 
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('faq')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <HelpCircle className="w-3 h-3 text-amber-400" />
-            <span>FAQ</span>
-          </button>
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-2">Resources</p>
 
-          <button 
-            type="button" 
-            onClick={() => scrollToSection('contact')} 
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 border border-emerald-700/50 whitespace-nowrap active:scale-95 flex items-center gap-1"
-          >
-            <Phone className="w-3 h-3 text-emerald-400" />
-            <span>Contact</span>
-          </button>
-        </div>
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('guide')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span>How to Enroll (3 Steps)</span>
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('schedule')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <Clock className="w-4 h-4 text-emerald-400" />
+                <span>Enrollment Schedule</span>
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('faq')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <HelpCircle className="w-4 h-4 text-amber-400" />
+                <span>Frequently Asked Questions</span>
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => scrollToSection('contact')} 
+                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+              >
+                <Phone className="w-4 h-4 text-emerald-400" />
+                <span>Contact NSTP Office</span>
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs) ───── */}
@@ -487,7 +601,7 @@ function Landing() {
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
                 <span className="inline-flex items-center gap-1.5 bg-emerald-500/90 text-white font-black text-xs sm:text-sm px-4 py-1.5 rounded-full uppercase tracking-wider mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <Award className="w-3.5 h-3.5 text-amber-300" />
                   <span>{image.badge}</span>
                 </span>
                 
@@ -505,8 +619,8 @@ function Landing() {
                     to="/enrollment"
                     className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
                   >
-                    <Sparkles className="w-4 h-4 text-emerald-950" />
                     <span>Apply for Enrollment</span>
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
 
                   <button
@@ -620,7 +734,7 @@ function Landing() {
           
           <div className="text-center mb-8 sm:mb-12">
             <span className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Interactive Track Finder
+              <Compass className="w-3.5 h-3.5 text-amber-600" /> Interactive Track Finder
             </span>
             <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-2">Which NSTP Component Fits You?</h2>
             <p className="text-slate-600 text-xs sm:text-base mt-1.5 max-w-xl mx-auto">
@@ -728,7 +842,7 @@ function Landing() {
                     ? 'bg-emerald-500 text-white shadow-emerald-900/50'
                     : 'bg-amber-400 text-emerald-950'
                 }`}>
-                  {enrollmentStatus.isOpen ? <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" /> : <Clock className="w-6 h-6 sm:w-7 sm:h-7" />}
+                  {enrollmentStatus.isOpen ? <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" /> : <Clock className="w-6 h-6 sm:w-7 sm:h-7" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
