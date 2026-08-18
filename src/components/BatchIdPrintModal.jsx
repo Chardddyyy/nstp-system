@@ -1,0 +1,321 @@
+import React, { useState, useEffect } from 'react';
+import { X, Printer, Filter, CheckSquare, Square, Download, Search } from 'lucide-react';
+import { attendanceAPI } from '../services/api';
+import NstpIdCard from './NstpIdCard';
+
+export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', defaultSection = 'All' }) {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [departmentFilter, setDepartmentFilter] = useState(defaultDepartment);
+  const [sectionFilter, setSectionFilter] = useState(defaultSection);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [printLayout, setPrintLayout] = useState('folding'); // 'folding' (side-by-side) | 'duplex' (fronts then backs)
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isSubscribed = true;
+    
+    attendanceAPI.getStudentIdCards({ department: departmentFilter, section: sectionFilter })
+      .then((data) => {
+        if (!isSubscribed) return;
+        const list = Array.isArray(data) ? data : [];
+        setStudents(list);
+        setSelectedIds(new Set(list.map(s => s.id)));
+      })
+      .catch((err) => {
+        console.error('Failed to load students for ID print:', err);
+      })
+      .finally(() => {
+        if (isSubscribed) setLoading(false);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [isOpen, departmentFilter, sectionFilter]);
+
+  if (!isOpen) return null;
+
+  const filteredStudents = students.filter(s => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const name = (s.name || `${s.firstName || ''} ${s.lastName || ''}`).toLowerCase();
+    const id = (s.studentId || '').toLowerCase();
+    const serial = (s.nstp_serial_id || '').toLowerCase();
+    return name.includes(q) || id.includes(q) || serial.includes(q);
+  });
+
+  const selectedStudentsList = filteredStudents.filter(s => selectedIds.has(s.id));
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredStudents.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredStudents.map(s => s.id)));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      {/* ── Screen UI Container (Hidden on Print) ── */}
+      <div className="print:hidden bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up">
+        
+        {/* Header */}
+        <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shadow-md">
+              <Printer className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-black leading-tight">Batch Printable NSTP ID Cards</h3>
+              <p className="text-xs text-emerald-200 font-medium">Standard CR80 cards formatted to fit standard A4 paper with front & back alignment</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Toolbar & Filter Bar */}
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            {/* Search */}
+            <div className="relative min-w-[180px] flex-1 max-w-xs">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search student or serial..."
+                className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+              />
+            </div>
+
+            {/* Department */}
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-3 py-2 bg-white rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="All">All Departments</option>
+              <option value="CWTS">CWTS</option>
+              <option value="ROTC">ROTC</option>
+              <option value="LTS">LTS</option>
+            </select>
+
+            {/* Section */}
+            <select
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              className="px-3 py-2 bg-white rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer"
+            >
+              <option value="All">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+              <option value="D">Section D</option>
+            </select>
+
+            {/* Print Mode Selector */}
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setPrintLayout('folding')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  printLayout === 'folding' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+                title="Front and Back side-by-side for easy folding and laminating"
+              >
+                Folding Pair (4 Pairs/A4)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintLayout('duplex')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  printLayout === 'duplex' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+                title="8 Fronts on Page 1, 8 Backs on Page 2 for double-sided printers"
+              >
+                Duplex (8 Fronts / 8 Backs)
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="px-3 py-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              {selectedIds.size === filteredStudents.length ? <CheckSquare className="w-4 h-4 text-emerald-700" /> : <Square className="w-4 h-4 text-slate-400" />}
+              <span>{selectedIds.size === filteredStudents.length ? 'Deselect All' : 'Select All'} ({selectedIds.size})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={selectedStudentsList.length === 0}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print {selectedStudentsList.length} Cards (A4)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Preview Scroll Area */}
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100/70 space-y-4">
+          {loading ? (
+            <div className="p-12 text-center text-slate-500 font-bold">
+              <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+              Loading student ID cards...
+            </div>
+          ) : selectedStudentsList.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 font-medium">
+              No students selected for printing. Please select at least one student.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredStudents.map((st) => {
+                const isSelected = selectedIds.has(st.id);
+                return (
+                  <div
+                    key={st.id}
+                    className={`p-3 rounded-2xl border-2 transition-all bg-white relative flex flex-col items-center gap-2 ${
+                      isSelected ? 'border-emerald-600 shadow-sm' : 'border-slate-200 opacity-60'
+                    }`}
+                  >
+                    <div className="w-full flex items-center justify-between pb-1 border-b border-slate-100">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectOne(st.id)}
+                          className="w-4 h-4 rounded text-emerald-700 focus:ring-emerald-500 cursor-pointer"
+                        />
+                        <span className="font-black text-xs text-slate-800">
+                          {st.name || `${st.firstName || ''} ${st.lastName || ''}`} ({st.studentId})
+                        </span>
+                      </label>
+                      <span className="text-[10px] font-bold text-slate-500 font-mono">
+                        {st.nstp_serial_id}
+                      </span>
+                    </div>
+
+                    {/* Render ID Card Preview */}
+                    <div className="scale-90 origin-top transform-gpu">
+                      <NstpIdCard student={st} side="both" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── PRINT-ONLY A4 SHEET CONTAINER (Rendered when window.print() is called) ── */}
+      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-0 m-0 w-full">
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 8mm 8mm 8mm 8mm;
+            }
+            body {
+              background: white !important;
+              color: black !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .a4-print-page {
+              page-break-after: always;
+              width: 194mm;
+              min-height: 281mm;
+              display: grid;
+              grid-template-columns: repeat(2, 85.6mm);
+              grid-gap: 6mm 10mm;
+              justify-content: center;
+              align-content: start;
+              margin: 0 auto;
+              padding: 4mm 0;
+            }
+            .id-card-front, .id-card-back {
+              border: 1px solid #cbd5e1 !important;
+              box-shadow: none !important;
+              border-radius: 4mm !important;
+              page-break-inside: avoid !important;
+            }
+          }
+        `}} />
+
+        {printLayout === 'folding' ? (
+          // Folding Mode: 4 Students per page (Front & Back side-by-side)
+          Array.from({ length: Math.ceil(selectedStudentsList.length / 4) }).map((_, pageIdx) => {
+            const pageStudents = selectedStudentsList.slice(pageIdx * 4, pageIdx * 4 + 4);
+            return (
+              <div key={pageIdx} className="a4-print-page">
+                {pageStudents.map((st) => (
+                  <React.Fragment key={st.id}>
+                    <div className="flex items-center justify-center">
+                      <NstpIdCard student={st} side="front" />
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <NstpIdCard student={st} side="back" />
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            );
+          })
+        ) : (
+          // Duplex Mode: 8 Fronts on Page 1, 8 Backs on Page 2
+          Array.from({ length: Math.ceil(selectedStudentsList.length / 8) }).map((_, pageIdx) => {
+            const pageStudents = selectedStudentsList.slice(pageIdx * 8, pageIdx * 8 + 8);
+            return (
+              <React.Fragment key={pageIdx}>
+                {/* Page Fronts */}
+                <div className="a4-print-page">
+                  {pageStudents.map((st) => (
+                    <div key={`front-${st.id}`} className="flex items-center justify-center">
+                      <NstpIdCard student={st} side="front" />
+                    </div>
+                  ))}
+                </div>
+                {/* Page Backs */}
+                <div className="a4-print-page">
+                  {pageStudents.map((st) => (
+                    <div key={`back-${st.id}`} className="flex items-center justify-center">
+                      <NstpIdCard student={st} side="back" />
+                    </div>
+                  ))}
+                </div>
+              </React.Fragment>
+            );
+          })
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+export default BatchIdPrintModal;

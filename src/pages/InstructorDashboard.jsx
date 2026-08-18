@@ -2,10 +2,12 @@ import { useAuth } from '../context/AuthContext';
 import { archivesAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
+import BatchIdPrintModal from '../components/BatchIdPrintModal';
+import AttendanceScannerModal from '../components/AttendanceScannerModal';
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
-  Archive, History, FileCheck, RotateCcw
+  Archive, History, FileCheck, RotateCcw, Camera, Printer, QrCode
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -27,6 +29,8 @@ function InstructorDashboard() {
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [showBatchIdModal, setShowBatchIdModal] = useState(false);
+  const [showAttendanceScanner, setShowAttendanceScanner] = useState(false);
 
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -447,6 +451,39 @@ function InstructorDashboard() {
           </div>
         </div>
 
+        {/* ── Attendance & NSTP ID Card Action Banner ────────────────────── */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-md border border-emerald-100 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-md shrink-0">
+              <Camera className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance & Cadet ID Tools</h3>
+              <p className="text-[11px] text-slate-500 font-medium truncate">Scan scannable QR tokens for instant check-in or print A4 batch ID cards</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowAttendanceScanner(true)}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              <Camera className="w-4 h-4 text-blue-200" />
+              <span>QR Scanner</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowBatchIdModal(true)}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-600/50"
+            >
+              <Printer className="w-4 h-4 text-amber-300" />
+              <span>Print {user?.department} IDs (A4)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Quick Action Navigation Cards - 4 Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-6">
           <div
@@ -848,6 +885,20 @@ function InstructorDashboard() {
             </div>
           </div>
         )}
+
+        {/* Batch A4 NSTP ID Cards Print Modal */}
+        <BatchIdPrintModal
+          isOpen={showBatchIdModal}
+          onClose={() => setShowBatchIdModal(false)}
+          defaultDepartment={user?.department || 'CWTS'}
+        />
+
+        {/* Live Camera QR Attendance Scanner Modal */}
+        <AttendanceScannerModal
+          isOpen={showAttendanceScanner}
+          onClose={() => setShowAttendanceScanner(false)}
+          currentDepartment={user?.department || 'CWTS'}
+        />
       </main>
       <ScrollToTopButton />
     </div>
@@ -855,3 +906,4 @@ function InstructorDashboard() {
 }
 
 export default InstructorDashboard;
+

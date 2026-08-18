@@ -602,6 +602,19 @@ export const telemetryAPI = {
   getStats: getTelemetryStats
 };
 
+export const attendanceAPI = {
+  scan: (data) => apiCall('/attendance/scan', { method: 'POST', body: JSON.stringify(data) }),
+  getRecords: (params) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiCall('/attendance' + qs);
+  },
+  deleteRecord: (id) => apiCall('/attendance/' + id, { method: 'DELETE' }),
+  getStudentIdCards: (params) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiCall('/students/id-cards' + qs);
+  }
+};
+
 export const callsAPI = {
   initiate: async () => ({ id: null }),
   getIncoming: async () => [],
@@ -613,5 +626,7 @@ export const callsAPI = {
   sendIce: async () => ({}),
   getWebRTCSignaling: async () => ({ offer_sdp: null, answer_sdp: null, ice_candidates: [] })
 };
+
+
 
 

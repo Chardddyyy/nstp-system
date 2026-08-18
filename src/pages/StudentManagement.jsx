@@ -1,10 +1,13 @@
 import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
+import BatchIdPrintModal from '../components/BatchIdPrintModal';
+import AttendanceScannerModal from '../components/AttendanceScannerModal';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText
+  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText,
+  Printer, Camera, QrCode
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -23,6 +26,8 @@ function StudentManagement() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [showBatchIdModal, setShowBatchIdModal] = useState(false);
+  const [showAttendanceScanner, setShowAttendanceScanner] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagination state
@@ -672,11 +677,31 @@ function StudentManagement() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+              {/* Batch NSTP IDs (A4) Button */}
+              <button type="button"
+                onClick={() => setShowBatchIdModal(true)}
+                title="Print batch official NSTP ID Cards fitted on standard A4"
+                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-emerald-600/50"
+              >
+                <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
+                <span>Print NSTP IDs (A4)</span>
+              </button>
+
+              {/* QR Attendance Scanner Button */}
+              <button type="button"
+                onClick={() => setShowAttendanceScanner(true)}
+                title="Open live camera QR scanner for student attendance"
+                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-blue-500/50"
+              >
+                <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
+                <span>QR Scanner</span>
+              </button>
+
               <button type="button"
                 onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
                 title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
-                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-sm cursor-pointer shrink-0"
+                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950" />
                 <span>Export CHED Excel</span>
@@ -686,9 +711,9 @@ function StudentManagement() {
                   onClick={() => !viewingArchive && setShowAddModal(true)}
                   disabled={viewingArchive}
                   title={viewingArchive ? 'Exit archive view to add students' : ''}
-                  className={`flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 text-[11px] sm:text-sm ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
+                  className={`flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 text-[11px] sm:text-xs ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
                 >
-                  <Plus className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span>Add Student</span>
                 </button>
               )}
@@ -2299,6 +2324,20 @@ function StudentManagement() {
             </div>
           </div>
         )}
+
+        {/* Batch A4 NSTP ID Cards Print Modal */}
+        <BatchIdPrintModal
+          isOpen={showBatchIdModal}
+          onClose={() => setShowBatchIdModal(false)}
+          defaultDepartment={isAdmin ? filterDept : (user?.department || 'CWTS')}
+        />
+
+        {/* Live Camera QR Attendance Scanner Modal */}
+        <AttendanceScannerModal
+          isOpen={showAttendanceScanner}
+          onClose={() => setShowAttendanceScanner(false)}
+          currentDepartment={isAdmin ? filterDept : (user?.department || 'CWTS')}
+        />
       </main>
       <ScrollToTopButton />
     </div>
@@ -2306,3 +2345,4 @@ function StudentManagement() {
 }
 
 export default StudentManagement;
+

@@ -206,6 +206,60 @@ async function ensureMessageRestoreColumns() {
   }
 }
 
+async function ensureNstpIdAndAttendanceTables() {
+  try {
+    const studentAlters = [
+      'ALTER TABLE students ADD COLUMN nstp_serial_id VARCHAR(50) NULL',
+      'ALTER TABLE students ADD COLUMN qr_token VARCHAR(100) NULL',
+      'ALTER TABLE students ADD COLUMN id_issued_at DATETIME NULL',
+      'ALTER TABLE enrollments ADD COLUMN nstp_serial_id VARCHAR(50) NULL',
+      'ALTER TABLE enrollments ADD COLUMN qr_token VARCHAR(100) NULL'
+    ];
+    for (const sql of studentAlters) {
+      try { await pool.execute(sql); } catch (_) {}
+    }
+
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS attendance_records (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(50) NOT NULL,
+        student_name VARCHAR(255) NULL,
+        department VARCHAR(50) NULL,
+        section VARCHAR(50) NULL,
+        activity_name VARCHAR(255) DEFAULT 'NSTP Session',
+        scan_type ENUM('TIME_IN', 'TIME_OUT') DEFAULT 'TIME_IN',
+        scanned_by INT NULL,
+        scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('Present', 'Late', 'Excused') DEFAULT 'Present',
+        notes TEXT NULL,
+        INDEX idx_attendance_student (student_id),
+        INDEX idx_attendance_dept (department),
+        INDEX idx_attendance_date (scanned_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // Backfill any existing active students that don't have nstp_serial_id or qr_token yet
+    const [rows] = await pool.execute(
+      "SELECT id, studentId, department, createdAt FROM students WHERE nstp_serial_id IS NULL OR qr_token IS NULL LIMIT 200"
+    );
+    for (const st of rows) {
+      const year = new Date(st.createdAt || Date.now()).getFullYear();
+      const dept = (st.department || 'CWTS').toUpperCase();
+      const paddedId = String(st.id).padStart(4, '0');
+      const serialId = `NSTP-${year}-${dept}-${paddedId}`;
+      const token = `NSTP-${st.studentId}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      try {
+        await pool.execute(
+          "UPDATE students SET nstp_serial_id = ?, qr_token = ?, id_issued_at = COALESCE(id_issued_at, NOW()) WHERE id = ?",
+          [serialId, token, st.id]
+        );
+      } catch (_) {}
+    }
+  } catch (err) {
+    console.warn('ensureNstpIdAndAttendanceTables notice:', err.message);
+  }
+}
+
 var userColumnsMigrated = false;
 async function ensureUserColumns() {
   if (userColumnsMigrated) return;
@@ -219,6 +273,7 @@ async function ensureUserColumns() {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
   }
   userColumnsMigrated = true;
+  await ensureNstpIdAndAttendanceTables();
 }
 
 async function ensureCallsTableAndColumns() {
@@ -3001,6 +3056,24 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
             ]
           );
         }
+
+        // Generate and assign unique NSTP Serial ID and QR Token
+        const year = new Date().getFullYear();
+        const dept = (enrollment.department || 'CWTS').toUpperCase();
+        const paddedId = String(enrollment.studentId || enrollment.id).slice(-4);
+        const serialId = `NSTP-${year}-${dept}-${paddedId}`;
+        const token = `NSTP-${enrollment.studentId}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        await pool.execute(
+          `UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), id_issued_at = COALESCE(id_issued_at, NOW()) WHERE studentId = ?`,
+          [serialId, token, enrollment.studentId]
+        ).catch(() => {});
+
+        await pool.execute(
+          `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
+          [serialId, token, id]
+        ).catch(() => {});
+
       } catch (insertError) {
         console.error('Error inserting student:', insertError);
         throw insertError;
@@ -3012,6 +3085,228 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Update enrollment error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── ATTENDANCE & BATCH NSTP ID CARD ENDPOINTS ─────────────────────────────────
+
+// GET active students with ID Card details for single/batch A4 printing
+app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
+  try {
+    const { department, section } = req.query;
+    let query = `
+      SELECT 
+        id, studentId, name, firstName, lastName, middleName,
+        department, section, program, year, contactNumber,
+        bloodType, emergencyContact, emergencyNumber,
+        nstp_serial_id, qr_token, id_issued_at,
+        registration_photo, registrationPhoto, photo,
+        status, createdAt
+      FROM students 
+      WHERE (status IS NULL OR status = 'Active')
+    `;
+    const params = [];
+
+    // Enforce instructor isolation
+    if (req.user.role === 'instructor') {
+      query += ' AND department = ?';
+      params.push(req.user.department);
+    } else if (department && department !== 'All') {
+      query += ' AND department = ?';
+      params.push(department);
+    }
+
+    if (section && section !== 'All') {
+      query += ' AND section = ?';
+      params.push(section);
+    }
+
+    query += ' ORDER BY lastName ASC, firstName ASC';
+
+    const [students] = await pool.execute(query, params);
+
+    // Auto-fill missing serials or qr_tokens on-the-fly
+    const enriched = students.map((st) => {
+      const yr = new Date(st.createdAt || Date.now()).getFullYear();
+      const dep = (st.department || 'CWTS').toUpperCase();
+      const padded = String(st.studentId || st.id).slice(-4);
+      const serial = st.nstp_serial_id || `NSTP-${yr}-${dep}-${padded}`;
+      const token = st.qr_token || `NSTP-${st.studentId}-${String(st.id).padStart(4, '0')}`;
+      return {
+        ...st,
+        nstp_serial_id: serial,
+        qr_token: token,
+      };
+    });
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('Error fetching student ID cards:', err);
+    res.status(500).json({ message: 'Failed to fetch student ID cards' });
+  }
+});
+
+// POST scan attendance via QR code token or student ID
+app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
+  try {
+    const { tokenOrId, activity_name, scan_type, notes } = req.body;
+    if (!tokenOrId || !tokenOrId.trim()) {
+      return res.status(400).json({ message: 'QR Code or Student ID is required' });
+    }
+
+    const cleanInput = tokenOrId.trim();
+
+    // Look up student by qr_token, studentId, or nstp_serial_id
+    let [students] = await pool.execute(
+      `SELECT * FROM students WHERE qr_token = ? OR studentId = ? OR nstp_serial_id = ? LIMIT 1`,
+      [cleanInput, cleanInput, cleanInput]
+    );
+
+    if (students.length === 0) {
+      return res.status(404).json({ message: 'No student found matching this QR code / ID' });
+    }
+
+    const student = students[0];
+
+    // Check instructor department permission
+    if (req.user.role === 'instructor' && student.department !== req.user.department) {
+      return res.status(403).json({ 
+        message: `Unauthorized: Student belongs to ${student.department}, but your account is assigned to ${req.user.department}` 
+      });
+    }
+
+    const actName = activity_name && activity_name.trim() ? activity_name.trim() : 'NSTP General Session';
+    const sType = scan_type === 'TIME_OUT' ? 'TIME_OUT' : 'TIME_IN';
+
+    // Check if already scanned today for this exact activity and scan_type
+    const [existing] = await pool.execute(
+      `SELECT * FROM attendance_records 
+       WHERE student_id = ? 
+         AND activity_name = ? 
+         AND scan_type = ? 
+         AND DATE(scanned_at) = CURDATE() 
+       ORDER BY scanned_at DESC LIMIT 1`,
+      [student.studentId, actName, sType]
+    );
+
+    if (existing.length > 0) {
+      return res.status(200).json({
+        already_scanned: true,
+        message: `${student.name || student.studentId} has already ${sType === 'TIME_IN' ? 'timed-in' : 'timed-out'} today at ${new Date(existing[0].scanned_at).toLocaleTimeString()}`,
+        student,
+        record: existing[0]
+      });
+    }
+
+    // Insert new attendance record
+    const [insertResult] = await pool.execute(
+      `INSERT INTO attendance_records (
+        student_id, student_name, department, section,
+        activity_name, scan_type, scanned_by, status, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Present', ?)`,
+      [
+        student.studentId,
+        student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        student.department,
+        student.section,
+        actName,
+        sType,
+        req.user.id,
+        notes || null
+      ]
+    );
+
+    const [savedRecord] = await pool.execute(
+      'SELECT * FROM attendance_records WHERE id = ?',
+      [insertResult.insertId]
+    );
+
+    auditLog('attendance_scanned', req.user.id, `student: ${student.studentId}, activity: ${actName}`, req.ip || 'unknown');
+
+    res.status(201).json({
+      success: true,
+      message: `Attendance logged successfully for ${student.name || student.studentId}`,
+      student,
+      record: savedRecord[0]
+    });
+  } catch (err) {
+    console.error('Error scanning attendance:', err);
+    res.status(500).json({ message: 'Server error processing attendance scan' });
+  }
+});
+
+// GET attendance history/logs
+app.get('/api/attendance', authenticateToken, async (req, res) => {
+  try {
+    const { department, section, activity_name, date, limit } = req.query;
+    let query = `
+      SELECT 
+        a.*, 
+        s.program, s.year, s.registration_photo, s.photo
+      FROM attendance_records a
+      LEFT JOIN students s ON s.studentId = a.student_id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (req.user.role === 'instructor') {
+      query += ' AND a.department = ?';
+      params.push(req.user.department);
+    } else if (department && department !== 'All') {
+      query += ' AND a.department = ?';
+      params.push(department);
+    }
+
+    if (section && section !== 'All') {
+      query += ' AND a.section = ?';
+      params.push(section);
+    }
+
+    if (activity_name && activity_name !== 'All') {
+      query += ' AND a.activity_name = ?';
+      params.push(activity_name);
+    }
+
+    if (date) {
+      query += ' AND DATE(a.scanned_at) = ?';
+      params.push(date);
+    }
+
+    query += ' ORDER BY a.scanned_at DESC';
+
+    const rowLimit = parseInt(limit, 10) || 500;
+    query += ` LIMIT ${rowLimit}`;
+
+    const [records] = await pool.execute(query, params);
+    res.json(records);
+  } catch (err) {
+    console.error('Error fetching attendance records:', err);
+    res.status(500).json({ message: 'Failed to fetch attendance logs' });
+  }
+});
+
+// DELETE single attendance record
+app.delete('/api/attendance/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let query = 'DELETE FROM attendance_records WHERE id = ?';
+    const params = [id];
+
+    if (req.user.role === 'instructor') {
+      query += ' AND department = ?';
+      params.push(req.user.department);
+    }
+
+    const [result] = await pool.execute(query, params);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Record not found or unauthorized' });
+    }
+
+    auditLog('attendance_deleted', req.user.id, `record_id: ${id}`, req.ip || 'unknown');
+    res.json({ message: 'Attendance record deleted' });
+  } catch (err) {
+    console.error('Error deleting attendance record:', err);
+    res.status(500).json({ message: 'Failed to delete attendance record' });
   }
 });
 
