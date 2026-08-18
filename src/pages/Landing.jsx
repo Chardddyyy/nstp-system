@@ -80,7 +80,8 @@ function Landing() {
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
   
-  // Navigation Mobile Menu State
+  // Navigation Dropdown & Mobile Menu State
+  const [openDropdown, setOpenDropdown] = useState(null); // 'resources' | null
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerNavRef = useRef(null);
 
@@ -275,6 +276,84 @@ function Landing() {
           {/* Desktop Dropdown Navigation Bar */}
           <nav ref={headerNavRef} className="hidden lg:flex items-center space-x-1.5 text-xs font-bold text-emerald-100/90">
             
+            {/* Dropdown: Student Resources */}
+            <div className="relative">
+              <button 
+                type="button" 
+                onClick={() => setOpenDropdown(openDropdown === 'resources' ? null : 'resources')}
+                className={`px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 ${
+                  openDropdown === 'resources' ? 'bg-white/15 text-white' : ''
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-emerald-300" />
+                <span>Student Resources</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === 'resources' ? 'rotate-180 text-emerald-300' : ''}`} />
+              </button>
+
+              {openDropdown === 'resources' && (
+                <div className="absolute left-0 mt-2 w-72 bg-emerald-950/95 backdrop-blur-2xl border border-emerald-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('guide')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">How to Enroll</p>
+                      <p className="text-[11px] text-emerald-200/80">Easy 3-step online application guide</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('schedule')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-black text-white text-xs group-hover:text-amber-300">Schedule &amp; Dates</p>
+                        {enrollmentStatus.isOpen && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>}
+                      </div>
+                      <p className="text-[11px] text-emerald-200/80">Active enrollment window dates</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('video')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <Play className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">Video Orientation</p>
+                      <p className="text-[11px] text-emerald-200/80">Official UP Diliman &amp; RA 9163 guide</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToSection('faq')}
+                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-xs group-hover:text-amber-300">Knowledge Base &amp; FAQ</p>
+                      <p className="text-[11px] text-emerald-200/80">Searchable answers and policies</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button 
               type="button" 
               onClick={() => scrollToSection('guide')} 

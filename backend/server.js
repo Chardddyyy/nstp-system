@@ -244,8 +244,20 @@ async function ensureNstpIdAndAttendanceTables() {
     try {
       await pool.execute("ALTER TABLE enrollments ADD COLUMN nstp_section VARCHAR(50) NULL");
     } catch (_) {}
+    try {
+      await pool.execute("ALTER TABLE students ADD COLUMN id_photo_2x2 LONGTEXT NULL");
+      await pool.execute("ALTER TABLE students ADD COLUMN reg_form LONGTEXT NULL");
+      await pool.execute("ALTER TABLE enrollments ADD COLUMN id_photo_2x2 LONGTEXT NULL");
+      await pool.execute("ALTER TABLE enrollments ADD COLUMN reg_form LONGTEXT NULL");
+    } catch (_) {}
 
-    // Backfill all active students with clean per-track matriculation numbers (starting at 00001) and auto-sections (CWTS-1, LTS-1, ROTC-1)
+    // Fix Gonzaga to LTS department as required
+    try {
+      await pool.execute("UPDATE students SET department = 'LTS' WHERE lastName LIKE '%Gonzaga%' OR name LIKE '%Gonzaga%'");
+      await pool.execute("UPDATE enrollments SET department = 'LTS' WHERE lastName LIKE '%Gonzaga%' OR fullName LIKE '%Gonzaga%'");
+    } catch (_) {}
+
+    // Backfill all active students with clean per-track matriculation numbers (starting at 00001)
     const [rows] = await pool.execute(
       "SELECT * FROM students ORDER BY department ASC, id ASC LIMIT 2000"
     ).catch(() => [[]]);
@@ -254,7 +266,11 @@ async function ensureNstpIdAndAttendanceTables() {
     const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
     for (const st of (rows || [])) {
       const year = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
-      const dept = (st.department || 'CWTS').toUpperCase();
+      let dept = (st.department || 'CWTS').toUpperCase();
+      const nameCheck = (st.lastName || st.name || '').toLowerCase();
+      if (nameCheck.includes('gonzaga')) {
+        dept = 'LTS';
+      }
       trackCounters[dept] = (trackCounters[dept] || 0) + 1;
       const countPadded = String(trackCounters[dept]).padStart(5, '0');
       const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
@@ -262,8 +278,8 @@ async function ensureNstpIdAndAttendanceTables() {
 
       try {
         await pool.execute(
-          "UPDATE students SET nstp_serial_id = ?, qr_token = COALESCE(qr_token, ?) WHERE id = ?",
-          [matriculationNumber, token, st.id]
+          "UPDATE students SET department = ?, nstp_serial_id = ?, qr_token = ? WHERE id = ?",
+          [dept, matriculationNumber, token, st.id]
         );
       } catch (_) {}
     }
@@ -3146,14 +3162,21 @@ app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
     const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
     const enriched = (students || []).map((st) => {
       const yr = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
-      const dep = (st.department || 'CWTS').toUpperCase();
+      let dep = (st.department || 'CWTS').toUpperCase();
+      const nameCheck = (st.lastName || st.name || '').toLowerCase();
+      if (nameCheck.includes('gonzaga')) {
+        dep = 'LTS';
+      }
       trackCounters[dep] = (trackCounters[dep] || 0) + 1;
       const countPadded = String(trackCounters[dep]).padStart(5, '0');
-      const defaultSerial = `NSTP-${dep}-${yr}-${countPadded}`;
-      const serial = st.nstp_serial_id || defaultSerial;
-      const token = st.qr_token || `NSTP-${st.studentId || st.id}-${serial}`;
+      const serial = `NSTP-${dep}-${yr}-${countPadded}`;
+      const token = `NSTP-${st.studentId || st.id}-${serial}`;
+      const idPhoto = st.id_photo_2x2 || st.photo || st.registration_photo || null;
       return {
         ...st,
+        department: dep,
+        photo: idPhoto,
+        registration_photo: idPhoto,
         nstp_serial_id: serial,
         qr_token: token,
       };

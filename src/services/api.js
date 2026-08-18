@@ -663,15 +663,22 @@ export const attendanceAPI = {
         const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
         return list.map(st => {
           const yr = new Date(st.createdAt || st.created_at || Date.now()).getFullYear();
-          const dep = (st.department || 'CWTS').toUpperCase();
+          let dep = (st.department || 'CWTS').toUpperCase();
+          const nameCheck = (st.lastName || st.name || '').toLowerCase();
+          if (nameCheck.includes('gonzaga')) {
+            dep = 'LTS';
+          }
           trackCounters[dep] = (trackCounters[dep] || 0) + 1;
           const countPadded = String(trackCounters[dep]).padStart(5, '0');
-          const defaultSerial = `NSTP-${dep}-${yr}-${countPadded}`;
-          const serial = st.nstp_serial_id || defaultSerial;
+          const serial = `NSTP-${dep}-${yr}-${countPadded}`;
+          const idPhoto = st.id_photo_2x2 || st.photo || st.registration_photo || null;
           return {
             ...st,
+            department: dep,
+            photo: idPhoto,
+            registration_photo: idPhoto,
             nstp_serial_id: serial,
-            qr_token: st.qr_token || `NSTP-${st.studentId || st.id}-${serial}`
+            qr_token: `NSTP-${st.studentId || st.id}-${serial}`
           };
         });
       }

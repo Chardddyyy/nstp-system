@@ -178,11 +178,15 @@ function Enrollment() {
   const errorTimerRef = useRef(null);
 
   const [registrationPhoto, setRegistrationPhoto] = useState(null);
+  const [idPhoto2x2, setIdPhoto2x2] = useState(null);
   const photoInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const idPhotoInputRef = useRef(null);
+  const idCameraInputRef = useRef(null);
 
   // Live Camera Capture Modal State & WebRTC Refs
   const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState('regform'); // 'regform' or 'idphoto'
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' or 'user'
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -199,8 +203,9 @@ function Enrollment() {
     setShowCameraModal(false);
   };
 
-  const startLiveCamera = async (preferredFacing = 'environment') => {
+  const startLiveCamera = async (target = 'regform', preferredFacing = 'environment') => {
     try {
+      setCameraTarget(target);
       stopCameraStream();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -220,7 +225,9 @@ function Enrollment() {
       }, 100);
     } catch (err) {
       console.warn('Live camera access failed or fallback needed:', err);
-      if (cameraInputRef.current) {
+      if (target === 'idphoto' && idCameraInputRef.current) {
+        idCameraInputRef.current.click();
+      } else if (cameraInputRef.current) {
         cameraInputRef.current.click();
       }
     }
@@ -229,7 +236,7 @@ function Enrollment() {
   const toggleCameraFacing = () => {
     const nextMode = facingMode === 'environment' ? 'user' : 'environment';
     setFacingMode(nextMode);
-    startLiveCamera(nextMode);
+    startLiveCamera(cameraTarget, nextMode);
   };
 
   const capturePhotoFromCamera = () => {
@@ -252,8 +259,13 @@ function Enrollment() {
     ctx.drawImage(video, 0, 0, w, h);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
-    setRegistrationPhoto(dataUrl);
-    if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+    if (cameraTarget === 'idphoto') {
+      setIdPhoto2x2(dataUrl);
+      if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
+    } else {
+      setRegistrationPhoto(dataUrl);
+      if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+    }
     closeCameraModal();
   };
 
@@ -401,9 +413,14 @@ function Enrollment() {
       }
     }
 
-    // Registration photo required
+    // Registration photo (COR) required
     if (!registrationPhoto) {
-      newErrors.registrationPhoto = 'Please upload a photo of your registration form';
+      newErrors.registrationPhoto = 'Please upload a photo/file of your Certificate of Registration (COR)';
+    }
+
+    // 2x2 ID photo required
+    if (!idPhoto2x2) {
+      newErrors.idPhoto2x2 = 'Please upload your official 2x2 ID picture (White Background)';
     }
 
     // Terms and Privacy Policy agreement required
@@ -503,6 +520,34 @@ function Enrollment() {
       img.onerror = () => {
         setRegistrationPhoto(ev.target.result);
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleIdPhotoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1000;
+        let w = img.width, h = img.height;
+        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.85));
+        if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
+      };
+      img.onerror = () => {
+        setIdPhoto2x2(ev.target.result);
+        if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
       };
       img.src = ev.target.result;
     };
@@ -629,7 +674,10 @@ function Enrollment() {
         fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim(),
         birthDate: cleanBirthDate,
         status: 'Pending',
-        registrationPhoto,
+        registrationPhoto: registrationPhoto,
+        reg_form: registrationPhoto,
+        id_photo_2x2: idPhoto2x2 || registrationPhoto,
+        photo: idPhoto2x2 || registrationPhoto,
         recaptchaToken: googleRecaptchaToken || null,
       };
 
@@ -1490,15 +1538,15 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 5: 2x2 ID Picture Attachment */}
+              {/* Step 5: Certificate of Registration (COR / Registration Form) Verification */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <FileCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-emerald-950">5. 2x2 ID Picture (White Background &amp; White Shirt) *</h3>
-                    <p className="text-xs text-gray-500 font-medium">Attach an official 2x2 ID photo (Plain White Background, White Shirt / Collared). This photo will be automatically printed on your official NSTP ID Card.</p>
+                    <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
+                    <p className="text-xs text-gray-500 font-medium">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
                   </div>
                 </div>
 
@@ -1514,7 +1562,7 @@ function Enrollment() {
                   ref={cameraInputRef}
                   type="file"
                   accept="image/*"
-                  capture="user"
+                  capture="environment"
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
@@ -1528,9 +1576,9 @@ function Enrollment() {
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Upload className="w-7 h-7" />
                     </div>
-                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Picture</h4>
+                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload Registration Form (COR)</h4>
                     <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
-                      Required: Plain <b>White Background</b> and <b>White Shirt</b>. Clear face view without sunglasses or face coverings.
+                      Supports PDF, PNG, JPG, or HEIC files. Ensure student number, name, and enrolled courses are clearly readable.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
@@ -1539,30 +1587,30 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
-                        Choose 2x2 Photo
+                        Choose RegForm File
                       </button>
                       <button
                         type="button"
-                        onClick={() => startLiveCamera()}
+                        onClick={() => startLiveCamera('regform')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
-                        Take 2x2 Photo
+                        Scan / Take RegForm Photo
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm">
-                        <img src={registrationPhoto} alt="2x2 ID Photo" className="w-full h-full object-cover" />
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center">
+                        <img src={registrationPhoto} alt="Registration Form" className="w-full h-full object-cover" />
                       </div>
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> 2x2 Photo Attached
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> COR Attached
                         </span>
-                        <h4 className="text-xs font-black text-gray-900 truncate">2x2 ID Picture Ready</h4>
-                        <p className="text-[11px] text-gray-500">Official photo successfully loaded for your NSTP ID card</p>
+                        <h4 className="text-xs font-black text-gray-900 truncate">Registration Form Uploaded</h4>
+                        <p className="text-[11px] text-gray-500">Official document ready for admin student verification</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -1586,6 +1634,102 @@ function Enrollment() {
                 {errors.registrationPhoto && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errors.registrationPhoto}</p>}
               </div>
 
+              {/* Step 6: Official 2x2 ID Picture Attachment */}
+              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-emerald-950">6. Official 2x2 ID Picture (White Background &amp; White Shirt) *</h3>
+                    <p className="text-xs text-gray-500 font-medium">Attach your official 2x2 ID picture (Plain White Background, White Shirt / Collared). This photo will be printed directly on your official NSTP ID Card.</p>
+                  </div>
+                </div>
+
+                <input
+                  ref={idPhotoInputRef}
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={handleIdPhotoChange}
+                  className="hidden"
+                />
+
+                <input
+                  ref={idCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  onChange={handleIdPhotoChange}
+                  className="hidden"
+                />
+
+                {!idPhoto2x2 ? (
+                  <div
+                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${
+                      errors.idPhoto2x2 ? 'border-red-400 bg-red-50/40' : 'border-emerald-200 hover:border-emerald-500 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                      <Camera className="w-7 h-7" />
+                    </div>
+                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Photo</h4>
+                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
+                      Required: Plain <b>White Background</b> and <b>White Shirt</b>. Clear front-facing portrait without sunglasses or caps.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => idPhotoInputRef.current.click()}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Choose 2x2 Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => startLiveCamera('idphoto', 'user')}
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4 text-amber-400" />
+                        Take 2x2 Portrait
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm">
+                        <img src={idPhoto2x2} alt="2x2 ID Photo" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> 2x2 ID Photo Ready
+                        </span>
+                        <h4 className="text-xs font-black text-gray-900 truncate">Official ID Photo Loaded</h4>
+                        <p className="text-[11px] text-gray-500">This photo will appear on your official NSTP ID Card</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => idPhotoInputRef.current.click()}
+                        className="px-3.5 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIdPhoto2x2(null)}
+                        className="px-3.5 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {errors.idPhoto2x2 && <p className="text-red-500 text-xs font-bold mt-2 text-center">{errors.idPhoto2x2}</p>}
+              </div>
+
               {/* Live Camera Viewfinder Modal */}
               {showCameraModal && (
                 <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
@@ -1593,7 +1737,9 @@ function Enrollment() {
                     <div className="p-4 bg-emerald-900 flex items-center justify-between text-white border-b border-emerald-800">
                       <div className="flex items-center gap-2">
                         <Camera className="w-5 h-5 text-amber-400" />
-                        <h3 className="text-sm font-black">Scan / Take Photo of Registration Form</h3>
+                        <h3 className="text-sm font-black">
+                          {cameraTarget === 'idphoto' ? 'Take Official 2x2 ID Portrait' : 'Scan / Take Photo of Registration Form'}
+                        </h3>
                       </div>
                       <button
                         type="button"
@@ -1611,7 +1757,7 @@ function Enrollment() {
                         muted
                         autoPlay
                         className="w-full h-full object-cover"
-                        style={{ transform: 'none' }}
+                        style={{ transform: cameraTarget === 'idphoto' && facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
                       />
                       
                       {/* Top Clear Guidance Banner */}
@@ -1621,10 +1767,24 @@ function Enrollment() {
                             <Sparkles className="w-4 h-4 text-amber-400" />
                           </div>
                           <p className="text-[10px] sm:text-xs font-semibold leading-tight text-emerald-100">
-                            <strong className="text-amber-300 font-bold">Paalala:</strong> Tiyaking malinaw, maayos ang ilaw, at nababasa ang lahat ng nakasulat sa iyong Registration Form bago kumuha ng litrato.
+                            {cameraTarget === 'idphoto' 
+                              ? <span><strong className="text-amber-300 font-bold">2x2 Paalala:</strong> Tiyaking nasa gitna ang mukha, nakasuot ng puting damit, at maliwanag ang puting background.</span>
+                              : <span><strong className="text-amber-300 font-bold">RegForm Paalala:</strong> Tiyaking malinaw at nababasa ang lahat ng nakasulat sa iyong Registration Form bago kumuha ng litrato.</span>
+                            }
                           </p>
                         </div>
                       </div>
+
+                      {/* Guide Box for 2x2 ID Photo */}
+                      {cameraTarget === 'idphoto' && (
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                          <div className="w-48 h-60 border-2 border-dashed border-amber-400/80 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                            <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full">
+                              Center Face Here
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-5 bg-emerald-950 flex items-center justify-between gap-3">
