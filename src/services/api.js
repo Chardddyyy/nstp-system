@@ -660,14 +660,18 @@ export const attendanceAPI = {
         if (params?.section && params.section !== 'All') {
           list = list.filter(s => s.section === params.section);
         }
+        const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
         return list.map(st => {
           const yr = new Date(st.createdAt || st.created_at || Date.now()).getFullYear();
           const dep = (st.department || 'CWTS').toUpperCase();
-          const padded = String(st.studentId || st.id || '0000').slice(-4);
+          trackCounters[dep] = (trackCounters[dep] || 0) + 1;
+          const countPadded = String(trackCounters[dep]).padStart(5, '0');
+          const defaultSerial = `NSTP-${dep}-${yr}-${countPadded}`;
+          const serial = st.nstp_serial_id || defaultSerial;
           return {
             ...st,
-            nstp_serial_id: st.nstp_serial_id || `NSTP-${yr}-${dep}-${padded}`,
-            qr_token: st.qr_token || `NSTP-${st.studentId || st.id}-${String(st.id || '0').padStart(4, '0')}`
+            nstp_serial_id: serial,
+            qr_token: st.qr_token || `NSTP-${st.studentId || st.id}-${serial}`
           };
         });
       }

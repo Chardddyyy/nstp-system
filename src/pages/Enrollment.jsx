@@ -1028,6 +1028,10 @@ function Enrollment() {
                       <option value="B">Section B</option>
                       <option value="C">Section C</option>
                       <option value="D">Section D</option>
+                      <option value="CWTS-1">CWTS-1</option>
+                      <option value="CWTS-2">CWTS-2</option>
+                      <option value="LTS-1">LTS-1</option>
+                      <option value="ROTC-1">ROTC-1</option>
                     </select>
                     {errors.section && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.section}</p>}
                   </div>

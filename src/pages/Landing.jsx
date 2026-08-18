@@ -41,39 +41,6 @@ const CAROUSEL_IMAGES = [
   }
 ];
 
-const TRACK_QUIZ_OPTIONS = [
-  {
-    id: 'CWTS',
-    label: 'Community Service & Environment',
-    icon: HeartHandshake,
-    tagline: 'Civic Welfare Training Service',
-    description: 'Perfect for students passionate about tree planting, coastal cleanups, public health, disaster relief, and barangay outreach.',
-    color: 'emerald',
-    badge: 'Civic Leadership',
-    keyPoints: ['Community Sanitation & Health Outreach', 'Coastal Cleanup & Reforestation', 'Civic Project Management']
-  },
-  {
-    id: 'LTS',
-    label: 'Teaching & Child Literacy',
-    icon: GraduationCap,
-    tagline: 'Literacy Training Service',
-    description: 'Designed for students who want to teach numeracy, reading, and basic education to children and out-of-school youth in Cavite.',
-    color: 'purple',
-    badge: 'Education & Mentorship',
-    keyPoints: ['Basic Reading & Numeracy Coaching', 'Child Values Formation & Learning', 'Out-of-School Youth Tutoring']
-  },
-  {
-    id: 'ROTC',
-    label: 'Military Preparedness & Discipline',
-    icon: Shield,
-    tagline: "Reserve Officers' Training Corps",
-    description: 'Tailored for students seeking military defense preparedness, martial discipline, ceremonial drills, and emergency rescue readiness.',
-    color: 'rose',
-    badge: 'Defense & Honor',
-    keyPoints: ['Military Drills & Ceremonial Formations', 'Disaster First Aid & Rescue Life Support', 'National Defense Tactics & Ethics']
-  }
-];
-
 const FAQ_ITEMS = [
   {
     q: "Who is required to take NSTP?",
@@ -109,14 +76,11 @@ const FAQ_ITEMS = [
 
 function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [activeComponentModal, setActiveComponentModal] = useState(null);
-  const [selectedQuizTrack, setSelectedQuizTrack] = useState('CWTS');
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
   
-  // Navigation Dropdown & Mobile Menu State
-  const [openDropdown, setOpenDropdown] = useState(null); // 'explore' | 'guide' | null
+  // Navigation Mobile Menu State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const headerNavRef = useRef(null);
 
@@ -311,130 +275,41 @@ function Landing() {
           {/* Desktop Dropdown Navigation Bar */}
           <nav ref={headerNavRef} className="hidden lg:flex items-center space-x-1.5 text-xs font-bold text-emerald-100/90">
             
-            {/* Dropdown 1: Explore Programs */}
-            <div className="relative">
-              <button 
-                type="button" 
-                onClick={() => setOpenDropdown(openDropdown === 'explore' ? null : 'explore')}
-                className={`px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 ${
-                  openDropdown === 'explore' ? 'bg-white/15 text-white' : ''
-                }`}
-              >
-                <Compass className="w-4 h-4 text-amber-400" />
-                <span>Explore Programs</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === 'explore' ? 'rotate-180 text-amber-300' : ''}`} />
-              </button>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('guide')} 
+              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <FileText className="w-4 h-4 text-emerald-300" />
+              <span>How to Enroll</span>
+            </button>
 
-              {openDropdown === 'explore' && (
-                <div className="absolute left-0 mt-2 w-72 bg-emerald-950/95 backdrop-blur-2xl border border-emerald-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('programs')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-black text-white text-xs group-hover:text-amber-300">NSTP Components</p>
-                      <p className="text-[11px] text-emerald-200/80">CWTS, ROTC, & LTS curriculum</p>
-                    </div>
-                  </button>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('schedule')} 
+              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Clock className="w-4 h-4 text-amber-300" />
+              <span>Schedule</span>
+            </button>
 
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('quiz')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
-                      <Compass className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-black text-white text-xs group-hover:text-amber-300">Track Finder Matcher</p>
-                      <p className="text-[11px] text-emerald-200/80">10-second interactive track quiz</p>
-                    </div>
-                  </button>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('video')} 
+              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Play className="w-4 h-4 text-emerald-300" />
+              <span>Orientation Video</span>
+            </button>
 
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('video')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                      <Play className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-black text-white text-xs group-hover:text-amber-300">Video Orientation</p>
-                      <p className="text-[11px] text-emerald-200/80">Official UP Diliman & RA 9163 guide</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Dropdown 2: Student Resources */}
-            <div className="relative">
-              <button 
-                type="button" 
-                onClick={() => setOpenDropdown(openDropdown === 'guide' ? null : 'guide')}
-                className={`px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 ${
-                  openDropdown === 'guide' ? 'bg-white/15 text-white' : ''
-                }`}
-              >
-                <BookOpen className="w-4 h-4 text-emerald-300" />
-                <span>Student Resources</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openDropdown === 'guide' ? 'rotate-180 text-emerald-300' : ''}`} />
-              </button>
-
-              {openDropdown === 'guide' && (
-                <div className="absolute left-0 mt-2 w-72 bg-emerald-950/95 backdrop-blur-2xl border border-emerald-700/80 rounded-2xl shadow-2xl p-2 z-50 animate-slide-up">
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('guide')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-black text-white text-xs group-hover:text-amber-300">How to Enroll</p>
-                      <p className="text-[11px] text-emerald-200/80">Easy 3-step online application guide</p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('schedule')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-emerald-300 shrink-0 mt-0.5">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-black text-white text-xs group-hover:text-amber-300">Schedule & Dates</p>
-                        {enrollmentStatus.isOpen && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>}
-                      </div>
-                      <p className="text-[11px] text-emerald-200/80">Active enrollment window dates</p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => scrollToSection('faq')}
-                    className="w-full p-2.5 rounded-xl hover:bg-emerald-800/70 text-left transition-colors flex items-start gap-3 cursor-pointer group"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                      <HelpCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="font-black text-white text-xs group-hover:text-amber-300">Knowledge Base & FAQ</p>
-                      <p className="text-[11px] text-emerald-200/80">Searchable answers and policies</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
+            <button 
+              type="button" 
+              onClick={() => scrollToSection('faq')} 
+              className="px-3.5 py-2 rounded-xl hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <HelpCircle className="w-4 h-4 text-amber-300" />
+              <span>FAQ</span>
+            </button>
 
             {/* Direct Contact Button */}
             <button 
@@ -504,29 +379,29 @@ function Landing() {
 
             {/* Categorized Mobile Navigation Links */}
             <div className="space-y-1.5 text-xs font-bold text-emerald-100">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1">Explore</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1">Resources</p>
               
               <button 
                 type="button" 
-                onClick={() => scrollToSection('programs')} 
+                onClick={() => { scrollToSection('guide'); setMobileMenuOpen(false); }} 
                 className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
               >
-                <Layers className="w-4 h-4 text-emerald-400" />
-                <span>NSTP Components (CWTS, ROTC, LTS)</span>
+                <FileText className="w-4 h-4 text-emerald-400" />
+                <span>How to Enroll (3 Steps)</span>
               </button>
 
               <button 
                 type="button" 
-                onClick={() => scrollToSection('quiz')} 
+                onClick={() => { scrollToSection('schedule'); setMobileMenuOpen(false); }} 
                 className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
               >
-                <Compass className="w-4 h-4 text-amber-400" />
-                <span>Interactive Track Finder</span>
+                <Clock className="w-4 h-4 text-amber-400" />
+                <span>Enrollment Schedule</span>
               </button>
 
               <button 
                 type="button" 
-                onClick={() => scrollToSection('video')} 
+                onClick={() => { scrollToSection('video'); setMobileMenuOpen(false); }} 
                 className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
               >
                 <Play className="w-4 h-4 text-emerald-400" />
@@ -605,19 +480,19 @@ function Landing() {
                   <span>{image.badge}</span>
                 </span>
                 
-                <h2 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-md leading-tight max-w-3xl">
+                <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white drop-shadow-md leading-tight max-w-4xl truncate">
                   {image.title}
                 </h2>
                 
-                <p className="text-emerald-100 text-xs sm:text-base md:text-lg max-w-2xl mt-2 sm:mt-3 font-medium leading-relaxed">
+                <p className="text-emerald-100 text-xs sm:text-sm md:text-base max-w-2xl mt-1.5 sm:mt-2 font-medium leading-relaxed">
                   {image.subtitle}
                 </p>
 
                 {/* Hero Immediate Action Buttons */}
-                <div className="mt-5 sm:mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
+                <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
                   <Link
                     to="/enrollment"
-                    className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
                   >
                     <span>Apply for Enrollment</span>
                     <ArrowRight className="w-4 h-4" />
@@ -625,11 +500,11 @@ function Landing() {
 
                   <button
                     type="button"
-                    onClick={() => scrollToSection('quiz')}
-                    className="inline-flex items-center gap-2 bg-emerald-900/70 hover:bg-emerald-800/90 text-white font-bold px-5 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg"
+                    onClick={() => scrollToSection('guide')}
+                    className="inline-flex items-center gap-2 bg-emerald-900/70 hover:bg-emerald-800/90 text-white font-bold px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg"
                   >
-                    <Compass className="w-4 h-4 text-amber-300" />
-                    <span>Find My NSTP Track</span>
+                    <BookOpen className="w-4 h-4 text-amber-300" />
+                    <span>How to Enroll</span>
                   </button>
                 </div>
               </div>
@@ -728,106 +603,6 @@ function Landing() {
         </div>
       </section>
 
-      {/* ── Interactive 10-Second Track Finder (Quiz / Component Matcher) ── */}
-      <section id="quiz" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-100 to-white border-t border-slate-200/80">
-        <div className="max-w-5xl mx-auto">
-          
-          <div className="text-center mb-8 sm:mb-12">
-            <span className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-              <Compass className="w-3.5 h-3.5 text-amber-600" /> Interactive Track Finder
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-2">Which NSTP Component Fits You?</h2>
-            <p className="text-slate-600 text-xs sm:text-base mt-1.5 max-w-xl mx-auto">
-              Select your primary interest below to see instant curriculum highlights and recommended courses.
-            </p>
-          </div>
-
-          {/* Interactive Selection Tabs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            {TRACK_QUIZ_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const isSelected = selectedQuizTrack === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSelectedQuizTrack(opt.id)}
-                  className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 text-left transition-all cursor-pointer flex items-center gap-3.5 ${
-                    isSelected 
-                      ? opt.id === 'ROTC' 
-                        ? 'border-rose-600 bg-rose-50/80 shadow-md scale-[1.02]' 
-                        : opt.id === 'CWTS'
-                          ? 'border-emerald-600 bg-emerald-50/80 shadow-md scale-[1.02]'
-                          : 'border-purple-600 bg-purple-50/80 shadow-md scale-[1.02]'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
-                  }`}
-                >
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm ${
-                    opt.id === 'ROTC' ? 'bg-rose-600' : opt.id === 'CWTS' ? 'bg-emerald-600' : 'bg-purple-600'
-                  }`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-black text-slate-900 truncate">{opt.label}</p>
-                    <p className="text-[11px] font-bold text-slate-500">{opt.id} Track</p>
-                  </div>
-                  {isSelected && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Dynamic Result Card */}
-          {(() => {
-            const current = TRACK_QUIZ_OPTIONS.find(t => t.id === selectedQuizTrack) || TRACK_QUIZ_OPTIONS[0];
-            return (
-              <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/90 shadow-xl animate-fade-in">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                  <div>
-                    <span className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
-                      current.id === 'ROTC' ? 'bg-rose-100 text-rose-800' : current.id === 'CWTS' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {current.badge}
-                    </span>
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
-                      {current.id} — {current.tagline}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                      {current.description}
-                    </p>
-                  </div>
-
-                  <Link
-                    to="/enrollment"
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black px-6 py-3.5 rounded-2xl text-xs sm:text-sm shadow-md active:scale-95 transition-all shrink-0"
-                  >
-                    <span>Apply for {current.id}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Key Activities & Syllabus Highlights:</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {current.keyPoints.map((pt, i) => (
-                      <div key={i} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-start gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span className="text-xs font-bold text-slate-700 leading-snug">{pt}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-        </div>
-      </section>
-
       {/* ── High-Impact Enrollment Schedule & Portal Action ──────────── */}
       <section id="schedule" className="py-12 sm:py-20 px-4 sm:px-6 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white relative overflow-hidden border-y border-emerald-800">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
@@ -894,114 +669,6 @@ function Landing() {
               )}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ── Interactive Program Components Section ───────────────────── */}
-      <section id="programs" className="py-12 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-8 sm:mb-14">
-          <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-            Program Components
-          </span>
-          <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3">Explore NSTP Offerings</h2>
-          <p className="text-slate-600 text-xs sm:text-base mt-1.5">Tap any track below to review syllabus specifics, field activities, and enrollment criteria</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
-          
-          {/* ROTC Card */}
-          <div
-            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-            onClick={() => setActiveComponentModal('ROTC')}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 bg-rose-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                  <Shield className="w-7 h-7" />
-                </div>
-                <span className="text-xs bg-rose-100 text-rose-800 font-black px-3 py-1 rounded-full">Defense Track</span>
-              </div>
-              
-              <h3 className="text-lg sm:text-2xl font-black text-rose-900 mb-1">ROTC</h3>
-              <p className="text-xs font-bold text-slate-500 mb-3">Reserve Officers' Training Corps</p>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                Military-based training designed for national defense preparedness, discipline, drills, disaster response, and leadership ethics.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                className="w-full py-2.5 px-4 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
-              >
-                <span>View Details & Requirements</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-              </button>
-            </div>
-          </div>
-
-          {/* CWTS Card */}
-          <div
-            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-            onClick={() => setActiveComponentModal('CWTS')}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                  <Users className="w-7 h-7" />
-                </div>
-                <span className="text-xs bg-emerald-100 text-emerald-800 font-black px-3 py-1 rounded-full">Civic Track</span>
-              </div>
-              
-              <h3 className="text-lg sm:text-2xl font-black text-emerald-900 mb-1">CWTS</h3>
-              <p className="text-xs font-bold text-slate-500 mb-3">Civic Welfare Training Service</p>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                Community-driven programs contributing to general welfare, public health, coastal protection, environmental tree planting, and civic leadership.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                className="w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
-              >
-                <span>View Details & Requirements</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-              </button>
-            </div>
-          </div>
-
-          {/* LTS Card */}
-          <div
-            className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
-            onClick={() => setActiveComponentModal('LTS')}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <div className="w-14 h-14 bg-purple-600 text-white rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-md shrink-0">
-                  <GraduationCap className="w-7 h-7" />
-                </div>
-                <span className="text-xs bg-purple-100 text-purple-800 font-black px-3 py-1 rounded-full">Literacy Track</span>
-              </div>
-              
-              <h3 className="text-lg sm:text-2xl font-black text-purple-900 mb-1">LTS</h3>
-              <p className="text-xs font-bold text-slate-500 mb-3">Literacy Training Service</p>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                Specialized program training college students to teach reading, writing, and numeracy to school children and out-of-school youth in Cavite.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                className="w-full py-2.5 px-4 bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white rounded-xl text-xs font-black transition-all flex items-center justify-between shadow-2xs group-hover:shadow-md cursor-pointer"
-              >
-                <span>View Details & Requirements</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-              </button>
-            </div>
-          </div>
-
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Filter, Download } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
+import { normalizeSectionName } from '../utils/signatureAssets';
 
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
@@ -48,7 +49,13 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       targetStudents = targetStudents.filter(s => s.department === selectedDept);
     }
     if (selectedSection !== 'All') {
-      targetStudents = targetStudents.filter(s => (s.section || '').toUpperCase() === selectedSection.toUpperCase());
+      targetStudents = targetStudents.filter(s => {
+        const sec = normalizeSectionName(s.nstp_section || s.section, s.department);
+        const rawSec = (s.section || '').toUpperCase();
+        const rawNstpSec = (s.nstp_section || '').toUpperCase();
+        const filterSec = selectedSection.toUpperCase();
+        return sec === filterSec || rawSec === filterSec || rawNstpSec === filterSec || rawSec.includes(filterSec);
+      });
     }
 
     return targetStudents.map((st) => {
@@ -108,6 +115,29 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   const totalStudents = studentMatrixList.length;
   const atRiskCount = studentMatrixList.filter(s => s.isAtRisk).length;
   const perfectCount = studentMatrixList.filter(s => s.absentCount === 0).length;
+
+  // Derive dynamic track sections available from active students
+  const availableSections = useMemo(() => {
+    const set = new Set();
+    students.forEach(st => {
+      const sec = st.nstp_section || st.section;
+      if (sec) {
+        set.add(normalizeSectionName(sec, st.department));
+      }
+    });
+
+    if (selectedDept === 'CWTS') {
+      ['CWTS-1', 'CWTS-2', 'CWTS-3', 'CWTS-4'].forEach(s => set.add(s));
+    } else if (selectedDept === 'LTS') {
+      ['LTS-1', 'LTS-2', 'LTS-3'].forEach(s => set.add(s));
+    } else if (selectedDept === 'ROTC') {
+      ['ROTC-1', 'ROTC-2'].forEach(s => set.add(s));
+    } else {
+      ['CWTS-1', 'CWTS-2', 'LTS-1', 'LTS-2', 'ROTC-1'].forEach(s => set.add(s));
+    }
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [students, selectedDept]);
 
   // Export Master Attendance Matrix to Excel (.xlsx)
   const handleExportMasterExcel = () => {
@@ -280,13 +310,12 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             <select
               value={selectedSection}
               onChange={(e) => setSelectedSection(e.target.value)}
-              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer"
+              className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
             >
               <option value="All">All Sections</option>
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-              <option value="C">Section C</option>
-              <option value="D">Section D</option>
+              {availableSections.map(sec => (
+                <option key={sec} value={sec}>{sec}</option>
+              ))}
             </select>
 
             {/* View Filter Toggle */}

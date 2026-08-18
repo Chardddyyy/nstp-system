@@ -245,12 +245,12 @@ async function ensureNstpIdAndAttendanceTables() {
       await pool.execute("ALTER TABLE enrollments ADD COLUMN nstp_section VARCHAR(50) NULL");
     } catch (_) {}
 
-    // Backfill any existing active students that don't have nstp_serial_id or qr_token yet
+    // Backfill all active students with clean per-track matriculation numbers (starting at 00001) and auto-sections (CWTS-1, LTS-1, ROTC-1)
     const [rows] = await pool.execute(
-      "SELECT * FROM students ORDER BY id ASC LIMIT 500"
+      "SELECT * FROM students ORDER BY department ASC, id ASC LIMIT 2000"
     ).catch(() => [[]]);
     
-    // Per-track counters for clean sequential matriculation numbers & auto-sections (50 per section for CWTS/LTS, 1 for ROTC)
+    // Per-track counters: CWTS, ROTC, LTS each start independently from 00001
     const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
     for (const st of (rows || [])) {
       const year = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
@@ -259,18 +259,11 @@ async function ensureNstpIdAndAttendanceTables() {
       const countPadded = String(trackCounters[dept]).padStart(5, '0');
       const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
       const token = `NSTP-${st.studentId || st.id}-${matriculationNumber}`;
-      
-      // Auto-sectioning: ROTC -> Section 1; CWTS & LTS -> 50 students per section
-      let nstpSection = 'ROTC Section 1';
-      if (dept !== 'ROTC') {
-        const secNum = Math.floor((trackCounters[dept] - 1) / 50) + 1;
-        nstpSection = `${dept} Section ${secNum}`;
-      }
 
       try {
         await pool.execute(
-          "UPDATE students SET nstp_serial_id = ?, qr_token = COALESCE(qr_token, ?), nstp_section = COALESCE(nstp_section, ?) WHERE id = ?",
-          [matriculationNumber, token, nstpSection, st.id]
+          "UPDATE students SET nstp_serial_id = ?, qr_token = COALESCE(qr_token, ?) WHERE id = ?",
+          [matriculationNumber, token, st.id]
         );
       } catch (_) {}
     }
@@ -1164,27 +1157,21 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       ]
     );
 
-    // Generate and assign unique NSTP Matriculation Number and auto-section
+    // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
     const year = new Date().getFullYear();
     const dept = (department || 'CWTS').toUpperCase();
     const [trackRows] = await pool.execute(
       'SELECT COUNT(*) as count FROM students WHERE department = ?',
       [dept]
     ).catch(() => [[{ count: 0 }]]);
-    const trackCount = ((trackRows && trackRows[0]?.count) || 0);
+    const trackCount = ((trackRows && trackRows[0]?.count) || 1);
     const countPadded = String(trackCount).padStart(5, '0');
     const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
     const token = `NSTP-${studentId}-${matriculationNumber}`;
 
-    let nstpSection = 'ROTC Section 1';
-    if (dept !== 'ROTC') {
-      const secNum = Math.floor((Math.max(1, trackCount) - 1) / 50) + 1;
-      nstpSection = `${dept} Section ${secNum}`;
-    }
-
     await pool.execute(
-      'UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), nstp_section = COALESCE(nstp_section, ?), id_issued_at = NOW() WHERE id = ?',
-      [matriculationNumber, token, nstpSection, result.insertId]
+      'UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), id_issued_at = NOW() WHERE id = ?',
+      [matriculationNumber, token, result.insertId]
     ).catch(() => {});
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
@@ -3099,32 +3086,26 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
           );
         }
 
-        // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001] and auto-section
+        // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
         const year = new Date().getFullYear();
         const dept = (enrollment.department || 'CWTS').toUpperCase();
         const [trackRows] = await pool.execute(
           'SELECT COUNT(*) as count FROM students WHERE department = ?',
           [dept]
         ).catch(() => [[{ count: 0 }]]);
-        const trackCount = ((trackRows && trackRows[0]?.count) || 0);
+        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
         const countPadded = String(trackCount).padStart(5, '0');
         const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
         const token = `NSTP-${enrollment.studentId}-${matriculationNumber}`;
 
-        let nstpSection = 'ROTC Section 1';
-        if (dept !== 'ROTC') {
-          const secNum = Math.floor((Math.max(1, trackCount) - 1) / 50) + 1;
-          nstpSection = `${dept} Section ${secNum}`;
-        }
-
         await pool.execute(
-          `UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), nstp_section = COALESCE(nstp_section, ?), id_issued_at = COALESCE(id_issued_at, NOW()) WHERE studentId = ?`,
-          [matriculationNumber, token, nstpSection, enrollment.studentId]
+          `UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), id_issued_at = COALESCE(id_issued_at, NOW()) WHERE studentId = ?`,
+          [matriculationNumber, token, enrollment.studentId]
         ).catch(() => {});
 
         await pool.execute(
-          `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), nstp_section = COALESCE(nstp_section, ?) WHERE id = ?`,
-          [matriculationNumber, token, nstpSection, id]
+          `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
+          [matriculationNumber, token, id]
         ).catch(() => {});
 
       } catch (insertError) {
@@ -3146,7 +3127,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
 // GET active students with ID Card details for single/batch A4 printing
 app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
   try {
-    const { department, section } = req.query;
+    const { department } = req.query;
     let query = "SELECT * FROM students WHERE (status IS NULL OR status = 'Active')";
     const params = [];
 
@@ -3159,20 +3140,18 @@ app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
       params.push(department);
     }
 
-    if (section && section !== 'All') {
-      query += ' AND section = ?';
-      params.push(section);
-    }
-
     const [students] = await pool.execute(query, params);
 
-    // Auto-fill missing serials or qr_tokens on-the-fly
+    // Group students by track to guarantee independent 00001 sequence numbering per track
+    const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
     const enriched = (students || []).map((st) => {
       const yr = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
       const dep = (st.department || 'CWTS').toUpperCase();
-      const padded = String(st.studentId || st.id || '0000').slice(-4);
-      const serial = st.nstp_serial_id || `NSTP-${yr}-${dep}-${padded}`;
-      const token = st.qr_token || `NSTP-${st.studentId || st.id}-${String(st.id || '0').padStart(4, '0')}`;
+      trackCounters[dep] = (trackCounters[dep] || 0) + 1;
+      const countPadded = String(trackCounters[dep]).padStart(5, '0');
+      const defaultSerial = `NSTP-${dep}-${yr}-${countPadded}`;
+      const serial = st.nstp_serial_id || defaultSerial;
+      const token = st.qr_token || `NSTP-${st.studentId || st.id}-${serial}`;
       return {
         ...st,
         nstp_serial_id: serial,

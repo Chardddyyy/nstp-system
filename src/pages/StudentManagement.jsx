@@ -816,8 +816,8 @@ function StudentManagement() {
                         <p className="text-[10px] sm:text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">{student.email}</p>
                       </div>
                     </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.section || '-'}
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold">
+                      {student.nstp_section || student.section || '-'}
                     </td>
                     <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.year}
@@ -1228,11 +1228,15 @@ function StudentManagement() {
                         className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
                         required
                       >
-                        <option value="">Section</option>
+                        <option value="">Select Section</option>
                         <option value="A">Section A</option>
                         <option value="B">Section B</option>
                         <option value="C">Section C</option>
                         <option value="D">Section D</option>
+                        <option value="CWTS-1">CWTS-1</option>
+                        <option value="CWTS-2">CWTS-2</option>
+                        <option value="LTS-1">LTS-1</option>
+                        <option value="ROTC-1">ROTC-1</option>
                       </select>
                     </div>
                     <div>
@@ -1705,7 +1709,7 @@ function StudentManagement() {
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Section</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.section || '-'}</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.nstp_section || currentViewStudent.section || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
@@ -2046,10 +2050,14 @@ function StudentManagement() {
                         required
                       >
                         <option value="">Select Section</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                        <option value="D">Section D</option>
+                        <option value="CWTS-1">CWTS-1</option>
+                        <option value="CWTS-2">CWTS-2</option>
+                        <option value="LTS-1">LTS-1</option>
+                        <option value="ROTC-1">ROTC-1</option>
                       </select>
                     </div>
                     <div>

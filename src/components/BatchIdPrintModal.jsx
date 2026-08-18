@@ -4,6 +4,12 @@ import { X, Printer, FileText, CheckSquare, Square, Search, Info, ChevronLeft, C
 import { attendanceAPI } from '../services/api';
 import NstpIdCard from './NstpIdCard';
 import { formatGradeAndSection } from '../utils/gradeSection';
+import {
+  DEMO_COORDINATOR_SIGNATURE_SVG,
+  COORDINATOR_NAME,
+  COORDINATOR_TITLE,
+  COORDINATOR_INSTITUTION
+} from '../utils/signatureAssets';
 
 function getTrackLabel(dept) {
   switch (dept) {
@@ -17,101 +23,116 @@ function renderPortraitCardHtml(st, qrSrc) {
   const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
   const dept = (st.department || 'CWTS').toUpperCase();
   const matriculationNo = st.nstp_serial_id || `NSTP-${dept}-2026-00001`;
-  const gradeSec = formatGradeAndSection(st);
+  const studentSection = st.section 
+    ? (st.section.toLowerCase().startsWith('section') ? st.section : `Section ${st.section}`) 
+    : formatGradeAndSection(st);
   const photo = st.registration_photo || st.registrationPhoto || st.photo || '';
   const trackLabel = getTrackLabel(dept);
-  const emergencyName = st.emergencyContact || st.emergencyName || 'Richard Belen';
-  const emergencyPhone = st.emergencyNumber || st.contactNumber || '09858337254';
-  const bloodType = st.bloodType || 'O';
+  const emergencyName = st.emergencyContact || st.emergencyName || 'Emergency Contact';
+  const emergencyPhone = st.emergencyNumber || st.contactNumber || '09000000000';
+  const bloodType = st.bloodType || 'O+';
 
   return `
-    <td style="width: 2.125in; height: 3.37in; border: 2pt solid #064e3b; border-radius: 8pt; vertical-align: top; background-color: #ffffff; font-family: Arial, Helvetica, sans-serif; text-align: center; padding: 0; margin: 0; box-sizing: border-box;">
+    <td style="width: 2.15in; height: 3.38in; border: 2pt solid #064e3b; vertical-align: top; background-color: #ffffff; font-family: Arial, Helvetica, sans-serif; text-align: center; padding: 0; margin: 0;" bgcolor="#ffffff" valign="top">
+      
       <!-- Top Header -->
-      <table style="width: 100%; border-collapse: collapse; background-color: #064e3b; border-bottom: 2pt solid #f59e0b;">
+      <table style="width: 100%; border-collapse: collapse; background-color: #064e3b; border-bottom: 2pt solid #f59e0b;" bgcolor="#064e3b" cellpadding="0" cellspacing="0">
         <tr>
           <td colspan="2" style="padding: 1pt; text-align: center;">
-            <div style="width: 0.5in; height: 2.5pt; background-color: #022c22; border-radius: 2pt; margin: 1pt auto 2pt auto;"></div>
+            <div style="width: 0.5in; height: 2.5pt; background-color: #022c22; margin: 1pt auto 2pt auto;"></div>
           </td>
         </tr>
         <tr>
-          <td style="padding: 2pt 4pt 3pt 4pt; text-align: left; vertical-align: middle;">
-            <div style="font-size: 6.5pt; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.2pt; line-height: 7.5pt;">CAVITE STATE UNIVERSITY</div>
-            <div style="font-size: 5.2pt; font-weight: bold; color: #fde047; margin-top: 1pt;">NAIC CAMPUS • NSTP</div>
+          <td style="padding: 2pt 4pt 3pt 4pt; text-align: left; vertical-align: middle;" align="left" valign="middle">
+            <div style="font-size: 6.5pt; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.2pt; line-height: 7.5pt; font-family: Arial, sans-serif;">CAVITE STATE UNIVERSITY</div>
+            <div style="font-size: 5.2pt; font-weight: bold; color: #fde047; margin-top: 1pt; font-family: Arial, sans-serif;">NAIC CAMPUS • NSTP</div>
           </td>
-          <td style="padding: 2pt 4pt 3pt 4pt; text-align: right; vertical-align: middle;">
-            <span style="font-size: 6.2pt; font-weight: 900; background-color: rgba(0,0,0,0.4); color: #fde047; padding: 1pt 3pt; border: 0.5pt solid #fde047; border-radius: 2pt;">${dept}</span>
+          <td style="padding: 2pt 4pt 3pt 4pt; text-align: right; vertical-align: middle;" align="right" valign="middle">
+            <span style="font-size: 6.2pt; font-weight: 900; background-color: #022c22; color: #fde047; padding: 1pt 3pt; border: 0.5pt solid #fde047;">${dept}</span>
           </td>
         </tr>
       </table>
 
-      <!-- Photo & Info Container -->
-      <div style="padding: 3pt 3pt; text-align: center;">
+      <!-- Main Body Container -->
+      <div style="padding: 3pt 4pt; text-align: center;">
+        
         <!-- 2x2 Photo Box -->
-        <div style="margin: 1pt auto 2pt auto; width: 0.75in; height: 0.85in; border: 1.5pt solid #064e3b; border-radius: 4pt; background-color: #f8fafc; text-align: center; line-height: 0.85in; overflow: hidden;">
-          ${photo ? `<img src="${photo}" style="width: 100%; height: 100%; object-fit: cover;" alt="Photo" />` : '<span style="font-size: 5pt; font-weight: bold; color: #94a3b8;">2x2 PHOTO</span>'}
-        </div>
+        <table align="center" style="margin: 1pt auto 2pt auto; border-collapse: collapse;">
+          <tr>
+            <td style="width: 0.72in; height: 0.78in; border: 1.5pt solid #064e3b; background-color: #f8fafc; text-align: center; vertical-align: middle;" bgcolor="#f8fafc" align="center" valign="middle">
+              ${photo ? `<img src="${photo}" width="68" height="74" style="width: 0.72in; height: 0.78in; display: block;" alt="Photo" />` : '<span style="font-size: 4.8pt; font-weight: bold; color: #94a3b8; font-family: Arial, sans-serif;">2x2 PHOTO</span>'}
+            </td>
+          </tr>
+        </table>
 
         <!-- Student Name -->
-        <div style="font-size: 4.8pt; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 0.5pt;">STUDENT NAME</div>
-        <div style="font-size: 7.5pt; font-weight: 900; color: #064e3b; text-transform: uppercase; line-height: 8.5pt; margin: 0.5pt 0 2pt 0;">${name}</div>
+        <div style="font-size: 7.5pt; font-weight: 900; color: #064e3b; text-transform: uppercase; line-height: 8.5pt; margin: 1pt 0 0.5pt 0; font-family: Arial, sans-serif;">${name}</div>
+        <div style="font-size: 4.5pt; font-weight: bold; color: #15803d; text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 2pt; font-family: Arial, sans-serif;">STUDENT</div>
 
-        <!-- Student No & Grade/Section Table -->
-        <table style="width: 100%; border-collapse: collapse; background-color: #e2e8f0; border-radius: 3pt; font-size: 5pt; margin: 1pt auto;">
+        <!-- Student No & Section Table -->
+        <table style="width: 100%; border-collapse: collapse; background-color: #f1f5f9; font-size: 5pt; margin: 1pt auto; border: 0.5pt solid #cbd5e1;" bgcolor="#f1f5f9" cellpadding="2" cellspacing="0">
           <tr>
-            <td style="padding: 1.5pt 2.5pt; text-align: left; vertical-align: middle;">
-              <span style="color: #64748b; font-size: 4.5pt; text-transform: uppercase; font-weight: bold;">STUDENT NO.</span><br/>
-              <b style="color: #0f172a; font-size: 6.2pt; font-family: monospace;">${st.studentId || 'N/A'}</b>
+            <td style="padding: 1.5pt 2.5pt; text-align: left; vertical-align: middle; width: 50%;" align="left" valign="middle">
+              <span style="color: #64748b; font-size: 4.2pt; text-transform: uppercase; font-weight: bold;">STUDENT NO.</span><br/>
+              <b style="color: #0f172a; font-size: 6pt; font-family: monospace;">${st.studentId || 'N/A'}</b>
             </td>
-            <td style="padding: 1.5pt 2.5pt; text-align: left; vertical-align: middle;">
-              <span style="color: #64748b; font-size: 4.5pt; text-transform: uppercase; font-weight: bold;">GRADE &amp; SECTION</span><br/>
-              <b style="color: #064e3b; font-size: 6.2pt; font-family: monospace;">${gradeSec}</b>
+            <td style="padding: 1.5pt 2.5pt; text-align: left; vertical-align: middle; width: 50%;" align="left" valign="middle">
+              <span style="color: #64748b; font-size: 4.2pt; text-transform: uppercase; font-weight: bold;">SECTION</span><br/>
+              <b style="color: #064e3b; font-size: 6pt; font-family: monospace;">${studentSection}</b>
             </td>
           </tr>
         </table>
 
         <!-- Matriculation Number Box -->
-        <div style="background-color: #ccfbf1; border: 0.5pt solid #5eead4; border-radius: 3pt; padding: 1.5pt; margin-top: 2pt;">
-          <div style="font-size: 4.5pt; font-weight: 900; color: #115e59; text-transform: uppercase;">MATRICULATION NUMBER</div>
-          <div style="font-size: 6.5pt; font-weight: 900; color: #064e3b; font-family: monospace; letter-spacing: -0.2pt;">${matriculationNo}</div>
-        </div>
-
-        <!-- AY Label Above QR -->
-        <div style="font-size: 4.8pt; font-weight: bold; color: #475569; margin: 1.5pt 0 0.5pt 0;">AY 2025-2026</div>
-
-        <!-- QR Code -->
-        <div style="margin: 1pt auto; text-align: center;">
-          <div style="width: 0.65in; height: 0.65in; border: 0.8pt solid #064e3b; border-radius: 3pt; padding: 1pt; margin: 0 auto; background-color: #ffffff;">
-            ${qrSrc ? `<img src="${qrSrc}" style="width: 100%; height: 100%;" alt="QR" />` : '<div style="line-height: 0.65in; font-size: 5pt;">QR CODE</div>'}
-          </div>
-          <div style="font-size: 4.8pt; font-weight: bold; color: #064e3b; font-family: monospace; margin-top: 0.5pt;">${matriculationNo}</div>
-        </div>
-
-        <!-- Emergency Box -->
-        <table style="width: 100%; border-collapse: collapse; background-color: #e2e8f0; border-radius: 3pt; font-size: 4.8pt; text-align: left; margin: 2pt auto;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ccfbf1; border: 0.5pt solid #5eead4; margin: 2pt auto 1pt auto;" bgcolor="#ccfbf1" cellpadding="1.5" cellspacing="0">
           <tr>
-            <td style="padding: 1.5pt 2.5pt;">
-              <b style="color: #1e293b; text-transform: uppercase;">EMERGENCY CONTACTS</b><br/>
-              <span style="font-weight: bold; color: #475569;">Emergency:</span> ${emergencyName}<br/>
-              <span style="font-weight: bold; color: #475569;">Contact No:</span> <span style="font-family: monospace;">${emergencyPhone}</span>
-              ${bloodType ? `<br/><span style="font-weight: bold; color: #475569;">Blood Type:</span> <b style="color: #be123c;">${bloodType}</b>` : ''}
+            <td style="text-align: center;" align="center">
+              <div style="font-size: 4.2pt; font-weight: 900; color: #115e59; text-transform: uppercase; font-family: Arial, sans-serif;">MATRICULATION NO.</div>
+              <div style="font-size: 6.2pt; font-weight: 900; color: #064e3b; font-family: monospace; letter-spacing: -0.2pt;">${matriculationNo}</div>
             </td>
           </tr>
         </table>
 
-        <!-- Signature Line -->
-        <div style="margin-top: 2pt; padding-top: 1pt;">
-          <div style="font-size: 5pt; font-weight: 900; color: #0f172a; text-transform: uppercase;">NSTP COORDINATOR</div>
-          <div style="font-size: 4.2pt; color: #64748b;">Cavite State University Naic</div>
+        <!-- QR Code -->
+        <table align="center" style="margin: 1.5pt auto 0.5pt auto; border-collapse: collapse;">
+          <tr>
+            <td style="width: 0.62in; height: 0.62in; border: 0.8pt solid #064e3b; padding: 1pt; background-color: #ffffff; text-align: center; vertical-align: middle;" bgcolor="#ffffff" align="center" valign="middle">
+              ${qrSrc ? `<img src="${qrSrc}" width="58" height="58" style="width: 0.62in; height: 0.62in; display: block;" alt="QR" />` : '<div style="font-size: 4.5pt;">QR CODE</div>'}
+            </td>
+          </tr>
+        </table>
+        <div style="font-size: 4.5pt; font-weight: bold; color: #064e3b; font-family: monospace; margin-bottom: 2pt;">${matriculationNo}</div>
+
+        <!-- Emergency Contact Strip -->
+        <table style="width: 100%; border-collapse: collapse; background-color: #f8fafc; font-size: 4.5pt; text-align: left; margin: 1pt auto; border: 0.5pt solid #e2e8f0;" bgcolor="#f8fafc" cellpadding="1.5" cellspacing="0">
+          <tr>
+            <td style="padding: 1pt 2pt; font-family: Arial, sans-serif; color: #334155;">
+              <b>Emergency:</b> ${emergencyName} (${emergencyPhone}) • <b style="color: #be123c;">Type: ${bloodType}</b>
+            </td>
+          </tr>
+        </table>
+
+        <!-- NSTP Coordinator Signature Section (With Demo E-Signature & FN MI. LN) -->
+        <div style="margin-top: 2pt; padding-top: 1pt; text-align: center;">
+          <div style="height: 16pt; margin: 0 auto; text-align: center;">
+            <img src="${DEMO_COORDINATOR_SIGNATURE_SVG}" width="90" height="22" style="height: 16pt; width: 68pt; display: inline-block;" alt="Signature" />
+          </div>
+          <div style="font-size: 5.5pt; font-weight: 900; color: #0f172a; text-transform: uppercase; border-top: 0.8pt solid #64748b; display: inline-block; padding: 1pt 10pt 0 10pt; font-family: Arial, sans-serif; line-height: 6.5pt;">
+            ${COORDINATOR_NAME}
+          </div>
+          <div style="font-size: 4.2pt; font-weight: bold; color: #475569; text-transform: uppercase; font-family: Arial, sans-serif; line-height: 5pt; margin-top: 0.5pt;">${COORDINATOR_TITLE}</div>
+          <div style="font-size: 3.8pt; color: #64748b; font-family: Arial, sans-serif; line-height: 4.5pt;">${COORDINATOR_INSTITUTION}</div>
         </div>
+
       </div>
 
       <!-- Footer Strip -->
-      <table style="width: 100%; border-collapse: collapse; background-color: #022c22; border-top: 1pt solid #f59e0b; margin-top: 1pt;">
+      <table style="width: 100%; border-collapse: collapse; background-color: #022c22; border-top: 1pt solid #f59e0b; margin-top: 1pt;" bgcolor="#022c22" cellpadding="2" cellspacing="0">
         <tr>
-          <td style="padding: 1.5pt 3pt; text-align: left; font-size: 5.2pt; font-weight: 900; color: #fde047; text-transform: uppercase;">
+          <td style="padding: 1.5pt 3pt; text-align: left; font-size: 5pt; font-weight: 900; color: #fde047; text-transform: uppercase; font-family: Arial, sans-serif;" align="left">
             ${trackLabel}
           </td>
-          <td style="padding: 1.5pt 3pt; text-align: right; font-size: 4.8pt; color: #ffffff; opacity: 0.8;">
+          <td style="padding: 1.5pt 3pt; text-align: right; font-size: 4.5pt; color: #ffffff; opacity: 0.85; font-family: Arial, sans-serif;" align="right">
             AY 2025-2026
           </td>
         </tr>
@@ -126,12 +147,12 @@ function generateDocxHtml(selectedStudents, qrMap) {
     const s1 = selectedStudents[i];
     const s2 = selectedStudents[i + 1] || null;
     rowsHtml += `
-      <tr style="height: 3.4in;">
+      <tr style="height: 3.42in;">
         ${renderPortraitCardHtml(s1, qrMap[s1.id])}
-        <td style="width: 0.3in; border: none;"></td>
-        ${s2 ? renderPortraitCardHtml(s2, qrMap[s2.id]) : '<td style="width: 2.125in; border: none;"></td>'}
+        <td style="width: 0.35in; border: none;"></td>
+        ${s2 ? renderPortraitCardHtml(s2, qrMap[s2.id]) : '<td style="width: 2.15in; border: none;"></td>'}
       </tr>
-      <tr style="height: 0.2in;"><td colspan="3" style="border: none;"></td></tr>
+      <tr style="height: 0.25in;"><td colspan="3" style="border: none;"></td></tr>
     `;
   }
 
@@ -152,22 +173,23 @@ function generateDocxHtml(selectedStudents, qrMap) {
       <style>
         @page Section1 {
           size: 210mm 297mm;
-          margin: 10mm 10mm 10mm 10mm;
+          margin: 10mm 12mm 10mm 12mm;
           mso-header-margin: 0mm;
           mso-footer-margin: 0mm;
         }
         div.Section1 { page: Section1; }
-        body { font-family: Arial, Helvetica, sans-serif; }
-        table { page-break-inside: avoid; }
+        body { font-family: Arial, Helvetica, sans-serif; background-color: #ffffff; margin: 0; padding: 0; }
+        table { page-break-inside: avoid; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { display: inline-block; }
       </style>
     </head>
-    <body>
+    <body style="font-family: Arial, Helvetica, sans-serif; background-color: #ffffff;">
       <div class="Section1">
-        <div style="text-align: center; margin-bottom: 6pt;">
-          <h3 style="margin: 0; font-size: 10.5pt; color: #064e3b; font-weight: 900;">CAVITE STATE UNIVERSITY - NAIC CAMPUS</h3>
-          <p style="margin: 1pt 0; font-size: 7.5pt; color: #475569; font-weight: bold;">NATIONAL SERVICE TRAINING PROGRAM • OFFICIAL VERTICAL STUDENT ID CARDS</p>
+        <div style="text-align: center; margin-bottom: 8pt;">
+          <h3 style="margin: 0; font-size: 11pt; color: #064e3b; font-weight: 900; font-family: Arial, sans-serif;">CAVITE STATE UNIVERSITY - NAIC CAMPUS</h3>
+          <p style="margin: 2pt 0 0 0; font-size: 7.5pt; color: #475569; font-weight: bold; font-family: Arial, sans-serif;">NATIONAL SERVICE TRAINING PROGRAM • OFFICIAL STUDENT ID CARDS</p>
         </div>
-        <table style="width: 100%; border-collapse: collapse; margin: 0 auto;" align="center">
+        <table style="width: 100%; border-collapse: collapse; margin: 0 auto;" align="center" cellpadding="0" cellspacing="0">
           ${rowsHtml}
         </table>
       </div>
@@ -176,24 +198,23 @@ function generateDocxHtml(selectedStudents, qrMap) {
   `;
 }
 
-export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', defaultSection = 'All' }) {
+export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }) {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isExportingDoc, setIsExportingDoc] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [departmentFilter, setDepartmentFilter] = useState(defaultDepartment);
-  const [sectionFilter, setSectionFilter] = useState(defaultSection);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const itemsPerPage = 5; // Fixed to strictly 5 IDs per page
 
   useEffect(() => {
     if (!isOpen) return;
     let isSubscribed = true;
     setLoading(true);
     
-    attendanceAPI.getStudentIdCards({ department: departmentFilter, section: sectionFilter })
+    attendanceAPI.getStudentIdCards({ department: departmentFilter })
       .then((data) => {
         if (!isSubscribed) return;
         const list = Array.isArray(data) ? data : [];
@@ -210,11 +231,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
     return () => {
       isSubscribed = false;
     };
-  }, [isOpen, departmentFilter, sectionFilter]);
+  }, [isOpen, departmentFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, departmentFilter, sectionFilter, itemsPerPage]);
+  }, [searchQuery, departmentFilter]);
 
   if (!isOpen) return null;
 
@@ -231,13 +252,17 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
   };
 
   const filteredStudents = students.filter(s => {
+    // Check department filter
+    if (departmentFilter !== 'All' && s.department !== departmentFilter) return false;
+
+    // Search query
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     const name = (s.name || `${s.firstName || ''} ${s.lastName || ''}`).toLowerCase();
     const id = (s.studentId || '').toLowerCase();
     const serial = (s.nstp_serial_id || '').toLowerCase();
     const dept = (s.department || '').toLowerCase();
-    const sec = (s.section || s.nstp_section || '').toLowerCase();
+    const sec = (s.section || '').toLowerCase();
     return name.includes(q) || id.includes(q) || serial.includes(q) || dept.includes(q) || sec.includes(q);
   });
 
@@ -341,12 +366,12 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-emerald-700 shrink-0" />
             <p className="text-[11px] text-emerald-800 leading-tight">
-              <b>Official ID Card Specifications:</b> Standard vertical portrait card with live QR Code, 2x2 Photo, Matriculation No., and Emergency Contacts.
+              <b>Official ID Card Specifications:</b> Standard vertical portrait card with live QR Code, 2x2 Photo, Matriculation No., and NSTP Coordinator signature space.
             </p>
           </div>
         </div>
 
-        {/* Filter Toolbar */}
+        {/* Filter Toolbar (Section Select Removed as Requested) */}
         <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 min-w-[200px] flex-1 max-w-xs">
@@ -390,21 +415,6 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
               <option value="ROTC">ROTC</option>
               <option value="LTS">LTS</option>
             </select>
-
-            <select
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
-            >
-              <option value="All">All Sections</option>
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-              <option value="C">Section C</option>
-              <option value="D">Section D</option>
-              <option value="1">Section 1</option>
-              <option value="2">Section 2</option>
-              <option value="3">Section 3</option>
-            </select>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -439,7 +449,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
           </div>
         </div>
 
-        {/* Card Grid Area */}
+        {/* Card Grid Area (5 IDs per page) */}
         <div className="p-3 sm:p-4 flex-1 bg-slate-100/70 flex flex-col justify-center overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-slate-500 font-bold">
@@ -454,6 +464,9 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 items-center justify-center">
               {paginatedStudents.map((st) => {
                 const isSelected = selectedIds.has(st.id);
+                const sectionLabel = st.section 
+                  ? (st.section.toLowerCase().startsWith('section') ? st.section : `Section ${st.section}`) 
+                  : formatGradeAndSection(st);
                 return (
                   <div
                     key={st.id}
@@ -473,8 +486,8 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                           {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                         </span>
                       </label>
-                      <span className="text-[8.5px] font-bold text-emerald-900 font-mono">
-                        {formatGradeAndSection(st)}
+                      <span className="text-[8.5px] font-bold text-emerald-900 font-mono truncate max-w-[80px]">
+                        {sectionLabel}
                       </span>
                     </div>
 
@@ -493,23 +506,8 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
                 <span>
                   Showing <b className="text-slate-800 font-bold">{startIndex + 1}</b> to{' '}
                   <b className="text-slate-800 font-bold">{Math.min(endIndex, filteredStudents.length)}</b> of{' '}
-                  <b className="text-slate-800 font-bold">{filteredStudents.length}</b> students
+                  <b className="text-slate-800 font-bold">{filteredStudents.length}</b> students (5 IDs per page)
                 </span>
-
-                <span className="text-slate-300">|</span>
-
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-slate-400">Cards per page:</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-                  >
-                    <option value={3}>3</option>
-                    <option value={5}>5</option>
-                    <option value={8}>8</option>
-                  </select>
-                </div>
               </div>
 
               {/* Page Number Buttons */}
@@ -630,4 +628,3 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All', 
 }
 
 export default BatchIdPrintModal;
-

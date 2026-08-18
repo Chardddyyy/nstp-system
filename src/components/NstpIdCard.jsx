@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { Shield, Users, GraduationCap } from 'lucide-react';
 import { formatGradeAndSection } from '../utils/gradeSection';
+import {
+  DEMO_COORDINATOR_SIGNATURE_SVG,
+  COORDINATOR_NAME,
+  COORDINATOR_TITLE,
+  COORDINATOR_INSTITUTION,
+  normalizeSectionName
+} from '../utils/signatureAssets';
 
 export function NstpIdCard({ student }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -15,10 +22,12 @@ export function NstpIdCard({ student }) {
   const matriculationNo = student.nstp_serial_id || `NSTP-${dept}-2026-00001`;
   const qrToken = student.qr_token || matriculationNo;
   const photoUrl = student.registration_photo || student.registrationPhoto || student.photo || null;
-  const gradeAndSection = formatGradeAndSection(student);
-  const emergencyName = student.emergencyContact || student.emergencyName || 'Richard Belen';
-  const emergencyContact = student.emergencyNumber || student.contactNumber || '09858337254';
-  const bloodType = student.bloodType || 'O';
+  const studentSection = student.section 
+    ? (student.section.toLowerCase().startsWith('section') ? student.section : `Section ${student.section}`)
+    : formatGradeAndSection(student);
+  const emergencyName = student.emergencyContact || student.emergencyName || 'Emergency Contact';
+  const emergencyContact = student.emergencyNumber || student.contactNumber || '09000000000';
+  const bloodType = student.bloodType || 'O+';
 
   useEffect(() => {
     let isMounted = true;
@@ -61,114 +70,120 @@ export function NstpIdCard({ student }) {
         src={`${import.meta.env.BASE_URL}cvsu.png`}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 m-auto w-36 h-36 object-contain opacity-[0.06] pointer-events-none select-none z-0"
+        className="absolute inset-0 m-auto w-32 h-32 object-contain opacity-[0.05] pointer-events-none select-none z-0"
       />
 
       {/* Top Header with Lanyard Slot, CvSU Logo, Title & Department Badge */}
-      <div className="bg-emerald-900 text-white px-2 pt-1 pb-1.5 border-b-2 border-amber-400 relative z-10">
+      <div className="bg-emerald-900 text-white px-2 pt-1 pb-1 border-b border-amber-400 relative z-10 shrink-0">
         {/* Lanyard Hole Cutout Bar */}
-        <div className="w-10 h-1.5 bg-slate-950/90 rounded-full mx-auto mb-1 border border-white/20 shadow-inner"></div>
+        <div className="w-9 h-1 bg-slate-950/80 rounded-full mx-auto mb-1 border border-white/20"></div>
 
-        <div className="flex items-center gap-1.5">
-          <img 
-            src={`${import.meta.env.BASE_URL}cvsu.png`} 
-            alt="CvSU Logo" 
-            className="w-6 h-6 object-contain bg-white rounded-full p-0.5 shrink-0 shadow-xs" 
-          />
-          <div className="leading-tight flex-1 min-w-0">
-            <h4 className="text-[6.5px] font-black uppercase tracking-tight text-white leading-none">CAVITE STATE UNIVERSITY</h4>
-            <p className="text-[5.2px] text-amber-300 font-bold tracking-wider leading-tight mt-0.5">NAIC CAMPUS • NSTP</p>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <img 
+              src={`${import.meta.env.BASE_URL}cvsu.png`} 
+              alt="CvSU Logo" 
+              className="w-5 h-5 object-contain bg-white rounded-full p-0.5 shrink-0 shadow-xs" 
+            />
+            <div className="leading-tight truncate">
+              <h4 className="text-[6.2px] font-black uppercase tracking-tight text-white leading-none">CAVITE STATE UNIVERSITY</h4>
+              <p className="text-[5px] text-amber-300 font-bold tracking-wider leading-tight mt-0.5">NAIC CAMPUS • NSTP</p>
+            </div>
           </div>
-          <span className="text-[6.5px] font-black uppercase px-1.5 py-0.5 rounded bg-black/40 text-amber-300 border border-amber-400/50">
+          <span className="text-[6.2px] font-black uppercase px-1.5 py-0.5 rounded bg-black/40 text-amber-300 border border-amber-400/60 shrink-0">
             {dept}
           </span>
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Body (Balanced Spacing & Clean Hierarchy) */}
       <div className="px-2 py-1 flex flex-col items-center flex-1 justify-between text-center relative z-10">
-        {/* 2x2 Photo Frame with Double Green & Gold Bezel */}
-        <div className="w-[20mm] h-[22mm] bg-slate-50 rounded-xl border-2 border-emerald-900 ring-1.5 ring-amber-400/90 overflow-hidden flex items-center justify-center shrink-0 shadow-sm relative my-0.5">
+        
+        {/* 2x2 Photo Box */}
+        <div className="w-[19mm] h-[20mm] bg-slate-50 rounded-lg border-1.5 border-emerald-900 ring-1 ring-amber-400/80 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs relative mt-0.5">
           {photoUrl ? (
             <img src={photoUrl} alt={studentName} className="w-full h-full object-cover" />
           ) : (
             <div className="text-center p-1">
-              <DeptIcon className="w-5 h-5 text-emerald-800/50 mx-auto mb-0.5" />
-              <span className="text-[5px] font-bold text-slate-400 block leading-tight">2x2 PHOTO</span>
+              <DeptIcon className="w-4 h-4 text-emerald-800/60 mx-auto mb-0.5" />
+              <span className="text-[4.5px] font-bold text-slate-400 block leading-tight">2x2 PHOTO</span>
             </div>
           )}
         </div>
 
         {/* Student Name */}
-        <div className="w-full">
-          <p className="text-[5px] font-extrabold text-slate-400 uppercase tracking-widest leading-none">STUDENT NAME</p>
-          <h3 className="text-[8px] font-black text-slate-900 uppercase truncate leading-tight mt-0.5">
+        <div className="w-full mt-0.5">
+          <h3 className="text-[7.8px] font-black text-slate-900 uppercase truncate leading-tight">
             {studentName}
           </h3>
+          <p className="text-[4.5px] font-extrabold text-emerald-800 uppercase tracking-widest leading-tight">
+            STUDENT
+          </p>
         </div>
 
-        {/* Student No. & Grade & Section Pill Box */}
-        <div className="w-full bg-slate-200/80 rounded-lg px-1.5 py-0.5 grid grid-cols-2 gap-1 text-left">
+        {/* Key Info Pill (Student ID & Section) */}
+        <div className="w-full bg-slate-100/90 rounded-md px-1.5 py-0.5 grid grid-cols-2 gap-1 text-left border border-slate-200/80">
           <div>
-            <p className="text-[4.5px] font-bold text-slate-500 uppercase">STUDENT NO.</p>
-            <p className="text-[6.5px] font-black text-slate-900 font-mono leading-tight">{student.studentId || 'N/A'}</p>
+            <span className="text-[4.2px] font-bold text-slate-500 uppercase block">STUDENT NO.</span>
+            <span className="text-[6px] font-black text-slate-900 font-mono leading-tight block">{student.studentId || 'N/A'}</span>
           </div>
           <div>
-            <p className="text-[4.5px] font-bold text-slate-500 uppercase">GRADE &amp; SECTION</p>
-            <p className="text-[6.5px] font-black text-emerald-900 font-mono leading-tight">{gradeAndSection}</p>
+            <span className="text-[4.2px] font-bold text-slate-500 uppercase block">SECTION</span>
+            <span className="text-[6px] font-black text-emerald-900 font-mono leading-tight block truncate">{studentSection}</span>
           </div>
         </div>
 
-        {/* Matriculation Number Pill Box */}
-        <div className="w-full bg-[#ccfbf1] border border-teal-300/80 rounded-lg py-0.5 px-1.5">
-          <p className="text-[4.8px] font-black text-teal-900 uppercase tracking-wider leading-none">MATRICULATION NUMBER</p>
-          <p className="text-[6.8px] font-black text-emerald-950 font-mono tracking-tight leading-tight mt-0.5">{matriculationNo}</p>
+        {/* Matriculation Number Bar */}
+        <div className="w-full bg-teal-50 border border-teal-300/80 rounded-md py-0.5 px-1">
+          <span className="text-[4.2px] font-black text-teal-800 uppercase tracking-wider block leading-none">MATRICULATION NO.</span>
+          <span className="text-[6.2px] font-black text-emerald-950 font-mono tracking-tight leading-tight block mt-0.5">{matriculationNo}</span>
         </div>
 
-        {/* Academic Year Label Above QR */}
-        <p className="text-[4.8px] font-bold text-slate-600 leading-none">AY 2025-2026</p>
-
-        {/* QR Code */}
-        <div className="flex flex-col items-center justify-center">
-          <div className="w-[17mm] h-[17mm] bg-white rounded-lg border border-emerald-900 p-0.5 flex items-center justify-center shadow-2xs">
+        {/* High Resolution QR Code */}
+        <div className="flex flex-col items-center justify-center my-0.5">
+          <div className="w-[16mm] h-[16mm] bg-white rounded-md border border-emerald-900/60 p-0.5 flex items-center justify-center shadow-2xs">
             {qrDataUrl ? (
               <img src={qrDataUrl} alt="Attendance QR Code" className="w-full h-full object-contain" />
             ) : (
               <div className="w-full h-full bg-slate-100 animate-pulse rounded"></div>
             )}
           </div>
-          <p className="text-[4.5px] font-bold text-slate-600 font-mono tracking-tight mt-0.5">{matriculationNo}</p>
+          <span className="text-[4.2px] font-bold text-slate-600 font-mono tracking-tight mt-0.5">{matriculationNo}</span>
         </div>
 
-        {/* Emergency Contacts Pill Box */}
-        <div className="w-full bg-slate-200/80 px-1.5 py-0.5 rounded-lg text-[5px] text-left leading-tight">
-          <p className="font-black text-slate-800 text-[5.2px] uppercase mb-0.5">EMERGENCY CONTACTS</p>
-          <p className="text-slate-700">
-            <span className="font-bold">Emergency:</span> <span className="font-medium text-slate-900">{emergencyName}</span>
-          </p>
-          <p className="text-slate-700">
-            <span className="font-bold">Contact No:</span> <span className="font-mono text-slate-900">{emergencyContact}</span>
-          </p>
-          <p className="text-slate-700">
-            <span className="font-bold">Blood Type:</span> <span className="font-bold text-rose-700">{bloodType}</span>
-          </p>
+        {/* Emergency Contact Single-Line Strip */}
+        <div className="w-full bg-slate-50 border border-slate-200/60 px-1 py-0.5 rounded text-[4.5px] text-left leading-tight text-slate-700">
+          <span className="font-bold text-slate-900">Emergency:</span> {emergencyName} ({emergencyContact}) • <span className="font-bold text-rose-700">Type: {bloodType}</span>
         </div>
 
-        {/* NSTP Coordinator Signature Area */}
-        <div className="w-full text-[4.8px] leading-tight">
-          <p className="font-black text-slate-900 uppercase">NSTP COORDINATOR</p>
-          <p className="text-[4.2px] text-slate-500">Cavite State University Naic</p>
+        {/* NSTP Coordinator Signature Area (With Demo E-Signature & FN MI. LN) */}
+        <div className="w-full pt-0.5 flex flex-col items-center justify-center">
+          {/* Demo E-Signature Graphic above name */}
+          <div className="h-[5.5mm] w-28 flex items-center justify-center -mb-1">
+            <img 
+              src={DEMO_COORDINATOR_SIGNATURE_SVG} 
+              alt="Coordinator E-Signature" 
+              className="h-full w-full object-contain pointer-events-none" 
+            />
+          </div>
+          
+          {/* Signatory Name */}
+          <p className="text-[5.5px] font-black text-slate-900 uppercase tracking-wide border-t border-slate-400/80 px-4 pt-0.5 leading-none">
+            {COORDINATOR_NAME}
+          </p>
+          <p className="text-[4.2px] font-bold text-slate-600 uppercase mt-0.5 leading-none">{COORDINATOR_TITLE}</p>
+          <p className="text-[3.8px] text-slate-500 leading-none">{COORDINATOR_INSTITUTION}</p>
         </div>
+
       </div>
 
       {/* Card Footer Strip */}
-      <div className="bg-emerald-950 text-amber-300 px-2 py-1 text-[5.5px] font-black flex items-center justify-between uppercase tracking-wider border-t border-amber-400 relative z-10">
-        <span className="font-mono">{currentTheme.label}</span>
-        <span className="text-[5px] text-amber-200 font-mono">AY 2025-2026</span>
+      <div className="bg-emerald-950 text-amber-300 px-2 py-0.5 text-[5px] font-black flex items-center justify-between uppercase tracking-wider border-t border-amber-400 relative z-10 shrink-0">
+        <span className="font-mono truncate">{currentTheme.label}</span>
+        <span className="text-[4.8px] text-amber-200 font-mono shrink-0 ml-1">AY 2025-2026</span>
       </div>
     </div>
   );
 }
 
 export default NstpIdCard;
-
