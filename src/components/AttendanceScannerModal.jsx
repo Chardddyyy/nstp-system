@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { X, Camera, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
+
 
 // Web Audio API Beep Generator (100% self-contained sound effect)
 function playScanBeep(success = true) {

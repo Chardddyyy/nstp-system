@@ -154,7 +154,8 @@ nstp-system/
 ### 1. 🏠 Landing Page (`Landing.jsx`)
 * **"Enroll Now" / "Mag-register Na" Button**: Nagno-navigate papuntang Online Student Registration Form (`/enrollment`).
 * **"Portal Login" / "Mag-login" Button**: Nagno-navigate papuntang Authentication Portal (`/login`).
-* **"Play Video Orientation" Button**: Nagbubukas ng modal window na nag-i-stream ng CvSU Naic NSTP Audio-Visual Orientation video (`/public/nstp-orientation.mp4`).
+* **"Play Video Orientation" Button**: Nagbubukas ng modal window na nag-i-stream ng CvSU Naic NSTP Audio-Visual Orientation video (`/public/nstp-orie
+ntation.mp4`).
 
 ---
 
