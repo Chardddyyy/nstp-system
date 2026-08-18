@@ -3,6 +3,7 @@ import { archivesAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import AttendanceScannerModal from '../components/AttendanceScannerModal';
+import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
@@ -29,6 +30,7 @@ function InstructorDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [showAttendanceScanner, setShowAttendanceScanner] = useState(false);
+  const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
 
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -461,14 +463,23 @@ function InstructorDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
             <button
               type="button"
               onClick={() => setShowAttendanceScanner(true)}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
             >
               <Camera className="w-4 h-4 text-emerald-200" />
-              <span>Live QR Attendance Scanner</span>
+              <span>Live QR Scanner</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAttendanceMatrix(true)}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer border border-blue-600/50"
+            >
+              <Users className="w-4 h-4 text-blue-200" />
+              <span>Attendance &amp; Absences</span>
             </button>
           </div>
         </div>
@@ -880,6 +891,14 @@ function InstructorDashboard() {
           isOpen={showAttendanceScanner}
           onClose={() => setShowAttendanceScanner(false)}
           currentDepartment={user?.department || 'CWTS'}
+        />
+
+        {/* Student Attendance & Absences Matrix Modal */}
+        <StudentAttendanceMatrixModal
+          isOpen={showAttendanceMatrix}
+          onClose={() => setShowAttendanceMatrix(false)}
+          students={students}
+          currentUser={user}
         />
       </main>
       <ScrollToTopButton />

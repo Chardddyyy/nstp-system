@@ -451,7 +451,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                   Clear List
                 </button>
 
-                {/* 1-Click Auto Excel Recorder Button */}
+                {/* 1-Click Auto Save & Excel Recorder Button */}
                 <button
                   type="button"
                   onClick={handleExportToExcel}
@@ -459,7 +459,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                   className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-                  <span>I-download sa Excel ({selectedDay})</span>
+                  <span>Save &amp; Export Record ({selectedDay})</span>
                 </button>
               </div>
             </div>

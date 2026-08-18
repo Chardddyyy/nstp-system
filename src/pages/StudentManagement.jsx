@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
+import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
@@ -25,6 +26,7 @@ function StudentManagement() {
   const [viewStudent, setViewStudent] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showBatchIdModal, setShowBatchIdModal] = useState(false);
+  const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Pagination state
@@ -694,6 +696,16 @@ function StudentManagement() {
                   <span>Download Student IDs</span>
                 </button>
               )}
+
+              {/* View Attendance & Absences Matrix Button (Instructors & Admin) */}
+              <button type="button"
+                onClick={() => setShowAttendanceMatrix(true)}
+                title="View Day 1-15 attendance records, track absences, and identify at-risk students"
+                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-blue-500/50"
+              >
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
+                <span>Attendance &amp; Absences</span>
+              </button>
 
               <button type="button"
                 onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
@@ -2372,6 +2384,14 @@ function StudentManagement() {
           isOpen={showBatchIdModal}
           onClose={() => setShowBatchIdModal(false)}
           defaultDepartment={isAdmin ? filterDept : (user?.department || 'CWTS')}
+        />
+
+        {/* Student Attendance & Absences Matrix Modal */}
+        <StudentAttendanceMatrixModal
+          isOpen={showAttendanceMatrix}
+          onClose={() => setShowAttendanceMatrix(false)}
+          students={students}
+          currentUser={user}
         />
 
       </main>
