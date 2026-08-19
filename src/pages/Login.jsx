@@ -228,37 +228,6 @@ function Login() {
                 </div>
               </div>
 
-              {/* Quick Fill One-Tap Account Chips */}
-              <div className="pt-1">
-                <p className="text-[10px] font-bold text-gray-500 mb-1.5 flex items-center justify-between">
-                  <span>Quick Tap Sign-In:</span>
-                </p>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('admin@cvsu.edu.ph');
-                      setPassword('admin123');
-                      setError('');
-                    }}
-                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-black cursor-pointer active:scale-95 transition-all"
-                  >
-                    🛡️ Admin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('instructor@cvsu.edu.ph');
-                      setPassword('instructor123');
-                      setError('');
-                    }}
-                    className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black cursor-pointer active:scale-95 transition-all"
-                  >
-                    👨‍🏫 CWTS Instructor
-                  </button>
-                </div>
-              </div>
-
               <button
                 type="submit"
                 disabled={loading}
