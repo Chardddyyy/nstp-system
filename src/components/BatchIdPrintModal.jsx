@@ -123,16 +123,6 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
           </button>
         </div>
 
-        {/* Guidelines Banner */}
-        <div className="bg-emerald-50 border-b border-emerald-200 px-3.5 py-2 text-xs text-emerald-950 flex items-center justify-between gap-2.5 shrink-0">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-emerald-700 shrink-0" />
-            <p className="text-[11px] text-emerald-800 leading-tight">
-              <b>Official ID Card Specifications:</b> Standard vertical portrait card with live QR Code, 2x2 Photo, Matriculation No., and NSTP Coordinator signature space.
-            </p>
-          </div>
-        </div>
-
         {/* Filter Toolbar */}
         <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
           <div className="flex items-center gap-2 flex-wrap flex-1">

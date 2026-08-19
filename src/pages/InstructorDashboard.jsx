@@ -484,8 +484,8 @@ function InstructorDashboard() {
           </div>
         </div>
 
-        {/* Quick Action Navigation Cards - 4 Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-3 sm:mb-6">
+        {/* Quick Stat Cards Grid (3 Clean Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 mb-3 sm:mb-6">
           <div
             className="bg-gradient-to-r from-emerald-700 to-green-800 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
             onClick={() => navigate('/students')}
@@ -537,24 +537,6 @@ function InstructorDashboard() {
                 </div>
               </div>
               <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
-            </div>
-          </div>
-
-          <div
-            className="bg-gradient-to-r from-purple-700 to-teal-800 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
-            onClick={handleOpenArchiveModal}
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
-              <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
-                <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <History className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-purple-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">{user?.department || 'My'} Archives</p>
-                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{archivedYears.length} <span className="text-[8px] font-normal hidden sm:inline">Batches</span></p>
-                </div>
-              </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-purple-900 font-semibold transition-all shrink-0">View &rarr;</span>
             </div>
           </div>
         </div>
@@ -645,6 +627,42 @@ function InstructorDashboard() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Batch Management & Department Archive Section - Matching Admin Design */}
+        <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-2xl shadow-md p-4 sm:p-6 mt-4 sm:mt-6 text-white border border-emerald-700/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 shadow-inner">
+                <Archive className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-xl font-black text-white leading-tight">
+                  {user?.department || 'Department'} Batch Archives &amp; Management
+                </h3>
+                <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5">
+                  Current Active Batch: <span className="font-bold text-amber-300">A.Y. {currentBatch}</span>
+                </p>
+                <p className="text-emerald-200/80 text-[11px] sm:text-xs mt-1 font-medium">
+                  {students.length} students enrolled • {reports.length} reports filed • {archivedYears.length} historical batches
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
+              <button
+                type="button"
+                onClick={handleOpenArchiveModal}
+                className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 sm:py-2.5 rounded-xl font-extrabold text-xs sm:text-sm transition-all flex items-center space-x-2 cursor-pointer shadow-sm hover:shadow-md active:scale-95"
+              >
+                <History className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                <span>View {user?.department} Archives</span>
+              </button>
+            </div>
+          </div>
+          <p className="text-emerald-200/90 text-xs mt-3.5 pt-3 border-t border-white/10 font-medium">
+            * Historical student batches, letter templates, and department reports are preserved for auditing and accreditation.
+          </p>
         </div>
 
         {/* Archive Modal - Historical Department Batches */}

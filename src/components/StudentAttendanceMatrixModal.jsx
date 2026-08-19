@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download } from 'lucide-react';
+import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 
@@ -13,6 +13,10 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'admin' ? 'All' : (currentUser?.department || 'CWTS'));
   const [viewFilter, setViewFilter] = useState('all'); // 'all' | 'at-risk' (3+ absences) | 'perfect' (100%)
+
+  // Cell Edit Modal state for overriding attendance or deleting absences
+  const [editingCell, setEditingCell] = useState(null); // { student, dayStr, currentStatus, notes }
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -157,6 +161,71 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   const atRiskCount = studentMatrixList.filter(s => s.isAtRisk).length;
   const perfectCount = studentMatrixList.filter(s => s.absentCount === 0).length;
 
+  // Handle cell click to open edit / delete absence modal
+  const handleCellClick = (student, dayStr) => {
+    const currentStatus = student.dayStatuses[dayStr] || '-';
+    setEditingCell({
+      student,
+      dayStr,
+      newStatus: currentStatus === '-' ? 'Present' : currentStatus,
+      currentStatus,
+      notes: ''
+    });
+  };
+
+  // Save manual attendance status override or delete absence
+  const handleSaveCellEdit = async (actionStatus = null) => {
+    if (!editingCell) return;
+    const finalStatus = actionStatus || editingCell.newStatus;
+    const { student, dayStr, notes } = editingCell;
+    const sid = student.studentId || student.id;
+    const actName = `${dayStr} - NSTP Session`;
+
+    try {
+      setSavingEdit(true);
+
+      // 1. Update backend
+      await attendanceAPI.overrideRecord({
+        student_id: sid,
+        activity_name: actName,
+        status: finalStatus,
+        notes: notes || `Manual override by ${currentUser?.name || 'Instructor'}`
+      });
+
+      // 2. Update local storage cache
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+      const filtered = cached.filter(r => !(
+        String(r.student_id) === String(sid) && (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase())
+      ));
+
+      if (finalStatus && finalStatus !== 'Clear' && finalStatus !== '-') {
+        filtered.push({
+          id: Date.now() + Math.random(),
+          student_id: sid,
+          student_name: student.name || `${student.firstName || ''} ${student.lastName || ''}`,
+          department: student.department || currentUser?.department || 'CWTS',
+          section: student.section || '',
+          activity_name: actName,
+          scan_type: finalStatus === 'Present' ? 'TIME_OUT' : 'TIME_IN',
+          scanned_at: new Date().toISOString(),
+          status: finalStatus,
+          notes: notes || 'Manual edit'
+        });
+      }
+
+      localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(filtered));
+      setAttendanceRecords(filtered);
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+
+      setEditingCell(null);
+    } catch (err) {
+      console.error('Failed to update attendance cell:', err);
+      alert('Error updating attendance record. Please try again.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   // Export Master Attendance Matrix to Excel (.xlsx)
   const handleExportMasterExcel = () => {
     if (studentMatrixList.length === 0) return;
@@ -194,6 +263,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           if (s === 'Present') return 'PRESENT';
           if (s === 'Late') return 'LATE';
           if (s === 'Excused') return 'EXCUSED';
+          if (s === 'Incomplete') return 'INCOMPLETE';
           if (s === 'Absent') return 'ABSENT';
           return '-';
         }),
@@ -231,7 +301,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 select-none">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up">
+      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up relative">
         
         {/* Header */}
         <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white flex items-center justify-between">
@@ -241,7 +311,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black leading-tight">Student Attendance &amp; Absences Tracker</h3>
-              <p className="text-xs text-emerald-200 font-medium">Monitor cadet attendance across Day 1 to Day 15, track absences, and identify at-risk students</p>
+              <p className="text-xs text-emerald-200 font-medium">Click any day cell (D1-D15) to edit attendance status, delete absences, or mark excused absences</p>
             </div>
           </div>
 
@@ -303,7 +373,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
           </div>
         </div>
 
-        {/* Toolbar & Filters (Section select removed as requested) */}
+        {/* Toolbar & Filters */}
         <div className="p-3 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             {/* Search */}
@@ -423,58 +493,61 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                           {st.gradeAndSection}
                         </td>
 
-                        {/* Day 1 to Day 15 Badges */}
+                        {/* Day 1 to Day 15 Badges (Clickable for Instructor / Admin to Edit or Delete Absence) */}
                         {DAYS_ARRAY.map((day) => {
                           const status = st.dayStatuses[day];
-                          if (status === 'Present') {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 text-emerald-800 font-black text-[9px]" title={`${day}: Present`}>
+                          return (
+                            <td 
+                              key={day} 
+                              className="p-1 text-center"
+                              onClick={() => handleCellClick(st, day)}
+                              title={`Click to edit or remove absence for ${day}`}
+                            >
+                              {status === 'Present' ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-emerald-400 active:scale-95 transition-all"
+                                >
                                   P
-                                </span>
-                              </td>
-                            );
-                          } else if (status === 'Late') {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-100 text-amber-800 font-black text-[9px]" title={`${day}: Late`}>
+                                </button>
+                              ) : status === 'Late' ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all"
+                                >
                                   L
-                                </span>
-                              </td>
-                            );
-                          } else if (status === 'Excused') {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 text-blue-800 font-black text-[9px]" title={`${day}: Excused`}>
+                                </button>
+                              ) : status === 'Excused' ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-blue-400 active:scale-95 transition-all"
+                                >
                                   E
-                                </span>
-                              </td>
-                            );
-                          } else if (status === 'Incomplete') {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center px-1 h-5 rounded-md bg-amber-100 text-amber-900 font-black text-[8px]" title={`${day}: Incomplete (Timed In only, did not Time Out)`}>
+                                </button>
+                              ) : status === 'Incomplete' ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center px-1 h-5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-[8px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all"
+                                >
                                   INC
-                                </span>
-                              </td>
-                            );
-                          } else if (status === 'Absent') {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-100 text-rose-700 font-black text-[9px]" title={`${day}: Absent`}>
+                                </button>
+                              ) : status === 'Absent' ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-100 hover:bg-rose-200 text-rose-700 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-rose-400 active:scale-95 transition-all"
+                                >
                                   A
-                                </span>
-                              </td>
-                            );
-                          } else {
-                            return (
-                              <td key={day} className="p-1 text-center">
-                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md text-slate-300 font-bold text-[10px]" title={`${day}: Not Recorded Yet`}>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md text-slate-300 hover:text-slate-600 hover:bg-slate-200/60 font-bold text-[10px] cursor-pointer active:scale-95 transition-all"
+                                >
                                   •
-                                </span>
-                              </td>
-                            );
-                          }
+                                </button>
+                              )}
+                            </td>
+                          );
                         })}
 
                         {/* Present Count */}
@@ -519,6 +592,113 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             </div>
           )}
         </div>
+
+        {/* ── Interactive Attendance & Absence Editor Modal ── */}
+        {editingCell && (
+          <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-slate-200 animate-slide-up flex flex-col gap-4">
+              
+              {/* Modal Top Bar */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-slate-900 leading-tight">Edit Cadet Attendance</h4>
+                    <p className="text-[11px] text-emerald-700 font-bold">{editingCell.dayStr} • {editingCell.student.department}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingCell(null)}
+                  className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Student Summary */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                <p className="font-black text-slate-900">{editingCell.student.name || `${editingCell.student.firstName || ''} ${editingCell.student.lastName || ''}`}</p>
+                <div className="flex items-center gap-2 text-slate-500 font-medium text-[11px] mt-0.5">
+                  <span>ID: <b className="text-slate-700">{editingCell.student.studentId || 'N/A'}</b></span>
+                  <span>•</span>
+                  <span>{editingCell.student.gradeAndSection}</span>
+                </div>
+              </div>
+
+              {/* Status Selection Buttons */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Select Attendance Status:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCellEdit('Present')}
+                    disabled={savingEdit}
+                    className="p-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    <span>Mark Present (P)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCellEdit('Excused')}
+                    disabled={savingEdit}
+                    className="p-3 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    <span>Mark Excused (E)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCellEdit('Late')}
+                    disabled={savingEdit}
+                    className="p-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span>Mark Late (L)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCellEdit('Absent')}
+                    disabled={savingEdit}
+                    className="p-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    <UserX className="w-4 h-4 text-rose-600" />
+                    <span>Mark Absent (A)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Delete / Clear Absence Option */}
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSaveCellEdit('Clear')}
+                  disabled={savingEdit}
+                  className="px-3 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+                  title="Clear record so this day is unrecorded"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Record / Reset (-)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingCell(null)}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

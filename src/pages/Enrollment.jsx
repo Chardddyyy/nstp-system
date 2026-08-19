@@ -1756,20 +1756,20 @@ function Enrollment() {
                         playsInline
                         muted
                         autoPlay
-                        className="w-full h-full object-cover"
-                        style={{ transform: cameraTarget === 'idphoto' && facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
+                        className="w-full h-full object-cover enrollment-camera-video"
+                        style={{ transform: 'none' }}
                       />
                       
-                      {/* Top Clear Guidance Banner */}
+                      {/* Top Clear Guidance Banner (English Instructions) */}
                       <div className="absolute top-3 left-3 right-3 pointer-events-none z-10">
-                        <div className="bg-emerald-950/85 backdrop-blur-md border border-emerald-500/40 text-white p-2.5 rounded-2xl shadow-xl flex items-center gap-2">
+                        <div className="bg-emerald-950/90 backdrop-blur-md border border-emerald-500/40 text-white p-2.5 rounded-2xl shadow-xl flex items-center gap-2">
                           <div className="w-7 h-7 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-400/30">
                             <Sparkles className="w-4 h-4 text-amber-400" />
                           </div>
                           <p className="text-[10px] sm:text-xs font-semibold leading-tight text-emerald-100">
                             {cameraTarget === 'idphoto' 
-                              ? <span><strong className="text-amber-300 font-bold">2x2 Paalala:</strong> Tiyaking nasa gitna ang mukha, nakasuot ng puting damit, at maliwanag ang puting background.</span>
-                              : <span><strong className="text-amber-300 font-bold">RegForm Paalala:</strong> Tiyaking malinaw at nababasa ang lahat ng nakasulat sa iyong Registration Form bago kumuha ng litrato.</span>
+                              ? <span><strong className="text-amber-300 font-bold">2x2 ID Photo Reminder:</strong> Ensure your face is centered, wearing proper collared/white attire, with a clear plain white background.</span>
+                              : <span><strong className="text-amber-300 font-bold">Registration Form (COR) Reminder:</strong> Ensure all printed text, courses, and student information on your Certificate of Registration are sharp and fully legible before capturing.</span>
                             }
                           </p>
                         </div>
@@ -1819,8 +1819,8 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Google reCAPTCHA v2 Widget - Perfectly Centered & Clean Rectangular */}
-              <div className="flex flex-col items-center justify-center my-4 w-full">
+              {/* Google reCAPTCHA v2 Widget - Steady & Flush Left-Aligned */}
+              <div className="flex flex-col items-start justify-start my-4 w-full text-left">
                 <div className="recaptcha-center-wrapper">
                   <div
                     ref={recaptchaContainerRef}
@@ -1828,7 +1828,7 @@ function Enrollment() {
                   />
                 </div>
                 {errors.captcha && (
-                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center justify-center gap-1.5 text-center">
+                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1.5 text-left">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {errors.captcha}
                   </p>
                 )}

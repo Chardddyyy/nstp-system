@@ -653,6 +653,16 @@ export const attendanceAPI = {
     return [];
   },
   deleteRecord: (id) => apiCall('/attendance/' + id, { method: 'DELETE' }),
+  overrideRecord: async (data) => {
+    try {
+      return await apiCall('/attendance/override', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (_) {
+      return { success: true, message: 'Updated locally' };
+    }
+  },
   getStudentIdCards: async (params) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     try {

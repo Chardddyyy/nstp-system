@@ -214,25 +214,32 @@ input:focus, select:focus, textarea:focus {
   animation: ripple 0.5s linear;
 }
 
-/* ── Google reCAPTCHA Perfect Centering & Non-Scrollable Styling ────────────── */
+/* ── Camera Normal Rendering (No Mirroring) ────────────────────────────── */
+#qr-reader-video-box video,
+#qr-reader-video-box canvas,
+video.camera-stream,
+.enrollment-camera-video {
+  transform: none !important;
+  -webkit-transform: none !important;
+}
+
+/* ── Google reCAPTCHA Left-Aligned & Non-Scrollable Styling ────────────── */
 .recaptcha-center-wrapper {
   display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
   width: 100% !important;
   max-width: 100% !important;
-  margin: 0 auto !important;
-  text-align: center !important;
-  padding: 8px 0 !important;
+  margin: 0 !important;
+  text-align: left !important;
+  padding: 4px 0 !important;
   overflow: visible !important;
-  overflow-x: hidden !important;
+  overflow-x: visible !important;
 }
 
 .recaptcha-center-wrapper .g-recaptcha {
-  display: inline-flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  margin: 0 auto !important;
+  display: inline-block !important;
+  margin: 0 !important;
   width: 304px !important;
   height: 78px !important;
   min-width: 304px !important;
@@ -241,7 +248,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .recaptcha-center-wrapper .g-recaptcha > div {
-  margin: 0 auto !important;
+  margin: 0 !important;
   width: 304px !important;
   height: 78px !important;
   overflow: visible !important;
@@ -249,16 +256,8 @@ input:focus, select:focus, textarea:focus {
 
 .recaptcha-center-wrapper iframe {
   display: block !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   border: none !important;
   overflow: visible !important;
   border-radius: 4px !important;
-}
-
-@media (max-width: 340px) {
-  .recaptcha-center-wrapper {
-    transform: scale(0.9);
-    transform-origin: center center;
-    margin: 4px auto !important;
-  }
 }
