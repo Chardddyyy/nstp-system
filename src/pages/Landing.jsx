@@ -250,25 +250,27 @@ function Landing() {
 
       {/* ── Executive Glassmorphic Header with Dropdown Navigation ──────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex justify-between items-center gap-3">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex justify-between items-center gap-2 sm:gap-3">
           
           {/* University Identity */}
-          <Link to="/" className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0 flex-1 group">
-            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg ring-2 ring-amber-400/40 group-hover:scale-105 transition-transform duration-300">
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 group">
+            <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md sm:shadow-lg ring-1.5 sm:ring-2 ring-amber-400/40 group-hover:scale-105 transition-transform duration-300">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-xs sm:text-base md:text-lg font-black tracking-tight truncate leading-tight text-white group-hover:text-amber-300 transition-colors">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <h1 className="text-[13px] sm:text-base md:text-lg font-black tracking-tight truncate leading-tight text-white group-hover:text-amber-300 transition-colors">
                   Cavite State University
                 </h1>
                 <span className="hidden sm:inline-block bg-amber-400 text-emerald-950 font-black text-[9px] px-1.5 py-0.2 rounded font-mono uppercase tracking-wider">
                   Naic
                 </span>
               </div>
-              <p className="text-emerald-300 text-[10px] sm:text-xs truncate font-medium flex items-center gap-1 mt-0.5">
+              <p className="text-emerald-300 text-[9px] sm:text-xs truncate font-medium flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                National Service Training Program Portal
+                <span className="hidden xs:inline">National Service Training Program</span>
+                <span className="xs:hidden">NSTP</span>
+                <span> Portal</span>
               </p>
             </div>
           </Link>
@@ -380,7 +382,7 @@ function Landing() {
                     </div>
                     <div>
                       <p className="font-black text-white text-xs group-hover:text-amber-300">Contact Directory</p>
-                      <p className="text-[11px] text-emerald-200/80">CvSU Naic NSTP coordinators &amp; hotline</p>
+                      <p className="text-[11px] text-emerald-200/80">CvSU Naic Campus information &amp; hotline</p>
                     </div>
                   </button>
                 </div>
@@ -389,7 +391,7 @@ function Landing() {
           </nav>
 
           {/* Header Action Buttons & Mobile Hamburger Button */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <Link
               to="/enrollment"
               className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-800/80 hover:bg-emerald-700 text-white font-bold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm border border-emerald-600/70 active:scale-95 transition-all shadow-sm hover:shadow-md hover:border-emerald-400 shrink-0"
@@ -401,34 +403,34 @@ function Landing() {
 
             <Link
               to="/login"
-              className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-amber-950/30 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 shrink-0"
+              className="inline-flex items-center gap-1 sm:gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-2.5 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm transition-all shadow-md shadow-amber-950/30 hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 shrink-0"
             >
               <span>Login</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </Link>
 
             {/* Mobile Hamburger Toggle Button */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700 flex items-center justify-center text-white transition-colors cursor-pointer"
+              className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700/80 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
           </div>
         </div>
 
         {/* ── Mobile Slide-down Full Drawer Navigation ──────────────────── */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-4 space-y-3 animate-slide-up shadow-2xl">
+          <div className="lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-3.5 space-y-3 animate-slide-up shadow-2xl">
             
             {/* Quick Actions in Mobile Drawer */}
             <div className="grid grid-cols-2 gap-2 pb-3 border-b border-emerald-800/80">
               <Link
                 to="/enrollment"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 px-3 bg-emerald-800 text-white font-bold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-700 shadow-sm"
+                className="py-2.5 px-3 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-700 shadow-sm transition-colors"
               >
                 <span>Enroll Now</span>
                 <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
@@ -436,7 +438,7 @@ function Landing() {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                className="py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
               >
                 <span>Portal Login</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -444,72 +446,54 @@ function Landing() {
             </div>
 
             {/* Categorized Mobile Navigation Links */}
-            <div className="space-y-1.5 text-xs font-bold text-emerald-100">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1">Resources</p>
+            <div className="space-y-1 text-xs font-bold text-emerald-100">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1 pb-0.5">Programs &amp; Guides</p>
               
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('guide'); setMobileMenuOpen(false); }} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
               >
-                <FileText className="w-4 h-4 text-emerald-400" />
+                <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>How to Enroll (3 Steps)</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('schedule'); setMobileMenuOpen(false); }} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
               >
-                <Clock className="w-4 h-4 text-amber-400" />
+                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>Enrollment Schedule</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('video'); setMobileMenuOpen(false); }} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
               >
-                <Play className="w-4 h-4 text-emerald-400" />
+                <Play className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>Video Orientation Guide</span>
               </button>
 
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-2">Resources</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-2 pb-0.5">Help &amp; Contact</p>
 
               <button 
                 type="button" 
-                onClick={() => scrollToSection('guide')} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+                onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }} 
+                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
               >
-                <FileText className="w-4 h-4 text-emerald-400" />
-                <span>How to Enroll (3 Steps)</span>
-              </button>
-
-              <button 
-                type="button" 
-                onClick={() => scrollToSection('schedule')} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
-              >
-                <Clock className="w-4 h-4 text-emerald-400" />
-                <span>Enrollment Schedule</span>
-              </button>
-
-              <button 
-                type="button" 
-                onClick={() => scrollToSection('faq')} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
-              >
-                <HelpCircle className="w-4 h-4 text-amber-400" />
+                <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>Frequently Asked Questions</span>
               </button>
 
               <button 
                 type="button" 
-                onClick={() => scrollToSection('contact')} 
-                className="w-full p-2.5 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer"
+                onClick={() => { scrollToSection('contact'); setMobileMenuOpen(false); }} 
+                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
               >
-                <Phone className="w-4 h-4 text-emerald-400" />
-                <span>Contact NSTP Office</span>
+                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>CvSU Naic Contact Directory</span>
               </button>
             </div>
           </div>
@@ -518,7 +502,7 @@ function Landing() {
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs) ───── */}
       <section 
-        className="relative h-[430px] xs:h-[480px] sm:h-[530px] md:h-[600px] lg:h-[650px] overflow-hidden bg-gray-950"
+        className="relative h-[410px] xs:h-[450px] sm:h-[530px] md:h-[600px] lg:h-[650px] overflow-hidden bg-gray-950"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -537,39 +521,39 @@ function Landing() {
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             {/* Rich Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-transparent flex flex-col justify-end p-5 sm:p-10 md:p-14 lg:p-20">
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-transparent flex flex-col justify-end p-4 xs:p-5 sm:p-10 md:p-14 lg:p-20 pb-5 xs:pb-6 sm:pb-12">
               <div className={`max-w-4xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/90 text-white font-black text-xs sm:text-sm px-4 py-1.5 rounded-full uppercase tracking-wider mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
-                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
+                  <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
                   <span>{image.badge}</span>
                 </span>
                 
-                <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white drop-shadow-md leading-tight max-w-4xl truncate">
+                <h2 className="text-base xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white drop-shadow-md leading-tight max-w-4xl truncate">
                   {image.title}
                 </h2>
                 
-                <p className="text-emerald-100 text-xs sm:text-sm md:text-base max-w-2xl mt-1.5 sm:mt-2 font-medium leading-relaxed">
+                <p className="text-emerald-100 text-[11px] xs:text-xs sm:text-sm md:text-base max-w-2xl mt-1 sm:mt-2 font-medium leading-relaxed line-clamp-2 sm:line-clamp-none">
                   {image.subtitle}
                 </p>
 
-                {/* Hero Immediate Action Buttons */}
-                <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
+                {/* Hero Immediate Action Buttons (Neatly Arranged & Balanced on Mobile) */}
+                <div className="mt-3.5 sm:mt-6 flex flex-row items-center gap-2 sm:gap-4 max-w-md sm:max-w-none">
                   <Link
                     to="/enrollment"
-                    className="inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3 sm:px-8 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-sm shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
                   >
                     <span>Apply for Enrollment</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => scrollToSection('guide')}
-                    className="inline-flex items-center gap-2 bg-emerald-900/70 hover:bg-emerald-800/90 text-white font-bold px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-3 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-sm backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
                   >
-                    <BookOpen className="w-4 h-4 text-amber-300" />
+                    <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
                     <span>How to Enroll</span>
                   </button>
                 </div>
@@ -596,8 +580,8 @@ function Landing() {
           <ChevronRight className="w-6 h-6" />
         </button>
 
-        {/* Indicators */}
-        <div className="absolute bottom-4 sm:bottom-6 right-5 sm:right-12 flex space-x-2 z-20">
+        {/* Carousel Indicators (Cleanly elevated in top-right on mobile, bottom-right on desktop) */}
+        <div className="absolute top-4 right-4 sm:top-auto sm:bottom-6 sm:right-12 flex space-x-1.5 sm:space-x-2 z-20 bg-black/30 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-1.5 sm:p-0 rounded-full border border-white/10 sm:border-0">
           {CAROUSEL_IMAGES.map((_, index) => (
             <button
               key={index}
@@ -605,8 +589,8 @@ function Landing() {
                 setCurrentSlide(index);
                 startTimer();
               }}
-              className={`h-2.5 sm:h-3 rounded-full transition-all duration-300 cursor-pointer ${
-                index === currentSlide ? 'w-8 sm:w-12 bg-amber-400' : 'w-2.5 sm:w-3 bg-white/40 hover:bg-white/80'
+              className={`h-2 sm:h-3 rounded-full transition-all duration-300 cursor-pointer ${
+                index === currentSlide ? 'w-6 sm:w-12 bg-amber-400' : 'w-2 sm:w-3 bg-white/40 hover:bg-white/80'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />
@@ -698,9 +682,12 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <p className="text-amber-300 text-xs font-bold mt-2 bg-black/30 px-3 py-1 rounded-xl inline-block border border-amber-400/20 leading-snug">
-                      📢 {enrollmentStatus.customNotice}
-                    </p>
+                    <div className="mt-2 overflow-hidden max-w-full">
+                      <p className="text-amber-300 text-[10px] xs:text-xs font-bold bg-black/35 px-2.5 sm:px-3 py-1 rounded-xl border border-amber-400/25 leading-tight inline-flex items-center gap-1.5 max-w-full truncate shadow-xs">
+                        <span className="shrink-0">📢</span>
+                        <span className="truncate">{enrollmentStatus.customNotice}</span>
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -938,70 +925,76 @@ function Landing() {
 
       {/* ── Modern Executive Footer ───────────────────────────────────── */}
       <footer id="contact" className="bg-emerald-950 text-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             
             {/* About (Left Side) */}
             <div>
-              <div className="flex items-center space-x-3.5 mb-3.5">
-                <div className="w-10 h-10 bg-white rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-amber-400/40">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-amber-400/40">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
-                <h4 className="text-base sm:text-xl font-black leading-tight text-white">Cavite State University Naic</h4>
+                <div>
+                  <h4 className="text-sm sm:text-xl font-black leading-tight text-white">Cavite State University</h4>
+                  <p className="text-amber-400 text-[10px] sm:text-xs font-bold font-mono">Naic Campus</p>
+                </div>
               </div>
-              <p className="text-emerald-200 text-xs sm:text-sm leading-relaxed mb-4 max-w-md">
+              <p className="text-emerald-200/90 text-xs sm:text-sm leading-relaxed mb-3 max-w-md">
                 A premier institution committed to providing quality education and producing morally upright graduates who contribute to national development through the National Service Training Program (NSTP).
               </p>
-              <p className="text-amber-400 text-xs font-black tracking-wide">Core Values: Truth • Integrity • Excellence • Service</p>
+              <p className="text-amber-400/90 text-[11px] sm:text-xs font-bold tracking-wide">Core Values: Truth • Integrity • Excellence • Service</p>
             </div>
 
-            {/* Contact Info (Right Side) */}
-            <div className="md:text-right">
-              <h5 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider mb-3.5 text-amber-400">Contact NSTP Office</h5>
-              <ul className="space-y-2.5 text-emerald-200 text-xs sm:text-sm font-medium">
-                <li className="flex items-center md:justify-end space-x-2">
+            {/* CvSU Naic Contact Info (Right Aligned on Both Mobile & Desktop) */}
+            <div className="text-right flex flex-col items-end border-t md:border-t-0 pt-6 md:pt-0 border-emerald-900/80">
+              <h5 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider mb-3 text-amber-400">CvSU Naic Contact Information</h5>
+              <ul className="space-y-2 text-emerald-200 text-xs sm:text-sm font-medium w-full flex flex-col items-end">
+                <li className="w-full flex items-center justify-end gap-2">
                   <a
                     href="https://www.cvsu-naic.edu.ph/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center space-x-1.5"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
                   >
-                    <span>www.cvsu-naic.edu.ph</span>
-                    <Globe className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="text-[11px] sm:text-sm group-hover:underline">www.cvsu-naic.edu.ph</span>
+                    <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="flex items-center md:justify-end space-x-2">
+                <li className="w-full flex items-center justify-end gap-2">
                   <a
                     href="https://web.facebook.com/cvsunaicpio?_rdc=1&_rdr#"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center space-x-1.5"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
                   >
-                    <span>Cavite State University - Naic</span>
-                    <Facebook className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="text-[11px] sm:text-sm group-hover:underline">CvSU - Naic Official Page</span>
+                    <Facebook className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="flex items-center md:justify-end space-x-2">
-                  <a href="mailto:info@cvsu-naic.edu.ph" className="hover:text-white transition-colors flex items-center space-x-1.5">
-                    <span>info@cvsu-naic.edu.ph</span>
-                    <Mail className="w-4 h-4 text-amber-400 shrink-0" />
+                <li className="w-full flex items-center justify-end gap-2">
+                  <a 
+                    href="mailto:info@cvsu-naic.edu.ph" 
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
+                  >
+                    <span className="text-[11px] sm:text-sm group-hover:underline">info@cvsu-naic.edu.ph</span>
+                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="flex items-center md:justify-end space-x-2">
+                <li className="w-full flex items-center justify-end gap-2">
                   <a
                     href="https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center space-x-1.5 hover:underline"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
                     title="View Cavite State University Naic Campus on Google Maps"
                   >
-                    <span>Naic, Cavite, Philippines</span>
-                    <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span className="text-[11px] sm:text-sm group-hover:underline">Naic, Cavite, Philippines</span>
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="flex items-center md:justify-end space-x-2">
-                  <span>(046) 890-5138</span>
-                  <Phone className="w-4 h-4 text-amber-400 shrink-0" />
+                <li className="w-full flex items-center justify-end gap-2 text-emerald-200">
+                  <span className="text-[11px] sm:text-sm font-semibold">(046) 890-5138</span>
+                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 </li>
               </ul>
             </div>
@@ -1010,39 +1003,39 @@ function Landing() {
         </div>
 
         {/* Live Telemetry Bar */}
-        <div className="border-t border-emerald-900/80 bg-emerald-900/50 py-3.5 px-4 sm:px-6 lg:px-8">
+        <div className="border-t border-emerald-900/80 bg-emerald-900/50 py-2.5 sm:py-3.5 px-3 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto flex flex-row items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-800/80 border border-emerald-700/80 flex items-center justify-center text-amber-400 shadow-xs shrink-0">
-                <Activity className="w-4 h-4 animate-pulse" />
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-800/80 border border-emerald-700/80 flex items-center justify-center text-amber-400 shadow-xs shrink-0">
+                <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" />
               </div>
-              <div>
-                <h5 className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-200 leading-none">Live Telemetry</h5>
-                <p className="text-[9px] sm:text-[11px] text-emerald-400 font-medium mt-0.5">Real-time visitor status</p>
+              <div className="min-w-0">
+                <h5 className="text-[9px] sm:text-xs font-black uppercase tracking-wider text-emerald-200 leading-none truncate">Live Telemetry</h5>
+                <p className="text-[8px] sm:text-[11px] text-emerald-400 font-medium mt-0.5 truncate hidden xs:block">Real-time status</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
               {/* Total Users */}
-              <div className="flex items-center gap-2 bg-emerald-900/80 border border-emerald-800 px-3 py-1.5 rounded-2xl shadow-xs">
-                <Users className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Users</p>
-                  <p className="text-xs sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Users</p>
+                  <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
                     {totalUsersCount.toLocaleString()}
                   </p>
                 </div>
               </div>
 
               {/* Active Online */}
-              <div className="flex items-center gap-2 bg-emerald-800/90 border border-emerald-600/80 px-3 py-1.5 rounded-2xl shadow-xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-800/90 border border-emerald-600/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <div className="relative flex h-2 w-2 items-center justify-center shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
                 </div>
                 <div>
-                  <p className="text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Active Online</p>
-                  <p className="text-xs sm:text-sm font-black text-emerald-300 leading-tight mt-0.5">
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Active Online</p>
+                  <p className="text-[11px] sm:text-sm font-black text-emerald-300 leading-tight mt-0.5">
                     {activeOnlineCount}
                   </p>
                 </div>
@@ -1052,8 +1045,8 @@ function Landing() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-emerald-900 py-4 px-4">
-          <div className="max-w-7xl mx-auto flex justify-center items-center text-xs text-emerald-400 font-medium text-center">
+        <div className="border-t border-emerald-900 py-3.5 sm:py-4 px-4">
+          <div className="max-w-7xl mx-auto flex justify-center items-center text-[10px] sm:text-xs text-emerald-400 font-medium text-center">
             <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
           </div>
         </div>
