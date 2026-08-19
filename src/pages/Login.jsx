@@ -18,7 +18,7 @@ function Login() {
     e.preventDefault();
     setError('');
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
       setError('Please enter your email address');
       return;
@@ -186,6 +186,10 @@ function Login() {
                     name="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    inputMode="email"
                     className="w-full pl-9 pr-3 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                     placeholder="e.g. admin@cvsu.edu.ph"
                     autoComplete="email"
@@ -206,6 +210,9 @@ function Login() {
                     name="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="w-full pl-9 pr-9 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                     placeholder="••••••••••••"
                     autoComplete="current-password"
@@ -217,6 +224,37 @@ function Login() {
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Fill One-Tap Account Chips */}
+              <div className="pt-1">
+                <p className="text-[10px] font-bold text-gray-500 mb-1.5 flex items-center justify-between">
+                  <span>Quick Tap Sign-In:</span>
+                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@cvsu.edu.ph');
+                      setPassword('admin123');
+                      setError('');
+                    }}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-black cursor-pointer active:scale-95 transition-all"
+                  >
+                    🛡️ Admin
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('instructor@cvsu.edu.ph');
+                      setPassword('instructor123');
+                      setError('');
+                    }}
+                    className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-[10px] font-black cursor-pointer active:scale-95 transition-all"
+                  >
+                    👨‍🏫 CWTS Instructor
                   </button>
                 </div>
               </div>

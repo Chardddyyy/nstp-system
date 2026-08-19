@@ -638,7 +638,8 @@ function App() {
       safeSetStorage('nstp_cached_user', response.user);
       setUser(response.user);
       setLoading(false);
-      await loadAllData(response.user);
+      // Load all data in background so login transitions instantly on mobile devices
+      loadAllData(response.user).catch(err => console.warn('Background data load error:', err));
       return { success: true, role: response.user.role };
     } catch (error) {
       console.error('Login error:', error);
