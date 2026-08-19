@@ -925,76 +925,76 @@ function Landing() {
 
       {/* ── Modern Executive Footer ───────────────────────────────────── */}
       <footer id="contact" className="bg-emerald-950 text-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-12 relative z-10">
+          <div className="grid grid-cols-2 gap-3 sm:gap-8 items-start">
             
             {/* About (Left Side) */}
-            <div>
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-amber-400/40">
+            <div className="min-w-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-1.5 sm:ring-2 ring-amber-400/40">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
-                <div>
-                  <h4 className="text-sm sm:text-xl font-black leading-tight text-white">Cavite State University</h4>
-                  <p className="text-amber-400 text-[10px] sm:text-xs font-bold font-mono">Naic Campus</p>
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University</h4>
+                  <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono">Naic Campus</p>
                 </div>
               </div>
-              <p className="text-emerald-200/90 text-xs sm:text-sm leading-relaxed mb-3 max-w-md">
-                A premier institution committed to providing quality education and producing morally upright graduates who contribute to national development through the National Service Training Program (NSTP).
+              <p className="text-emerald-200/90 text-[10px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed mb-2 max-w-md line-clamp-3 sm:line-clamp-none">
+                A premier institution committed to providing quality education and producing morally upright graduates through the National Service Training Program (NSTP).
               </p>
-              <p className="text-amber-400/90 text-[11px] sm:text-xs font-bold tracking-wide">Core Values: Truth • Integrity • Excellence • Service</p>
+              <p className="text-amber-400/90 text-[9px] sm:text-xs font-bold tracking-wide">Truth • Integrity • Excellence • Service</p>
             </div>
 
-            {/* CvSU Naic Contact Info (Right Aligned on Both Mobile & Desktop) */}
-            <div className="text-right flex flex-col items-end border-t md:border-t-0 pt-6 md:pt-0 border-emerald-900/80">
-              <h5 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider mb-3 text-amber-400">CvSU Naic Contact Information</h5>
-              <ul className="space-y-2 text-emerald-200 text-xs sm:text-sm font-medium w-full flex flex-col items-end">
-                <li className="w-full flex items-center justify-end gap-2">
+            {/* CvSU Naic Contact Info (Right Side - strictly on the same row) */}
+            <div className="text-right flex flex-col items-end min-w-0">
+              <h5 className="text-[10px] sm:text-xs md:text-sm font-extrabold uppercase tracking-wider mb-2 sm:mb-3 text-amber-400 truncate">Contact Information</h5>
+              <ul className="space-y-1.5 sm:space-y-2 text-emerald-200 text-[10px] sm:text-xs md:text-sm font-medium w-full flex flex-col items-end">
+                <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
                     href="https://www.cvsu-naic.edu.ph/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                   >
-                    <span className="text-[11px] sm:text-sm group-hover:underline">www.cvsu-naic.edu.ph</span>
-                    <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">cvsu-naic.edu.ph</span>
+                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="w-full flex items-center justify-end gap-2">
+                <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
                     href="https://web.facebook.com/cvsunaicpio?_rdc=1&_rdr#"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                   >
-                    <span className="text-[11px] sm:text-sm group-hover:underline">CvSU - Naic Official Page</span>
-                    <Facebook className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">CvSU - Naic FB</span>
+                    <Facebook className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="w-full flex items-center justify-end gap-2">
+                <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a 
                     href="mailto:info@cvsu-naic.edu.ph" 
-                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                   >
-                    <span className="text-[11px] sm:text-sm group-hover:underline">info@cvsu-naic.edu.ph</span>
-                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">info@cvsu-naic.edu.ph</span>
+                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="w-full flex items-center justify-end gap-2">
+                <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
                     href="https://www.google.com/maps/search/?api=1&query=Cavite+State+University+-+Naic"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-white transition-colors flex items-center justify-end gap-1.5 group"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                     title="View Cavite State University Naic Campus on Google Maps"
                   >
-                    <span className="text-[11px] sm:text-sm group-hover:underline">Naic, Cavite, Philippines</span>
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Naic, Cavite</span>
                     <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                   </a>
                 </li>
-                <li className="w-full flex items-center justify-end gap-2 text-emerald-200">
-                  <span className="text-[11px] sm:text-sm font-semibold">(046) 890-5138</span>
-                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2 text-emerald-200">
+                  <span className="text-[9.5px] xs:text-[11px] sm:text-sm font-semibold whitespace-nowrap">(046) 890-5138</span>
+                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 </li>
               </ul>
             </div>

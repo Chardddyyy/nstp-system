@@ -567,22 +567,57 @@ function getClientSideTelemetry() {
   };
 }
 
+let isTelemetryServerOffline = false;
+let telemetryOfflineUntil = 0;
+
+function isTelemetryCooldown() {
+  return isTelemetryServerOffline && Date.now() < telemetryOfflineUntil;
+}
+
+function markTelemetryOffline() {
+  isTelemetryServerOffline = true;
+  telemetryOfflineUntil = Date.now() + 45000;
+}
+
+function markTelemetryOnline() {
+  isTelemetryServerOffline = false;
+  telemetryOfflineUntil = 0;
+}
+
 export function pingTelemetry(data) {
+  if (isTelemetryCooldown()) {
+    return Promise.resolve(getClientSideTelemetry());
+  }
+
   var url = getPrimaryApiUrl() + '/telemetry/ping';
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   })
-  .then(function(res) { return res.ok ? res.json() : getClientSideTelemetry(); })
-  .catch(function() { return getClientSideTelemetry(); });
+  .then(function(res) { 
+    if (res.ok) {
+      markTelemetryOnline();
+      return res.json();
+    }
+    return getClientSideTelemetry(); 
+  })
+  .catch(function() { 
+    markTelemetryOffline();
+    return getClientSideTelemetry(); 
+  });
 }
 
 export function getTelemetryStats() {
+  if (isTelemetryCooldown()) {
+    return Promise.resolve(getClientSideTelemetry());
+  }
+
   var url = getPrimaryApiUrl() + '/telemetry/stats';
   return fetch(url)
     .then(function(res) {
       if (res.ok) {
+        markTelemetryOnline();
         return res.json().then(function(data) {
           if (data && (data.totalRegisteredUsers || data.totalUsers)) {
             try {
@@ -594,7 +629,10 @@ export function getTelemetryStats() {
       }
       return getClientSideTelemetry();
     })
-    .catch(function() { return getClientSideTelemetry(); });
+    .catch(function() { 
+      markTelemetryOffline();
+      return getClientSideTelemetry(); 
+    });
 }
 
 export const telemetryAPI = {

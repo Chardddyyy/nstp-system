@@ -1182,7 +1182,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     );
 
     // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
-    const year = new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
     const dept = (department || 'CWTS').toUpperCase();
     const [trackRows] = await pool.execute(
       'SELECT COUNT(*) as count FROM students WHERE department = ?',
@@ -1190,7 +1190,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     ).catch(() => [[{ count: 0 }]]);
     const trackCount = ((trackRows && trackRows[0]?.count) || 1);
     const countPadded = String(trackCount).padStart(5, '0');
-    const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
+    const matriculationNumber = `NSTP-${dept}-${currentYear}-${countPadded}`;
     const token = `NSTP-${studentId}-${matriculationNumber}`;
 
     await pool.execute(
@@ -3393,6 +3393,10 @@ app.delete('/api/attendance/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'Attendance record deleted' });
   } catch (err) {
     console.error('Error deleting attendance record:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // POST override student attendance record (Edit/Delete status for any Day)
 app.post('/api/attendance/override', authenticateToken, async (req, res) => {
   try {
