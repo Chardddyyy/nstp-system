@@ -445,18 +445,18 @@ function InstructorDashboard() {
                 )}
               </div>
 
-              {/* User Profile Button - Compact Avatar on Mobile, Full Pill on Desktop */}
+              {/* User Profile Button - Full Display on Mobile & Desktop */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0 hidden md:block">
-                  <p className="font-extrabold text-xs text-white leading-tight truncate">{user?.name || 'Instructor'}</p>
-                  <p className="text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
+                <div className="text-left min-w-0 flex flex-col justify-center">
+                  <p className="font-extrabold text-[10.5px] sm:text-xs text-white leading-tight truncate max-w-[70px] xs:max-w-[100px] sm:max-w-none">{user?.name || 'Instructor'}</p>
+                  <p className="text-[8.5px] sm:text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
                 </div>
               </Link>
             </div>
