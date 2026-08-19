@@ -176,7 +176,26 @@ function RegistrationDocumentPreview({ documentUrl, onExpand, isFullscreen = fal
 }
 
 function AdminDashboard() {
-  const { user, logout, clearBatchData, students, reports, allUsers, pendingEnrollments, approveEnrollment, declineEnrollment, refreshData, archivedYears, currentBatch, notifications, setNotifications, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { 
+    user, 
+    logout, 
+    clearBatchData, 
+    students = [], 
+    reports = [], 
+    allUsers = [], 
+    pendingEnrollments = [], 
+    approveEnrollment, 
+    declineEnrollment, 
+    refreshData, 
+    archivedYears = [], 
+    currentBatch = new Date().getFullYear().toString(), 
+    notifications = [], 
+    setNotifications, 
+    viewingArchive, 
+    archiveViewData, 
+    setViewingArchive, 
+    setArchiveViewData 
+  } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   

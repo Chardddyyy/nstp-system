@@ -23,7 +23,17 @@ const AVATAR_OPTIONS = {
 };
 
 function InstructorDashboard() {
-  const { user, logout, students, reports, conversations, messages, notifications, setNotifications } = useAuth();
+  const { 
+    user, 
+    logout, 
+    students = [], 
+    reports = [], 
+    conversations = [], 
+    messages = {}, 
+    notifications = [], 
+    setNotifications,
+    currentBatch = new Date().getFullYear().toString()
+  } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -239,9 +249,9 @@ function InstructorDashboard() {
   };
 
   // Get instructor's department students only
-  const myStudents = students.filter(s => s.department === user?.department);
-  const myReports = reports.filter(r => r.department === 'All' || r.department === user?.department);
-  const pendingReports = myReports.filter(r => !(r.submissions && r.submissions.some(sub => sub.instructor === user?.name)));
+  const myStudents = (students || []).filter(s => s && s.department === user?.department);
+  const myReports = (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+  const pendingReports = myReports.filter(r => !(r.submissions && r.submissions.some(sub => sub && sub.instructor === user?.name)));
 
   // Count unread messages across all conversations
   const readConversations = (() => {
@@ -249,10 +259,12 @@ function InstructorDashboard() {
     catch { return {}; }
   })();
 
-  const pendingMessages = conversations.reduce((total, conv) => {
-    const convMessages = messages[conv.id] || [];
+  const pendingMessages = (conversations || []).reduce((total, conv) => {
+    if (!conv) return total;
+    const convMessages = (messages && messages[conv.id]) || [];
     const lastReadTime = readConversations[conv.id] || 0;
     return total + convMessages.filter(msg => {
+      if (!msg) return false;
       const msgTime = new Date(msg.created_at || 0).getTime();
       const isOwn = msg.senderId === user?.id || msg.sender_id === user?.id;
       const isSystem = msg.type === 'system' || msg.message_type === 'system';
