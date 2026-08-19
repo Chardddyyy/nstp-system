@@ -300,91 +300,91 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 select-none">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up relative">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 select-none">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-6xl w-full max-h-[96vh] sm:max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-slide-up relative">
         
         {/* Header */}
-        <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shadow-md">
-              <Users className="w-5 h-5" />
+        <div className="p-3 sm:p-6 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shadow-md shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-black leading-tight">Student Attendance &amp; Absences Tracker</h3>
-              <p className="text-xs text-emerald-200 font-medium">Click any day cell (D1-D15) to edit attendance status, delete absences, or mark excused absences</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-xs sm:text-lg font-black leading-tight truncate">Student Attendance &amp; Absences Tracker</h3>
+              <p className="text-[10px] sm:text-xs text-emerald-200 font-medium truncate">Click any day cell (D1-D15) to edit attendance or delete absences</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs sm:text-sm font-black transition-colors cursor-pointer shrink-0 ml-2"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Quick Analytics Cards */}
-        <div className="grid grid-cols-3 gap-2 p-3 sm:p-4 bg-slate-50 border-b border-slate-200 text-xs">
-          <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">Total Enrolled</p>
-              <p className="text-lg font-black text-slate-900">{totalStudents}</p>
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-2 sm:p-4 bg-slate-50 border-b border-slate-200 text-xs">
+          <div className="bg-white p-2 sm:p-3 rounded-xl sm:rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between min-w-0">
+            <div className="min-w-0">
+              <p className="text-[8.5px] sm:text-[10px] font-bold text-slate-500 uppercase truncate">Enrolled</p>
+              <p className="text-sm sm:text-lg font-black text-slate-900 leading-tight">{totalStudents}</p>
             </div>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-black">
-              <Users className="w-4 h-4" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-black shrink-0">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
 
           <div 
             onClick={() => setViewFilter(viewFilter === 'at-risk' ? 'all' : 'at-risk')}
-            className={`bg-white p-3 rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+            className={`bg-white p-2 sm:p-3 rounded-xl sm:rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all min-w-0 ${
               viewFilter === 'at-risk' ? 'border-rose-500 bg-rose-50/40 ring-2 ring-rose-500/20' : 'border-rose-200 hover:border-rose-400'
             }`}
           >
-            <div>
-              <p className="text-[10px] font-bold text-rose-700 uppercase flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3 text-rose-600" />
-                <span>At-Risk (3+ Absences)</span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] sm:text-[10px] font-bold text-rose-700 uppercase flex items-center gap-0.5 truncate">
+                <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-rose-600 shrink-0" />
+                <span className="truncate">At-Risk</span>
               </p>
-              <p className="text-lg font-black text-rose-700">{atRiskCount} <span className="text-[10px] text-slate-500 font-normal">students</span></p>
+              <p className="text-sm sm:text-lg font-black text-rose-700 leading-tight">{atRiskCount} <span className="text-[9px] text-slate-500 font-normal hidden xs:inline">students</span></p>
             </div>
-            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black">
-              <UserX className="w-4 h-4" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black shrink-0">
+              <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
 
           <div 
             onClick={() => setViewFilter(viewFilter === 'perfect' ? 'all' : 'perfect')}
-            className={`bg-white p-3 rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all ${
+            className={`bg-white p-2 sm:p-3 rounded-xl sm:rounded-2xl border shadow-2xs flex items-center justify-between cursor-pointer transition-all min-w-0 ${
               viewFilter === 'perfect' ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20' : 'border-emerald-200 hover:border-emerald-400'
             }`}
           >
-            <div>
-              <p className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1">
-                <CheckCircle className="w-3 h-3 text-emerald-600" />
-                <span>100% Attendance</span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] sm:text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-0.5 truncate">
+                <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 shrink-0" />
+                <span className="truncate">100%</span>
               </p>
-              <p className="text-lg font-black text-emerald-900">{perfectCount} <span className="text-[10px] text-slate-500 font-normal">students</span></p>
+              <p className="text-sm sm:text-lg font-black text-emerald-900 leading-tight">{perfectCount} <span className="text-[9px] text-slate-500 font-normal hidden xs:inline">students</span></p>
             </div>
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
-              <CheckCircle className="w-4 h-4" />
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black shrink-0">
+              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
         </div>
 
         {/* Toolbar & Filters */}
-        <div className="p-3 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 flex-wrap flex-1">
+        <div className="p-2 sm:p-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 sm:gap-3 text-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1 min-w-0">
             {/* Search */}
-            <div className="relative min-w-[180px] flex-1 max-w-xs">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative min-w-[140px] flex-1 max-w-xs">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cadet name, student ID..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                placeholder="Search cadet..."
+                className="w-full pl-8 pr-2.5 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
 
@@ -393,9 +393,9 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
               <select
                 value={selectedDept}
                 onChange={(e) => setSelectedDept(e.target.value)}
-                className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer"
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer"
               >
-                <option value="All">All Departments</option>
+                <option value="All">All Track</option>
                 <option value="CWTS">CWTS</option>
                 <option value="ROTC">ROTC</option>
                 <option value="LTS">LTS</option>
@@ -403,25 +403,25 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             )}
 
             {/* View Filter Toggle */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-slate-100 p-0.5 sm:p-1 rounded-lg sm:rounded-xl">
               <button
                 type="button"
                 onClick={() => setViewFilter('all')}
-                className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                className={`px-2 sm:px-3 py-1 rounded-md sm:rounded-lg font-bold text-[10.5px] sm:text-xs transition-colors cursor-pointer ${
                   viewFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                All Students
+                All
               </button>
               <button
                 type="button"
                 onClick={() => setViewFilter('at-risk')}
-                className={`px-3 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                className={`px-2 sm:px-3 py-1 rounded-md sm:rounded-lg font-bold text-[10.5px] sm:text-xs transition-colors cursor-pointer flex items-center gap-1 ${
                   viewFilter === 'at-risk' ? 'bg-rose-700 text-white shadow-xs' : 'text-rose-700 hover:bg-rose-50'
                 }`}
               >
-                <span>⚠️ Most Absences</span>
-                <span className="bg-rose-900/30 text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">{atRiskCount}</span>
+                <span>⚠️ Absences</span>
+                <span className="bg-rose-900/30 text-white text-[9px] px-1 py-0.2 rounded-full font-black">{atRiskCount}</span>
               </button>
             </div>
           </div>
@@ -431,15 +431,22 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             type="button"
             onClick={handleExportMasterExcel}
             disabled={studentMatrixList.length === 0}
-            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-            <span>Export Master Excel</span>
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+            <span className="hidden xs:inline">Export Master Excel</span>
+            <span className="xs:hidden">Export Excel</span>
           </button>
         </div>
 
         {/* Attendance Matrix Table */}
-        <div className="overflow-x-auto flex-1 p-4 bg-slate-50">
+        <div className="flex-1 p-2 sm:p-4 bg-slate-50 overflow-hidden flex flex-col">
+          {/* Mobile Swipe Hint */}
+          <div className="sm:hidden bg-emerald-900/10 text-emerald-950 font-bold text-[10px] py-1 px-2.5 mb-2 rounded-lg flex items-center justify-between shrink-0">
+            <span>👉 Swipe horizontally to view Days 1-15</span>
+            <span className="font-mono font-black text-emerald-800">15 Days</span>
+          </div>
+
           {loading ? (
             <div className="p-16 text-center text-slate-500 font-bold">
               <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -450,20 +457,20 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
               No students found matching current filters.
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-x-auto overflow-y-auto flex-1">
+              <table className="w-full text-left border-collapse text-xs min-w-[760px] sm:min-w-[880px]">
                 <thead>
-                  <tr className="bg-emerald-950 text-white font-black text-[11px] uppercase tracking-wider">
-                    <th className="p-2.5 border-b border-emerald-800">Student No. &amp; Name</th>
-                    <th className="p-2.5 border-b border-emerald-800 text-center">Grade &amp; Sec</th>
+                  <tr className="bg-emerald-950 text-white font-black text-[10.5px] sm:text-[11px] uppercase tracking-wider sticky top-0 z-30">
+                    <th className="p-2 sm:p-2.5 border-b border-emerald-800 sticky left-0 z-40 bg-emerald-950 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] min-w-[140px] sm:min-w-[200px]">Student No. &amp; Name</th>
+                    <th className="p-2 sm:p-2.5 border-b border-emerald-800 text-center">Grade &amp; Sec</th>
                     {DAYS_ARRAY.map((day) => (
-                      <th key={day} className="p-1.5 border-b border-emerald-800 text-center text-[10px] font-mono whitespace-nowrap">
+                      <th key={day} className="p-1 sm:p-1.5 border-b border-emerald-800 text-center text-[9.5px] sm:text-[10px] font-mono whitespace-nowrap">
                         {day.replace('Day ', 'D')}
                       </th>
                     ))}
-                    <th className="p-2.5 border-b border-emerald-800 text-center">Present</th>
-                    <th className="p-2.5 border-b border-emerald-800 text-center">Absences</th>
-                    <th className="p-2.5 border-b border-emerald-800 text-center">Status</th>
+                    <th className="p-2 sm:p-2.5 border-b border-emerald-800 text-center">Present</th>
+                    <th className="p-2 sm:p-2.5 border-b border-emerald-800 text-center">Absences</th>
+                    <th className="p-2 sm:p-2.5 border-b border-emerald-800 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -472,16 +479,16 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                     return (
                       <tr 
                         key={st.id} 
-                        className={`hover:bg-slate-50/80 transition-colors ${
+                        className={`hover:bg-slate-50/80 transition-colors group ${
                           isWarning ? 'bg-rose-50/30' : ''
                         }`}
                       >
-                        {/* Student Details */}
-                        <td className="p-2.5">
-                          <div className="font-black text-slate-900 leading-tight truncate max-w-[200px]">
+                        {/* Student Details - Sticky Left on Horizontal Scroll */}
+                        <td className="p-2 sm:p-2.5 sticky left-0 z-20 bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]">
+                          <div className="font-black text-slate-900 leading-tight truncate max-w-[140px] sm:max-w-[200px]">
                             {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                          <div className="text-[9.5px] sm:text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
                             <span>{st.studentId || 'N/A'}</span>
                             <span>•</span>
                             <span className="font-bold text-emerald-800">{st.department}</span>
@@ -489,7 +496,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                         </td>
 
                         {/* Grade & Section */}
-                        <td className="p-2.5 text-center font-mono font-bold text-slate-800 whitespace-nowrap">
+                        <td className="p-2 sm:p-2.5 text-center font-mono font-bold text-slate-800 whitespace-nowrap">
                           {st.gradeAndSection}
                         </td>
 
@@ -499,7 +506,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                           return (
                             <td 
                               key={day} 
-                              className="p-1 text-center"
+                              className="p-0.5 sm:p-1 text-center"
                               onClick={() => handleCellClick(st, day)}
                               title={`Click to edit or remove absence for ${day}`}
                             >

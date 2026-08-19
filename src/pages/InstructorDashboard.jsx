@@ -296,31 +296,31 @@ function InstructorDashboard() {
       {/* Main Content */}
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Hero Header - Unified CvSU Naic Aesthetics */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
-            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div className="w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-[11px] sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
+                <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
                   <span className="sm:hidden">{user?.department} Portal</span>
                 </h2>
-                <p className="text-emerald-200 text-[9px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Welcome, {user?.name || 'Instructor'} 👋</p>
+                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Welcome, {user?.name || 'Instructor'} 👋</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Notification Container */}
               <div className="relative notification-container">
                 <button type="button"
@@ -448,15 +448,15 @@ function InstructorDashboard() {
               {/* User Profile Button - Compact Avatar on Mobile, Full Pill on Desktop */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0">
-                  <p className="font-extrabold text-[11px] sm:text-xs text-white leading-tight truncate max-w-[90px] sm:max-w-none">{user?.name || 'Instructor'}</p>
-                  <p className="text-[10px] sm:text-[11px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
+                <div className="text-left min-w-0 hidden md:block">
+                  <p className="font-extrabold text-xs text-white leading-tight truncate">{user?.name || 'Instructor'}</p>
+                  <p className="text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
                 </div>
               </Link>
             </div>
@@ -464,91 +464,91 @@ function InstructorDashboard() {
         </div>
 
         {/* ── Attendance QR Scanner Action Banner ────────────────────── */}
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-md border border-emerald-100 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-md shrink-0">
-              <Camera className="w-5 h-5" />
+        <div className="bg-white rounded-xl sm:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-emerald-100/90 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-xs sm:shadow-md shrink-0">
+              <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div className="min-w-0">
-              <h3 className="font-black text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
-              <p className="text-[11px] text-slate-500 font-medium truncate">Scan scannable QR tokens for instant cadet and trainee attendance</p>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Quick QR token scanner & attendance matrix</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
+          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto shrink-0">
             <button
               type="button"
               onClick={() => setShowAttendanceScanner(true)}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
             >
-              <Camera className="w-4 h-4 text-emerald-200" />
+              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
               <span>Live QR Scanner</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowAttendanceMatrix(true)}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 hover:to-indigo-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all cursor-pointer border border-blue-600/50"
+              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-blue-600/50 whitespace-nowrap"
             >
-              <Users className="w-4 h-4 text-blue-200" />
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
               <span>Attendance &amp; Absences</span>
             </button>
           </div>
         </div>
 
-        {/* Quick Stat Cards Grid (3 Clean Cards) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 mb-3 sm:mb-6">
+        {/* Quick Stat Cards Grid (3 Clean Cards - Side by Side on Mobile) */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
           <div
-            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-emerald-700 to-green-800 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-xs text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between min-w-0"
             onClick={() => navigate('/students')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
               <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
                 <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                  <Users className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-emerald-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Students</p>
-                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.totalStudents} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
+                  <p className="text-emerald-100 text-[7.5px] xs:text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate">Students</p>
+                  <p className="text-[11px] xs:text-xs sm:text-xl font-black text-white leading-tight mt-0.5">{stats.totalStudents} <span className="text-[8px] font-normal hidden sm:inline">Active</span></p>
                 </div>
               </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
+              <span className="hidden xs:inline-block text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-emerald-800 font-semibold transition-all shrink-0">View &rarr;</span>
             </div>
           </div>
 
           <div
-            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-xs text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between min-w-0"
             onClick={() => navigate('/chat')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
               <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
                 <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <MessageSquare className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                  <MessageSquare className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-blue-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Messages</p>
-                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
+                  <p className="text-blue-100 text-[7.5px] xs:text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate">Messages</p>
+                  <p className="text-[11px] xs:text-xs sm:text-xl font-black text-white leading-tight mt-0.5">{stats.pendingMessages} <span className="text-[8px] font-normal hidden sm:inline">Unread</span></p>
                 </div>
               </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
+              <span className="hidden xs:inline-block text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-blue-800 font-semibold transition-all shrink-0">Open &rarr;</span>
             </div>
           </div>
 
           <div
-            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2.5 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between"
+            className="bg-gradient-to-r from-amber-600 to-yellow-600 p-2 sm:p-5 rounded-xl sm:rounded-2xl shadow-xs text-white cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group flex flex-col justify-between min-w-0"
             onClick={() => navigate('/reports')}
           >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
               <div className="flex items-center space-x-1 sm:space-x-3 min-w-0">
                 <div className="w-6 h-6 sm:w-10 sm:h-10 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
-                  <FileText className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" />
+                  <FileText className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-amber-100 text-[8px] sm:text-xs font-medium uppercase tracking-wider truncate">Reports</p>
-                  <p className="text-[11px] sm:text-xl font-bold text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
+                  <p className="text-amber-100 text-[7.5px] xs:text-[9px] sm:text-xs font-bold uppercase tracking-wider truncate">Reports</p>
+                  <p className="text-[11px] xs:text-xs sm:text-xl font-black text-white leading-tight mt-0.5">{stats.pendingReports} <span className="text-[8px] font-normal hidden sm:inline">Pending</span></p>
                 </div>
               </div>
-              <span className="text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
+              <span className="hidden xs:inline-block text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
             </div>
           </div>
         </div>

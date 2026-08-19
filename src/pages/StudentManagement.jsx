@@ -660,40 +660,41 @@ function StudentManagement() {
         )}
 
         {/* Hero Header Card - Unified CvSU Naic Aesthetics */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 sm:gap-3 relative z-10">
-            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1 w-full sm:w-auto">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div className="w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
               <div className="min-w-0 flex-1">
                 <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Student Management</h2>
-                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   <span className="hidden sm:inline">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update roster'}</span>
                   <span className="sm:hidden">{isAdmin ? 'Student records & CHED' : 'Student roster'}</span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
               {/* Batch NSTP IDs Download & Print Button (Admin Only) */}
               {isAdmin && (
                 <button type="button"
                   onClick={() => setShowBatchIdModal(true)}
                   title="Download or print standard student ID cards with Select All and filtering"
-                  className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-emerald-600/50"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
                 >
-                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300" />
-                  <span>Download Student IDs</span>
+                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+                  <span className="hidden xs:inline">Download Student IDs</span>
+                  <span className="xs:hidden">Student IDs</span>
                 </button>
               )}
 
@@ -702,29 +703,32 @@ function StudentManagement() {
                 <button type="button"
                   onClick={() => setShowAttendanceMatrix(true)}
                   title="View Day 1-15 attendance records, track absences, and identify at-risk students"
-                  className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 font-bold shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0 border border-blue-500/50"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-blue-500/50 whitespace-nowrap"
                 >
-                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
-                  <span>Attendance &amp; Absences</span>
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200 shrink-0" />
+                  <span className="hidden xs:inline">Attendance &amp; Absences</span>
+                  <span className="xs:hidden">Attendance</span>
                 </button>
               )}
 
               <button type="button"
                 onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
                 title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
-                className="flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0"
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer whitespace-nowrap"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950" />
-                <span>Export CHED Excel</span>
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                <span className="hidden xs:inline">Export CHED Excel</span>
+                <span className="xs:hidden">CHED Excel</span>
               </button>
+
               {isAdmin && (
                 <button type="button"
                   onClick={() => !viewingArchive && setShowAddModal(true)}
                   disabled={viewingArchive}
                   title={viewingArchive ? 'Exit archive view to add students' : ''}
-                  className={`flex-1 sm:flex-initial flex items-center space-x-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-md shadow-emerald-900/20 active:scale-95 text-[11px] sm:text-xs ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 hover:shadow-lg hover:-translate-y-0.5'}`}
+                  className={`col-span-2 sm:col-span-1 flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800'}`}
                 >
-                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span>Add Student</span>
                 </button>
               )}

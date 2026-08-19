@@ -604,31 +604,31 @@ function AdminDashboard() {
         )}
 
         {/* Hero Header - Single-Line Compact Mobile Layout */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
-            <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
                 aria-label="Open menu"
               >
-                <Menu className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               
-              <div className="w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
               <div className="min-w-0 flex-1 pr-1">
-                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
+                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                 </h1>
-                <p className="text-emerald-200 text-[10px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'} 👋`}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
                 <button type="button"
@@ -759,15 +759,15 @@ function AdminDashboard() {
               {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0">
-                  <p className="font-extrabold text-[11px] sm:text-xs text-white leading-tight truncate max-w-[90px] sm:max-w-none">{user?.name || 'Admin'}</p>
-                  <p className="text-[10px] sm:text-[11px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
+                <div className="text-left min-w-0 hidden md:block">
+                  <p className="font-extrabold text-xs text-white leading-tight truncate">{user?.name || 'Admin'}</p>
+                  <p className="text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
                 </div>
               </button>
             </div>

@@ -221,7 +221,20 @@ export function deleteUser(id) {
 
 // Students
 export function getStudents() {
-  return apiCall('/students');
+  return apiCall('/students')
+    .then(function(res) {
+      if (Array.isArray(res)) {
+        try { localStorage.setItem('nstp_cached_students', JSON.stringify(res)); } catch (_) {}
+      }
+      return res;
+    })
+    .catch(function(err) {
+      try {
+        const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+      } catch (_) {}
+      throw err;
+    });
 }
 
 export function addStudent(data) {
@@ -643,32 +656,50 @@ export const telemetryAPI = {
 export const attendanceAPI = {
   scan: async (data) => {
     try {
-      return await apiCall('/attendance/scan', { method: 'POST', body: JSON.stringify(data) });
+      const res = await apiCall('/attendance/scan', { method: 'POST', body: JSON.stringify(data) });
+      if (res && res.record) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+          cached.unshift(res.record);
+          localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(cached.slice(0, 1000)));
+        } catch (_) {}
+      }
+      return res;
     } catch (err) {
-      // Local client-side fallback if server is waking up
+      // Local client-side fallback if server is unreachable or degraded
       try {
         const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
         const cleanInput = (data.tokenOrId || '').trim();
         const st = cached.find(s => 
-          (s.qr_token && s.qr_token === cleanInput) ||
-          (s.studentId && s.studentId === cleanInput) ||
-          (s.nstp_serial_id && s.nstp_serial_id === cleanInput) ||
+          (s.qr_token && s.qr_token.toLowerCase() === cleanInput.toLowerCase()) ||
+          (s.studentId && String(s.studentId).trim() === cleanInput) ||
+          (s.nstp_serial_id && s.nstp_serial_id.toLowerCase() === cleanInput.toLowerCase()) ||
           (s.name && s.name.toLowerCase().includes(cleanInput.toLowerCase()))
         );
         if (st) {
+          const actName = data.activity_name || 'NSTP Field Session';
+          const sType = data.scan_type || 'TIME_IN';
+          const rec = {
+            id: 'local_' + Date.now(),
+            student_id: st.studentId,
+            student_name: st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim(),
+            department: st.department,
+            section: st.section,
+            activity_name: actName,
+            scan_type: sType,
+            status: sType === 'TIME_OUT' ? 'Present' : 'Timed In',
+            scanned_at: new Date().toISOString()
+          };
+          try {
+            const curRecords = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+            curRecords.unshift(rec);
+            localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(curRecords.slice(0, 1000)));
+          } catch (_) {}
           return {
             success: true,
-            message: `Attendance logged for ${st.name || st.studentId}`,
+            message: `Attendance logged successfully for ${st.name || st.studentId}`,
             student: st,
-            record: {
-              student_id: st.studentId,
-              student_name: st.name || `${st.firstName || ''} ${st.lastName || ''}`.trim(),
-              department: st.department,
-              section: st.section,
-              activity_name: data.activity_name,
-              scan_type: data.scan_type || 'TIME_IN',
-              scanned_at: new Date().toISOString()
-            }
+            record: rec
           };
         }
       } catch (_) {}
