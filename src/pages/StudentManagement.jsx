@@ -39,6 +39,7 @@ function StudentManagement() {
     lastName: '',
     firstName: '',
     middleName: '',
+    suffix: '',
     name: '',
     email: '',
     street: '',
@@ -148,8 +149,8 @@ function StudentManagement() {
       if (newValue.length === 4 && parseInt(newValue) > currentYear) {
         newValue = currentYear.toString();
       }
-    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact', 'emergencyName'].includes(name)) {
-      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g, ''));
+    } else if (['firstName', 'lastName', 'middleName', 'suffix', 'emergencyContact', 'emergencyName'].includes(name)) {
+      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ0-9.\s'-]/g, ''));
     } else if (['street', 'municipality', 'province'].includes(name)) {
       newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, ''));
     }
@@ -188,7 +189,7 @@ function StudentManagement() {
 
   const resetFormData = () => {
     setFormData({
-      studentId: '', lastName: '', firstName: '', middleName: '', name: '',
+      studentId: '', lastName: '', firstName: '', middleName: '', suffix: '', name: '',
       email: '', street: '', municipality: '', province: '', address: '',
       department: '', year: '', yearLevel: '', program: '', section: '',
       contactNumber: '09', birthMonth: '', birthDay: '', birthYear: '', age: '',
@@ -285,13 +286,14 @@ function StudentManagement() {
 
     const cleanLastName = toTitleCase(formData.lastName.trim());
     const cleanFirstName = toTitleCase(formData.firstName.trim());
-    const cleanMiddleName = toTitleCase(formData.middleName.trim());
+    const cleanMiddleName = toTitleCase((formData.middleName || '').trim());
+    const cleanSuffix = (formData.suffix || '').trim();
     const cleanStreet = toTitleCase(formData.street.trim());
     const cleanMunicipality = toTitleCase(formData.municipality.trim());
     const cleanProvince = toTitleCase(formData.province.trim());
     const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
 
-    const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim();
+    const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim();
     const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`;
 
     const studentPayload = {
@@ -299,6 +301,7 @@ function StudentManagement() {
       lastName: cleanLastName,
       firstName: cleanFirstName,
       middleName: cleanMiddleName,
+      suffix: cleanSuffix || null,
       street: cleanStreet,
       municipality: cleanMunicipality,
       province: cleanProvince,
@@ -410,12 +413,13 @@ function StudentManagement() {
       const cleanLastName = toTitleCase((formData.lastName || '').trim());
       const cleanFirstName = toTitleCase((formData.firstName || '').trim());
       const cleanMiddleName = toTitleCase((formData.middleName || '').trim());
+      const cleanSuffix = (formData.suffix || '').trim();
       const cleanStreet = toTitleCase((formData.street || '').trim());
       const cleanMunicipality = toTitleCase((formData.municipality || '').trim());
       const cleanProvince = toTitleCase((formData.province || '').trim());
       const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
 
-      const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim() || formData.name;
+      const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim() || formData.name;
       const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`.replace(/^,\s*|,\s*$/g, '') || formData.address;
 
       const payload = {
@@ -423,6 +427,7 @@ function StudentManagement() {
         lastName: cleanLastName,
         firstName: cleanFirstName,
         middleName: cleanMiddleName,
+        suffix: cleanSuffix || null,
         street: cleanStreet,
         municipality: cleanMunicipality,
         province: cleanProvince,
@@ -550,6 +555,7 @@ function StudentManagement() {
       lastName: toTitleCase(lastName),
       firstName: toTitleCase(firstName),
       middleName: toTitleCase(middleName),
+      suffix: student.suffix ? String(student.suffix) : '',
       name: String(student.name || ''),
       email: String(student.email || ''),
       department: String(student.department || 'CWTS'),
@@ -1089,7 +1095,7 @@ function StudentManagement() {
                     1. Personal Information & Address
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
@@ -1122,6 +1128,17 @@ function StudentManagement() {
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Santos (Optional)"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                      <input
+                        type="text"
+                        name="suffix"
+                        value={formData.suffix || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Jr., Sr., III (Optional)"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                       />
                     </div>
@@ -1233,14 +1250,10 @@ function StudentManagement() {
                         required
                       >
                         <option value="">Select Section</option>
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
-                        <option value="D">Section D</option>
-                        <option value="CWTS-1">CWTS-1</option>
-                        <option value="CWTS-2">CWTS-2</option>
-                        <option value="LTS-1">LTS-1</option>
-                        <option value="ROTC-1">ROTC-1</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
                       </select>
                     </div>
                     <div>
@@ -1633,7 +1646,7 @@ function StudentManagement() {
                     <User className="w-4 h-4 text-emerald-600" />
                     Personal Details &amp; Name Breakdown
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID Number</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.studentId}</span>
@@ -1654,6 +1667,12 @@ function StudentManagement() {
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Middle Name</span>
                       <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
                         {currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '(None)'}
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Suffix</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                        {currentViewStudent.suffix || '—'}
                       </span>
                     </div>
                   </div>
@@ -1911,7 +1930,7 @@ function StudentManagement() {
                     1. Personal Information &amp; Address
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
@@ -1944,6 +1963,17 @@ function StudentManagement() {
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Reyes"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                      <input
+                        type="text"
+                        name="suffix"
+                        value={formData.suffix || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Jr., Sr., III (Optional)"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                       />
                     </div>
@@ -2054,14 +2084,10 @@ function StudentManagement() {
                         required
                       >
                         <option value="">Select Section</option>
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
-                        <option value="D">Section D</option>
-                        <option value="CWTS-1">CWTS-1</option>
-                        <option value="CWTS-2">CWTS-2</option>
-                        <option value="LTS-1">LTS-1</option>
-                        <option value="ROTC-1">ROTC-1</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
                       </select>
                     </div>
                     <div>

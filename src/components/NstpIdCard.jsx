@@ -15,7 +15,7 @@ export function NstpIdCard({ student }) {
 
   const studentName = (
     student.name ||
-    `${student.lastName || ''}, ${student.firstName || ''} ${student.middleName ? student.middleName.charAt(0) + '.' : ''}`
+    `${student.lastName || ''}, ${student.firstName || ''} ${student.middleName ? student.middleName.charAt(0) + '.' : ''}${student.suffix ? ' ' + student.suffix : ''}`
   ).trim().toUpperCase() || 'STUDENT NAME';
 
   const dept = (student.department || 'CWTS').toUpperCase();

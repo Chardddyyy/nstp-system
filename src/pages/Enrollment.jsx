@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, FlipHorizontal } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw } from 'lucide-react';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
@@ -27,6 +27,7 @@ function Enrollment() {
       lastName: '',
       firstName: '',
       middleName: '',
+      suffix: '',
       studentId: '',
       street: '',
       municipality: '',
@@ -191,7 +192,6 @@ function Enrollment() {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraTarget, setCameraTarget] = useState('regform'); // 'regform' or 'idphoto'
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' or 'user'
-  const [cameraMirror, setCameraMirror] = useState(false); // strictly unmirrored natural capture by default
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -211,7 +211,6 @@ function Enrollment() {
     try {
       setCameraTarget(target);
       setFacingMode(preferredFacing);
-      setCameraMirror(false); // Default to strictly normal non-mirrored
       stopCameraStream();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -262,16 +261,8 @@ function Enrollment() {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
     
-    if (cameraMirror) {
-      ctx.save();
-      ctx.translate(w, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, w, h);
-      ctx.restore();
-    } else {
-      // Natural True-to-life Unmirrored Capture (Text & Faces in correct orientation)
-      ctx.drawImage(video, 0, 0, w, h);
-    }
+    // Natural True-to-life Unmirrored Capture (Text & Faces in correct orientation)
+    ctx.drawImage(video, 0, 0, w, h);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
     if (cameraTarget === 'idphoto') {
@@ -297,7 +288,7 @@ function Enrollment() {
   const handleStartFresh = () => {
     localStorage.removeItem('enrollmentFormData');
     setFormData({
-      lastName: '', firstName: '', middleName: '', studentId: '',
+      lastName: '', firstName: '', middleName: '', suffix: '', studentId: '',
       street: '', municipality: '', province: '',
       program: '', yearLevel: '', section: '', nstpComponent: '',
       birthMonth: '', birthDay: '', birthYear: '', age: '', civilStatus: '', sex: '',
@@ -611,9 +602,9 @@ function Enrollment() {
     } else if (name === 'birthYear') {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
-    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact'].includes(name)) {
+    } else if (['firstName', 'lastName', 'middleName', 'suffix', 'emergencyContact'].includes(name)) {
       // Allow letters and eñe (ñ / Ñ); Title Case only
-      const cleanLetters = value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ\s'-]/g, '');
+      const cleanLetters = value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ0-9.\s'-]/g, '');
       newValue = toTitleCase(cleanLetters);
     } else if (['street', 'municipality', 'province'].includes(name)) {
       // Address fields: allow numbers, letters, and eñe (ñ / Ñ); Title Case only
@@ -655,7 +646,8 @@ function Enrollment() {
     try {
       const cleanLastName = toTitleCase(formData.lastName.trim());
       const cleanFirstName = toTitleCase(formData.firstName.trim());
-      const cleanMiddleName = toTitleCase(formData.middleName.trim());
+      const cleanMiddleName = toTitleCase((formData.middleName || '').trim());
+      const cleanSuffix = (formData.suffix || '').trim();
       const cleanStreet = toTitleCase(formData.street.trim());
       const cleanMunicipality = toTitleCase(formData.municipality.trim());
       const cleanProvince = toTitleCase(formData.province.trim());
@@ -682,11 +674,12 @@ function Enrollment() {
         lastName: cleanLastName,
         firstName: cleanFirstName,
         middleName: cleanMiddleName,
+        suffix: cleanSuffix || null,
         street: cleanStreet,
         municipality: cleanMunicipality,
         province: cleanProvince,
         emergencyContact: cleanEmergencyContact,
-        fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}`.trim(),
+        fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim(),
         birthDate: cleanBirthDate,
         status: 'Pending',
         registrationPhoto: registrationPhoto,
@@ -911,7 +904,7 @@ function Enrollment() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                     <input
@@ -949,6 +942,18 @@ function Enrollment() {
                       name="middleName"
                       placeholder="Santos (Optional)"
                       value={formData.middleName}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                    <input
+                      type="text"
+                      name="suffix"
+                      placeholder="Jr., Sr., III (Optional)"
+                      value={formData.suffix || ''}
                       onChange={handleChange}
                       className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
                     />
@@ -1087,14 +1092,10 @@ function Enrollment() {
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.section ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     >
                       <option value="">Select Section</option>
-                      <option value="A">Section A</option>
-                      <option value="B">Section B</option>
-                      <option value="C">Section C</option>
-                      <option value="D">Section D</option>
-                      <option value="CWTS-1">CWTS-1</option>
-                      <option value="CWTS-2">CWTS-2</option>
-                      <option value="LTS-1">LTS-1</option>
-                      <option value="ROTC-1">ROTC-1</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
                     </select>
                     {errors.section && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.section}</p>}
                   </div>
@@ -1817,8 +1818,8 @@ function Enrollment() {
                         autoPlay
                         className="w-full h-full object-cover enrollment-camera-video"
                         style={{ 
-                          transform: cameraMirror ? 'scaleX(-1)' : 'none',
-                          WebkitTransform: cameraMirror ? 'scaleX(-1)' : 'none'
+                          transform: 'none',
+                          WebkitTransform: 'none'
                         }}
                       />
                       
@@ -1849,30 +1850,16 @@ function Enrollment() {
                       )}
                     </div>
 
-                    <div className="p-4 sm:p-5 bg-emerald-950 flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={toggleCameraFacing}
-                          className="p-2.5 sm:p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
-                          title="Switch Front / Back Camera"
-                        >
-                          <SwitchCamera className="w-4 h-4 text-amber-400" />
-                          <span>{facingMode === 'user' ? 'Front' : 'Back'}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setCameraMirror(!cameraMirror)}
-                          className={`p-2.5 sm:p-3 rounded-2xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
-                            cameraMirror ? 'bg-amber-400 text-emerald-950 font-black' : 'bg-emerald-900 hover:bg-emerald-800 text-emerald-200'
-                          }`}
-                          title="Toggle Mirror Orientation"
-                        >
-                          <FlipHorizontal className="w-4 h-4" />
-                          <span>{cameraMirror ? 'Mirrored' : 'Normal'}</span>
-                        </button>
-                      </div>
+                    <div className="p-4 sm:p-5 bg-emerald-950 flex items-center justify-between gap-2 sm:gap-3">
+                      <button
+                        type="button"
+                        onClick={toggleCameraFacing}
+                        className="p-2.5 sm:p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                        title="Switch Front / Back Camera"
+                      >
+                        <SwitchCamera className="w-4 h-4 text-amber-400" />
+                        <span>{facingMode === 'user' ? 'Front Camera' : 'Back Camera'}</span>
+                      </button>
 
                       <button
                         type="button"

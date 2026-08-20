@@ -1648,6 +1648,7 @@ function AdminDashboard() {
                         ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
                         ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
                         ['Middle Name', selectedEnrollment.middleName || '—'],
+                        ['Suffix', selectedEnrollment.suffix || '—'],
                         ['Student ID', selectedEnrollment.studentId],
                         ['Email', selectedEnrollment.email],
                         ['Contact No.', selectedEnrollment.contactNumber],

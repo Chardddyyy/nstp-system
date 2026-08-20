@@ -209,6 +209,7 @@ async function ensureAllCoreTables() {
       firstName VARCHAR(100),
       lastName VARCHAR(100),
       middleName VARCHAR(100),
+      suffix VARCHAR(50),
       street VARCHAR(255),
       municipality VARCHAR(100),
       province VARCHAR(100),
@@ -318,6 +319,7 @@ async function ensureAllCoreTables() {
       first_name VARCHAR(100) NOT NULL,
       last_name VARCHAR(100) NOT NULL,
       middle_name VARCHAR(100),
+      suffix VARCHAR(50),
       email VARCHAR(255) NOT NULL,
       course VARCHAR(100) NOT NULL,
       year_level VARCHAR(50) NOT NULL,
@@ -666,6 +668,7 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN firstName VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN lastName VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN middleName VARCHAR(100)',
+    'ALTER TABLE students ADD COLUMN suffix VARCHAR(50)',
     'ALTER TABLE students ADD COLUMN registeredVoter VARCHAR(20)',
     'ALTER TABLE students ADD COLUMN registrationPhoto LONGTEXT NULL',
     'ALTER TABLE students ADD COLUMN registration_photo LONGTEXT NULL',
@@ -682,6 +685,7 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN firstName VARCHAR(100)',
     'ALTER TABLE enrollments ADD COLUMN lastName VARCHAR(100)',
     'ALTER TABLE enrollments ADD COLUMN middleName VARCHAR(100)',
+    'ALTER TABLE enrollments ADD COLUMN suffix VARCHAR(50)',
     'ALTER TABLE enrollments ADD COLUMN homeAddress TEXT',
     'ALTER TABLE enrollments ADD COLUMN address TEXT',
     'ALTER TABLE enrollments ADD COLUMN contactNumber VARCHAR(50)',
@@ -1423,7 +1427,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       contactNumber, address, gender, sex, birthDate, birthMonth, birthDay, birthYear,
       age, civilStatus, bloodType, height, weight, facebookAccount,
       emergencyName, emergencyContact, emergencyNumber,
-      firstName, lastName, middleName, registeredVoter, isVoter,
+      firstName, lastName, middleName, suffix, registeredVoter, isVoter,
       street, municipality, province, registrationPhoto, registration_photo
     } = req.body;
 
@@ -1449,7 +1453,8 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       }
     }
 
-    const finalName = name || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
+    const finalSuffix = n(suffix);
+    const finalName = name || `${lastName || ''}, ${firstName || ''} ${middleName || ''}${finalSuffix ? ' ' + finalSuffix : ''}`.replace(/\s+/g, ' ').trim();
     const finalGender = n(gender) || n(sex);
     const finalYear = n(yearLevel) || n(year);
     const finalEmergency = n(emergencyContact) || n(emergencyName);
@@ -1462,15 +1467,15 @@ app.post('/api/students', authenticateToken, async (req, res) => {
         contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear,
         age, civilStatus, bloodType, height, weight, facebookAccount,
         emergencyContact, emergencyNumber,
-        firstName, lastName, middleName, registeredVoter,
+        firstName, lastName, middleName, suffix, registeredVoter,
         street, municipality, province, registrationPhoto, registration_photo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         studentId, finalName, n(email), department, n(section), n(semester), n(schoolYear), n(program), finalYear,
         n(contactNumber), n(address), finalGender, safeBirthDate, n(birthMonth), n(birthDay), n(birthYear),
         n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount),
         finalEmergency, n(emergencyNumber),
-        n(firstName), n(lastName), n(middleName), finalVoter,
+        n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
         n(street), n(municipality), n(province), finalPhoto, finalPhoto
       ]
     );
@@ -1513,7 +1518,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       contactNumber, address, gender, sex, birthDate, birthMonth, birthDay, birthYear,
       age, civilStatus, bloodType, height, weight, facebookAccount,
       emergencyName, emergencyContact, emergencyNumber,
-      firstName, lastName, middleName, registeredVoter, isVoter,
+      firstName, lastName, middleName, suffix, registeredVoter, isVoter,
       street, municipality, province, registrationPhoto, registration_photo
     } = req.body;
 
@@ -1544,6 +1549,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    const finalSuffix = n(suffix);
     const finalGender = n(gender) || n(sex);
     const finalYear = n(yearLevel) || n(year);
     const finalEmergency = n(emergencyContact) || n(emergencyName);
@@ -1556,7 +1562,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?,
          birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?,
          height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
-         firstName = ?, lastName = ?, middleName = ?, registeredVoter = ?,
+         firstName = ?, lastName = ?, middleName = ?, suffix = ?, registeredVoter = ?,
          street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?
        WHERE id = ?`,
       [
@@ -1564,7 +1570,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         n(program), finalYear, n(contactNumber), n(address), finalGender, safeBirthDate,
         n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType),
         n(height), n(weight), n(facebookAccount), finalEmergency, n(emergencyNumber),
-        n(firstName), n(lastName), n(middleName), finalVoter,
+        n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
         n(street), n(municipality), n(province), finalPhoto, finalPhoto,
         id
       ]
@@ -3178,7 +3184,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     // ──────────────────────────────────────────────────────────────────────
 
     const {
-      firstName, lastName, middleName, fullName,
+      firstName, lastName, middleName, suffix, fullName,
       studentId, email, contactNumber,
       birthDate, birthMonth, birthDay, birthYear,
       age, civilStatus, gender, sex,
@@ -3223,7 +3229,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       return res.status(400).json({ message: 'Invalid Email Address: Please enter a valid email address.' });
     }
 
-    const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}`.trim();
+    const name = fullName || `${lastName || ''}, ${firstName || ''} ${middleName || ''}${suffix ? ' ' + suffix : ''}`.replace(/\s+/g, ' ').trim();
     const finalGender = gender || sex;
     const finalAddress = street ? `${street}, ${municipality || ''}, ${province || ''}`.replace(/, ,/g, ',').replace(/,\s*$/, '') : (homeAddress || address);
     const finalEmergencyContact = emergencyName || emergencyContact;
@@ -3251,14 +3257,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       try {
         const [result] = await pool.execute(
           `INSERT INTO enrollments
-           (student_name, firstName, lastName, middleName, email, department, studentId, contactNumber,
+           (student_name, firstName, lastName, middleName, suffix, email, department, studentId, contactNumber,
             birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
             gender, height, weight, facebookAccount, bloodType, address,
             street, municipality, province,
             program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter, ip_address, user_agent)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            name || null, firstName, lastName, middleName || null, String(email).trim(), nstpComponent || 'CWTS', sid, contactDigits,
+            name || null, firstName, lastName, middleName || null, suffix || null, String(email).trim(), nstpComponent || 'CWTS', sid, contactDigits,
             finalBirthDate, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
             finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
             street || null, municipality || null, province || null,
@@ -3275,9 +3281,9 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
         }
         // Self-healing fallback insert with core columns
         const [fbResult] = await pool.execute(
-          `INSERT INTO enrollments (student_name, firstName, lastName, email, department, studentId, contactNumber, program, section, yearLevel, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-          [name || `${lastName}, ${firstName}`, firstName, lastName, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
+          `INSERT INTO enrollments (student_name, firstName, lastName, middleName, suffix, email, department, studentId, contactNumber, program, section, yearLevel, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+          [name || `${lastName}, ${firstName}`, firstName, lastName, middleName || null, suffix || null, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
         );
         return fbResult.insertId;
       }
@@ -3288,6 +3294,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       student_name: name || null,
       firstName, lastName,
       middleName: middleName || null,
+      suffix: suffix || null,
       email,
       department: nstpComponent || 'CWTS',
       studentId,
@@ -3364,17 +3371,16 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               age, civilStatus, height, weight,
               bloodType, facebookAccount, emergencyContact, emergencyNumber,
               street, municipality, province,
-              firstName, lastName, middleName, registeredVoter,
+              firstName, lastName, middleName, suffix, registeredVoter,
               registrationPhoto, registration_photo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               enrollment.studentId,
-              enrollment.student_name,
+              enrollment.student_name || `${enrollment.lastName}, ${enrollment.firstName} ${enrollment.middleName || ''}${enrollment.suffix ? ' ' + enrollment.suffix : ''}`.replace(/\s+/g, ' ').trim(),
               enrollment.email,
               enrollment.department,
               'Active',
               enrollment.section,
-              enrollment.yearLevel,
               enrollment.program,
               enrollment.homeAddress || enrollment.address || null,
               enrollment.contactNumber,
