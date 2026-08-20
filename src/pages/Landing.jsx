@@ -164,11 +164,18 @@ function Landing() {
   }, []);
 
   // Real-time Telemetry & Active Online Users state
-  const [telemetry, setTelemetry] = useState({
-    totalVisitors: 47,
-    totalUsers: 47,
-    activeOnlineCount: 1,
-    activeUsers: []
+  const [telemetry, setTelemetry] = useState(() => {
+    let cached = 0;
+    try {
+      cached = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
+    } catch (_) {}
+    return {
+      totalVisitors: cached,
+      totalUsers: cached,
+      totalRegisteredUsers: cached,
+      activeOnlineCount: 1,
+      activeUsers: []
+    };
   });
 
   useEffect(() => {
@@ -262,15 +269,14 @@ function Landing() {
                 <h1 className="text-[13px] sm:text-base md:text-lg font-black tracking-tight truncate leading-tight text-white group-hover:text-amber-300 transition-colors">
                   Cavite State University
                 </h1>
-                <span className="hidden sm:inline-block bg-amber-400 text-emerald-950 font-black text-[9px] px-1.5 py-0.2 rounded font-mono uppercase tracking-wider">
-                  Naic
-                </span>
               </div>
-              <p className="text-emerald-300 text-[9px] sm:text-xs truncate font-medium flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                <span className="hidden xs:inline">National Service Training Program</span>
-                <span className="xs:hidden">NSTP</span>
-                <span> Portal</span>
+              <p className="text-amber-400 text-[9px] sm:text-xs truncate font-bold flex items-center gap-1 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                <span>Naic Campus</span>
+                <span className="text-amber-300/80">•</span>
+                <span className="hidden xs:inline text-emerald-200 font-medium">National Service Training Program</span>
+                <span className="xs:hidden text-emerald-200 font-medium">NSTP</span>
+                <span className="text-emerald-200 font-medium"> Portal</span>
               </p>
             </div>
           </Link>
@@ -525,8 +531,7 @@ function Landing() {
               <div className={`max-w-4xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
-                  <Award className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-300" />
+                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
                   <span>{image.badge}</span>
                 </span>
                 
@@ -828,9 +833,9 @@ function Landing() {
               {/* Video Credits */}
               <div className="bg-amber-400/10 border border-amber-400/25 px-4 py-2.5 rounded-2xl text-left shrink-0 w-full sm:w-auto">
                 <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
-                  <Award className="w-3.5 h-3.5 text-amber-400" /> Video Credits:
+                  <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Video Credits:
                 </p>
-                <p className="text-xs font-black text-white mt-0.5 whitespace-nowrap">
+                <p className="text-xs font-black text-white mt-0.5 break-words sm:whitespace-nowrap">
                   University of the Philippines Diliman (UP Diliman)
                 </p>
               </div>
@@ -942,7 +947,7 @@ function Landing() {
               <p className="text-emerald-200/90 text-[10px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed mb-2 max-w-md line-clamp-3 sm:line-clamp-none">
                 A premier institution committed to providing quality education and producing morally upright graduates through the National Service Training Program (NSTP).
               </p>
-              <p className="text-amber-400/90 text-[9px] sm:text-xs font-bold tracking-wide">Truth • Integrity • Excellence • Service</p>
+              <p className="text-amber-400/90 text-[8px] xs:text-[9.5px] sm:text-xs font-bold tracking-tight sm:tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Truth • Integrity • Excellence • Service</p>
             </div>
 
             {/* CvSU Naic Contact Info (Right Side - strictly on the same row) */}
@@ -951,13 +956,14 @@ function Landing() {
               <ul className="space-y-1.5 sm:space-y-2 text-emerald-200 text-[10px] sm:text-xs md:text-sm font-medium w-full flex flex-col items-end">
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
-                    href="https://www.cvsu-naic.edu.ph/"
+                    href="https://cvsu.edu.ph/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
+                    title="Cavite State University Official Portal"
                   >
-                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">cvsu-naic.edu.ph</span>
-                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Cavite State University - Naic</span>
+                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
@@ -968,7 +974,7 @@ function Landing() {
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                   >
                     <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">CvSU - Naic FB</span>
-                    <Facebook className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <Facebook className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
@@ -977,7 +983,7 @@ function Landing() {
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                   >
                     <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">info@cvsu-naic.edu.ph</span>
-                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
@@ -989,12 +995,18 @@ function Landing() {
                     title="View Cavite State University Naic Campus on Google Maps"
                   >
                     <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Naic, Cavite</span>
-                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2 text-emerald-200">
-                  <span className="text-[9.5px] xs:text-[11px] sm:text-sm font-semibold whitespace-nowrap">(046) 890-5138</span>
-                  <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                  <a
+                    href="tel:0468905138"
+                    className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
+                    title="Call Cavite State University - Naic Campus"
+                  >
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm font-semibold whitespace-nowrap group-hover:underline">(046) 890-5138</span>
+                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  </a>
                 </li>
               </ul>
             </div>

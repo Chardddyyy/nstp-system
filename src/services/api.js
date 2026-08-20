@@ -569,7 +569,7 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  const cachedTotal = parseInt(localStorage.getItem('nstp_cached_total_users') || '47', 10);
+  const cachedTotal = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
 
   return {
     totalVisitors: cachedTotal,

@@ -1687,7 +1687,7 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => startLiveCamera('idphoto', 'user')}
+                        onClick={() => startLiveCamera('idphoto', 'environment')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />

@@ -159,6 +159,300 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// ── Auto-provision all core database tables if not exists ────────────────────
+async function ensureAllCoreTables() {
+  const tableDefinitions = [
+    `CREATE TABLE IF NOT EXISTS users (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      role ENUM('admin', 'instructor') NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      department VARCHAR(100),
+      avatar VARCHAR(50) DEFAULT 'default',
+      profilePicture TEXT,
+      phone VARCHAR(50),
+      bio TEXT,
+      last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS students (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      studentId VARCHAR(50) UNIQUE NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      department ENUM('ROTC', 'CWTS', 'LTS') NOT NULL,
+      status ENUM('Active', 'Inactive', 'Completed') DEFAULT 'Active',
+      semester VARCHAR(50),
+      schoolYear VARCHAR(50),
+      course VARCHAR(100),
+      program VARCHAR(100),
+      year VARCHAR(50),
+      section VARCHAR(50),
+      nstp_section VARCHAR(50),
+      contactNumber VARCHAR(50),
+      address TEXT,
+      birthDate DATE,
+      birthMonth VARCHAR(2),
+      birthDay VARCHAR(2),
+      birthYear VARCHAR(4),
+      age VARCHAR(10),
+      civilStatus VARCHAR(50),
+      gender VARCHAR(20),
+      height VARCHAR(10),
+      weight VARCHAR(10),
+      facebookAccount VARCHAR(255),
+      emergencyContact VARCHAR(255),
+      emergencyNumber VARCHAR(50),
+      firstName VARCHAR(100),
+      lastName VARCHAR(100),
+      middleName VARCHAR(100),
+      street VARCHAR(255),
+      municipality VARCHAR(100),
+      province VARCHAR(100),
+      registeredVoter VARCHAR(20),
+      registrationPhoto LONGTEXT,
+      registration_photo LONGTEXT,
+      photo LONGTEXT,
+      id_photo_2x2 LONGTEXT,
+      profilePicture TEXT,
+      nstp_serial_id VARCHAR(50),
+      qr_token VARCHAR(100),
+      id_issued_at DATETIME,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_students_department (department),
+      INDEX idx_students_status (status),
+      INDEX idx_students_program (program)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS reports (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      department VARCHAR(50),
+      status ENUM('Draft', 'Submitted', 'Reviewed') DEFAULT 'Draft',
+      due_date DATE,
+      created_by INT,
+      batch_year INT,
+      reference_file_data LONGTEXT,
+      reference_file_name VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_reports_department (department),
+      INDEX idx_reports_batch_year (batch_year),
+      INDEX idx_reports_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS report_submissions (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      report_id INT NOT NULL,
+      instructor_id INT NOT NULL,
+      content TEXT,
+      file_data LONGTEXT,
+      file_name VARCHAR(255),
+      submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_report_submissions_report (report_id),
+      INDEX idx_report_submissions_instructor (instructor_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS report_comments (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      report_id INT NOT NULL,
+      user_id INT NOT NULL,
+      comment TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_report_comments_report (report_id),
+      INDEX idx_report_comments_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS conversations (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      type ENUM('direct', 'group') NOT NULL DEFAULT 'direct',
+      title VARCHAR(255),
+      department VARCHAR(50),
+      created_by INT,
+      last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_sender_id INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_conversations_type (type),
+      INDEX idx_conversations_department (department)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS conversation_participants (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      conversation_id INT NOT NULL,
+      user_id INT NOT NULL,
+      joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_read_at TIMESTAMP NULL,
+      INDEX idx_cp_conversation (conversation_id),
+      INDEX idx_cp_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS messages (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      conversation_id INT NOT NULL,
+      sender_id INT NOT NULL,
+      content TEXT,
+      type VARCHAR(20) DEFAULT 'text',
+      attachment_url TEXT,
+      attachment_name VARCHAR(255),
+      attachment_type VARCHAR(100),
+      attachment_size INT,
+      deleted_snapshot JSON NULL,
+      deleted_at TIMESTAMP NULL,
+      deleted_for JSON NULL,
+      deleted_for_everyone BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_messages_conversation (conversation_id),
+      INDEX idx_messages_sender (sender_id),
+      INDEX idx_messages_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS enrollments (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      student_id VARCHAR(50) NOT NULL,
+      first_name VARCHAR(100) NOT NULL,
+      last_name VARCHAR(100) NOT NULL,
+      middle_name VARCHAR(100),
+      email VARCHAR(255) NOT NULL,
+      course VARCHAR(100) NOT NULL,
+      year_level VARCHAR(50) NOT NULL,
+      section VARCHAR(50),
+      department ENUM('ROTC', 'CWTS', 'LTS') NOT NULL,
+      status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
+      contact_number VARCHAR(50),
+      address TEXT,
+      emergency_contact VARCHAR(255),
+      emergency_number VARCHAR(50),
+      birth_date DATE,
+      birth_month VARCHAR(2),
+      birth_day VARCHAR(2),
+      birth_year VARCHAR(4),
+      age VARCHAR(10),
+      civil_status VARCHAR(50),
+      gender VARCHAR(20),
+      height VARCHAR(10),
+      weight VARCHAR(10),
+      facebook_account VARCHAR(255),
+      street VARCHAR(255),
+      municipality VARCHAR(100),
+      province VARCHAR(100),
+      registered_voter VARCHAR(20),
+      registration_photo LONGTEXT,
+      id_photo_2x2 LONGTEXT,
+      photo LONGTEXT,
+      reg_form LONGTEXT,
+      rejection_reason TEXT,
+      reviewed_by INT,
+      reviewed_at DATETIME,
+      nstp_serial_id VARCHAR(50),
+      qr_token VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_enrollments_student_id (student_id),
+      INDEX idx_enrollments_status (status),
+      INDEX idx_enrollments_department (department)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS calls (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      conversation_id INT,
+      caller_id INT NOT NULL,
+      receiver_id INT NULL,
+      group_call_id VARCHAR(100) NULL,
+      call_type VARCHAR(20) DEFAULT 'voice',
+      status VARCHAR(20) DEFAULT 'ringing',
+      offer_sdp TEXT NULL,
+      answer_sdp TEXT NULL,
+      caller_ice TEXT NULL,
+      receiver_ice TEXT NULL,
+      started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      connected_at TIMESTAMP NULL,
+      ended_at TIMESTAMP NULL,
+      duration INT DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS archived_years (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      school_year VARCHAR(50) NOT NULL UNIQUE,
+      is_locked BOOLEAN DEFAULT FALSE,
+      archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      archived_by INT,
+      stats JSON
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS current_batch (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      school_year VARCHAR(50) NOT NULL,
+      semester VARCHAR(50) NOT NULL,
+      is_active BOOLEAN DEFAULT TRUE,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS audit_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      action VARCHAR(100) NOT NULL,
+      user_id INT NULL,
+      detail TEXT NULL,
+      ip VARCHAR(45) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS active_visitors (
+      visitor_id VARCHAR(36) PRIMARY KEY,
+      page_url VARCHAR(500) NOT NULL,
+      user_agent TEXT,
+      first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_active_visitors_last_seen (last_seen)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS attendance_records (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      student_id VARCHAR(50) NOT NULL,
+      student_name VARCHAR(255) NULL,
+      department VARCHAR(50) NULL,
+      section VARCHAR(50) NULL,
+      activity_name VARCHAR(255) DEFAULT 'NSTP Session',
+      scan_type ENUM('TIME_IN', 'TIME_OUT') DEFAULT 'TIME_IN',
+      scanned_by INT NULL,
+      scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      status ENUM('Present', 'Late', 'Excused') DEFAULT 'Present',
+      notes TEXT NULL,
+      INDEX idx_attendance_student (student_id),
+      INDEX idx_attendance_dept (department),
+      INDEX idx_attendance_date (scanned_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+  ];
+
+  for (const sql of tableDefinitions) {
+    try {
+      await pool.execute(sql);
+    } catch (err) {
+      console.warn('Table initialization notice:', err.message);
+    }
+  }
+
+  // Seed default admin user if not exists
+  try {
+    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE email = ?', ['admin@cvsu.edu.ph']);
+    if (existingAdmin.length === 0) {
+      const hashedPw = await bcrypt.hash('Admin@123', 12);
+      await pool.execute(
+        'INSERT INTO users (email, password, role, name, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
+        ['admin@cvsu.edu.ph', hashedPw, 'admin', 'NSTP Administrator', 'NSTP Office', 'default']
+      );
+      console.log('Seeded default admin user: admin@cvsu.edu.ph');
+    }
+  } catch (err) {
+    console.warn('Admin seed notice:', err.message);
+  }
+}
+
 // ── Audit log ─────────────────────────────────────────────────────────────────
 async function ensureAuditLogs() {
   try {
@@ -4009,6 +4303,8 @@ async function startServer() {
   }
 
   if (dbConnected) {
+    console.log('Ensuring all core tables exist...');
+    await ensureAllCoreTables();
     console.log('Running schema migrations...');
     await Promise.all([
       ensureAuditLogs(),
@@ -4028,6 +4324,15 @@ async function startServer() {
       console.warn('Schema migration warning:', err.message);
     });
     console.log('Migrations complete.');
+
+    // Background keepalive ping to prevent cloud database connections from dropping
+    setInterval(async () => {
+      try {
+        await pool.execute('SELECT 1');
+      } catch (e) {
+        console.warn('DB Keepalive ping warning:', e.message);
+      }
+    }, 45000);
 
     // Hash any plain-text passwords left in the users table
     try {
