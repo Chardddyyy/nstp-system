@@ -618,11 +618,11 @@ function AdminDashboard() {
               <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
-              <div className="min-w-0 flex-1 pr-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                 </h1>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
+                <p className="text-emerald-200 text-[10px] xs:text-[11px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'} 👋`}
                 </p>
               </div>
@@ -1164,15 +1164,24 @@ function AdminDashboard() {
                         className="p-3 hover:bg-green-50 cursor-pointer transition-colors"
                         onClick={() => setSelectedEnrollment(enrollment)}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{enrollment.fullName}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{enrollment.studentId} · {enrollment.yearLevel} · Sec {enrollment.section || '-'}</p>
-                            <p className="text-xs text-gray-400 truncate">{enrollment.email}</p>
+                        <div className="flex items-start gap-3 mb-2.5">
+                          <div className="w-12 h-14 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-2xs">
+                            <img 
+                              src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
+                              alt="2x2" 
+                              className="w-full h-full object-cover" 
+                            />
                           </div>
-                          <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${deptColor}`}>
-                            {enrollment.nstpComponent || '—'}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-1">
+                              <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{enrollment.fullName}</p>
+                              <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${deptColor}`}>
+                                {enrollment.nstpComponent || '—'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 font-mono mt-0.5">{enrollment.studentId} · {enrollment.yearLevel} · Sec {enrollment.section || '-'}</p>
+                            <p className="text-[10.5px] text-gray-400 truncate">{enrollment.email}</p>
+                          </div>
                         </div>
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
@@ -1224,8 +1233,19 @@ function AdminDashboard() {
                         >
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
                           <td className="px-4 py-3">
-                            <p className="text-sm font-medium text-gray-900">{enrollment.fullName}</p>
-                            <p className="text-xs text-gray-500">{enrollment.email}</p>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-12 bg-gray-100 rounded-xl overflow-hidden border border-emerald-300 shrink-0 shadow-2xs">
+                                <img 
+                                  src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
+                                  alt="2x2" 
+                                  className="w-full h-full object-cover" 
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-gray-900">{enrollment.fullName}</p>
+                                <p className="text-xs text-gray-500">{enrollment.email}</p>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.section || '-'}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.yearLevel}</td>
@@ -1609,6 +1629,59 @@ function AdminDashboard() {
 
               {/* Scrollable body */}
               <div className="flex-1 overflow-y-auto overscroll-contain">
+
+                {/* Official 2x2 ID Portrait Photo Preview */}
+                <div className="p-3.5 border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-emerald-700" /> Official 2x2 ID Portrait Photo
+                    </p>
+                    {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) && (
+                      <button
+                        type="button"
+                        onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        🔍 Expand 2x2 Fullscreen
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3.5 bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80">
+                    <div 
+                      className="w-20 h-24 bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
+                      onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                      title="Click to expand 2x2 ID Photo"
+                    >
+                      {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) ? (
+                        <>
+                          <img 
+                            src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
+                            alt="2x2 ID Photo" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                            🔍 View
+                          </div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-[10px] text-center p-1 font-bold">
+                          <User className="w-6 h-6 mb-1 opacity-50" />
+                          No Photo
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-full mb-1">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" /> Official Portrait ID
+                      </span>
+                      <h4 className="text-xs font-black text-gray-900 truncate">
+                        {selectedEnrollment.fullName || 'Student 2x2 Photo'}
+                      </h4>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Click thumbnail to inspect full size 2x2 portrait photo</p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
                 <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">

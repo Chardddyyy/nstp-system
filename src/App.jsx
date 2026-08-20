@@ -496,7 +496,7 @@ function App() {
   // Handle session expiry — api.js dispatches this event so React Router can
   // navigate to /login without a hard reload, preserving any open form state.
   useEffect(() => {
-    function onSessionExpired() {
+    function onSessionExpired(e) {
       window.__nstp_session_expired__ = true;
       localStorage.removeItem('nstp_token');
       localStorage.removeItem('nstp_cached_user');
@@ -508,11 +508,11 @@ function App() {
         'padding:14px 16px', 'font-size:15px', 'font-weight:600',
         'box-shadow:0 2px 8px rgba(0,0,0,.35)',
       ].join(';');
-      banner.textContent = 'Your session has expired. Please log in again.';
+      banner.textContent = e?.detail?.message || '⚠️ Your session has been terminated because your account was logged in on another device.';
       document.body.appendChild(banner);
       setTimeout(() => {
         document.getElementById('session-expired-banner')?.remove();
-      }, 5000);
+      }, 6000);
       setUser(null);
       setLoading(false);
       window.location.hash = '#/login';
@@ -629,10 +629,18 @@ function App() {
     }
   }
 
-  async function login(email, password) {
+  async function login(email, password, forceLogin = false) {
     try {
-      const response = await authAPI.login(email, password);
-      if (!response.token) return { success: false, message: 'Invalid server response' };
+      const response = await authAPI.login(email, password, forceLogin);
+      if (response && response.warning && response.activeSession) {
+        return {
+          success: false,
+          warning: true,
+          activeSession: true,
+          message: response.message || '⚠️ Account Active: This account is currently logged in on another device.'
+        };
+      }
+      if (!response || !response.token) return { success: false, message: 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
       safeSetStorage('nstp_cached_user', response.user);

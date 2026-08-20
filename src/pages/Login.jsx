@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle } from 'lucide-react';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -9,14 +9,16 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activeSessionWarning, setActiveSessionWarning] = useState(null);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const [loadingText, setLoadingText] = useState('Connecting to Portal...');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e, forceLogin = false) => {
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
+    setActiveSessionWarning(null);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
@@ -40,9 +42,15 @@ function Login() {
     }, 14000);
 
     try {
-      const result = await login(cleanEmail, password);
+      const result = await login(cleanEmail, password, forceLogin);
       clearTimeout(timer1);
       clearTimeout(timer2);
+
+      if (result.warning && result.activeSession) {
+        setActiveSessionWarning(result.message || '⚠️ Account Active: This account is currently logged in on another device.');
+        setLoading(false);
+        return;
+      }
 
       if (result.success) {
         if (result.role === 'admin') {
@@ -143,12 +151,12 @@ function Login() {
             </div>
           </div>
 
-          {/* Right Form Card (Scaled down for Mobile) */}
-          <div className="lg:col-span-7 p-3.5 sm:p-8 flex flex-col justify-center overflow-y-auto">
-            {/* Mobile Decorative Hero Header Banner (Exact Desktop Style) */}
-            <div className="lg:hidden bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-xl p-3 mb-3 border border-emerald-800/60 shadow-sm flex items-center justify-between">
+          {/* Right Form Card (Scaled down for Mobile & Static) */}
+          <div className="lg:col-span-7 p-3.5 sm:p-7 flex flex-col justify-center">
+            {/* Mobile Decorative Hero Header Banner */}
+            <div className="lg:hidden bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-xl p-2.5 mb-2.5 border border-emerald-800/60 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 bg-white rounded-lg p-0.5 flex items-center justify-center shrink-0 shadow-xs border border-emerald-700">
+                <div className="w-7 h-7 bg-white rounded-lg p-0.5 flex items-center justify-center shrink-0 shadow-xs border border-emerald-700">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="min-w-0">
@@ -161,8 +169,8 @@ function Login() {
               </span>
             </div>
 
-            <div className="text-center sm:text-left mb-3 sm:mb-6">
-              <h2 className="text-base sm:text-3xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
+            <div className="text-center sm:text-left mb-2.5 sm:mb-5">
+              <h2 className="text-base sm:text-2xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
               <p className="text-gray-500 text-[10px] sm:text-xs mt-0.5">Sign in with your official CvSU faculty or admin credentials</p>
             </div>
 
@@ -244,7 +252,7 @@ function Login() {
               </button>
             </form>
 
-            <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10px] sm:text-xs">
+            <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10px] sm:text-xs">
               <span className="text-gray-500">Incoming Student?</span>
               <Link 
                 to="/enrollment" 
@@ -257,6 +265,41 @@ function Login() {
           </div>
         </div>
       </main>
+
+      {/* Concurrent Active Session Warning Modal */}
+      {activeSessionWarning && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white text-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-300">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-4 mx-auto border border-amber-300">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-2">
+              Account Active on Another Device
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 text-center mb-6 leading-relaxed">
+              {activeSessionWarning}
+              <br /><br />
+              <span className="font-semibold text-emerald-900">Do you want to disconnect the other session and sign in on this device?</span>
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveSessionWarning(null)}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit(null, true)}
+                className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl text-xs sm:text-sm transition-colors shadow-md cursor-pointer"
+              >
+                Disconnect &amp; Sign In
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer Bar - Matching Landing Page Edge-to-Edge Footer Bar */}
       <footer className="bg-emerald-950/90 border-t border-emerald-900 py-2 px-3 sm:px-8 text-center shrink-0 z-10">

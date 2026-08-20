@@ -311,12 +311,12 @@ function InstructorDashboard() {
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
               </div>
 
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
                   <span className="sm:hidden">{user?.department} Portal</span>
                 </h2>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">Welcome, {user?.name || 'Instructor'} 👋</p>
+                <p className="text-emerald-200 text-[10px] xs:text-[11px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">Welcome, {user?.name || 'Instructor'} 👋</p>
               </div>
             </div>
 

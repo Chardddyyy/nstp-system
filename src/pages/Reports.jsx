@@ -327,10 +327,6 @@ function Reports() {
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
                   {isAdmin ? 'Report Assignments' : 'My Reports'}
                 </h1>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                  <span className="hidden sm:inline">{isAdmin ? 'Create & manage requirements' : 'Submit & monitor required files'}</span>
-                  <span className="sm:hidden">{isAdmin ? 'Manage reports' : 'My submissions'}</span>
-                </p>
               </div>
             </div>
             {isAdmin && !viewingArchive && (

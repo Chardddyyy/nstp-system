@@ -177,9 +177,6 @@ export default function LetterFormats() {
 
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Letter Formats &amp; Attachments</h1>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                  {user?.role === 'instructor' && user?.department ? `Official forms for All & ${user.department}` : 'Download or upload official forms'}
-                </p>
               </div>
             </div>
 

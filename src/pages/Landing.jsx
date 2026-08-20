@@ -267,7 +267,7 @@ function Landing() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <h1 className="text-[13px] sm:text-base md:text-lg font-black tracking-tight truncate leading-tight text-white group-hover:text-amber-300 transition-colors">
-                  Cavite State University - Naic
+                  Cavite State University
                 </h1>
               </div>
               <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono mt-0.5">

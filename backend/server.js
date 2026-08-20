@@ -136,17 +136,31 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, function(err, user) {
+  jwt.verify(token, JWT_SECRET, async function(err, user) {
     if (err) {
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({ message: 'Session expired. Please log in again.' });
       }
       return res.status(403).json({ message: 'Invalid token' });
     }
-    req.user = user;
-    if (user && user.id) {
-      pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
+
+    // Check single-session device validity
+    if (user && user.id && user.sessionId) {
+      try {
+        var [uRows] = await pool.execute('SELECT current_session_id FROM users WHERE id = ?', [user.id]);
+        if (uRows.length > 0 && uRows[0].current_session_id && uRows[0].current_session_id !== user.sessionId) {
+          return res.status(401).json({
+            code: 'SESSION_TERMINATED',
+            message: '⚠️ Session Expired: Your account has been logged in from another device.'
+          });
+        }
+        pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
+      } catch (e) {
+        // Continue if transient db error
+      }
     }
+
+    req.user = user;
     next();
   });
 }
@@ -173,6 +187,7 @@ async function ensureAllCoreTables() {
       profilePicture TEXT,
       phone VARCHAR(50),
       bio TEXT,
+      current_session_id VARCHAR(100) NULL,
       last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -672,6 +687,8 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN registeredVoter VARCHAR(20)',
     'ALTER TABLE students ADD COLUMN registrationPhoto LONGTEXT NULL',
     'ALTER TABLE students ADD COLUMN registration_photo LONGTEXT NULL',
+    'ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL',
+    'ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -906,7 +923,7 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var result = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
       [email, email + '@%', email]
     );
     var users = result[0];
@@ -942,8 +959,30 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
+    // Check if account has an active session in another device within the last 15 mins
+    var forceLogin = req.body.forceLogin === true;
+    var isActiveSession = false;
+    if (user.current_session_id && user.last_active_at) {
+      var lastActiveTime = new Date(user.last_active_at).getTime();
+      var diffMinutes = (Date.now() - lastActiveTime) / (1000 * 60);
+      if (diffMinutes < 15) {
+        isActiveSession = true;
+      }
+    }
+
+    if (isActiveSession && !forceLogin) {
+      return res.json({
+        warning: true,
+        activeSession: true,
+        message: '⚠️ Account Active: This account is currently in use on another device.'
+      });
+    }
+
+    var sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+    await pool.execute('UPDATE users SET current_session_id = ?, last_active_at = NOW() WHERE id = ?', [sessionId, user.id]);
+
     var token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, department: user.department },
+      { id: user.id, email: user.email, role: user.role, department: user.department, sessionId: sessionId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );

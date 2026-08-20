@@ -303,10 +303,6 @@ function Calendar() {
                   <span className="hidden sm:inline">NSTP Activity Calendar</span>
                   <span className="sm:hidden">Activity Calendar</span>
                 </h1>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                  <span className="hidden sm:inline">{isAdmin ? 'Schedule & organize campus events' : 'View official NSTP activities'}</span>
-                  <span className="sm:hidden">{isAdmin ? 'Schedule events' : 'NSTP Activities'}</span>
-                </p>
               </div>
             </div>
             {isAdmin && (

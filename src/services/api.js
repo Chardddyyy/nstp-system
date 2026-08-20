@@ -115,11 +115,14 @@ async function apiCall(endpoint, options) {
       localStorage.removeItem('nstp_token');
       if (!window.__nstp_session_expired__) {
         window.__nstp_session_expired__ = true;
-        window.dispatchEvent(new CustomEvent('nstp-session-expired'));
+        window.dispatchEvent(new CustomEvent('nstp-session-expired', {
+          detail: { code: error.code, message: error.message }
+        }));
       }
     }
     var apiErr = new Error(error.message || 'API request failed');
     apiErr.status = response ? response.status : 0;
+    apiErr.code = error.code;
     throw apiErr;
   }
 
@@ -127,11 +130,11 @@ async function apiCall(endpoint, options) {
 }
 
 // Auth
-export async function loginUser(email, password) {
+export async function loginUser(email, password, forceLogin = false) {
   try {
     const res = await apiCall('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: email, password: password })
+      body: JSON.stringify({ email: email, password: password, forceLogin: forceLogin })
     });
     if (res && res.token) {
       localStorage.setItem('nstp_token', res.token);

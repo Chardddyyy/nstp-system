@@ -949,14 +949,20 @@ function Enrollment() {
 
                   <div>
                     <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
-                    <input
-                      type="text"
+                    <select
                       name="suffix"
-                      placeholder="Jr., Sr., III (Optional)"
                       value={formData.suffix || ''}
                       onChange={handleChange}
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium"
-                    />
+                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium cursor-pointer"
+                    >
+                      <option value="">None / (No Suffix)</option>
+                      <option value="Jr.">Jr. (Junior)</option>
+                      <option value="Sr.">Sr. (Senior)</option>
+                      <option value="II">II (The Second)</option>
+                      <option value="III">III (The Third)</option>
+                      <option value="IV">IV (The Fourth)</option>
+                      <option value="V">V (The Fifth)</option>
+                    </select>
                   </div>
                 </div>
 

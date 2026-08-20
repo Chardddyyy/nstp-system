@@ -684,10 +684,6 @@ function StudentManagement() {
 
               <div className="min-w-0 flex-1">
                 <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Student Management</h2>
-                <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                  <span className="hidden sm:inline">{isAdmin ? 'Manage student records & CHED export reporting' : 'View & update roster'}</span>
-                  <span className="sm:hidden">{isAdmin ? 'Student records & CHED' : 'Student roster'}</span>
-                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
@@ -793,23 +789,68 @@ function StudentManagement() {
               </select>
             </div>
           </div>
-
-
-
         </div>
 
-        {/* Students Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
+                  {/* Students List — Responsive: Mobile Card Stack & Desktop Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Mobile Cards (No Horizontal Scroll Needed) */}
+          <div className="sm:hidden divide-y divide-gray-100">
+            {currentStudents.map((student, index) => (
+              <div
+                key={student.id || student.studentId || `student-m-${index}`}
+                className="p-3.5 hover:bg-emerald-50/40 cursor-pointer transition-colors"
+                onClick={() => handleViewStudent(student)}
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-gray-900 truncate">{student.name}</p>
+                    <p className="text-[11px] text-gray-500 font-mono mt-0.5">{student.studentId} • Sec {student.nstp_section || student.section || '-'}</p>
+                    <p className="text-[10.5px] text-gray-400 truncate">{student.email}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${getDepartmentColor(student.department)}`}>
+                    {student.department}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px] text-gray-500">
+                  <span>{student.program || 'No Program'} · {student.year || '1st Year'}</span>
+                  {isAdmin && (
+                    <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => !viewingArchive && openEditModal(student)}
+                        disabled={viewingArchive}
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
+                        title="Edit"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
+                        disabled={viewingArchive}
+                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                  <th className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                  <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                  {isAdmin && <th className="px-2.5 sm:px-6 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                  {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -819,26 +860,26 @@ function StudentManagement() {
                     className="hover:bg-green-50 cursor-pointer transition-colors duration-150"
                     onClick={() => handleViewStudent(student)}
                   >
-                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">{student.studentId}</td>
-                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <p className="text-xs sm:text-sm font-medium text-gray-900">{student.name}</p>
-                        <p className="text-[10px] sm:text-sm text-gray-500 truncate max-w-[120px] sm:max-w-none">{student.email}</p>
+                        <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                        <p className="text-xs text-gray-500">{student.email}</p>
                       </div>
                     </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold">
                       {student.nstp_section || student.section || '-'}
                     </td>
-                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.year}
                     </td>
-                    <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
-                      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium ${getDepartmentColor(student.department)}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(student.department)}`}>
                         {student.department}
                       </span>
                     </td>
                     {isAdmin && (
-                      <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
                             onClick={() => !viewingArchive && openEditModal(student)}
@@ -1133,14 +1174,20 @@ function StudentManagement() {
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
-                      <input
-                        type="text"
+                      <select
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
-                        placeholder="Jr., Sr., III (Optional)"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                      />
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="">None / (No Suffix)</option>
+                        <option value="Jr.">Jr. (Junior)</option>
+                        <option value="Sr.">Sr. (Senior)</option>
+                        <option value="II">II (The Second)</option>
+                        <option value="III">III (The Third)</option>
+                        <option value="IV">IV (The Fourth)</option>
+                        <option value="V">V (The Fifth)</option>
+                      </select>
                     </div>
                   </div>
 
@@ -1968,14 +2015,20 @@ function StudentManagement() {
                     </div>
                     <div>
                       <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
-                      <input
-                        type="text"
+                      <select
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
-                        placeholder="Jr., Sr., III (Optional)"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                      />
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="">None / (No Suffix)</option>
+                        <option value="Jr.">Jr. (Junior)</option>
+                        <option value="Sr.">Sr. (Senior)</option>
+                        <option value="II">II (The Second)</option>
+                        <option value="III">III (The Third)</option>
+                        <option value="IV">IV (The Fourth)</option>
+                        <option value="V">V (The Fifth)</option>
+                      </select>
                     </div>
                   </div>
 

@@ -1774,12 +1774,8 @@ function Chat() {
 
                   <div className="min-w-0 flex-1">
                     <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
-                      {showContacts ? 'Contacts Directory' : 'NSTP Messages'}
+                      {showContacts ? 'Contacts' : 'Messages'}
                     </h1>
-                    <p className="text-emerald-200 text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5">
-                      <span className="hidden sm:inline">{showContacts ? 'Browse contacts' : 'Instant messaging'}</span>
-                      <span className="sm:hidden">{showContacts ? 'Contacts' : 'Chats'}</span>
-                    </p>
                   </div>
                 </div>
 
