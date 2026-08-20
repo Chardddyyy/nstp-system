@@ -21,7 +21,7 @@ export function NstpIdCard({ student }) {
   const dept = (student.department || 'CWTS').toUpperCase();
   const matriculationNo = student.nstp_serial_id || `NSTP-${dept}-2026-00001`;
   const qrToken = student.qr_token || matriculationNo;
-  const photoUrl = student.registration_photo || student.registrationPhoto || student.photo || null;
+  const photoUrl = student.id_photo_2x2 || student.idPhoto2x2 || student.photo || student.profilePicture || student.registration_photo || student.registrationPhoto || null;
   const studentSection = student.section 
     ? (student.section.toLowerCase().startsWith('section') ? student.section : `Section ${student.section}`)
     : formatGradeAndSection(student);

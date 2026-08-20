@@ -1498,7 +1498,9 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const finalYear = n(yearLevel) || n(year);
     const finalEmergency = n(emergencyContact) || n(emergencyName);
     const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
-    const finalPhoto = n(registrationPhoto) || n(registration_photo);
+    const finalIdPhoto = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
+    const finalRegPhoto = n(registrationPhoto) || n(registration_photo) || finalIdPhoto;
+    const resolved2x2 = finalIdPhoto || finalRegPhoto;
 
     const [result] = await pool.execute(
       `INSERT INTO students (
@@ -1507,15 +1509,15 @@ app.post('/api/students', authenticateToken, async (req, res) => {
         age, civilStatus, bloodType, height, weight, facebookAccount,
         emergencyContact, emergencyNumber,
         firstName, lastName, middleName, suffix, registeredVoter,
-        street, municipality, province, registrationPhoto, registration_photo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        street, municipality, province, registrationPhoto, registration_photo, photo, id_photo_2x2
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         studentId, finalName, n(email), department, n(section), n(semester), n(schoolYear), n(program), finalYear,
         n(contactNumber), n(address), finalGender, safeBirthDate, n(birthMonth), n(birthDay), n(birthYear),
         n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount),
         finalEmergency, n(emergencyNumber),
         n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
-        n(street), n(municipality), n(province), finalPhoto, finalPhoto
+        n(street), n(municipality), n(province), finalRegPhoto, finalRegPhoto, resolved2x2, resolved2x2
       ]
     );
 
@@ -1593,7 +1595,9 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const finalYear = n(yearLevel) || n(year);
     const finalEmergency = n(emergencyContact) || n(emergencyName);
     const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
-    const finalPhoto = n(registrationPhoto) || n(registration_photo);
+    const finalIdPhoto = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
+    const finalRegPhoto = n(registrationPhoto) || n(registration_photo) || finalIdPhoto;
+    const resolved2x2 = finalIdPhoto || finalRegPhoto;
 
     await pool.execute(
       `UPDATE students SET
@@ -1602,7 +1606,8 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?,
          height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
          firstName = ?, lastName = ?, middleName = ?, suffix = ?, registeredVoter = ?,
-         street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?
+         street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?,
+         photo = COALESCE(?, photo), id_photo_2x2 = COALESCE(?, id_photo_2x2)
        WHERE id = ?`,
       [
         studentId, name, n(email), department, n(section), n(semester), n(schoolYear),
@@ -1610,7 +1615,8 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType),
         n(height), n(weight), n(facebookAccount), finalEmergency, n(emergencyNumber),
         n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
-        n(street), n(municipality), n(province), finalPhoto, finalPhoto,
+        n(street), n(municipality), n(province), finalRegPhoto, finalRegPhoto,
+        resolved2x2, resolved2x2,
         id
       ]
     );
@@ -3402,6 +3408,9 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
             birthDate = `${enrollment.birthYear}-${enrollment.birthMonth.padStart(2, '0')}-${enrollment.birthDay.padStart(2, '0')}`;
           }
           
+          const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || null;
+          const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment2x2;
+
           await pool.execute(
             `INSERT INTO students (
               studentId, name, email, department, status,
@@ -3411,8 +3420,8 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               bloodType, facebookAccount, emergencyContact, emergencyNumber,
               street, municipality, province,
               firstName, lastName, middleName, suffix, registeredVoter,
-              registrationPhoto, registration_photo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              registrationPhoto, registration_photo, photo, id_photo_2x2
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               enrollment.studentId,
               enrollment.student_name || `${enrollment.lastName}, ${enrollment.firstName} ${enrollment.middleName || ''}${enrollment.suffix ? ' ' + enrollment.suffix : ''}`.replace(/\s+/g, ' ').trim(),
@@ -3443,8 +3452,10 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               enrollment.lastName      || null,
               enrollment.middleName    || null,
               enrollment.registeredVoter || 'No',
-              enrollment.registration_photo || enrollment.registrationPhoto || null,
-              enrollment.registration_photo || enrollment.registrationPhoto || null,
+              enrollmentReg,
+              enrollmentReg,
+              enrollment2x2,
+              enrollment2x2,
             ]
           );
         }

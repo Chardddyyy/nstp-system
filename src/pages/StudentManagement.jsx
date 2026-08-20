@@ -6,11 +6,11 @@ import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixM
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
-  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload
+  CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 function StudentManagement() {
   const { user, logout, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
@@ -67,8 +67,99 @@ function StudentManagement() {
     emergencyName: '',
     emergencyNumber: '',
     registrationPhoto: '',
-    photo: ''
+    photo: '',
+    id_photo_2x2: ''
   });
+
+  // Camera capture & photo viewer states
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState('add'); // 'add' or 'edit'
+  const [facingMode, setFacingMode] = useState('environment'); // 'user' or 'environment'
+  const [photoViewer, setPhotoViewer] = useState(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const fileInputAddRef = useRef(null);
+  const fileInputEditRef = useRef(null);
+
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const closeCameraModal = () => {
+    stopCameraStream();
+    setShowCameraModal(false);
+  };
+
+  const startLiveCamera = async (target = 'add', preferredFacing = 'environment') => {
+    try {
+      setCameraTarget(target);
+      setFacingMode(preferredFacing);
+      stopCameraStream();
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: preferredFacing,
+          width: { ideal: 1280 },
+          height: { ideal: 960 }
+        },
+        audio: false
+      });
+
+      streamRef.current = stream;
+      setShowCameraModal(true);
+
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(e => console.warn('Video play interrupted:', e));
+        }
+      }, 250);
+    } catch (err) {
+      console.warn('Live camera access failed or fallback needed:', err);
+      alert('Camera access failed or permission denied. Please allow camera access in your browser or use the Upload Photo button.');
+    }
+  };
+
+  const toggleCameraFacing = () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    startLiveCamera(cameraTarget, nextMode);
+  };
+
+  const capturePhotoFromCamera = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 480;
+
+    const size = Math.min(vw, vh);
+    const sx = (vw - size) / 2;
+    const sy = (vh - size) / 2;
+
+    canvas.width = 600;
+    canvas.height = 600;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
+
+    const base64Data = canvas.toDataURL('image/jpeg', 0.88);
+    setFormData(prev => ({
+      ...prev,
+      id_photo_2x2: base64Data,
+      photo: base64Data,
+      registrationPhoto: base64Data
+    }));
+    closeCameraModal();
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
 
   const [heightUnit, setHeightUnit] = useState('cm');
   const [heightInput, setHeightInput] = useState('');
@@ -582,7 +673,10 @@ function StudentManagement() {
       address: String(student.address || student.homeAddress || ''),
       emergencyContact: toTitleCase(String(student.emergencyContact || student.emergencyName || '')),
       emergencyName: toTitleCase(String(student.emergencyName || student.emergencyContact || '')),
-      emergencyNumber: emerNo.slice(0, 11)
+      emergencyNumber: emerNo.slice(0, 11),
+      id_photo_2x2: String(student.id_photo_2x2 || student.idPhoto2x2 || student.photo || student.registrationPhoto || student.registration_photo || ''),
+      photo: String(student.id_photo_2x2 || student.photo || student.registrationPhoto || student.registration_photo || ''),
+      registrationPhoto: String(student.registrationPhoto || student.registration_photo || student.id_photo_2x2 || student.photo || '')
     });
     setHeightInput(String(student.height || ''));
     setWeightInput(String(student.weight || ''));
@@ -678,8 +772,8 @@ function StudentManagement() {
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -1602,29 +1696,53 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  {/* 2x2 ID Photo Upload with White Background & White Shirt */}
+                  {/* 2x2 ID Photo Capture / Upload with White Background & White Shirt */}
                   <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200">
                     <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1">
                       2x2 ID Picture (White Background, White Shirt) *
                     </label>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Required for official NSTP ID Card printing. Ensure clear portrait face view.
+                      Required for official NSTP ID Card printing. Use live camera or upload photo file.
                     </p>
                     
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-20 bg-white rounded-xl border-2 border-emerald-300 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                        {formData.registrationPhoto || formData.photo ? (
-                          <img src={formData.registrationPhoto || formData.photo} alt="2x2 Preview" className="w-full h-full object-cover" />
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
+                      <div className="w-20 h-24 bg-white rounded-xl border-2 border-emerald-400 overflow-hidden flex items-center justify-center shrink-0 shadow-sm relative group">
+                        {formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? (
+                          <>
+                            <img src={formData.id_photo_2x2 || formData.photo || formData.registrationPhoto} alt="2x2 Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setPhotoViewer(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto)}
+                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
+                            >
+                              🔍 View
+                            </button>
+                          </>
                         ) : (
-                          <span className="text-[9px] font-bold text-slate-400 text-center">2x2 PHOTO</span>
+                          <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                            <User className="w-6 h-6 mb-1 opacity-50" />
+                            <span className="text-[9px] font-black leading-tight">2x2 PHOTO</span>
+                          </div>
                         )}
                       </div>
                       
-                      <div className="flex-1">
-                        <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all">
-                          <Upload className="w-3.5 h-3.5" />
-                          <span>{formData.registrationPhoto || formData.photo ? 'Change 2x2 Photo' : 'Upload 2x2 Photo'}</span>
+                      <div className="flex-1 flex flex-wrap items-center gap-2">
+                        {/* Live Camera Button */}
+                        <button
+                          type="button"
+                          onClick={() => startLiveCamera('add', 'environment')}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Camera className="w-4 h-4 text-amber-300" />
+                          <span>Take with Camera</span>
+                        </button>
+
+                        {/* File Upload Button */}
+                        <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
+                          <Upload className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>{formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? 'Change File' : 'Upload File'}</span>
                           <input
+                            ref={fileInputAddRef}
                             type="file"
                             accept="image/*"
                             onChange={(e) => {
@@ -1634,8 +1752,9 @@ function StudentManagement() {
                               reader.onload = (ev) => {
                                 setFormData(prev => ({
                                   ...prev,
-                                  registrationPhoto: ev.target.result,
-                                  photo: ev.target.result
+                                  id_photo_2x2: ev.target.result,
+                                  photo: ev.target.result,
+                                  registrationPhoto: ev.target.result
                                 }));
                               };
                               reader.readAsDataURL(file);
@@ -1643,6 +1762,25 @@ function StudentManagement() {
                             className="hidden"
                           />
                         </label>
+
+                        {/* Remove / Reset Button */}
+                        {(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                id_photo_2x2: '',
+                                photo: '',
+                                registrationPhoto: ''
+                              }));
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2446,6 +2584,96 @@ function StudentManagement() {
                       />
                     </div>
                   </div>
+
+                  {/* 4. 2x2 ID Photo Update / Camera Capture */}
+                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 mt-3">
+                    <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-emerald-700" />
+                      4. Official 2x2 ID Picture
+                    </label>
+                    <p className="text-[11px] text-slate-500 mb-3">
+                      Edit or update student 2x2 photo before generating or printing the NSTP ID card.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
+                      <div className="w-20 h-24 bg-white rounded-xl border-2 border-emerald-400 overflow-hidden flex items-center justify-center shrink-0 shadow-sm relative group">
+                        {formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? (
+                          <>
+                            <img src={formData.id_photo_2x2 || formData.photo || formData.registrationPhoto} alt="2x2 Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setPhotoViewer(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto)}
+                              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
+                            >
+                              🔍 View
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                            <User className="w-6 h-6 mb-1 opacity-50" />
+                            <span className="text-[9px] font-black leading-tight">NO PHOTO</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 flex flex-wrap items-center gap-2">
+                        {/* Live Camera Button */}
+                        <button
+                          type="button"
+                          onClick={() => startLiveCamera('edit', 'environment')}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
+                        >
+                          <Camera className="w-4 h-4 text-amber-300" />
+                          <span>Take with Camera</span>
+                        </button>
+
+                        {/* File Upload Button */}
+                        <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
+                          <Upload className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>{formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? 'Change Photo' : 'Upload Photo'}</span>
+                          <input
+                            ref={fileInputEditRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  id_photo_2x2: ev.target.result,
+                                  photo: ev.target.result,
+                                  registrationPhoto: ev.target.result
+                                }));
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+
+                        {/* Remove / Reset Button */}
+                        {(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                id_photo_2x2: '',
+                                photo: '',
+                                registrationPhoto: ''
+                              }));
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -2478,6 +2706,117 @@ function StudentManagement() {
           onClose={() => setShowBatchIdModal(false)}
           defaultDepartment={isAdmin ? filterDept : (user?.department || 'CWTS')}
         />
+
+        {/* Live Camera Viewfinder Modal for Student Management (Add & Edit) */}
+        {showCameraModal && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-6 animate-fade-in">
+            <div className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[95vh]">
+              {/* Header */}
+              <div className="p-4 bg-gradient-to-r from-emerald-950 to-teal-950 border-b border-emerald-800/60 flex items-center justify-between text-white shrink-0">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-5 h-5 text-amber-400" />
+                  <div>
+                    <h3 className="text-sm font-black tracking-tight">Capture 2x2 Student Photo</h3>
+                    <p className="text-[10px] text-emerald-200 font-medium">Position face inside square frame</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeCameraModal}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Camera Video Stream & Viewfinder Overlay */}
+              <div className="relative bg-black flex-1 flex items-center justify-center min-h-[300px] sm:min-h-[380px] overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* 2x2 Frame Overlay Guide */}
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                  <div className="w-52 h-52 sm:w-64 sm:h-64 border-2 border-dashed border-amber-400/90 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
+                    <div className="absolute top-2 left-2 right-2 text-center">
+                      <span className="bg-emerald-950/80 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-md border border-amber-400/30">
+                        2x2 Portrait View
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Camera Controls Footer */}
+              <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleCameraFacing}
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer"
+                  title="Switch Front / Back Camera"
+                >
+                  <SwitchCamera className="w-4 h-4 text-amber-400" />
+                  <span className="hidden xs:inline">{facingMode === 'user' ? 'Front' : 'Back'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={capturePhotoFromCamera}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-emerald-950 font-black text-sm rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>Snap 2x2 Photo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeCameraModal}
+                  className="px-4 py-2.5 text-slate-400 hover:text-white font-bold text-xs rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fullscreen Photo Viewer Modal */}
+        {photoViewer && (
+          <div 
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setPhotoViewer(null)}
+          >
+            <div 
+              className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl p-4 flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full flex items-center justify-between mb-3 text-white">
+                <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">2x2 ID Photo Preview</h4>
+                <button
+                  type="button"
+                  onClick={() => setPhotoViewer(null)}
+                  className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="w-64 h-80 bg-black rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-xl flex items-center justify-center">
+                <img src={photoViewer} alt="Full 2x2 Preview" className="w-full h-full object-cover" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhotoViewer(null)}
+                className="mt-4 px-6 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Student Attendance & Absences Matrix Modal */}
         <StudentAttendanceMatrixModal
