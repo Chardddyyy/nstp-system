@@ -727,9 +727,10 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN reviewed_by INT NULL',
     'ALTER TABLE enrollments ADD COLUMN street VARCHAR(255)',
     'ALTER TABLE enrollments ADD COLUMN municipality VARCHAR(100)',
-    'ALTER TABLE enrollments ADD COLUMN province VARCHAR(100)',
-    'ALTER TABLE enrollments ADD COLUMN reviewed_at TIMESTAMP NULL',
     'ALTER TABLE enrollments ADD COLUMN registration_photo LONGTEXT NULL',
+    'ALTER TABLE enrollments ADD COLUMN id_photo_2x2 LONGTEXT NULL',
+    'ALTER TABLE enrollments ADD COLUMN photo LONGTEXT NULL',
+    'ALTER TABLE enrollments ADD COLUMN reg_form LONGTEXT NULL',
     'ALTER TABLE enrollments ADD COLUMN registeredVoter VARCHAR(20)',
     'ALTER TABLE enrollments ADD COLUMN ip_address VARCHAR(45) NULL',
     'ALTER TABLE enrollments ADD COLUMN user_agent TEXT NULL',
@@ -959,15 +960,11 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device within the last 15 mins
+    // Check if account has an active session in another device
     var forceLogin = req.body.forceLogin === true;
     var isActiveSession = false;
-    if (user.current_session_id && user.last_active_at) {
-      var lastActiveTime = new Date(user.last_active_at).getTime();
-      var diffMinutes = (Date.now() - lastActiveTime) / (1000 * 60);
-      if (diffMinutes < 15) {
-        isActiveSession = true;
-      }
+    if (user.current_session_id && String(user.current_session_id).trim() !== '') {
+      isActiveSession = true;
     }
 
     if (isActiveSession && !forceLogin) {
@@ -3237,8 +3234,13 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       homeAddress, address, street, municipality, province,
       program, section, yearLevel, nstpComponent,
       emergencyContact, emergencyNumber, emergencyName,
-      registrationPhoto, registeredVoter, isVoter, recaptchaToken
+      registrationPhoto, registeredVoter, isVoter, recaptchaToken,
+      id_photo_2x2, photo: uploadedPhoto, reg_form
     } = req.body;
+
+    const finalIdPhoto = id_photo_2x2 || uploadedPhoto || null;
+    const finalRegPhoto = registrationPhoto || reg_form || finalIdPhoto;
+    const resolved2x2 = finalIdPhoto || finalRegPhoto;
 
     // Anti-Troll Security: Rate Limit by IP Address (Max 4 submissions per 15 minutes)
     const clientIp = String(req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
@@ -3306,14 +3308,14 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
             birthDate, birthMonth, birthDay, birthYear, age, civilStatus,
             gender, height, weight, facebookAccount, bloodType, address,
             street, municipality, province,
-            program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, registeredVoter, ip_address, user_agent)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            program, section, yearLevel, emergencyContact, emergencyNumber, status, registration_photo, id_photo_2x2, photo, reg_form, registeredVoter, ip_address, user_agent)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             name || null, firstName, lastName, middleName || null, suffix || null, String(email).trim(), nstpComponent || 'CWTS', sid, contactDigits,
             finalBirthDate, birthMonth || null, birthDay || null, birthYear || null, age || null, civilStatus || null,
             finalGender || null, height || null, weight || null, facebookAccount || null, bloodType || null, finalAddress || null,
             street || null, municipality || null, province || null,
-            program, section, yearLevel, finalEmergencyContact || null, emerDigits, 'Pending', photo, finalVoter, clientIp, userAgent
+            program, section, yearLevel, finalEmergencyContact || null, emerDigits, 'Pending', finalRegPhoto, resolved2x2, resolved2x2, finalRegPhoto, finalVoter, clientIp, userAgent
           ]
         );
         return result.insertId;
@@ -3326,9 +3328,9 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
         }
         // Self-healing fallback insert with core columns
         const [fbResult] = await pool.execute(
-          `INSERT INTO enrollments (student_name, firstName, lastName, middleName, suffix, email, department, studentId, contactNumber, program, section, yearLevel, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-          [name || `${lastName}, ${firstName}`, firstName, lastName, middleName || null, suffix || null, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel]
+          `INSERT INTO enrollments (student_name, firstName, lastName, middleName, suffix, email, department, studentId, contactNumber, program, section, yearLevel, status, registration_photo, id_photo_2x2, photo)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)`,
+          [name || `${lastName}, ${firstName}`, firstName, lastName, middleName || null, suffix || null, email, nstpComponent || 'CWTS', studentId, contactNumber, program, section, yearLevel, finalRegPhoto, resolved2x2, resolved2x2]
         );
         return fbResult.insertId;
       }

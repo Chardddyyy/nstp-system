@@ -504,22 +504,34 @@ function App() {
       banner.id = 'session-expired-banner';
       banner.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
-        'background:#dc2626', 'color:#fff', 'text-align:center',
-        'padding:14px 16px', 'font-size:15px', 'font-weight:600',
-        'box-shadow:0 2px 8px rgba(0,0,0,.35)',
+        'background:#b91c1c', 'color:#fff', 'text-align:center',
+        'padding:14px 16px', 'font-size:14px', 'font-weight:700',
+        'box-shadow:0 4px 14px rgba(0,0,0,.45)',
       ].join(';');
       banner.textContent = e?.detail?.message || '⚠️ Your session has been terminated because your account was logged in on another device.';
       document.body.appendChild(banner);
       setTimeout(() => {
         document.getElementById('session-expired-banner')?.remove();
-      }, 6000);
+      }, 7000);
       setUser(null);
       setLoading(false);
-      window.location.hash = '#/login';
+      const loginUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/login';
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.href = loginUrl;
+      }
     }
     window.addEventListener('nstp-session-expired', onSessionExpired);
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
+
+  // Background active session heartbeat (every 6 seconds) — kicks out obsolete sessions immediately
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      authAPI.verifySession().catch(() => {});
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Restore session & data from stored cache on mount INSTANTLY (0ms)
   useEffect(() => {
@@ -656,6 +668,7 @@ function App() {
   }
 
   function logout() {
+    authAPI.logout().catch(() => {});
     localStorage.removeItem('nstp_token');
     localStorage.removeItem('nstp_cached_user');
     setUser(null);

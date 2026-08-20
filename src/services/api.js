@@ -486,9 +486,24 @@ export function getCallWebRTCSignaling(callId) {
   return apiCall('/calls/' + callId + '/webrtc');
 }
 
+export function logoutUser() {
+  return apiCall('/auth/logout', { method: 'POST' }).catch(() => ({ success: true }));
+}
+
+export function verifySession() {
+  return apiCall('/auth/verify-session').catch((err) => {
+    if (err?.code === 'SESSION_TERMINATED' || err?.status === 401) {
+      throw err;
+    }
+    return { success: false };
+  });
+}
+
 // Old style exports for compatibility
 export const authAPI = {
-  login: loginUser
+  login: loginUser,
+  logout: logoutUser,
+  verifySession: verifySession
 };
 
 export const usersAPI = {
