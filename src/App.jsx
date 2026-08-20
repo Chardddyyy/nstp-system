@@ -641,15 +641,15 @@ function App() {
     }
   }
 
-  async function login(email, password) {
+  async function login(email, password, forceLogin = false) {
     try {
-      const response = await authAPI.login(email, password);
+      const response = await authAPI.login(email, password, forceLogin);
       if (response && (response.warning || response.blocked) && response.activeSession) {
         return {
           success: false,
           blocked: true,
           activeSession: true,
-          message: response.message || '⚠️ Login Blocked: This account is currently in use on another device.'
+          message: response.message || '⚠️ Account Active: This account is currently in use on another device.'
         };
       }
       if (!response || !response.token) return { success: false, message: response?.message || 'Invalid server response' };
@@ -663,7 +663,7 @@ function App() {
       return { success: true, role: response.user.role };
     } catch (error) {
       console.error('Login error:', error);
-      if (error?.message && (error.message.includes('another device') || error.message.includes('currently in use'))) {
+      if (error?.message && (error.message.includes('another device') || error.message.includes('currently in use') || error.message.includes('Account In Use'))) {
         return {
           success: false,
           blocked: true,

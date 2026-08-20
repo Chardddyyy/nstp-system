@@ -960,24 +960,32 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device within the last 30 seconds (active heartbeat)
+    // Check if account has an active session in another device within the last 15 seconds (active realtime heartbeat)
+    var forceLogin = req.body && (req.body.forceLogin === true || req.body.forceLogin === 'true');
     var isDeviceActivelyInUse = false;
+
     if (user.current_session_id && String(user.current_session_id).trim() !== '') {
       var secondsSinceActive = user.seconds_since_active;
-      if (secondsSinceActive !== null && secondsSinceActive !== undefined && Number(secondsSinceActive) < 30) {
+      if (
+        secondsSinceActive !== null &&
+        secondsSinceActive !== undefined &&
+        !isNaN(Number(secondsSinceActive)) &&
+        Number(secondsSinceActive) >= 0 &&
+        Number(secondsSinceActive) < 15
+      ) {
         isDeviceActivelyInUse = true;
       } else {
-        // Automatically clear stale or inactive session in DB
+        // Automatically clear stale, closed, or inactive session in DB
         await pool.execute('UPDATE users SET current_session_id = NULL, last_active_at = NULL WHERE id = ?', [user.id]);
       }
     }
 
-    if (isDeviceActivelyInUse) {
-      auditLog('login_blocked_active_session', user.id, `blocked_concurrent_login: ${email}`, ip);
-      return res.status(403).json({
-        blocked: true,
+    if (isDeviceActivelyInUse && !forceLogin) {
+      auditLog('login_prompt_active_session', user.id, `prompt_concurrent_login: ${email}`, ip);
+      return res.status(200).json({
+        warning: true,
         activeSession: true,
-        message: '⚠️ Login Blocked: This account is currently in use on another device. Simultaneous logins are strictly prohibited. The other device will remain logged in.'
+        message: '⚠️ Account In Use: This account is currently active on another device. Do you want to disconnect the other session and sign in on this device?'
       });
     }
 
