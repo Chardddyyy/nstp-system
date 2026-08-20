@@ -267,16 +267,11 @@ function Landing() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <h1 className="text-[13px] sm:text-base md:text-lg font-black tracking-tight truncate leading-tight text-white group-hover:text-amber-300 transition-colors">
-                  Cavite State University
+                  Cavite State University - Naic
                 </h1>
               </div>
-              <p className="text-amber-400 text-[9px] sm:text-xs truncate font-bold flex items-center gap-1 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-                <span>Naic Campus</span>
-                <span className="text-amber-300/80">•</span>
-                <span className="hidden xs:inline text-emerald-200 font-medium">National Service Training Program</span>
-                <span className="xs:hidden text-emerald-200 font-medium">NSTP</span>
-                <span className="text-emerald-200 font-medium"> Portal</span>
+              <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono mt-0.5">
+                Naic Campus
               </p>
             </div>
           </Link>
@@ -831,11 +826,11 @@ function Landing() {
               </div>
 
               {/* Video Credits */}
-              <div className="bg-amber-400/10 border border-amber-400/25 px-4 py-2.5 rounded-2xl text-left shrink-0 w-full sm:w-auto">
-                <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
+              <div className="bg-amber-400/10 border border-amber-400/25 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-left shrink-0 w-full sm:w-auto overflow-hidden">
+                <p className="text-[9px] sm:text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
                   <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Video Credits:
                 </p>
-                <p className="text-xs font-black text-white mt-0.5 break-words sm:whitespace-nowrap">
+                <p className="text-[10.5px] xs:text-xs sm:text-xs font-black text-white mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                   University of the Philippines Diliman (UP Diliman)
                 </p>
               </div>
@@ -940,11 +935,11 @@ function Landing() {
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University</h4>
+                  <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University - Naic</h4>
                   <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono">Naic Campus</p>
                 </div>
               </div>
-              <p className="text-emerald-200/90 text-[10px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed mb-2 max-w-md line-clamp-3 sm:line-clamp-none">
+              <p className="text-emerald-200/90 text-[10px] sm:text-xs md:text-sm leading-snug sm:leading-relaxed mb-2 max-w-md">
                 A premier institution committed to providing quality education and producing morally upright graduates through the National Service Training Program (NSTP).
               </p>
               <p className="text-amber-400/90 text-[8px] xs:text-[9.5px] sm:text-xs font-bold tracking-tight sm:tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Truth • Integrity • Excellence • Service</p>

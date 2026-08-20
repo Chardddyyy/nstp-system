@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, FlipHorizontal } from 'lucide-react';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
@@ -184,10 +184,14 @@ function Enrollment() {
   const idPhotoInputRef = useRef(null);
   const idCameraInputRef = useRef(null);
 
+  // Full Photo Inspection & Lightbox Modal State
+  const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
+
   // Live Camera Capture Modal State & WebRTC Refs
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraTarget, setCameraTarget] = useState('regform'); // 'regform' or 'idphoto'
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' or 'user'
+  const [cameraMirror, setCameraMirror] = useState(false); // strictly unmirrored natural capture by default
   const videoRef = useRef(null);
   const streamRef = useRef(null);
 
@@ -206,6 +210,8 @@ function Enrollment() {
   const startLiveCamera = async (target = 'regform', preferredFacing = 'environment') => {
     try {
       setCameraTarget(target);
+      setFacingMode(preferredFacing);
+      setCameraMirror(false); // Default to strictly normal non-mirrored
       stopCameraStream();
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -256,7 +262,16 @@ function Enrollment() {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
     
-    ctx.drawImage(video, 0, 0, w, h);
+    if (cameraMirror) {
+      ctx.save();
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      // Natural True-to-life Unmirrored Capture (Text & Faces in correct orientation)
+      ctx.drawImage(video, 0, 0, w, h);
+    }
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
     if (cameraTarget === 'idphoto') {
@@ -1601,19 +1616,41 @@ function Enrollment() {
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center">
-                        <img src={registrationPhoto} alt="Registration Form" className="w-full h-full object-cover" />
+                    <div 
+                      onClick={() => setPreviewPhotoModal({
+                        type: 'regform',
+                        title: 'Certificate of Registration (COR)',
+                        src: registrationPhoto
+                      })}
+                      className="flex items-center gap-4 min-w-0 cursor-pointer group hover:opacity-95"
+                      title="Click to expand / inspect full Registration Form"
+                    >
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center relative">
+                        <img src={registrationPhoto} alt="Registration Form" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <Eye className="w-5 h-5 drop-shadow" />
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> COR Attached
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> COR Attached (Click to View)
                         </span>
-                        <h4 className="text-xs font-black text-gray-900 truncate">Registration Form Uploaded</h4>
-                        <p className="text-[11px] text-gray-500">Official document ready for admin student verification</p>
+                        <h4 className="text-xs font-black text-gray-900 truncate group-hover:text-emerald-700 transition-colors">Registration Form Uploaded</h4>
+                        <p className="text-[11px] text-gray-500">Click photo to view full size, check clarity, or change</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPhotoModal({
+                          type: 'regform',
+                          title: 'Certificate of Registration (COR)',
+                          src: registrationPhoto
+                        })}
+                        className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-300" /> View Full
+                      </button>
                       <button
                         type="button"
                         onClick={() => photoInputRef.current.click()}
@@ -1697,19 +1734,41 @@ function Enrollment() {
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm">
-                        <img src={idPhoto2x2} alt="2x2 ID Photo" className="w-full h-full object-cover" />
+                    <div 
+                      onClick={() => setPreviewPhotoModal({
+                        type: 'idphoto',
+                        title: 'Official 2x2 ID Portrait Photo',
+                        src: idPhoto2x2
+                      })}
+                      className="flex items-center gap-4 min-w-0 cursor-pointer group hover:opacity-95"
+                      title="Click to expand / inspect full 2x2 ID Photo"
+                    >
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm relative">
+                        <img src={idPhoto2x2} alt="2x2 ID Photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <Eye className="w-5 h-5 drop-shadow" />
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> 2x2 ID Photo Ready
+                          <CheckCircle className="w-3 h-3 text-emerald-600" /> 2x2 ID Photo Ready (Click to View)
                         </span>
-                        <h4 className="text-xs font-black text-gray-900 truncate">Official ID Photo Loaded</h4>
-                        <p className="text-[11px] text-gray-500">This photo will appear on your official NSTP ID Card</p>
+                        <h4 className="text-xs font-black text-gray-900 truncate group-hover:text-emerald-700 transition-colors">Official ID Photo Loaded</h4>
+                        <p className="text-[11px] text-gray-500">Click photo to view full size portrait, check plain white background, or change</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewPhotoModal({
+                          type: 'idphoto',
+                          title: 'Official 2x2 ID Portrait Photo',
+                          src: idPhoto2x2
+                        })}
+                        className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-amber-300" /> View Full
+                      </button>
                       <button
                         type="button"
                         onClick={() => idPhotoInputRef.current.click()}
@@ -1757,10 +1816,13 @@ function Enrollment() {
                         muted
                         autoPlay
                         className="w-full h-full object-cover enrollment-camera-video"
-                        style={{ transform: 'none' }}
+                        style={{ 
+                          transform: cameraMirror ? 'scaleX(-1)' : 'none',
+                          WebkitTransform: cameraMirror ? 'scaleX(-1)' : 'none'
+                        }}
                       />
                       
-                      {/* Top Clear Guidance Banner (English Instructions) */}
+                      {/* Top Clear Guidance Banner */}
                       <div className="absolute top-3 left-3 right-3 pointer-events-none z-10">
                         <div className="bg-emerald-950/90 backdrop-blur-md border border-emerald-500/40 text-white p-2.5 rounded-2xl shadow-xl flex items-center gap-2">
                           <div className="w-7 h-7 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-400/30">
@@ -1768,8 +1830,8 @@ function Enrollment() {
                           </div>
                           <p className="text-[10px] sm:text-xs font-semibold leading-tight text-emerald-100">
                             {cameraTarget === 'idphoto' 
-                              ? <span><strong className="text-amber-300 font-bold">2x2 ID Photo Reminder:</strong> Ensure your face is centered, wearing proper collared/white attire, with a clear plain white background.</span>
-                              : <span><strong className="text-amber-300 font-bold">Registration Form (COR) Reminder:</strong> Ensure all printed text, courses, and student information on your Certificate of Registration are sharp and fully legible before capturing.</span>
+                              ? <span><strong className="text-amber-300 font-bold">2x2 ID Photo:</strong> Keep face centered, plain white background, white/collared shirt.</span>
+                              : <span><strong className="text-amber-300 font-bold">COR Document:</strong> Ensure text, subjects, and student details are sharp and clearly legible.</span>
                             }
                           </p>
                         </div>
@@ -1787,21 +1849,35 @@ function Enrollment() {
                       )}
                     </div>
 
-                    <div className="p-5 bg-emerald-950 flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={toggleCameraFacing}
-                        className="p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
-                        title="Switch Camera"
-                      >
-                        <SwitchCamera className="w-4 h-4 text-amber-400" />
-                        <span>Flip</span>
-                      </button>
+                    <div className="p-4 sm:p-5 bg-emerald-950 flex items-center justify-between gap-2 sm:gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={toggleCameraFacing}
+                          className="p-2.5 sm:p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+                          title="Switch Front / Back Camera"
+                        >
+                          <SwitchCamera className="w-4 h-4 text-amber-400" />
+                          <span>{facingMode === 'user' ? 'Front' : 'Back'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setCameraMirror(!cameraMirror)}
+                          className={`p-2.5 sm:p-3 rounded-2xl transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                            cameraMirror ? 'bg-amber-400 text-emerald-950 font-black' : 'bg-emerald-900 hover:bg-emerald-800 text-emerald-200'
+                          }`}
+                          title="Toggle Mirror Orientation"
+                        >
+                          <FlipHorizontal className="w-4 h-4" />
+                          <span>{cameraMirror ? 'Mirrored' : 'Normal'}</span>
+                        </button>
+                      </div>
 
                       <button
                         type="button"
                         onClick={capturePhotoFromCamera}
-                        className="flex-1 py-3 px-6 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black rounded-2xl shadow-lg transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer"
+                        className="flex-1 py-3 px-4 sm:px-6 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black rounded-2xl shadow-lg transition-all active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer min-w-[140px]"
                       >
                         <Camera className="w-5 h-5" />
                         <span>Capture Photo</span>
@@ -1810,7 +1886,7 @@ function Enrollment() {
                       <button
                         type="button"
                         onClick={closeCameraModal}
-                        className="p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer text-xs font-bold"
+                        className="p-2.5 sm:p-3 bg-emerald-900 hover:bg-emerald-800 text-emerald-200 rounded-2xl transition-colors cursor-pointer text-xs font-bold"
                       >
                         Cancel
                       </button>
@@ -2012,6 +2088,111 @@ function Enrollment() {
                 Confirm Component
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Document / 2x2 Photo Inspection Lightbox Modal */}
+      {previewPhotoModal && (
+        <div 
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in"
+          onClick={() => setPreviewPhotoModal(null)}
+        >
+          <div 
+            className="bg-emerald-950 rounded-3xl border border-emerald-700/80 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 sm:p-5 bg-emerald-900/90 flex items-center justify-between text-white border-b border-emerald-800">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                  <Eye className="w-4 h-4 text-amber-400" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-black truncate">{previewPhotoModal.title}</h3>
+                  <p className="text-[10px] sm:text-xs text-emerald-300 font-medium">Full Attachment Preview &amp; Document Quality Check</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-800 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0"
+                aria-label="Close Preview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Image Body */}
+            <div className="p-4 sm:p-6 bg-gray-950 flex-1 overflow-auto flex items-center justify-center min-h-[300px] max-h-[60vh]">
+              {typeof previewPhotoModal.src === 'string' && previewPhotoModal.src.startsWith('data:application/pdf') ? (
+                <div className="w-full h-full min-h-[400px]">
+                  <iframe src={previewPhotoModal.src} title="PDF Document Preview" className="w-full h-[50vh] rounded-2xl border border-white/10" />
+                </div>
+              ) : (
+                <img
+                  src={previewPhotoModal.src}
+                  alt={previewPhotoModal.title}
+                  className="max-h-[55vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+                />
+              )}
+            </div>
+
+            {/* Action Footer */}
+            <div className="p-4 sm:p-5 bg-emerald-950 border-t border-emerald-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoModal(null)}
+                className="w-full sm:w-auto px-5 py-2.5 bg-emerald-900 hover:bg-emerald-800 text-emerald-100 font-bold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Form</span>
+              </button>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = previewPhotoModal.type;
+                    setPreviewPhotoModal(null);
+                    startLiveCamera(target, 'environment');
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-emerald-950 font-black rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Retake Photo</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = previewPhotoModal.type;
+                    setPreviewPhotoModal(null);
+                    if (target === 'idphoto') idPhotoInputRef.current?.click();
+                    else photoInputRef.current?.click();
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Upload File</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = previewPhotoModal.type;
+                    if (target === 'idphoto') setIdPhoto2x2(null);
+                    else setRegistrationPhoto(null);
+                    setPreviewPhotoModal(null);
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-red-900/80 hover:bg-red-800 text-red-200 hover:text-white font-bold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Photo</span>
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
