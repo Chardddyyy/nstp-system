@@ -1598,7 +1598,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
     // Instructors: verify the target student belongs to their department
     if (req.user.role !== 'admin') {
-      const [existing] = await pool.execute('SELECT department FROM students WHERE id = ?', [id]);
+      const [existing] = await pool.execute('SELECT department FROM students WHERE id = ? OR studentId = ?', [id, id]);
       if (existing.length === 0) return res.status(404).json({ message: 'Student not found' });
       if (existing[0].department !== req.user.department) {
         return res.status(403).json({ message: 'You can only edit students in your department' });
@@ -1640,8 +1640,8 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
          firstName = ?, lastName = ?, middleName = ?, suffix = ?, registeredVoter = ?,
          street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?,
-         photo = COALESCE(?, photo), id_photo_2x2 = COALESCE(?, id_photo_2x2)
-       WHERE id = ?`,
+         photo = ?, id_photo_2x2 = ?
+       WHERE id = ? OR studentId = ?`,
       [
         studentId, name, n(email), department, n(section), n(semester), n(schoolYear),
         n(program), finalYear, n(contactNumber), n(address), finalGender, safeBirthDate,
@@ -1650,19 +1650,23 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
         n(street), n(municipality), n(province), finalRegPhoto, finalRegPhoto,
         resolved2x2, resolved2x2,
-        id
+        id, id
       ]
     );
 
-    const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [id]);
-    autoSaveToGDrive('Edit_Student_' + (studentId || id));
-    res.json(students[0]);
+    const [students] = await pool.execute('SELECT * FROM students WHERE id = ? OR studentId = ?', [id, id]);
+    try {
+      autoSaveToGDrive('Edit_Student_' + (studentId || id));
+    } catch (e) {
+      console.warn('GDrive auto-save warning:', e.message);
+    }
+    res.json(students[0] || { success: true });
   } catch (error) {
     console.error('Update student error:', error);
     if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
       return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
     }
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error: ' + (error.message || 'Unable to update student') });
   }
 });
 

@@ -40,8 +40,10 @@ function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
-  if (!user) return <Navigate to="/login" />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/" />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace />;
+  }
   return children;
 }
 

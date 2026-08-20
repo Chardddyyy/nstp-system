@@ -1644,39 +1644,31 @@ function Chat() {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Helper function to format time (Military Time: 0100H to 2400H)
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    if (hours === 0 && minutes === 0) {
-      return '2400H';
-    }
-    const hh = hours.toString().padStart(2, '0');
-    const mm = minutes.toString().padStart(2, '0');
-    return `${hh}${mm}H`;
-  };
-
-  // Helper function to format date
+  // Helper function to format civilian date & time: e.g. "August 18, 2026 12:00am"
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Check if it's today
-    if (date.toDateString() === today.toDateString()) {
-      return formatTime(dateString);
-    }
-    // Check if it's yesterday
-    if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday ' + formatTime(dateString);
-    }
-    // Otherwise show date
-    const options = { month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options) + ' ' + formatTime(dateString);
+    if (isNaN(date.getTime())) return String(dateString);
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 becomes 12
+
+    return `${month} ${day}, ${year} ${hours}:${minutes}${ampm}`;
+  };
+
+  const formatTime = (dateString) => {
+    return formatDate(dateString);
   };
 
   // Get user avatar display
@@ -2067,7 +2059,7 @@ function Chat() {
                           {isJoin && <span>👋</span>}
                           <span className="truncate">{callText}</span>
                           <span className="text-gray-400 text-[10px] flex-shrink-0">
-                            {message.created_at ? new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            {formatDate(message.created_at || message.timestamp)}
                           </span>
                         </div>
                       </div>

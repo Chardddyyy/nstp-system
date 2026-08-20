@@ -15,6 +15,8 @@ export default defineConfig({
     tailwindcss()
   ],
   build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -24,5 +26,9 @@ export default defineConfig({
         }
       }
     }
+  },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+    legalComments: 'none'
   }
 })
