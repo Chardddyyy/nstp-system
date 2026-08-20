@@ -924,7 +924,7 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var result = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) as seconds_since_active FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
       [email, email + '@%', email]
     );
     var users = result[0];
@@ -960,8 +960,16 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device — STRICT BLOCK (No overrides allowed)
+    // Check if account has an active session in another device within the last 2 minutes (120s)
+    var isDeviceActivelyInUse = false;
     if (user.current_session_id && String(user.current_session_id).trim() !== '') {
+      var secondsSinceActive = user.seconds_since_active;
+      if (secondsSinceActive !== null && secondsSinceActive !== undefined && Number(secondsSinceActive) < 120) {
+        isDeviceActivelyInUse = true;
+      }
+    }
+
+    if (isDeviceActivelyInUse) {
       auditLog('login_blocked_active_session', user.id, `blocked_concurrent_login: ${email}`, ip);
       return res.status(403).json({
         blocked: true,
@@ -995,8 +1003,30 @@ app.post('/api/auth/login', async function(req, res) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error during login' });
   }
+});
+
+// Logout endpoint — immediately clear active session in DB so user can switch devices cleanly
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+  try {
+    if (req.user && req.user.id) {
+      await pool.execute('UPDATE users SET current_session_id = NULL, last_active_at = NULL WHERE id = ?', [req.user.id]);
+    }
+  } catch (err) {
+    console.warn('Logout DB update error:', err.message);
+  }
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// Verify session heartbeat endpoint — refreshes last_active_at timestamp every few seconds
+app.get('/api/auth/verify-session', authenticateToken, async (req, res) => {
+  try {
+    if (req.user && req.user.id) {
+      await pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [req.user.id]);
+    }
+  } catch (err) {}
+  res.json({ success: true, active: true });
 });
 
 // ===== USER ROUTES =====

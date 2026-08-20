@@ -132,8 +132,8 @@ function Calendar() {
     { date: '2030-12-30', title: 'Rizal Day', type: 'holiday' },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

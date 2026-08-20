@@ -486,8 +486,19 @@ export function getCallWebRTCSignaling(callId) {
   return apiCall('/calls/' + callId + '/webrtc');
 }
 
-export function logoutUser() {
-  return apiCall('/auth/logout', { method: 'POST' }).catch(() => ({ success: true }));
+export async function logoutUser() {
+  const token = localStorage.getItem('nstp_token');
+  if (token) {
+    try {
+      await apiCall('/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token }
+      });
+    } catch (err) {
+      console.warn('Logout API warning:', err);
+    }
+  }
+  return { success: true };
 }
 
 export function verifySession() {

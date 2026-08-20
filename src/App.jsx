@@ -675,8 +675,10 @@ function App() {
     }
   }
 
-  function logout() {
-    authAPI.logout().catch(() => {});
+  async function logout() {
+    try {
+      await authAPI.logout();
+    } catch (_) {}
     localStorage.removeItem('nstp_token');
     localStorage.removeItem('nstp_cached_user');
     setUser(null);

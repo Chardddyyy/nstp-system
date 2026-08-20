@@ -122,8 +122,8 @@ export default function LetterFormats() {
     document.body.removeChild(a);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

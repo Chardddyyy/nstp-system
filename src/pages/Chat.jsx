@@ -131,8 +131,8 @@ function Chat() {
   const [isPlaying, setIsPlaying] = useState(null); // message id being played
   const audioPlayerRef = useRef(null);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
