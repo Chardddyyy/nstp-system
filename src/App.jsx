@@ -524,15 +524,6 @@ function App() {
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
 
-  // Background active session heartbeat (every 6 seconds) — kicks out obsolete sessions immediately
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      authAPI.verifySession().catch(() => {});
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [user]);
-
   // Restore session & data from stored cache on mount INSTANTLY (0ms)
   useEffect(() => {
     const token = localStorage.getItem('nstp_token');

@@ -3441,13 +3441,45 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
         
         if (existingStudents.length === 0) {
           // Build birthdate from separate fields if available
-          let birthDate = enrollment.birthDate;
+          let birthDate = enrollment.birthDate || enrollment.birth_date;
           if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
-            birthDate = `${enrollment.birthYear}-${enrollment.birthMonth.padStart(2, '0')}-${enrollment.birthDay.padStart(2, '0')}`;
+            birthDate = `${enrollment.birthYear}-${String(enrollment.birthMonth).padStart(2, '0')}-${String(enrollment.birthDay).padStart(2, '0')}`;
+          } else if (!birthDate && enrollment.birth_month && enrollment.birth_day && enrollment.birth_year) {
+            birthDate = `${enrollment.birth_year}-${String(enrollment.birth_month).padStart(2, '0')}-${String(enrollment.birth_day).padStart(2, '0')}`;
           }
           
           const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || null;
           const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment2x2;
+
+          const studentIdVal = enrollment.studentId || enrollment.student_id;
+          const fName = enrollment.firstName || enrollment.first_name || '';
+          const lName = enrollment.lastName || enrollment.last_name || '';
+          const mName = enrollment.middleName || enrollment.middle_name || '';
+          const sfx = enrollment.suffix || '';
+          const fullName = enrollment.student_name || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim();
+          const dept = enrollment.department || enrollment.nstpComponent || 'CWTS';
+          const emailVal = enrollment.email || '';
+          const sec = enrollment.section || 'A';
+          const prog = enrollment.program || enrollment.course || '';
+          const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
+          const streetVal = enrollment.street || '';
+          const munVal = enrollment.municipality || '';
+          const provVal = enrollment.province || '';
+          const addr = enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '';
+          const contact = enrollment.contactNumber || enrollment.contact_number || '';
+          const gndr = enrollment.gender || enrollment.sex || '';
+          const bMonth = enrollment.birthMonth || enrollment.birth_month || null;
+          const bDay = enrollment.birthDay || enrollment.birth_day || null;
+          const bYear = enrollment.birthYear || enrollment.birth_year || null;
+          const ageVal = enrollment.age || null;
+          const civStat = enrollment.civilStatus || enrollment.civil_status || null;
+          const hVal = enrollment.height || null;
+          const wVal = enrollment.weight || null;
+          const bType = enrollment.bloodType || enrollment.blood_type || null;
+          const fbVal = enrollment.facebookAccount || enrollment.facebook_account || null;
+          const emergName = enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || null;
+          const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
+          const voterVal = enrollment.registeredVoter || enrollment.registered_voter || 'No';
 
           await pool.execute(
             `INSERT INTO students (
@@ -3461,39 +3493,41 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               registrationPhoto, registration_photo, photo, id_photo_2x2
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-              enrollment.studentId,
-              enrollment.student_name || `${enrollment.lastName}, ${enrollment.firstName} ${enrollment.middleName || ''}${enrollment.suffix ? ' ' + enrollment.suffix : ''}`.replace(/\s+/g, ' ').trim(),
-              enrollment.email,
-              enrollment.department,
+              studentIdVal,
+              fullName,
+              emailVal,
+              dept,
               'Active',
-              enrollment.section,
-              enrollment.program,
-              enrollment.homeAddress || enrollment.address || null,
-              enrollment.contactNumber,
-              enrollment.gender || enrollment.sex || null,
-              birthDate,
-              enrollment.birthMonth || null,
-              enrollment.birthDay   || null,
-              enrollment.birthYear  || null,
-              enrollment.age        || null,
-              enrollment.civilStatus || null,
-              enrollment.height     || null,
-              enrollment.weight     || null,
-              enrollment.bloodType  || null,
-              enrollment.facebookAccount || null,
-              enrollment.emergencyContact || enrollment.emergencyName || null,
-              enrollment.emergencyNumber || null,
-              enrollment.street        || null,
-              enrollment.municipality  || null,
-              enrollment.province      || null,
-              enrollment.firstName     || null,
-              enrollment.lastName      || null,
-              enrollment.middleName    || null,
-              enrollment.registeredVoter || 'No',
+              sec,
+              yr,
+              prog,
+              addr,
+              contact,
+              gndr,
+              birthDate || null,
+              bMonth,
+              bDay,
+              bYear,
+              ageVal,
+              civStat,
+              hVal,
+              wVal,
+              bType,
+              fbVal,
+              emergName,
+              emergNum,
+              streetVal,
+              munVal,
+              provVal,
+              fName,
+              lName,
+              mName,
+              sfx,
+              voterVal,
               enrollmentReg,
               enrollmentReg,
               enrollment2x2,
-              enrollment2x2,
+              enrollment2x2
             ]
           );
         }

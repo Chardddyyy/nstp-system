@@ -2252,21 +2252,6 @@ function Enrollment() {
         </div>
       )}
 
-      {/* Smart Single Floating Guided Scroll Button (Arrow Down when near top, Arrow Up when scrolled down) */}
-      <button
-        type="button"
-        onClick={handleToggleScroll}
-        aria-label={isScrolledDown ? "Scroll to top" : "Scroll to bottom"}
-        title={isScrolledDown ? "Scroll to Top" : "Scroll to Bottom"}
-        className="fixed bottom-6 right-5 z-40 p-3.5 rounded-full bg-emerald-950/95 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer backdrop-blur-md flex items-center justify-center group animate-fade-in"
-      >
-        {isScrolledDown ? (
-          <ChevronUp className="w-5 h-5 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
-        ) : (
-          <ChevronDown className="w-5 h-5 stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
-        )}
-      </button>
-
       {/* Footer Bar matching Landing Page footer */}
       <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 shrink-0 mt-12">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-400 font-medium">

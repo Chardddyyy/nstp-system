@@ -13,15 +13,7 @@ import { usersAPI, getAllInstructorsGroup } from '../services/api';
 const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
 
-// Pre-defined avatar options
-const AVATAR_OPTIONS = [
-  { id: 'default', color: 'bg-gray-400', icon: '👤' },
-  { id: 'green', color: 'bg-green-500', icon: '🎓' },
-  { id: 'blue', color: 'bg-blue-500', icon: '👨‍🏫' },
-  { id: 'purple', color: 'bg-purple-500', icon: '👩‍🏫' },
-  { id: 'red', color: 'bg-red-500', icon: '👮' },
-  { id: 'yellow', color: 'bg-yellow-500', icon: '⭐' },
-];
+import { AVATAR_OPTIONS, getAvatarSrc } from '../utils/avatars';
 
 function Profile() {
   const { user, logout, updateUser, changePassword } = useAuth();
@@ -317,11 +309,12 @@ function Profile() {
         />
       );
     }
-    const avatar = AVATAR_OPTIONS.find(a => a.id === formData.avatar) || AVATAR_OPTIONS[0];
     return (
-      <div className={`w-full h-full ${avatar.color} rounded-full flex items-center justify-center text-4xl`}>
-        {avatar.icon}
-      </div>
+      <img
+        src={getAvatarSrc(formData.avatar)}
+        alt="Avatar"
+        className="w-full h-full object-cover rounded-full shadow-inner"
+      />
     );
   };
 
@@ -574,16 +567,18 @@ function Profile() {
               {/* Avatar Selector */}
               {isEditing && showAvatarSelector && (
                 <div className="p-4 bg-gray-50 border-t">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Choose an Avatar</p>
-                  <div className="flex justify-center space-x-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2.5">Choose an Avatar</p>
+                  <div className="grid grid-cols-5 gap-2 sm:gap-2.5">
                     {AVATAR_OPTIONS.map((avatar) => (
-                      <button type="button"
-                        
+                      <button
+                        type="button"
                         key={avatar.id}
                         onClick={() => handleAvatarSelect(avatar.id)}
-                        className={`w-12 h-12 ${avatar.color} rounded-full flex items-center justify-center text-2xl transition-transform hover:scale-110 ${formData.avatar === avatar.id ? 'ring-2 ring-offset-2 ring-green-500' : ''}`}
+                        className={`w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden border-2 transition-all p-0.5 bg-white hover:scale-110 shadow-xs cursor-pointer ${
+                          formData.avatar === avatar.id ? 'border-emerald-600 ring-2 ring-emerald-400/50 scale-105' : 'border-gray-200 hover:border-emerald-400'
+                        }`}
                       >
-                        {avatar.icon}
+                        <img src={avatar.image} alt={avatar.name} className="w-full h-full object-cover rounded-full" />
                       </button>
                     ))}
                   </div>
@@ -730,9 +725,11 @@ function Profile() {
                             {inst.profilePicture ? (
                               <img src={inst.profilePicture} alt={inst.name} className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30" />
                             ) : (
-                              <div className={`w-9 h-9 rounded-full ${AVATAR_OPTIONS.find(a => a.id === inst.avatar)?.color || 'bg-emerald-700'} flex items-center justify-center text-white shrink-0 text-xs font-bold`}>
-                                {AVATAR_OPTIONS.find(a => a.id === inst.avatar)?.icon || inst.name?.charAt(0)?.toUpperCase()}
-                              </div>
+                              <img
+                                src={getAvatarSrc(inst.avatar)}
+                                alt={inst.name}
+                                className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30 shadow-xs"
+                              />
                             )}
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
@@ -988,9 +985,11 @@ function Profile() {
                 {editingInstructor?.profilePicture ? (
                   <img src={editingInstructor.profilePicture} alt={editingInstructor.name} className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0" />
                 ) : (
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 text-base font-bold">
-                    {AVATAR_OPTIONS.find(a => a.id === editingInstructor?.avatar)?.icon || editingInstructor?.name?.charAt(0)?.toUpperCase() || '👨‍🏫'}
-                  </div>
+                  <img
+                    src={getAvatarSrc(editingInstructor?.avatar)}
+                    alt={editingInstructor?.name || 'Instructor'}
+                    className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0 shadow-xs"
+                  />
                 )}
                 <div>
                   <h3 className="text-base sm:text-lg font-black tracking-tight">{editInstructorForm.name || 'Instructor Details'}</h3>

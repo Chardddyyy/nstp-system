@@ -12,15 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useEffect } from 'react';
 
-// Avatar options for display
-const AVATAR_OPTIONS = {
-  default: { color: 'bg-gray-400', icon: '👤' },
-  green: { color: 'bg-green-500', icon: '🎓' },
-  blue: { color: 'bg-blue-500', icon: '👨‍🏫' },
-  purple: { color: 'bg-purple-500', icon: '👩‍🏫' },
-  red: { color: 'bg-red-500', icon: '👮' },
-  yellow: { color: 'bg-yellow-500', icon: '⭐' },
-};
+import { getAvatarSrc } from '../utils/avatars';
 
 // Emoji list for reactions
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
@@ -191,29 +183,15 @@ function Chat() {
           ];
           const pos = positions[index] || { top: '0px', left: '0px' };
 
-          if (participant?.profilePicture) {
-            return (
-              <img
-                key={participant?.id || index}
-                src={participant.profilePicture}
-                alt={participant?.name || 'User'}
-                className="absolute w-5 h-5 rounded-full border border-white shadow-xs object-cover"
-                style={pos}
-                title={participant?.name || 'User'}
-              />
-            );
-          }
-
-          const avatar = AVATAR_OPTIONS[participant?.avatar || 'default'] || AVATAR_OPTIONS.default;
           return (
-            <div
+            <img
               key={participant?.id || index}
-              className={`absolute w-5 h-5 ${avatar.color} rounded-full flex items-center justify-center text-[10px] border border-white shadow-xs`}
+              src={getAvatarSrc(participant?.avatar, participant?.profilePicture)}
+              alt={participant?.name || 'User'}
+              className="absolute w-5 h-5 rounded-full border border-white shadow-xs object-cover"
               style={pos}
               title={participant?.name || 'User'}
-            >
-              {avatar.icon}
-            </div>
+            />
           );
         })}
         {(conversation.participants?.length > 3 || conversation.participantDetails?.length > 3) && (
@@ -1703,20 +1681,12 @@ function Chat() {
 
   // Get user avatar display
   const getUserAvatar = (u) => {
-    if (u?.profilePicture) {
-      return (
-        <img
-          src={u.profilePicture}
-          alt="Profile"
-          className="w-9 h-9 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs shrink-0"
-        />
-      );
-    }
-    const avatar = AVATAR_OPTIONS[u?.avatar || 'default'] || AVATAR_OPTIONS.default;
     return (
-      <div className={`w-9 h-9 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-sm sm:text-base shadow-xs shrink-0`}>
-        {avatar.icon}
-      </div>
+      <img
+        src={getAvatarSrc(u?.avatar, u?.profilePicture)}
+        alt={u?.name || 'User'}
+        className="w-9 h-9 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs shrink-0 border border-emerald-600/30"
+      />
     );
   };
 
@@ -2062,26 +2032,12 @@ function Chat() {
                         {/* Avatar always first in DOM — flex-row-reverse keeps it on the right for own messages */}
                         <div className="flex-shrink-0 self-end mb-1">
                           {isOwn ? (
-                            (() => {
-                              const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
-                              return user?.profilePicture ? (
-                                <img src={user.profilePicture} alt="Me" className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" />
-                              ) : (
-                                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-base sm:text-lg`}>
-                                  {avatar.icon}
-                                </div>
-                              );
-                            })()
+                            <img src={getAvatarSrc(user?.avatar, user?.profilePicture)} alt="Me" className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs" />
                           ) : (
                             (() => {
                               const senderUser = allUsers.find(u => u.id === message.senderId) || allUsers.find(u => u.id === message.sender_id);
-                              if (!senderUser) return <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-300 rounded-full" />;
-                              return senderUser.profilePicture ? (
-                                <img src={senderUser.profilePicture} alt={senderUser.name} className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" />
-                              ) : (
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-400 rounded-full flex items-center justify-center text-base sm:text-lg">
-                                  {(senderUser.name || '?').charAt(0).toUpperCase()}
-                                </div>
+                              return (
+                                <img src={getAvatarSrc(senderUser?.avatar, senderUser?.profilePicture)} alt={senderUser?.name || 'User'} className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs" />
                               );
                             })()
                           )}
@@ -2125,41 +2081,22 @@ function Chat() {
                       {/* Avatar */}
                       <div className="flex-shrink-0 self-end mb-1">
                         {isOwn ? (
-                          (() => {
-                            const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
-                            return user?.profilePicture ? (
-                              <img 
-                                src={user.profilePicture} 
-                                alt="Me" 
-                                className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full"
-                              />
-                            ) : (
-                              <div className={`w-8 h-8 sm:w-10 sm:h-10 ${avatar.color} rounded-full flex items-center justify-center text-base sm:text-lg`}>
-                                {avatar.icon}
-                              </div>
-                            );
-                          })()
+                          <img 
+                            src={getAvatarSrc(user?.avatar, user?.profilePicture)} 
+                            alt="Me" 
+                            className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
+                          />
                         ) : (
                           (() => {
                             const senderUser = allUsers.find(u => u.id === message.senderId) || 
                                                allUsers.find(u => u.id === message.sender_id) ||
-                                               (message.senderId ? { id: message.senderId, name: message.senderName, profilePicture: message.senderProfilePicture } : null);
-                            if (!senderUser) return null;
+                                               activeConversation?.participantDetails?.find(p => p.id === message.senderId || p.id === message.sender_id);
                             return (
-                              <div className="relative">
-                                {senderUser.profilePicture ? (
-                                  <img 
-                                    src={senderUser.profilePicture} 
-                                    alt={senderUser.name || 'User'} 
-                                    className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full"
-                                  />
-                                ) : (
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-400 rounded-full flex items-center justify-center text-base sm:text-lg">
-                                    {(senderUser.name || '?').charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
-                              </div>
+                              <img 
+                                src={getAvatarSrc(senderUser?.avatar, senderUser?.profilePicture)} 
+                                alt={senderUser?.name || 'User'} 
+                                className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
+                              />
                             );
                           })()
                         )}
@@ -2599,14 +2536,12 @@ function Chat() {
                       <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden bg-gray-700 border-4 border-gray-700">
                         {(() => {
                           const partner = getConversationPartner(activeConversation);
-                          if (partner?.profilePicture) {
-                            return <img src={partner.profilePicture} alt="" className="w-full h-full object-cover" />;
-                          }
-                          const avatar = AVATAR_OPTIONS[partner?.avatar || 'default'] || AVATAR_OPTIONS.default;
                           return (
-                            <div className={`w-full h-full ${avatar.color} flex items-center justify-center text-4xl sm:text-5xl`}>
-                              {avatar.icon}
-                            </div>
+                            <img
+                              src={getAvatarSrc(partner?.avatar, partner?.profilePicture)}
+                              alt={partner?.name || 'Partner'}
+                              className="w-full h-full object-cover"
+                            />
                           );
                         })()}
                       </div>

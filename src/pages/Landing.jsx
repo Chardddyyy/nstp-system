@@ -947,7 +947,7 @@ function Landing() {
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University - Naic</h4>
+                  <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University</h4>
                   <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono">Naic Campus</p>
                 </div>
               </div>
@@ -969,7 +969,7 @@ function Landing() {
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                     title="Cavite State University Official Portal"
                   >
-                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Cavite State University - Naic</span>
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Cavite State University</span>
                     <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>

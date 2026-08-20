@@ -3,7 +3,8 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   FileText, Plus, Search, Calendar,
   Send, MessageCircle, CheckCircle, Clock,
-  Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User, Pencil
+  Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User, Pencil,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -27,7 +28,7 @@ function Reports() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -508,28 +509,82 @@ function Reports() {
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-2 mt-6">
-            <button type="button"
-              
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2 text-gray-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button type="button"
-              
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+        {/* Modern Pagination Controls */}
+        {filteredReports.length > 0 && (
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/90 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-emerald-100 shadow-sm text-xs sm:text-sm">
+            <div className="flex items-center gap-2 text-gray-600 font-medium flex-wrap">
+              <span>Showing</span>
+              <span className="font-bold text-emerald-950">{Math.min(indexOfFirstReport + 1, filteredReports.length)}</span>
+              <span>to</span>
+              <span className="font-bold text-emerald-950">{Math.min(indexOfLastReport, filteredReports.length)}</span>
+              <span>of</span>
+              <span className="font-bold text-emerald-950">{filteredReports.length}</span>
+              <span>reports</span>
+
+              <div className="flex items-center gap-1.5 ml-2 sm:ml-4 pl-2 sm:pl-4 border-l border-gray-200">
+                <span className="text-gray-500 text-xs">Per page:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-100"
+                >
+                  <option value={6}>6</option>
+                  <option value={12}>12</option>
+                  <option value={24}>24</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold border border-gray-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Prev</span>
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                  .map((page, idx, arr) => {
+                    const prevPage = arr[idx - 1];
+                    return (
+                      <div key={page} className="flex items-center">
+                        {prevPage && page - prevPage > 1 && (
+                          <span className="px-1 text-gray-400 font-bold">...</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-xl font-black text-xs transition-all cursor-pointer ${
+                            currentPage === page
+                              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+                              : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold border border-gray-200 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

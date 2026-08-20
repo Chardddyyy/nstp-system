@@ -12,15 +12,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
-// Avatar options for display
-const AVATAR_OPTIONS = {
-  default: { color: 'bg-gray-400', icon: '👤' },
-  green: { color: 'bg-green-500', icon: '🎓' },
-  blue: { color: 'bg-blue-500', icon: '👨‍🏫' },
-  purple: { color: 'bg-purple-500', icon: '👩‍🏫' },
-  red: { color: 'bg-red-500', icon: '👮' },
-  yellow: { color: 'bg-yellow-500', icon: '⭐' },
-};
+import { getAvatarSrc } from '../utils/avatars';
 
 function InstructorDashboard() {
   const { 
@@ -231,20 +223,12 @@ function InstructorDashboard() {
 
   // Get user avatar display
   const getUserAvatar = () => {
-    if (user?.profilePicture) {
-      return (
-        <img 
-          src={user.profilePicture} 
-          alt="Profile" 
-          className="w-10 h-10 object-cover rounded-full"
-        />
-      );
-    }
-    const avatar = AVATAR_OPTIONS[user?.avatar || 'default'] || AVATAR_OPTIONS.default;
     return (
-      <div className={`w-10 h-10 ${avatar.color} rounded-full flex items-center justify-center text-lg`}>
-        {avatar.icon}
-      </div>
+      <img 
+        src={getAvatarSrc(user?.avatar, user?.profilePicture)} 
+        alt="Profile" 
+        className="w-10 h-10 object-cover rounded-full shadow-xs border border-emerald-600/30"
+      />
     );
   };
 
