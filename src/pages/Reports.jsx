@@ -25,14 +25,14 @@ function Reports() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
-  
+
   // Refs for file inputs
   const fileInputRef = useRef(null);
-  
+
   // Admin creates report assignment
   const [createForm, setCreateForm] = useState({
     title: '',
@@ -69,9 +69,9 @@ function Reports() {
       dueDate: formattedDate,
       referenceFile: (report.reference_file_data || report.referenceFile?.data || report.reference_file_name || report.referenceFile?.name)
         ? {
-            name: report.reference_file_name || report.referenceFile?.name || 'Attached Reference File',
-            data: report.reference_file_data || report.referenceFile?.data || null
-          }
+          name: report.reference_file_name || report.referenceFile?.name || 'Attached Reference File',
+          data: report.reference_file_data || report.referenceFile?.data || null
+        }
         : null
     });
     setShowCreateModal(true);
@@ -221,18 +221,18 @@ function Reports() {
     const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || report.status === filterStatus;
     const matchesDept = filterDept === 'All' || report.department === 'All' || report.department === filterDept;
-    
+
     // Instructors only see reports for their department
     if (isInstructor && user?.department) {
       const assignedToMe = report.department === 'All' || report.department === user.department;
       return matchesSearch && matchesStatus && matchesDept && assignedToMe;
     }
-    
+
     // Students don't see submit buttons (read-only if needed)
     if (user?.role === 'student') {
       return false; // Students don't access this page or see reports
     }
-    
+
     return matchesSearch && matchesStatus && matchesDept;
   }), [sourceReports, searchTerm, filterStatus, filterDept, isInstructor, user]);
 
@@ -259,7 +259,7 @@ function Reports() {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'Reviewed': return 'bg-blue-100 text-blue-700 border border-blue-200';
       case 'Submitted': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
       case 'Pending': return 'bg-amber-100 text-amber-700 border border-amber-200';
@@ -268,7 +268,7 @@ function Reports() {
   };
 
   const getDeptColor = (dept) => {
-    switch(dept) {
+    switch (dept) {
       case 'ROTC': return 'bg-red-100 text-red-700';
       case 'LTS': return 'bg-purple-100 text-purple-700';
       case 'CWTS': return 'bg-green-100 text-green-700';
@@ -439,7 +439,7 @@ function Reports() {
                   {/* Only instructors can submit reports */}
                   {isInstructor && !viewingArchive && !hasSubmitted(report) && (
                     <button type="button"
-                      
+
                       onClick={(e) => { e.stopPropagation(); openSubmitModal(report); }}
                       className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors"
                     >
@@ -562,11 +562,10 @@ function Reports() {
                         <button
                           type="button"
                           onClick={() => setCurrentPage(page)}
-                          className={`w-8 h-8 rounded-xl font-black text-xs transition-all cursor-pointer ${
-                            currentPage === page
-                              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
-                              : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
-                          }`}
+                          className={`w-8 h-8 rounded-xl font-black text-xs transition-all cursor-pointer ${currentPage === page
+                            ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/20'
+                            : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200'
+                            }`}
                         >
                           {page}
                         </button>
@@ -591,10 +590,10 @@ function Reports() {
         {/* Create / Edit Report Assignment Modal (Admin) */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowCreateModal(false)}>
-            <div 
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
-              onClick={(e) => e.stopPropagation()} 
-              onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}
+            <div
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); } } }}
             >
               {/* Header */}
               <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
@@ -628,7 +627,7 @@ function Reports() {
                   <input
                     type="text"
                     value={createForm.title}
-                    onChange={(e) => setCreateForm({...createForm, title: e.target.value})}
+                    onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     placeholder="e.g., Activity Schedule - March 2024"
                   />
@@ -639,7 +638,7 @@ function Reports() {
                   </label>
                   <textarea
                     value={createForm.description}
-                    onChange={(e) => setCreateForm({...createForm, description: e.target.value})}
+                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none h-32 resize-none font-medium"
                     placeholder="Describe what instructors need to submit (e.g., Activity Schedule, DTR, Grading Sheet, Attendance, etc.)"
                   />
@@ -649,7 +648,7 @@ function Reports() {
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Assign To Department</label>
                     <select
                       value={createForm.department}
-                      onChange={(e) => setCreateForm({...createForm, department: e.target.value})}
+                      onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
                       className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     >
                       <option value="All">All Departments</option>
@@ -664,7 +663,7 @@ function Reports() {
                       type="date"
                       min={getTodayLocalStr()}
                       value={createForm.dueDate}
-                      onChange={(e) => setCreateForm({...createForm, dueDate: e.target.value})}
+                      onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
                       className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     />
                   </div>
@@ -695,7 +694,7 @@ function Reports() {
                         <span className="truncate max-w-[200px]">{createForm.referenceFile.name}</span>
                         <button
                           type="button"
-                          onClick={() => setCreateForm({...createForm, referenceFile: null})}
+                          onClick={() => setCreateForm({ ...createForm, referenceFile: null })}
                           className="text-emerald-700 hover:text-red-600 ml-1 cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -732,10 +731,10 @@ function Reports() {
         {/* Submit Report Modal (Instructor) */}
         {showSubmitModal && selectedReport && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowSubmitModal(false)}>
-            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length-1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length-1]) { e.preventDefault(); f[0].focus(); } } }}>
+            <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') e.preventDefault(); if (e.key === 'Tab') { const f = Array.from(e.currentTarget.querySelectorAll('button:not([disabled]), input, select, textarea')); if (!f.length) return; if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); } } }}>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Submit Report</h3>
               <p className="text-gray-600 mb-4">{selectedReport.title}</p>
-              
+
               <div className="bg-yellow-50 rounded-lg p-4 mb-4">
                 <p className="text-sm text-gray-700"><span className="font-medium">Instructions:</span> {selectedReport.description}</p>
               </div>
@@ -745,7 +744,7 @@ function Reports() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Your Report Content</label>
                   <textarea
                     value={submitForm.content}
-                    onChange={(e) => setSubmitForm({...submitForm, content: e.target.value})}
+                    onChange={(e) => setSubmitForm({ ...submitForm, content: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-32 resize-none"
                     placeholder="Enter your report details here..."
                   />
@@ -763,7 +762,7 @@ function Reports() {
                   />
                   <div className="flex items-center space-x-2">
                     <button type="button"
-                      
+
                       onClick={() => submitFileRef.current?.click()}
                       className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
@@ -775,8 +774,8 @@ function Reports() {
                         <File className="w-4 h-4 text-green-600" />
                         <span className="text-sm text-green-700 truncate max-w-[200px]">{submitForm.attachment.name}</span>
                         <button type="button"
-                          
-                          onClick={() => setSubmitForm({...submitForm, attachment: null})}
+
+                          onClick={() => setSubmitForm({ ...submitForm, attachment: null })}
                           className="text-green-600 hover:text-green-800"
                         >
                           <X className="w-4 h-4" />
@@ -809,14 +808,14 @@ function Reports() {
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button type="button"
-                  
+
                   onClick={() => setShowSubmitModal(false)}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button type="button"
-                  
+
                   onClick={handleSubmitReport}
                   disabled={isSubmittingReport}
                   className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
@@ -838,7 +837,7 @@ function Reports() {
                   <p className="text-sm text-gray-500">Created by {selectedReport.createdBy}</p>
                 </div>
                 <button type="button"
-                  
+
                   onClick={() => setShowViewModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -913,7 +912,7 @@ function Reports() {
                   <MessageCircle className="w-5 h-5 mr-2" />
                   Replies & Comments ({(selectedReport.comments || []).length})
                 </h4>
-                
+
                 <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                   {(selectedReport.comments || []).map((comment) => (
                     <div key={comment.id} className={`rounded-lg p-3 ${comment.role === 'admin' ? 'bg-blue-50' : 'bg-gray-50'}`}>
@@ -946,7 +945,7 @@ function Reports() {
                     onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddComment(); } }}
                   />
                   <button type="button"
-                    
+
                     onClick={handleAddComment}
                     disabled={!newComment.trim()}
                     className="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg transition-colors disabled:opacity-50"

@@ -6,8 +6,7 @@ import {
   DEMO_COORDINATOR_SIGNATURE_SVG,
   COORDINATOR_NAME,
   COORDINATOR_TITLE,
-  COORDINATOR_INSTITUTION,
-  normalizeSectionName
+  COORDINATOR_INSTITUTION
 } from '../utils/signatureAssets';
 
 export function NstpIdCard({ student }) {

@@ -273,32 +273,6 @@ function Enrollment() {
     closeCameraModal();
   };
 
-  // Detect scroll position to dynamically toggle between Scroll to Bottom (near top) and Scroll to Top (when scrolled)
-  const [isScrolledDown, setIsScrolledDown] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      if (scrollHeight > 0) {
-        setIsScrolledDown(scrollY > scrollHeight * 0.35 || scrollY > 400);
-      } else {
-        setIsScrolledDown(scrollY > 300);
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleToggleScroll = () => {
-    if (isScrolledDown) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-    }
-  };
-
   // True when there is saved progress from a previous session
   const hasSavedData = false;
 
@@ -698,10 +672,10 @@ function Enrollment() {
         fullName: `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim(),
         birthDate: cleanBirthDate,
         status: 'Pending',
-        registrationPhoto: registrationPhoto,
-        reg_form: registrationPhoto,
-        id_photo_2x2: idPhoto2x2 || registrationPhoto,
-        photo: idPhoto2x2 || registrationPhoto,
+        registrationPhoto: registrationPhoto || null,
+        reg_form: registrationPhoto || null,
+        id_photo_2x2: idPhoto2x2 || null,
+        photo: idPhoto2x2 || null,
         recaptchaToken: googleRecaptchaToken || null,
       };
 

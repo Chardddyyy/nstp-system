@@ -89,7 +89,6 @@ function Landing() {
 
   // Live Enrollment Timed Schedule Status
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const updateSchedule = () => setEnrollmentStatus(calculateEnrollmentStatus());

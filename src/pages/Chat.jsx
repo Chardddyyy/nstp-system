@@ -1667,10 +1667,6 @@ function Chat() {
     return `${month} ${day}, ${year} ${hours}:${minutes}${ampm}`;
   };
 
-  const formatTime = (dateString) => {
-    return formatDate(dateString);
-  };
-
   // Get user avatar display
   const getUserAvatar = (u) => {
     return (

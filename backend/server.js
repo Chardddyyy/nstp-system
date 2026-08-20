@@ -676,7 +676,9 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN emergencyNumber VARCHAR(50)',
     'ALTER TABLE students ADD COLUMN program VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN section VARCHAR(50)',
-    'ALTER TABLE students ADD COLUMN profilePicture TEXT',
+    'ALTER TABLE students ADD COLUMN nstp_section VARCHAR(50)',
+    'ALTER TABLE students ADD COLUMN profilePicture LONGTEXT',
+    'ALTER TABLE students MODIFY COLUMN profilePicture LONGTEXT',
     'ALTER TABLE students ADD COLUMN street VARCHAR(255)',
     'ALTER TABLE students ADD COLUMN municipality VARCHAR(100)',
     'ALTER TABLE students ADD COLUMN province VARCHAR(100)',
@@ -686,7 +688,18 @@ async function ensureStudentColumns() {
     'ALTER TABLE students ADD COLUMN suffix VARCHAR(50)',
     'ALTER TABLE students ADD COLUMN registeredVoter VARCHAR(20)',
     'ALTER TABLE students ADD COLUMN registrationPhoto LONGTEXT NULL',
+    'ALTER TABLE students MODIFY COLUMN registrationPhoto LONGTEXT NULL',
     'ALTER TABLE students ADD COLUMN registration_photo LONGTEXT NULL',
+    'ALTER TABLE students MODIFY COLUMN registration_photo LONGTEXT NULL',
+    'ALTER TABLE students ADD COLUMN photo LONGTEXT NULL',
+    'ALTER TABLE students MODIFY COLUMN photo LONGTEXT NULL',
+    'ALTER TABLE students ADD COLUMN id_photo_2x2 LONGTEXT NULL',
+    'ALTER TABLE students MODIFY COLUMN id_photo_2x2 LONGTEXT NULL',
+    'ALTER TABLE students ADD COLUMN reg_form LONGTEXT NULL',
+    'ALTER TABLE students MODIFY COLUMN reg_form LONGTEXT NULL',
+    'ALTER TABLE students ADD COLUMN nstp_serial_id VARCHAR(50) NULL',
+    'ALTER TABLE students ADD COLUMN qr_token VARCHAR(100) NULL',
+    'ALTER TABLE students ADD COLUMN id_issued_at DATETIME NULL',
     'ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL',
     'ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL',
   ];
@@ -1587,50 +1600,75 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 app.put('/api/students/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      studentId, name, email, department, section, semester, schoolYear, program, year, yearLevel,
-      contactNumber, address, gender, sex, birthDate, birthMonth, birthDay, birthYear,
-      age, civilStatus, bloodType, height, weight, facebookAccount,
-      emergencyName, emergencyContact, emergencyNumber,
-      firstName, lastName, middleName, suffix, registeredVoter, isVoter,
-      street, municipality, province, registrationPhoto, registration_photo
-    } = req.body;
+    
+    // First, find the student to ensure they exist and retrieve all existing fields
+    const [existing] = await pool.execute('SELECT * FROM students WHERE id = ? OR studentId = ? LIMIT 1', [id, id]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    const current = existing[0];
 
     // Instructors: verify the target student belongs to their department
     if (req.user.role !== 'admin') {
-      const [existing] = await pool.execute('SELECT department FROM students WHERE id = ? OR studentId = ?', [id, id]);
-      if (existing.length === 0) return res.status(404).json({ message: 'Student not found' });
-      if (existing[0].department !== req.user.department) {
+      if (current.department !== req.user.department) {
         return res.status(403).json({ message: 'You can only edit students in your department' });
       }
-      // Prevent instructors from changing a student's department
-      if (department && department !== req.user.department) {
+      if (req.body.department && req.body.department !== req.user.department) {
         return res.status(403).json({ message: 'You cannot change a student\'s department' });
       }
     }
 
-    // Convert undefined OR empty string to null (empty string breaks DATE columns in MySQL strict mode)
-    const n = (v) => (v === undefined || v === null || v === '') ? null : v;
+    const n = (v, fallback = null) => (v === undefined || v === null || v === '') ? fallback : v;
 
-    // Build a valid DATE string only if all three parts are present and make a plausible date
-    let safeBirthDate = n(birthDate);
-    if (!safeBirthDate && n(birthMonth) && n(birthDay) && n(birthYear)) {
-      const m = parseInt(birthMonth, 10);
-      const d = parseInt(birthDay, 10);
-      const y = parseInt(birthYear, 10);
+    const finalStudentId = n(req.body.studentId, current.studentId);
+    const finalName = n(req.body.name, current.name);
+    const finalDept = n(req.body.department, current.department);
+    const finalEmail = n(req.body.email, current.email);
+    const finalSection = n(req.body.section, current.section);
+    const finalSemester = n(req.body.semester, current.semester);
+    const finalSchoolYear = n(req.body.schoolYear, current.schoolYear);
+    const finalProgram = n(req.body.program, current.program);
+    const finalYear = n(req.body.yearLevel, n(req.body.year, current.year));
+    const finalContact = n(req.body.contactNumber, current.contactNumber);
+    const finalAddress = n(req.body.address, current.address);
+    const finalGender = n(req.body.gender, n(req.body.sex, current.gender));
+
+    let safeBirthDate = n(req.body.birthDate, current.birthDate);
+    const bm = n(req.body.birthMonth, current.birthMonth);
+    const bd = n(req.body.birthDay, current.birthDay);
+    const by = n(req.body.birthYear, current.birthYear);
+    if ((!safeBirthDate || safeBirthDate === '') && bm && bd && by) {
+      const m = parseInt(bm, 10);
+      const d = parseInt(bd, 10);
+      const y = parseInt(by, 10);
       if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2100) {
         safeBirthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       }
     }
 
-    const finalSuffix = n(suffix);
-    const finalGender = n(gender) || n(sex);
-    const finalYear = n(yearLevel) || n(year);
-    const finalEmergency = n(emergencyContact) || n(emergencyName);
-    const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
-    const finalIdPhoto = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
-    const finalRegPhoto = n(registrationPhoto) || n(registration_photo) || finalIdPhoto;
-    const resolved2x2 = finalIdPhoto || finalRegPhoto;
+    const finalAge = n(req.body.age, current.age);
+    const finalCivilStatus = n(req.body.civilStatus, current.civilStatus);
+    const finalBloodType = n(req.body.bloodType, current.bloodType);
+    const finalHeight = n(req.body.height, current.height);
+    const finalWeight = n(req.body.weight, current.weight);
+    const finalFacebook = n(req.body.facebookAccount, current.facebookAccount);
+    const finalEmergency = n(req.body.emergencyContact, n(req.body.emergencyName, current.emergencyContact));
+    const finalEmergencyNumber = n(req.body.emergencyNumber, current.emergencyNumber);
+    const finalFirstName = n(req.body.firstName, current.firstName);
+    const finalLastName = n(req.body.lastName, current.lastName);
+    const finalMiddleName = n(req.body.middleName, current.middleName);
+    const finalSuffix = n(req.body.suffix, current.suffix);
+    const finalVoter = n(req.body.registeredVoter, n(req.body.isVoter, current.registeredVoter || 'No'));
+    const finalStreet = n(req.body.street, current.street);
+    const finalMunicipality = n(req.body.municipality, current.municipality);
+    const finalProvince = n(req.body.province, current.province);
+
+    // Resolve photo values properly
+    const new2x2 = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
+    const newReg = n(req.body.registrationPhoto) || n(req.body.registration_photo);
+    
+    const finalPhoto = new2x2 || current.id_photo_2x2 || current.photo || current.registrationPhoto;
+    const finalRegPhoto = newReg || current.registrationPhoto || current.registration_photo || finalPhoto;
 
     await pool.execute(
       `UPDATE students SET
@@ -1643,24 +1681,26 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          photo = ?, id_photo_2x2 = ?
        WHERE id = ? OR studentId = ?`,
       [
-        studentId, name, n(email), department, n(section), n(semester), n(schoolYear),
-        n(program), finalYear, n(contactNumber), n(address), finalGender, safeBirthDate,
-        n(birthMonth), n(birthDay), n(birthYear), n(age), n(civilStatus), n(bloodType),
-        n(height), n(weight), n(facebookAccount), finalEmergency, n(emergencyNumber),
-        n(firstName), n(lastName), n(middleName), finalSuffix, finalVoter,
-        n(street), n(municipality), n(province), finalRegPhoto, finalRegPhoto,
-        resolved2x2, resolved2x2,
-        id, id
+        finalStudentId, finalName, finalEmail, finalDept, finalSection, finalSemester, finalSchoolYear,
+        finalProgram, finalYear, finalContact, finalAddress, finalGender, safeBirthDate,
+        bm, bd, by, finalAge, finalCivilStatus, finalBloodType,
+        finalHeight, finalWeight, finalFacebook, finalEmergency, finalEmergencyNumber,
+        finalFirstName, finalLastName, finalMiddleName, finalSuffix, finalVoter,
+        finalStreet, finalMunicipality, finalProvince, finalRegPhoto, finalRegPhoto,
+        finalPhoto, finalPhoto,
+        current.id, String(finalStudentId)
       ]
     );
 
-    const [students] = await pool.execute('SELECT * FROM students WHERE id = ? OR studentId = ?', [id, id]);
+    const [updatedRows] = await pool.execute('SELECT * FROM students WHERE id = ? LIMIT 1', [current.id]);
+    
     try {
-      autoSaveToGDrive('Edit_Student_' + (studentId || id));
+      autoSaveToGDrive('Edit_Student_' + (finalStudentId || id));
     } catch (e) {
       console.warn('GDrive auto-save warning:', e.message);
     }
-    res.json(students[0] || { success: true });
+    
+    res.json(updatedRows[0] || { success: true, ...req.body });
   } catch (error) {
     console.error('Update student error:', error);
     if (error.code === 'ER_DUP_ENTRY' || (error.message && error.message.includes('Duplicate'))) {
@@ -3452,8 +3492,8 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
             birthDate = `${enrollment.birth_year}-${String(enrollment.birth_month).padStart(2, '0')}-${String(enrollment.birth_day).padStart(2, '0')}`;
           }
           
-          const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || null;
-          const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment2x2;
+          const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || null;
+          const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.reg_form || null;
 
           const studentIdVal = enrollment.studentId || enrollment.student_id;
           const fName = enrollment.firstName || enrollment.first_name || '';

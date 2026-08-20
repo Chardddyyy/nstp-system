@@ -17,30 +17,27 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
   useEffect(() => {
     if (!isOpen) return;
     let isSubscribed = true;
-    setLoading(true);
     
-    attendanceAPI.getStudentIdCards({ department: departmentFilter })
-      .then((data) => {
+    // Asynchronously fetch cards
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await attendanceAPI.getStudentIdCards({ department: departmentFilter });
         if (!isSubscribed) return;
         const list = Array.isArray(data) ? data : [];
         setStudents(list);
         setSelectedIds(new Set(list.map(s => s.id)));
-      })
-      .catch((err) => {
-        console.error('Failed to load students for ID print:', err);
-      })
-      .finally(() => {
+      } catch (err) {
+        if (isSubscribed) console.error('Failed to load students for ID print:', err);
+      } finally {
         if (isSubscribed) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       isSubscribed = false;
     };
   }, [isOpen, departmentFilter]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, departmentFilter]);
 
   if (!isOpen) return null;
 
@@ -159,7 +156,10 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
 
             <select
               value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
+              onChange={(e) => {
+                setDepartmentFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="px-2 sm:px-2.5 py-1.5 bg-white rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
             >
               <option value="All">All Tracks</option>

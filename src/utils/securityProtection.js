@@ -50,7 +50,7 @@ export function initSecurityProtection() {
   }, { capture: true });
 
   // 4. Mute console in production to prevent inspection of state/tokens/objects
-  if (import.meta.env.PROD || process.env.NODE_ENV === 'production') {
+  if (import.meta.env.PROD || (typeof globalThis !== 'undefined' && globalThis.process?.env?.NODE_ENV === 'production')) {
     const noop = () => {};
     try {
       console.log = noop;

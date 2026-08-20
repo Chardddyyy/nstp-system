@@ -12,6 +12,38 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useMemo, useEffect, useRef } from 'react';
+
+// Client-side photo compression utility to prevent payload overflow
+const compressPhoto = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
+  return new Promise((resolve) => {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      return resolve(dataUrl);
+    }
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+};
+
 function StudentManagement() {
   const { user, logout, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
@@ -146,13 +178,16 @@ function StudentManagement() {
     
     ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
 
-    const base64Data = canvas.toDataURL('image/jpeg', 0.88);
-    setFormData(prev => ({
-      ...prev,
-      id_photo_2x2: base64Data,
-      photo: base64Data,
-      registrationPhoto: base64Data
-    }));
+    const base64Data = canvas.toDataURL('image/jpeg', 0.82);
+    compressPhoto(base64Data, 800, 800, 0.8).then(compressed => {
+      setFormData(prev => ({
+        ...prev,
+        id_photo_2x2: compressed,
+        photo: compressed,
+        registrationPhoto: compressed,
+        registration_photo: compressed
+      }));
+    });
     closeCameraModal();
   };
 
@@ -513,7 +548,8 @@ function StudentManagement() {
 
       const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim() || formData.name;
       const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`.replace(/^,\s*|,\s*$/g, '') || formData.address;
-
+      const resolved2x2 = (formData.id_photo_2x2 || formData.photo || '').trim();
+      const resolvedReg = (formData.registrationPhoto || formData.registration_photo || '').trim();
       const payload = {
         ...formData,
         lastName: cleanLastName,
@@ -533,9 +569,14 @@ function StudentManagement() {
         isVoter: formData.registeredVoter || 'No',
         emergencyName: cleanEmergencyContact,
         emergencyContact: cleanEmergencyContact,
+        photo: resolved2x2 || undefined,
+        id_photo_2x2: resolved2x2 || undefined,
+        registrationPhoto: resolvedReg || undefined,
+        registration_photo: resolvedReg || undefined
       };
 
-      const updatedRes = await updateStudent(selectedStudent.id, payload);
+      const targetId = selectedStudent.id || selectedStudent.studentId;
+      const updatedRes = await updateStudent(targetId, payload);
       if (updatedRes) {
         setViewStudent(updatedRes);
       }
@@ -675,9 +716,9 @@ function StudentManagement() {
       emergencyContact: toTitleCase(String(student.emergencyContact || student.emergencyName || '')),
       emergencyName: toTitleCase(String(student.emergencyName || student.emergencyContact || '')),
       emergencyNumber: emerNo.slice(0, 11),
-      id_photo_2x2: String(student.id_photo_2x2 || student.idPhoto2x2 || student.photo || student.registrationPhoto || student.registration_photo || ''),
-      photo: String(student.id_photo_2x2 || student.photo || student.registrationPhoto || student.registration_photo || ''),
-      registrationPhoto: String(student.registrationPhoto || student.registration_photo || student.id_photo_2x2 || student.photo || '')
+      id_photo_2x2: String(student.id_photo_2x2 || student.idPhoto2x2 || student.photo || ''),
+      photo: String(student.id_photo_2x2 || student.photo || student.idPhoto2x2 || ''),
+      registrationPhoto: String(student.registrationPhoto || student.registration_photo || student.reg_form || '')
     });
     setHeightInput(String(student.height || ''));
     setWeightInput(String(student.weight || ''));
@@ -1805,12 +1846,14 @@ function StudentManagement() {
                               const file = e.target.files?.[0];
                               if (!file) return;
                               const reader = new FileReader();
-                              reader.onload = (ev) => {
+                              reader.onload = async (ev) => {
+                                const compressed = await compressPhoto(ev.target.result);
                                 setFormData(prev => ({
                                   ...prev,
-                                  id_photo_2x2: ev.target.result,
-                                  photo: ev.target.result,
-                                  registrationPhoto: ev.target.result
+                                  id_photo_2x2: compressed,
+                                  photo: compressed,
+                                  registrationPhoto: compressed,
+                                  registration_photo: compressed
                                 }));
                               };
                               reader.readAsDataURL(file);
@@ -2066,42 +2109,198 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Submitted Registration Form / Photo Document — Full Instant Inline Preview */}
-                {(currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) && (
-                  <div className="bg-emerald-50/60 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/80 shadow-2xs">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 flex items-center gap-2 uppercase tracking-wider">
-                        <FileText className="w-4 h-4 text-emerald-700" />
-                        CvSU Registration Form Document Proof
-                      </h4>
-                      <a
-                        href={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors"
-                      >
-                        ↗ Open Full Window
-                      </a>
-                    </div>
-                    {typeof (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl) === 'string' && (currentViewStudent.registrationPhoto || currentViewStudent.photoUrl).startsWith('data:application/pdf') ? (
-                      <div className="w-full rounded-xl overflow-hidden border border-emerald-300 shadow-sm bg-white">
-                        <iframe
-                          src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                          title="Submitted Registration Form PDF"
-                          className="w-full h-80 sm:h-96 rounded-xl"
-                        />
-                      </div>
-                    ) : (
-                      <div className="rounded-xl overflow-hidden border border-gray-300 bg-gray-900/5 shadow-sm">
-                        <img
-                          src={currentViewStudent.registrationPhoto || currentViewStudent.photoUrl}
-                          alt="Submitted Registration Form Proof"
-                          className="w-full max-h-[420px] sm:max-h-[500px] object-contain mx-auto"
-                        />
-                      </div>
-                    )}
+                {/* Official Student Documents & Photos Section */}
+                <div className="bg-slate-50/90 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                  <div className="flex items-center justify-between mb-3.5">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 flex items-center gap-2 uppercase tracking-wider">
+                      <FileText className="w-4 h-4 text-emerald-700" />
+                      Student Official Documents &amp; Photos
+                    </h4>
+                    <span className="text-[10px] font-bold text-slate-500 hidden sm:inline">
+                      Click image or Expand to inspect full size
+                    </span>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {/* 1. Official 2x2 ID Photo Card */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                            Official 2x2 ID Photo
+                          </span>
+                          {currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? (
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Available
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                              No Photo
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 my-2">
+                          <div 
+                            onClick={() => {
+                              const src = currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2;
+                              if (src) setPhotoViewer({ url: src, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
+                            }}
+                            className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
+                              currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? 'cursor-pointer hover:border-emerald-500' : ''
+                            }`}
+                          >
+                            {currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? (
+                              <>
+                                <img 
+                                  src={currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2} 
+                                  alt="2x2 ID Photo" 
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                />
+                                <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
+                                  <Eye className="w-4 h-4" />
+                                  <span>Expand</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-center p-2 text-slate-400">
+                                <User className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
+                                <span className="text-[8px] font-black uppercase block">No 2x2 Photo</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 text-left text-xs">
+                            <p className="font-bold text-slate-800 text-[11px] leading-snug">
+                              White Background, White Shirt
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                              Used for official NSTP ID Card printing.
+                            </p>
+                            {(currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2) ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const src = currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2;
+                                  setPhotoViewer({ url: src, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
+                                }}
+                                className="mt-2 inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Expand 2x2 Photo</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-amber-700 italic mt-2 block font-medium">Click Edit to upload or take 2x2 photo</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Certificate of Registration (COR / Regform) Card */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                            Registration Form (COR)
+                          </span>
+                          {currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.photoUrl ? (
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Available
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                              No Regform
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 my-2">
+                          {(() => {
+                            const regSrc = currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.photoUrl;
+                            const isPdf = typeof regSrc === 'string' && regSrc.startsWith('data:application/pdf');
+
+                            return (
+                              <>
+                                <div 
+                                  onClick={() => {
+                                    if (regSrc) setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
+                                  }}
+                                  className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
+                                    regSrc ? 'cursor-pointer hover:border-emerald-500' : ''
+                                  }`}
+                                >
+                                  {regSrc ? (
+                                    isPdf ? (
+                                      <div className="text-center p-2 text-emerald-800">
+                                        <FileText className="w-7 h-7 mx-auto mb-0.5 text-emerald-700" />
+                                        <span className="text-[8px] font-black uppercase block">PDF File</span>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <img 
+                                          src={regSrc} 
+                                          alt="Registration Form (COR)" 
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                        />
+                                        <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
+                                          <Eye className="w-4 h-4" />
+                                          <span>Expand</span>
+                                        </div>
+                                      </>
+                                    )
+                                  ) : (
+                                    <div className="text-center p-2 text-slate-400">
+                                      <FileText className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
+                                      <span className="text-[8px] font-black uppercase block">No Regform</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex-1 text-left text-xs">
+                                  <p className="font-bold text-slate-800 text-[11px] leading-snug">
+                                    Official Enrollment Proof
+                                  </p>
+                                  <p className="text-[10px] text-slate-500 mt-0.5">
+                                    Certificate of Registration (COR) document.
+                                  </p>
+                                  {regSrc ? (
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                                      >
+                                        <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                        <span>Expand Regform</span>
+                                      </button>
+                                      {isPdf && (
+                                        <a
+                                          href={regSrc}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-1 px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold border border-slate-200 shadow-2xs transition-colors"
+                                        >
+                                          ↗ Open
+                                        </a>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 italic mt-2 block">No COR document submitted</span>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Sticky Footer */}
@@ -2653,12 +2852,12 @@ function StudentManagement() {
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
                       <div className="w-20 h-24 bg-white rounded-xl border-2 border-emerald-400 overflow-hidden flex items-center justify-center shrink-0 shadow-sm relative group">
-                        {formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? (
+                        {formData.id_photo_2x2 || formData.photo ? (
                           <>
-                            <img src={formData.id_photo_2x2 || formData.photo || formData.registrationPhoto} alt="2x2 Preview" className="w-full h-full object-cover" />
+                            <img src={formData.id_photo_2x2 || formData.photo} alt="2x2 Preview" className="w-full h-full object-cover" />
                             <button
                               type="button"
-                              onClick={() => setPhotoViewer(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto)}
+                              onClick={() => setPhotoViewer({ url: formData.id_photo_2x2 || formData.photo, title: '2x2 ID Photo Preview', isPdf: false })}
                               className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
                             >
                               🔍 View
@@ -2686,7 +2885,7 @@ function StudentManagement() {
                         {/* File Upload Button */}
                         <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
                           <Upload className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>{formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? 'Change Photo' : 'Upload Photo'}</span>
+                          <span>{formData.id_photo_2x2 || formData.photo ? 'Change Photo' : 'Upload Photo'}</span>
                           <input
                             ref={fileInputEditRef}
                             type="file"
@@ -2695,12 +2894,12 @@ function StudentManagement() {
                               const file = e.target.files?.[0];
                               if (!file) return;
                               const reader = new FileReader();
-                              reader.onload = (ev) => {
+                              reader.onload = async (ev) => {
+                                const compressed = await compressPhoto(ev.target.result);
                                 setFormData(prev => ({
                                   ...prev,
-                                  id_photo_2x2: ev.target.result,
-                                  photo: ev.target.result,
-                                  registrationPhoto: ev.target.result
+                                  id_photo_2x2: compressed,
+                                  photo: compressed
                                 }));
                               };
                               reader.readAsDataURL(file);
@@ -2710,15 +2909,14 @@ function StudentManagement() {
                         </label>
 
                         {/* Remove / Reset Button */}
-                        {(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto) && (
+                        {(formData.id_photo_2x2 || formData.photo) && (
                           <button
                             type="button"
                             onClick={() => {
                               setFormData(prev => ({
                                 ...prev,
                                 id_photo_2x2: '',
-                                photo: '',
-                                registrationPhoto: ''
+                                photo: ''
                               }));
                             }}
                             className="inline-flex items-center gap-1 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-colors cursor-pointer"
@@ -2729,6 +2927,27 @@ function StudentManagement() {
                         )}
                       </div>
                     </div>
+
+                    {/* Registration Form Document Proof info in Edit Modal */}
+                    {(formData.registrationPhoto || formData.registration_photo) && (
+                      <div className="mt-3.5 pt-3 border-t border-emerald-200/80 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-emerald-700" />
+                          <span className="text-xs font-bold text-emerald-950">Registration Form (COR) Attached</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const reg = formData.registrationPhoto || formData.registration_photo;
+                            const isPdf = typeof reg === 'string' && reg.startsWith('data:application/pdf');
+                            setPhotoViewer({ url: reg, title: `${formData.name || 'Student'} - Registration Form (COR)`, isPdf });
+                          }}
+                          className="text-[11px] font-black text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer"
+                        >
+                          👁 Inspect COR
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2840,39 +3059,65 @@ function StudentManagement() {
           </div>
         )}
 
-        {/* Fullscreen Photo Viewer Modal */}
-        {photoViewer && (
-          <div 
-            className="fixed inset-0 bg-black/90 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-fade-in"
-            onClick={() => setPhotoViewer(null)}
-          >
+        {/* Fullscreen Photo & Document Viewer Lightbox Modal */}
+        {photoViewer && (() => {
+          const viewerUrl = typeof photoViewer === 'object' ? photoViewer.url : photoViewer;
+          const viewerTitle = typeof photoViewer === 'object' ? (photoViewer.title || 'Document Preview') : '2x2 ID Photo Preview';
+          const isPdf = typeof photoViewer === 'object' ? photoViewer.isPdf : (typeof viewerUrl === 'string' && viewerUrl.startsWith('data:application/pdf'));
+
+          return (
             <div 
-              className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl p-4 flex flex-col items-center"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-black/90 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+              onClick={() => setPhotoViewer(null)}
             >
-              <div className="w-full flex items-center justify-between mb-3 text-white">
-                <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">2x2 ID Photo Preview</h4>
-                <button
-                  type="button"
-                  onClick={() => setPhotoViewer(null)}
-                  className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="w-64 h-80 bg-black rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-xl flex items-center justify-center">
-                <img src={photoViewer} alt="Full 2x2 Preview" className="w-full h-full object-cover" />
-              </div>
-              <button
-                type="button"
-                onClick={() => setPhotoViewer(null)}
-                className="mt-4 px-6 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl cursor-pointer"
+              <div 
+                className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl p-4 sm:p-5 flex flex-col items-center max-h-[92vh]"
+                onClick={(e) => e.stopPropagation()}
               >
-                Close Preview
-              </button>
+                <div className="w-full flex items-center justify-between mb-3 text-white">
+                  <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-300 truncate pr-2">{viewerTitle}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoViewer(null)}
+                    className="p-1.5 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="w-full max-h-[70vh] bg-black/60 rounded-2xl overflow-hidden border-2 border-emerald-500/80 shadow-xl flex items-center justify-center p-1">
+                  {isPdf ? (
+                    <iframe src={viewerUrl} title={viewerTitle} className="w-full h-[65vh] rounded-xl" />
+                  ) : (
+                    <img src={viewerUrl} alt={viewerTitle} className="w-full max-h-[68vh] object-contain rounded-xl" />
+                  )}
+                </div>
+
+                <div className="w-full flex items-center justify-between mt-4">
+                  {viewerUrl && (
+                    <a
+                      href={viewerUrl}
+                      download="student-document"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-xs font-bold rounded-xl border border-slate-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download File</span>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPhotoViewer(null)}
+                    className="px-6 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl cursor-pointer ml-auto active:scale-95 transition-all"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Student Attendance & Absences Matrix Modal */}
         <StudentAttendanceMatrixModal

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
-import IncomingCallOverlay from './components/IncomingCallOverlay';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
