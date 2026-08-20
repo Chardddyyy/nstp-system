@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
@@ -21,43 +21,41 @@ function Enrollment() {
       clearInterval(interval);
     };
   }, []);
-  const [formData, setFormData] = useState(() => {
-    const saved = localStorage.getItem('enrollmentFormData');
-    return saved ? JSON.parse(saved) : {
-      lastName: '',
-      firstName: '',
-      middleName: '',
-      suffix: '',
-      studentId: '',
-      street: '',
-      municipality: '',
-      province: '',
-      program: '',
-      yearLevel: '',
-      section: '',
-      nstpComponent: '',
-      birthMonth: '',
-      birthDay: '',
-      birthYear: '',
-      age: '',
-      civilStatus: '',
-      sex: '',
-      height: '',
-      weight: '',
-      bloodType: '',
-      contactNumber: '',
-      email: '',
-      facebookAccount: '',
-      registeredVoter: '',
-      emergencyContact: '',
-      emergencyNumber: ''
-    };
+  // Fresh clean state without saving or autofilling previous inputs
+  const [formData, setFormData] = useState({
+    lastName: '',
+    firstName: '',
+    middleName: '',
+    suffix: '',
+    studentId: '',
+    street: '',
+    municipality: '',
+    province: '',
+    program: '',
+    yearLevel: '',
+    section: '',
+    nstpComponent: '',
+    birthMonth: '',
+    birthDay: '',
+    birthYear: '',
+    age: '',
+    civilStatus: '',
+    sex: '',
+    height: '',
+    weight: '',
+    bloodType: '',
+    contactNumber: '',
+    email: '',
+    facebookAccount: '',
+    registeredVoter: '',
+    emergencyContact: '',
+    emergencyNumber: ''
   });
 
   const [heightUnit, setHeightUnit] = useState('cm');
-  const [heightInput, setHeightInput] = useState(() => formData.height || '');
+  const [heightInput, setHeightInput] = useState('');
   const [weightUnit, setWeightUnit] = useState('kg');
-  const [weightInput, setWeightInput] = useState(() => formData.weight || '');
+  const [weightInput, setWeightInput] = useState('');
 
   // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
@@ -614,7 +612,6 @@ function Enrollment() {
 
     const updatedFormData = { ...formData, [name]: newValue };
     setFormData(updatedFormData);
-    localStorage.setItem('enrollmentFormData', JSON.stringify(updatedFormData));
 
     // Clear error when user types and update the top banner
     if (errors[name]) {
@@ -890,7 +887,7 @@ function Enrollment() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} className="space-y-8">
+            <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-8">
               
               {/* Step 1: Personal Information */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
@@ -912,6 +909,10 @@ function Enrollment() {
                       type="text"
                       name="lastName"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Dela Cruz"
                       value={formData.lastName}
                       onChange={handleChange}
@@ -927,6 +928,10 @@ function Enrollment() {
                       type="text"
                       name="firstName"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Juan"
                       value={formData.firstName}
                       onChange={handleChange}
@@ -940,6 +945,10 @@ function Enrollment() {
                     <input
                       type="text"
                       name="middleName"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Santos (Optional)"
                       value={formData.middleName}
                       onChange={handleChange}
@@ -974,6 +983,10 @@ function Enrollment() {
                       type="text"
                       name="studentId"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="202400001"
                       value={formData.studentId}
                       onChange={handleChange}
@@ -990,7 +1003,10 @@ function Enrollment() {
                       name="street"
                       id="street"
                       required
-                      autoComplete="address-line1"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
                       value={formData.street}
                       onChange={handleChange}
@@ -1009,7 +1025,10 @@ function Enrollment() {
                       name="municipality"
                       id="municipality"
                       required
-                      autoComplete="address-level2"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Naic"
                       value={formData.municipality}
                       onChange={handleChange}
@@ -1026,7 +1045,10 @@ function Enrollment() {
                       name="province"
                       id="province"
                       required
-                      autoComplete="address-level1"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Cavite"
                       value={formData.province}
                       onChange={handleChange}
@@ -1043,6 +1065,10 @@ function Enrollment() {
                     type="email"
                     name="email"
                     required
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    data-lpignore="true"
                     placeholder="student@gmail.com or student@cvsu.edu.ph"
                     value={formData.email}
                     onChange={handleChange}
@@ -1217,7 +1243,10 @@ function Enrollment() {
                     type="date"
                     name="birthDate"
                     id="birthDate"
-                    autoComplete="bday"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    data-lpignore="true"
                     max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`}
                     value={
                       formData.birthYear && formData.birthMonth && formData.birthDay
@@ -1229,7 +1258,6 @@ function Enrollment() {
                       if (!val) {
                         const upd = { ...formData, birthYear: '', birthMonth: '', birthDay: '', age: '' };
                         setFormData(upd);
-                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         return;
                       }
                       const [y, m, d] = val.split('-');
@@ -1260,7 +1288,6 @@ function Enrollment() {
                         age: calcAge
                       };
                       setFormData(upd);
-                      localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                       if (errors.birthMonth || errors.birthDay || errors.birthYear || errors.age) {
                         setErrors(prev => ({ ...prev, birthMonth: '', birthDay: '', birthYear: '', age: '' }));
                       }
@@ -1351,6 +1378,10 @@ function Enrollment() {
                       <input
                         ref={el => fieldRefs.current.height = el}
                         type="text"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
                         placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
                         value={heightInput}
                         onChange={(e) => {
@@ -1359,7 +1390,6 @@ function Enrollment() {
                           const cmVal = convertToCm(raw, heightUnit);
                           const updated = { ...formData, height: cmVal };
                           setFormData(updated);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
                         }}
                         className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.height ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                       />
@@ -1371,7 +1401,6 @@ function Enrollment() {
                           const cmVal = convertToCm(heightInput, newUnit);
                           const updated = { ...formData, height: cmVal };
                           setFormData(updated);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
                         }}
                         className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                       >
@@ -1392,6 +1421,10 @@ function Enrollment() {
                       <input
                         ref={el => fieldRefs.current.weight = el}
                         type="text"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
                         placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
                         value={weightInput}
                         onChange={(e) => {
@@ -1400,7 +1433,6 @@ function Enrollment() {
                           const kgVal = convertToKg(raw, weightUnit);
                           const updated = { ...formData, weight: kgVal };
                           setFormData(updated);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
                         }}
                         className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.weight ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                       />
@@ -1412,7 +1444,6 @@ function Enrollment() {
                           const kgVal = convertToKg(weightInput, newUnit);
                           const updated = { ...formData, weight: kgVal };
                           setFormData(updated);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(updated));
                         }}
                         className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                       >
@@ -1457,6 +1488,10 @@ function Enrollment() {
                       type="text"
                       name="contactNumber"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="09123456789"
                       value={formData.contactNumber || '09'}
                       onChange={(e) => {
@@ -1473,14 +1508,12 @@ function Enrollment() {
                         val = val.slice(0, 11);
                         const upd = { ...formData, contactNumber: val };
                         setFormData(upd);
-                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }));
                       }}
                       onFocus={(e) => {
                         if (!e.target.value) {
                           const upd = { ...formData, contactNumber: '09' };
                           setFormData(upd);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         }
                       }}
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.contactNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
@@ -1497,6 +1530,10 @@ function Enrollment() {
                       type="text"
                       name="facebookAccount"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="https://facebook.com/username"
                       value={formData.facebookAccount || ''}
                       onChange={handleChange}
@@ -1512,6 +1549,10 @@ function Enrollment() {
                       type="text"
                       name="emergencyContact"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="Parent or Guardian Name"
                       value={formData.emergencyContact}
                       onChange={handleChange}
@@ -1527,6 +1568,10 @@ function Enrollment() {
                       type="tel"
                       name="emergencyNumber"
                       required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
                       placeholder="09123456789"
                       value={formData.emergencyNumber || '09'}
                       onChange={(e) => {
@@ -1543,14 +1588,12 @@ function Enrollment() {
                         val = val.slice(0, 11);
                         const upd = { ...formData, emergencyNumber: val };
                         setFormData(upd);
-                        localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         if (errors.emergencyNumber) setErrors(prev => ({ ...prev, emergencyNumber: '' }));
                       }}
                       onFocus={(e) => {
                         if (!e.target.value) {
                           const upd = { ...formData, emergencyNumber: '09' };
                           setFormData(upd);
-                          localStorage.setItem('enrollmentFormData', JSON.stringify(upd));
                         }
                       }}
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.emergencyNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
@@ -2189,6 +2232,28 @@ function Enrollment() {
           </div>
         </div>
       )}
+
+      {/* Floating Guided Navigation Controls (Scroll to Top & Scroll to Bottom) */}
+      <div className="fixed bottom-6 right-5 z-40 flex flex-col items-center gap-2 animate-fade-in">
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Scroll to top"
+          title="Scroll to Top"
+          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
+        >
+          <ChevronUp className="w-5 h-5 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
+        </button>
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+          aria-label="Scroll to bottom"
+          title="Scroll to Bottom"
+          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
+        >
+          <ChevronDown className="w-5 h-5 stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
+        </button>
+      </div>
 
       {/* Footer Bar matching Landing Page footer */}
       <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 shrink-0 mt-12">

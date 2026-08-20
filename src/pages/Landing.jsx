@@ -1059,17 +1059,27 @@ function Landing() {
         </div>
       </footer>
 
-      {/* Floating Back to Top Button */}
-      {showScrollTop && (
+      {/* Floating Guided Navigation Controls (Scroll to Top & Scroll to Bottom) */}
+      <div className="fixed bottom-6 right-5 z-40 flex flex-col items-center gap-2 animate-fade-in">
         <button
           type="button"
           onClick={scrollToTop}
           aria-label="Scroll to top"
-          className="fixed bottom-6 right-5 z-40 p-3.5 rounded-full bg-emerald-900/95 text-amber-400 border border-amber-400/70 shadow-2xl hover:bg-emerald-800 hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md animate-fade-in"
+          title="Scroll to Top"
+          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
         >
-          <ChevronUp className="w-5 h-5 stroke-[2.5]" />
+          <ChevronUp className="w-5 h-5 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
         </button>
-      )}
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
+          aria-label="Scroll to bottom"
+          title="Scroll to Bottom"
+          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
+        >
+          <ChevronDown className="w-5 h-5 stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
+        </button>
+      </div>
 
     </div>
   );

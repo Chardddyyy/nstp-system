@@ -960,12 +960,15 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device within the last 2 minutes (120s)
+    // Check if account has an active session in another device within the last 30 seconds (active heartbeat)
     var isDeviceActivelyInUse = false;
     if (user.current_session_id && String(user.current_session_id).trim() !== '') {
       var secondsSinceActive = user.seconds_since_active;
-      if (secondsSinceActive !== null && secondsSinceActive !== undefined && Number(secondsSinceActive) < 120) {
+      if (secondsSinceActive !== null && secondsSinceActive !== undefined && Number(secondsSinceActive) < 30) {
         isDeviceActivelyInUse = true;
+      } else {
+        // Automatically clear stale or inactive session in DB
+        await pool.execute('UPDATE users SET current_session_id = NULL, last_active_at = NULL WHERE id = ?', [user.id]);
       }
     }
 
