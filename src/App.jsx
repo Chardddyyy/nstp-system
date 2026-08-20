@@ -641,18 +641,18 @@ function App() {
     }
   }
 
-  async function login(email, password, forceLogin = false) {
+  async function login(email, password) {
     try {
-      const response = await authAPI.login(email, password, forceLogin);
-      if (response && response.warning && response.activeSession) {
+      const response = await authAPI.login(email, password);
+      if (response && (response.warning || response.blocked) && response.activeSession) {
         return {
           success: false,
-          warning: true,
+          blocked: true,
           activeSession: true,
-          message: response.message || '⚠️ Account Active: This account is currently logged in on another device.'
+          message: response.message || '⚠️ Login Blocked: This account is currently in use on another device.'
         };
       }
-      if (!response || !response.token) return { success: false, message: 'Invalid server response' };
+      if (!response || !response.token) return { success: false, message: response?.message || 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
       safeSetStorage('nstp_cached_user', response.user);
@@ -663,6 +663,14 @@ function App() {
       return { success: true, role: response.user.role };
     } catch (error) {
       console.error('Login error:', error);
+      if (error?.message && (error.message.includes('another device') || error.message.includes('currently in use'))) {
+        return {
+          success: false,
+          blocked: true,
+          activeSession: true,
+          message: error.message
+        };
+      }
       return { success: false, message: error.message || 'Invalid email or password' };
     }
   }

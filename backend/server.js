@@ -960,18 +960,13 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device
-    var forceLogin = req.body.forceLogin === true;
-    var isActiveSession = false;
+    // Check if account has an active session in another device — STRICT BLOCK (No overrides allowed)
     if (user.current_session_id && String(user.current_session_id).trim() !== '') {
-      isActiveSession = true;
-    }
-
-    if (isActiveSession && !forceLogin) {
-      return res.json({
-        warning: true,
+      auditLog('login_blocked_active_session', user.id, `blocked_concurrent_login: ${email}`, ip);
+      return res.status(403).json({
+        blocked: true,
         activeSession: true,
-        message: '⚠️ Account Active: This account is currently in use on another device.'
+        message: '⚠️ Login Blocked: This account is currently in use on another device. Simultaneous logins are strictly prohibited. The other device will remain logged in.'
       });
     }
 

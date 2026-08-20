@@ -15,7 +15,7 @@ function Login() {
 
   const [loadingText, setLoadingText] = useState('Connecting to Portal...');
 
-  const handleSubmit = async (e, forceLogin = false) => {
+  const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
     setActiveSessionWarning(null);
@@ -42,12 +42,12 @@ function Login() {
     }, 14000);
 
     try {
-      const result = await login(cleanEmail, password, forceLogin);
+      const result = await login(cleanEmail, password);
       clearTimeout(timer1);
       clearTimeout(timer2);
 
-      if (result.warning && result.activeSession) {
-        setActiveSessionWarning(result.message || '⚠️ Account Active: This account is currently logged in on another device.');
+      if ((result.warning || result.blocked) && result.activeSession) {
+        setActiveSessionWarning(result.message || '⚠️ Login Blocked: This account is currently in use on another device.');
         setLoading(false);
         return;
       }
@@ -59,7 +59,11 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
-        setError(result.message || 'Invalid email or password');
+        if (result.message && (result.message.includes('another device') || result.message.includes('currently in use'))) {
+          setActiveSessionWarning(result.message);
+        } else {
+          setError(result.message || 'Invalid email or password');
+        }
         setPassword('');
       }
     } catch (err) {
@@ -266,35 +270,30 @@ function Login() {
         </div>
       </main>
 
-      {/* Concurrent Active Session Warning Modal */}
+      {/* Concurrent Active Session Blocked Modal */}
       {activeSessionWarning && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white text-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-300">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-4 mx-auto border border-amber-300">
-              <AlertTriangle className="w-6 h-6" />
+          <div className="bg-white text-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-400">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mb-4 mx-auto border border-rose-300 shadow-sm">
+              <AlertTriangle className="w-7 h-7" />
             </div>
             <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-2">
-              Account Active on Another Device
+              Login Blocked: Account in Use
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 text-center mb-6 leading-relaxed">
               {activeSessionWarning}
               <br /><br />
-              <span className="font-semibold text-emerald-900">Do you want to disconnect the other session and sign in on this device?</span>
+              <span className="font-bold text-rose-800 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 inline-block">
+                Only the first active session is permitted. You cannot sign in until the active device logs out.
+              </span>
             </p>
-            <div className="flex gap-2.5">
+            <div className="flex justify-center">
               <button
                 type="button"
                 onClick={() => setActiveSessionWarning(null)}
-                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+                className="w-full py-3 bg-gray-900 hover:bg-black text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSubmit(null, true)}
-                className="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl text-xs sm:text-sm transition-colors shadow-md cursor-pointer"
-              >
-                Disconnect &amp; Sign In
+                Close / Cancel
               </button>
             </div>
           </div>
