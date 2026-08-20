@@ -273,15 +273,34 @@ function Enrollment() {
     closeCameraModal();
   };
 
-  // Clean up camera stream on unmount
+  // Detect scroll position to dynamically toggle between Scroll to Bottom (near top) and Scroll to Top (when scrolled)
+  const [isScrolledDown, setIsScrolledDown] = useState(false);
+
   useEffect(() => {
-    return () => {
-      stopCameraStream();
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollHeight > 0) {
+        setIsScrolledDown(scrollY > scrollHeight * 0.35 || scrollY > 400);
+      } else {
+        setIsScrolledDown(scrollY > 300);
+      }
     };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleToggleScroll = () => {
+    if (isScrolledDown) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
   // True when there is saved progress from a previous session
-  const hasSavedData = !!localStorage.getItem('enrollmentFormData');
+  const hasSavedData = false;
 
   const handleStartFresh = () => {
     localStorage.removeItem('enrollmentFormData');
@@ -2233,27 +2252,20 @@ function Enrollment() {
         </div>
       )}
 
-      {/* Floating Guided Navigation Controls (Scroll to Top & Scroll to Bottom) */}
-      <div className="fixed bottom-6 right-5 z-40 flex flex-col items-center gap-2 animate-fade-in">
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Scroll to top"
-          title="Scroll to Top"
-          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
-        >
+      {/* Smart Single Floating Guided Scroll Button (Arrow Down when near top, Arrow Up when scrolled down) */}
+      <button
+        type="button"
+        onClick={handleToggleScroll}
+        aria-label={isScrolledDown ? "Scroll to top" : "Scroll to bottom"}
+        title={isScrolledDown ? "Scroll to Top" : "Scroll to Bottom"}
+        className="fixed bottom-6 right-5 z-40 p-3.5 rounded-full bg-emerald-950/95 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer backdrop-blur-md flex items-center justify-center group animate-fade-in"
+      >
+        {isScrolledDown ? (
           <ChevronUp className="w-5 h-5 stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
-        </button>
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })}
-          aria-label="Scroll to bottom"
-          title="Scroll to Bottom"
-          className="p-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-amber-400 border border-amber-400/80 shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer backdrop-blur-md flex items-center justify-center group"
-        >
+        ) : (
           <ChevronDown className="w-5 h-5 stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
-        </button>
-      </div>
+        )}
+      </button>
 
       {/* Footer Bar matching Landing Page footer */}
       <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 shrink-0 mt-12">
