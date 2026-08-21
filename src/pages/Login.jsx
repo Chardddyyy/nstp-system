@@ -523,13 +523,16 @@ function Login() {
 
                   <form onSubmit={handleSendForgotOtp} className="space-y-3.5">
                     <div>
-                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                      <label htmlFor="forgot-email" className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                         Registered Email Address
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="email"
+                          id="forgot-email"
+                          name="forgotEmail"
+                          autoComplete="email"
                           value={forgotEmail}
                           onChange={(e) => setForgotEmail(e.target.value)}
                           placeholder="e.g. admin@cvsu.edu.ph"
@@ -578,11 +581,14 @@ function Login() {
 
                   <form onSubmit={handleVerifyOtpOnly} className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 text-center">
+                      <label htmlFor="forgot-otp" className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 text-center">
                         6-Digit Verification Code
                       </label>
                       <input
                         type="text"
+                        id="forgot-otp"
+                        name="forgotOtp"
+                        autoComplete="one-time-code"
                         maxLength="6"
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
@@ -653,13 +659,15 @@ function Login() {
 
                   <form onSubmit={handleConfirmReset} className="space-y-3.5">
                     <div>
-                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                      <label htmlFor="forgot-new-password" className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                         New Password
                       </label>
                       <div className="relative">
                         <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type={forgotShowPassword ? 'text' : 'password'}
+                          id="forgot-new-password"
+                          name="forgotNewPassword"
                           value={forgotNewPassword}
                           onChange={(e) => setForgotNewPassword(e.target.value)}
                           placeholder="••••••••••••"
@@ -680,13 +688,15 @@ function Login() {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                      <label htmlFor="forgot-confirm-password" className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                         Confirm New Password
                       </label>
                       <div className="relative">
                         <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type={forgotShowPassword ? 'text' : 'password'}
+                          id="forgot-confirm-password"
+                          name="forgotConfirmPassword"
                           value={forgotConfirmPassword}
                           onChange={(e) => setForgotConfirmPassword(e.target.value)}
                           placeholder="••••••••••••"

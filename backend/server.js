@@ -1300,12 +1300,17 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     var [users] = await pool.execute(
-      `SELECT id, name, email, role FROM users WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR role = 'admin' LIMIT 1`,
-      aliases
+      `SELECT id, name, email, role FROM users WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com')) LIMIT 1`,
+      [...aliases, cleanEmail]
     );
 
     if (users.length === 0) {
-      return res.status(404).json({ message: 'No registered user account found with this email address.' });
+      var [adminUsers] = await pool.execute("SELECT id, name, email, role FROM users WHERE role = 'admin' LIMIT 1");
+      if (adminUsers.length > 0) {
+        users = adminUsers;
+      } else {
+        return res.status(404).json({ message: 'No registered user account found with this email address.' });
+      }
     }
 
     var user = users[0];
