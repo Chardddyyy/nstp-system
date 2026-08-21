@@ -10,6 +10,7 @@ var { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
 
 var bcrypt = require('bcryptjs');
 var ExcelJS = require('exceljs');
+var nodemailer = require('nodemailer');
 var path = require('path');
 var fs = require('fs');
 var app = express();
@@ -1103,6 +1104,175 @@ app.get('/api/auth/verify-session', authenticateToken, async (req, res) => {
     }
   } catch (err) {}
   res.json({ success: true, active: true });
+});
+
+// ── Password Reset Table & Email Helper ────────────────────────────────────
+var passwordResetsTableCreated = false;
+async function ensurePasswordResetsTable() {
+  if (passwordResetsTableCreated) return;
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        otp_code VARCHAR(10) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        used TINYINT(1) DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    passwordResetsTableCreated = true;
+  } catch (err) {
+    console.warn('ensurePasswordResetsTable notice:', err.message);
+  }
+}
+
+async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
+  var emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+  var emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  var smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+  var smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465;
+
+  if (emailUser && emailPass) {
+    var transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    });
+
+    var mailOptions = {
+      from: `"CvSU Naic NSTP System" <${emailUser}>`,
+      to: targetEmail,
+      subject: 'CvSU NSTP System - Password Reset OTP Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #064e3b; margin: 0 0 4px 0; font-size: 20px;">Cavite State University - Naic Campus</h2>
+            <p style="color: #047857; margin: 0; font-size: 13px; font-weight: bold;">National Service Training Program (NSTP)</p>
+          </div>
+          <div style="padding: 20px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; margin-bottom: 20px;">
+            <p style="color: #1f2937; font-size: 14px; margin: 0 0 10px 0;">Hello <strong>${userName || 'User'}</strong>,</p>
+            <p style="color: #4b5563; font-size: 13px; line-height: 1.5; margin: 0 0 16px 0;">
+              You requested to reset your password for the Cavite State University NSTP System. Use the 6-digit verification code below to complete your password reset:
+            </p>
+            <div style="text-align: center; padding: 16px; background-color: #ffffff; border: 2px dashed #059669; border-radius: 12px; margin: 16px 0;">
+              <span style="font-size: 30px; font-weight: 900; letter-spacing: 8px; color: #065f46; font-family: monospace;">${otpCode}</span>
+            </div>
+            <p style="color: #6b7280; font-size: 12px; margin: 10px 0 0 0; text-align: center;">
+              ⏳ This verification code is valid for <strong>15 minutes</strong>. If you did not request this, you can safely ignore this email.
+            </p>
+          </div>
+          <p style="color: #9ca3af; font-size: 11px; text-align: center; margin: 0;">
+            © ${new Date().getFullYear()} Cavite State University Naic Campus • NSTP Department
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { sent: true, method: 'smtp' };
+  } else {
+    console.log(`[AUTH / DEV] Password Reset Code for ${targetEmail}: ${otpCode}`);
+    return { sent: true, method: 'mock', otp: otpCode };
+  }
+}
+
+// Forgot Password — generate OTP and send to registered email
+app.post('/api/auth/forgot-password', async (req, res) => {
+  await ensurePasswordResetsTable();
+  try {
+    var email = req.body && req.body.email;
+    if (!email || !String(email).trim()) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
+    var cleanEmail = String(email).trim().toLowerCase();
+    var [users] = await pool.execute('SELECT id, name, email, role FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: 'No registered user account found with this email address.' });
+    }
+
+    var user = users[0];
+    var otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Invalidate previous unused codes for this email
+    await pool.execute('UPDATE password_resets SET used = 1 WHERE LOWER(email) = ? AND used = 0', [cleanEmail]);
+
+    // Insert new OTP with 15 min expiry
+    await pool.execute(
+      'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))',
+      [cleanEmail, otp]
+    );
+
+    try {
+      await sendPasswordResetEmail(cleanEmail, otp, user.name);
+    } catch (mailErr) {
+      console.warn('Mail dispatch warning:', mailErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Password reset verification code has been sent to ${cleanEmail}. Please check your inbox.`,
+      devOtp: (!process.env.EMAIL_USER && !process.env.SMTP_USER) ? otp : undefined
+    });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Server error processing password reset request.' });
+  }
+});
+
+// Reset Password — verify OTP and update user password
+app.post('/api/auth/reset-password', async (req, res) => {
+  await ensurePasswordResetsTable();
+  try {
+    var { email, otp_code, new_password } = req.body || {};
+    if (!email || !otp_code || !new_password) {
+      return res.status(400).json({ message: 'Please provide email, verification code, and new password.' });
+    }
+
+    if (String(new_password).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    }
+
+    var cleanEmail = String(email).trim().toLowerCase();
+    var cleanOtp = String(otp_code).trim();
+
+    var [resets] = await pool.execute(
+      'SELECT id, email, otp_code FROM password_resets WHERE LOWER(email) = ? AND otp_code = ? AND used = 0 AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
+      [cleanEmail, cleanOtp]
+    );
+
+    if (resets.length === 0) {
+      return res.status(400).json({ message: 'Invalid or expired verification code. Please check and try again.' });
+    }
+
+    var resetRecord = resets[0];
+    var hashedPassword = await bcrypt.hash(new_password, 10);
+
+    // Update user password and clear stale session
+    await pool.execute(
+      'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) = ?',
+      [hashedPassword, cleanEmail]
+    );
+
+    // Mark OTP as used
+    await pool.execute('UPDATE password_resets SET used = 1 WHERE id = ?', [resetRecord.id]);
+
+    auditLog('password_reset_success', null, `email: ${cleanEmail}`, req.ip);
+
+    res.json({
+      success: true,
+      message: 'Your password has been successfully reset! You can now sign in with your new password.'
+    });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Server error resetting password.' });
+  }
 });
 
 // ===== USER ROUTES =====

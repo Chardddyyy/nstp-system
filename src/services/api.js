@@ -510,11 +510,27 @@ export function verifySession() {
   });
 }
 
+export function requestPasswordReset(email) {
+  return apiCall('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email: email })
+  });
+}
+
+export function confirmPasswordReset(email, otp_code, new_password) {
+  return apiCall('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ email: email, otp_code: otp_code, new_password: new_password })
+  });
+}
+
 // Old style exports for compatibility
 export const authAPI = {
   login: loginUser,
   logout: logoutUser,
-  verifySession: verifySession
+  verifySession: verifySession,
+  requestPasswordReset: requestPasswordReset,
+  confirmPasswordReset: confirmPasswordReset
 };
 
 export const usersAPI = {
