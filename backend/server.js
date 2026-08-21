@@ -1237,8 +1237,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     res.json({
       success: true,
-      message: `Password reset verification code has been generated for ${cleanEmail}.`,
-      devOtp: otp
+      message: `A 6-digit verification code has been sent to your Gmail (${cleanEmail}). Please check your inbox.`
     });
   } catch (err) {
     console.error('Forgot password error:', err);

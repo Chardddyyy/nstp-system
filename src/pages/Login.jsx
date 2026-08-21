@@ -19,7 +19,6 @@ function Login() {
   const [forgotStep, setForgotStep] = useState(1); // 1 = request, 2 = verify & reset, 3 = success
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtp, setForgotOtp] = useState('');
-  const [receivedDevOtp, setReceivedDevOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
@@ -141,13 +140,8 @@ function Login() {
     setForgotLoading(true);
     try {
       const res = await requestPasswordReset(clean);
-      if (res && res.devOtp) {
-        setReceivedDevOtp(res.devOtp);
-        setForgotOtp(res.devOtp);
-      } else {
-        setReceivedDevOtp('');
-      }
-      setForgotSuccess(res?.message || 'Verification code sent to your email.');
+      setForgotOtp('');
+      setForgotSuccess(res?.message || `A 6-digit verification code has been sent to ${clean}. Please check your Gmail inbox.`);
       setForgotStep(2);
     } catch (err) {
       var msg = err?.message || 'Failed to send reset code.';
@@ -541,25 +535,23 @@ function Login() {
                 <>
                   <div className="text-center mb-3">
                     <h4 className="text-sm sm:text-base font-black text-gray-900">
-                      Verify Code &amp; Create New Password
+                      Enter Code from Your Gmail
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Enter the 6-digit code sent to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong> or use the Master PIN.
+                      We sent a 6-digit verification code to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong>.
                     </p>
                   </div>
 
-                  {receivedDevOtp && (
-                    <div className="mb-3 bg-amber-50 border border-amber-300 text-amber-950 p-3 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-xs">
-                      <div>
-                        <p className="font-extrabold text-[10px] text-amber-800 uppercase tracking-wider">Your 6-Digit Verification Code:</p>
-                        <p className="font-mono text-xl font-black tracking-widest text-emerald-950 mt-0.5">{receivedDevOtp}</p>
-                      </div>
-                      <span className="text-[10px] font-extrabold bg-emerald-800 text-white px-2.5 py-1 rounded-lg">Auto-Filled</span>
+                  <div className="mb-3.5 bg-emerald-50 border border-emerald-300/80 text-emerald-950 p-3.5 rounded-2xl text-xs flex items-start gap-3 shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-800 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                      <Mail className="w-4 h-4" />
                     </div>
-                  )}
-
-                  <div className="mb-3 text-center text-[10.5px] text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-200">
-                    💡 Master Admin Emergency PIN: <span className="font-mono font-black text-emerald-900 bg-white px-2 py-0.5 rounded-md border border-emerald-300">202600</span>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="font-black text-emerald-950 text-xs">Check Your Gmail Inbox</p>
+                      <p className="text-gray-600 text-[11px] mt-0.5 leading-snug">
+                        Open your Gmail inbox, copy the 6-digit code sent by <strong>CvSU Naic NSTP Portal</strong>, and paste it below.
+                      </p>
+                    </div>
                   </div>
 
                   {forgotSuccess && (
