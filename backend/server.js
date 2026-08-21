@@ -1344,7 +1344,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
-    var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026' || cleanOtp === '123456';
+    var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
 
     var aliases = [cleanEmail];
     if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
@@ -1356,13 +1356,12 @@ app.post('/api/auth/reset-password', async (req, res) => {
        WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) 
        AND otp_code = ? 
        AND used = 0 
-       AND (expires_at > NOW() OR created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)) 
        ORDER BY id DESC LIMIT 1`,
       [...aliases, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
-      return res.status(400).json({ message: 'Invalid or expired verification code. Please check and try again, or use Master PIN 202600.' });
+      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your Gmail inbox.' });
     }
 
     var hashedPassword = await bcrypt.hash(new_password, 10);
