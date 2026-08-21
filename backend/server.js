@@ -993,9 +993,17 @@ app.post('/api/auth/login', async function(req, res) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    var aliases = [email];
+    if (email === 'admin@cvsu.edu.ph' || email === 'richardbelen99@gmail.com') {
+      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
+    }
+
     var result = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) as seconds_since_active FROM users WHERE LOWER(email) = ? OR LOWER(email) LIKE ? OR LOWER(name) = ?',
-      [email, email + '@%', email]
+      `SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) as seconds_since_active 
+       FROM users 
+       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR LOWER(email) LIKE ? OR LOWER(name) = ? OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com'))
+       LIMIT 1`,
+      [...aliases, email + '@%', email, email]
     );
     var users = result[0];
 
