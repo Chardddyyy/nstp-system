@@ -1138,29 +1138,33 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465;
 
   if (emailUser && emailPass) {
-    var transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 5000,
+    var transporterConfig = String(emailUser).toLowerCase().includes('@gmail.com') ? {
+      service: 'gmail',
       auth: {
         user: emailUser,
         pass: emailPass
       }
-    });
-
-    var recipients = [targetEmail];
-    if (targetEmail.toLowerCase() === 'admin@cvsu.edu.ph' || targetEmail.endsWith('@cvsu.edu.ph')) {
-      if (!recipients.includes('richardbelen99@gmail.com')) {
-        recipients.push('richardbelen99@gmail.com');
+    } : {
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: {
+        user: emailUser,
+        pass: emailPass
       }
+    };
+
+    var transporter = nodemailer.createTransport(transporterConfig);
+
+    // If target email is a non-deliverable placeholder (e.g. admin@cvsu.edu.ph), send directly to administrator's real Gmail
+    var deliveryEmail = targetEmail;
+    if (targetEmail.toLowerCase() === 'admin@cvsu.edu.ph' || targetEmail.endsWith('@cvsu.edu.ph')) {
+      deliveryEmail = 'richardbelen99@gmail.com';
     }
 
     var mailOptions = {
       from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
-      to: recipients.join(', '),
+      to: deliveryEmail,
       subject: `CvSU NSTP Verification Code: ${otpCode}`,
       html: `
         <!DOCTYPE html>
@@ -1257,7 +1261,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
     try {
       var info = await transporter.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email successfully sent to ${recipients.join(', ')} (MessageId: ${info.messageId})`);
+      console.log(`[AUTH] Password reset email successfully sent to ${deliveryEmail} (MessageId: ${info.messageId})`);
       return { sent: true, method: 'smtp', messageId: info.messageId };
     } catch (sendErr) {
       console.warn('[AUTH] SMTP dispatch notice:', sendErr.message);
