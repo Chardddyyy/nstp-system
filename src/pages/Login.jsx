@@ -6,6 +6,7 @@ import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Awa
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [submittedPassword, setSubmittedPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +30,7 @@ function Login() {
       return;
     }
 
+    setSubmittedPassword(password);
     setLoading(true);
     setLoadingText('Verifying credentials...');
 
@@ -58,7 +60,7 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
-        if (result.message && (result.message.includes('another device') || result.message.includes('currently in use'))) {
+        if (result.message && (result.message.includes('another device') || result.message.includes('currently in use') || result.message.includes('active'))) {
           setActiveSessionWarning(result.message);
         } else {
           setError(result.message || 'Invalid email or password');
@@ -76,6 +78,37 @@ function Login() {
         setError(errMsg || 'Server connection failed. Please try again.');
       }
       setPassword('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceLogin = async () => {
+    const cleanEmail = email.trim().toLowerCase();
+    const pw = password || submittedPassword;
+    if (!cleanEmail || !pw) {
+      setActiveSessionWarning(null);
+      setError('Please re-enter your password');
+      return;
+    }
+
+    setLoading(true);
+    setLoadingText('Signing in on this device...');
+    setActiveSessionWarning(null);
+
+    try {
+      const result = await login(cleanEmail, pw, true);
+      if (result.success) {
+        if (result.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/instructor/dashboard');
+        }
+      } else {
+        setError(result.message || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      setError(err?.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
@@ -279,18 +312,27 @@ function Login() {
               <AlertTriangle className="w-7 h-7" />
             </div>
             <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-2">
-              Account Currently Active
+              Account Active on Another Device
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 text-center mb-6 leading-relaxed">
               {activeSessionWarning}
             </p>
-            <button
-              type="button"
-              onClick={() => setActiveSessionWarning(null)}
-              className="w-full py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
-            >
-              Understood
-            </button>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveSessionWarning(null)}
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleForceLogin}
+                className="flex-1 py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                Sign In on This Device
+              </button>
+            </div>
           </div>
         </div>
       )}

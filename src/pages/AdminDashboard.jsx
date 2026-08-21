@@ -5,7 +5,7 @@ import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
   User, Shield,
-  BookOpen, Bell, Calendar, X, CheckCircle, AlertCircle, Trash2, CheckSquare, Square,
+  BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

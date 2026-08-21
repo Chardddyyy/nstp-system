@@ -154,7 +154,6 @@ function authenticateToken(req, res, next) {
             message: '⚠️ Session Expired: Your account has been logged in from another device.'
           });
         }
-        pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(() => {});
       } catch (e) {
         // Continue if transient db error
       }
@@ -620,7 +619,8 @@ async function ensureUserColumns() {
     'ALTER TABLE users ADD COLUMN profilePicture TEXT',
     'ALTER TABLE users ADD COLUMN phone VARCHAR(50)',
     'ALTER TABLE users ADD COLUMN bio TEXT',
-    'ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+    'ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL',
+    'ALTER TABLE users MODIFY COLUMN last_active_at DATETIME NULL',
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -1025,17 +1025,18 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device within the last 25 seconds (active realtime heartbeat)
+    // Check if account has an active session in another device
+    var forceLogin = req.body && (req.body.forceLogin === true || req.body.forceLogin === 'true');
     var isDeviceActivelyInUse = false;
 
-    if (user.current_session_id && String(user.current_session_id).trim() !== '') {
+    if (!forceLogin && user.current_session_id && String(user.current_session_id).trim() !== '') {
       var secondsSinceActive = user.seconds_since_active;
       if (
         secondsSinceActive !== null &&
         secondsSinceActive !== undefined &&
         !isNaN(Number(secondsSinceActive)) &&
         Number(secondsSinceActive) >= 0 &&
-        Number(secondsSinceActive) < 25
+        Number(secondsSinceActive) < 30
       ) {
         isDeviceActivelyInUse = true;
       } else {
@@ -1044,11 +1045,12 @@ app.post('/api/auth/login', async function(req, res) {
       }
     }
 
-    if (isDeviceActivelyInUse) {
-      auditLog('login_blocked_active_session', user.id, `blocked_concurrent_login: ${email}`, ip);
-      return res.status(409).json({
+    if (isDeviceActivelyInUse && !forceLogin) {
+      auditLog('login_prompt_active_session', user.id, `prompt_concurrent_login: ${email}`, ip);
+      return res.status(200).json({
+        warning: true,
         activeSession: true,
-        message: 'Account Currently Active: This account is already signed in and in use on another device. To protect ongoing work and avoid interruption, simultaneous logins on the same account are blocked. Please wait for the active session to log out.'
+        message: 'This account is currently active on another device. Do you want to sign in on this device and continue?'
       });
     }
 
