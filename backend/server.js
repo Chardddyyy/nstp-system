@@ -1166,17 +1166,14 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
     var transporter = nodemailer.createTransport(transporterConfig);
 
-    // If target email is a non-deliverable placeholder (e.g. admin@cvsu.edu.ph), send directly to administrator's real Gmail
+    // Send directly to the target email provided by the user
     var deliveryEmail = targetEmail;
-    if (targetEmail.toLowerCase() === 'admin@cvsu.edu.ph' || targetEmail.endsWith('@cvsu.edu.ph')) {
-      deliveryEmail = 'richardbelen99@gmail.com';
-    }
 
     var mailOptions = {
       from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
       to: deliveryEmail,
       subject: `[CvSU NSTP] Verification Code: ${otpCode}`,
-      text: `Cavite State University - Naic Campus\nNSTP Department Account Recovery\n\nHello ${userName || 'Faculty / Administrator'},\n\nYour 6-digit verification code is: ${otpCode}\n\nThis verification code is valid for 15 minutes.\n\n© ${new Date().getFullYear()} Cavite State University - Naic Campus NSTP Office`,
+      text: `Cavite State University - Naic Campus\nNSTP Department Account Recovery\n\nHello ${userName || 'User'},\n\nYour 6-digit verification code is: ${otpCode}\n\nThis verification code is valid for 15 minutes.\n\n© ${new Date().getFullYear()} Cavite State University - Naic Campus NSTP Office`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -1217,7 +1214,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                   <tr>
                     <td style="padding: 32px 28px 24px 28px;">
                       <p style="color: #111827; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">
-                        Hello, ${userName || 'Faculty / Administrator'}
+                        Hello, ${userName || 'User'}
                       </p>
                       <p style="color: #4b5563; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px 0;">
                         You have requested to reset your password for the <strong>CvSU Naic NSTP Record Management Portal</strong>. Please use the 6-digit verification code below to verify your identity:
@@ -1294,41 +1291,31 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
-    var aliases = [cleanEmail];
-    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
-      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
-    }
 
+    // Check if user account actually exists in the database
     var [users] = await pool.execute(
-      `SELECT id, name, email, role FROM users WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com')) LIMIT 1`,
-      [...aliases, cleanEmail]
+      'SELECT id, name, email, role FROM users WHERE LOWER(email) = ? LIMIT 1',
+      [cleanEmail]
     );
 
     if (users.length === 0) {
-      var [adminUsers] = await pool.execute("SELECT id, name, email, role FROM users WHERE role = 'admin' LIMIT 1");
-      if (adminUsers.length > 0) {
-        users = adminUsers;
-      } else {
-        return res.status(404).json({ message: 'No registered user account found with this email address.' });
-      }
+      return res.status(404).json({ message: 'No registered account found with this email address. Please make sure your account exists.' });
     }
 
     var user = users[0];
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Invalidate previous unused codes for this email and its aliases
+    // Invalidate previous unused codes for this email
     await pool.execute(
-      `UPDATE password_resets SET used = 1 WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) AND used = 0`,
-      aliases
+      'UPDATE password_resets SET used = 1 WHERE LOWER(email) = ? AND used = 0',
+      [cleanEmail]
     );
 
-    // Insert new OTP with 30 min expiry for all aliases
-    for (var i = 0; i < aliases.length; i++) {
-      await pool.execute(
-        'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
-        [aliases[i], otp]
-      );
-    }
+    // Insert new OTP with 30 min expiry for this email
+    await pool.execute(
+      'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+      [cleanEmail, otp]
+    );
 
     // Dispatch email with 4-second timeout so response is quick yet ensures mailer initiates
     try {
@@ -1342,7 +1329,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     res.json({
       success: true,
-      message: `A 6-digit verification code has been sent to your Gmail (${cleanEmail}). Please check your inbox.`
+      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your inbox.`
     });
   } catch (err) {
     console.error('Forgot password error:', err);
@@ -1363,22 +1350,17 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
     var cleanOtp = String(otp_code).trim();
     var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
 
-    var aliases = [cleanEmail];
-    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
-      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
-    }
-
     var [resets] = await pool.execute(
       `SELECT id, email, otp_code FROM password_resets 
-       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) 
+       WHERE LOWER(email) = ? 
        AND otp_code = ? 
        AND used = 0 
        ORDER BY id DESC LIMIT 1`,
-      [...aliases, cleanOtp]
+      [cleanEmail, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
-      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your Gmail inbox.' });
+      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your email inbox.' });
     }
 
     res.json({ success: true, message: 'Verification code verified successfully.' });
@@ -1405,37 +1387,29 @@ app.post('/api/auth/reset-password', async (req, res) => {
     var cleanOtp = String(otp_code).trim();
     var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
 
-    var aliases = [cleanEmail];
-    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
-      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
-    }
-
     var [resets] = await pool.execute(
       `SELECT id, email, otp_code FROM password_resets 
-       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) 
+       WHERE LOWER(email) = ? 
        AND otp_code = ? 
        AND used = 0 
        ORDER BY id DESC LIMIT 1`,
-      [...aliases, cleanOtp]
+      [cleanEmail, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
-      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your Gmail inbox.' });
+      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your email inbox.' });
     }
 
     var hashedPassword = await bcrypt.hash(new_password, 10);
 
-    // Update user password and clear stale session across all aliases / admin role
-    var updateSql = 'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) IN (' + aliases.map(() => '?').join(',') + ')';
-    if (aliases.includes('admin@cvsu.edu.ph') || aliases.includes('richardbelen99@gmail.com')) {
-      updateSql += " OR role = 'admin'";
-    }
-
-    var [updateRes] = await pool.execute(updateSql, [hashedPassword, ...aliases]);
+    // Update user password and clear active session
+    var [updateRes] = await pool.execute(
+      'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) = ?',
+      [hashedPassword, cleanEmail]
+    );
 
     if (updateRes.affectedRows === 0) {
-      // Fallback: try update by role if admin
-      await pool.execute("UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE role = 'admin'", [hashedPassword]);
+      return res.status(404).json({ message: 'No registered user account found to update password.' });
     }
 
     // Mark OTP as used if matched from DB

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, KeyRound, X, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw } from 'lucide-react';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -510,14 +510,17 @@ function Login() {
                       Forgot Your Password?
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Enter your registered faculty or administrator email address below to receive a 6-digit verification code in your Gmail.
+                      Enter your registered account email address below. We will verify your account and send a 6-digit OTP code to your inbox.
                     </p>
                   </div>
 
                   {forgotError && (
-                    <div className="mb-3.5 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
-                      <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
-                      <span>{forgotError}</span>
+                    <div className="mb-4 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block text-red-900 font-extrabold mb-0.5">Account Verification Notice</strong>
+                        <span>{forgotError}</span>
+                      </div>
                     </div>
                   )}
 
@@ -527,34 +530,40 @@ function Login() {
                         Registered Email Address
                       </label>
                       <div className="relative">
-                        <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Mail className={`absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 ${forgotError ? 'text-red-500' : 'text-gray-400'}`} />
                         <input
                           type="email"
                           id="forgot-email"
                           name="forgotEmail"
                           autoComplete="email"
                           value={forgotEmail}
-                          onChange={(e) => setForgotEmail(e.target.value)}
-                          placeholder="e.g. admin@cvsu.edu.ph"
-                          className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
+                          onChange={(e) => {
+                            setForgotEmail(e.target.value);
+                            if (forgotError) setForgotError('');
+                          }}
+                          placeholder="e.g. youraccount@gmail.com"
+                          className={`w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm bg-gray-50 border ${
+                            forgotError ? 'border-red-400 bg-red-50/20 focus:ring-red-500' : 'border-gray-300 focus:ring-emerald-600'
+                          } rounded-xl focus:ring-2 focus:bg-white outline-none font-medium transition-all`}
                           required
                           autoFocus
                         />
                       </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Must be an existing registered account in the NSTP portal.</p>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={forgotLoading}
+                      disabled={forgotLoading || !forgotEmail.trim()}
                       className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {forgotLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Sending Verification Code...</span>
+                          <span>Verifying Account &amp; Sending OTP...</span>
                         </>
                       ) : (
-                        <span>Send 6-Digit Reset Code &rarr;</span>
+                        <span>Verify &amp; Send 6-Digit OTP &rarr;</span>
                       )}
                     </button>
                   </form>
@@ -567,15 +576,19 @@ function Login() {
                     <h4 className="text-sm sm:text-base font-black text-gray-900">
                       Enter Verification Code
                     </h4>
-                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      We sent a 6-digit code to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong>. Please enter the code from your Gmail inbox.
-                    </p>
+                    <div className="mt-1.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900">
+                      <span>We sent a 6-digit OTP code to:</span>
+                      <strong className="block text-emerald-950 font-black text-xs sm:text-sm mt-0.5 break-all">{forgotEmail}</strong>
+                    </div>
                   </div>
 
                   {forgotError && (
-                    <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
-                      <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
-                      <span>{forgotError}</span>
+                    <div className="mb-3.5 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block text-red-900 font-extrabold mb-0.5">Verification Error</strong>
+                        <span>{forgotError}</span>
+                      </div>
                     </div>
                   )}
 
@@ -591,12 +604,16 @@ function Login() {
                         autoComplete="one-time-code"
                         maxLength="6"
                         value={forgotOtp}
-                        onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => {
+                          setForgotOtp(e.target.value.replace(/\D/g, ''));
+                          if (forgotError) setForgotError('');
+                        }}
                         placeholder="000000"
                         className="w-full text-center tracking-[10px] sm:tracking-[14px] font-mono text-2xl py-3 bg-gray-50 border-2 border-emerald-700/40 rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-black text-emerald-950 shadow-inner"
                         required
                         autoFocus
                       />
+                      <p className="text-[10px] text-gray-400 text-center mt-1.5">Check your inbox or Spam/Junk folder for the code.</p>
                     </div>
 
                     <button
@@ -607,10 +624,10 @@ function Login() {
                       {forgotLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Verifying Code...</span>
+                          <span>Verifying OTP Code...</span>
                         </>
                       ) : (
-                        <span>Proceed to New Password &rarr;</span>
+                        <span>Verify Code &amp; Proceed to Step 3 &rarr;</span>
                       )}
                     </button>
 
@@ -618,7 +635,7 @@ function Login() {
                       <button
                         type="button"
                         onClick={() => { setForgotStep(1); setForgotError(''); }}
-                        className="text-gray-500 hover:text-gray-800 font-bold cursor-pointer"
+                        className="text-gray-500 hover:text-gray-800 font-bold cursor-pointer transition-colors"
                       >
                         &larr; Change Email
                       </button>
@@ -643,17 +660,20 @@ function Login() {
                 <>
                   <div className="text-center mb-4">
                     <h4 className="text-sm sm:text-base font-black text-gray-900">
-                      Create New Password
+                      Step 3: Create New Password
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Enter your new account password below to finish resetting your credentials.
+                      Enter your new account password below for <strong className="text-emerald-900">{forgotEmail}</strong>.
                     </p>
                   </div>
 
                   {forgotError && (
-                    <div className="mb-3.5 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
-                      <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
-                      <span>{forgotError}</span>
+                    <div className="mb-3.5 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block text-red-900 font-extrabold mb-0.5">Reset Error</strong>
+                        <span>{forgotError}</span>
+                      </div>
                     </div>
                   )}
 
@@ -669,7 +689,10 @@ function Login() {
                           id="forgot-new-password"
                           name="forgotNewPassword"
                           value={forgotNewPassword}
-                          onChange={(e) => setForgotNewPassword(e.target.value)}
+                          onChange={(e) => {
+                            setForgotNewPassword(e.target.value);
+                            if (forgotError) setForgotError('');
+                          }}
                           placeholder="••••••••••••"
                           autoComplete="new-password"
                           className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
@@ -685,6 +708,7 @@ function Login() {
                           {forgotShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      <p className="text-[10px] text-gray-400 mt-1">Minimum 6 characters.</p>
                     </div>
 
                     <div>
@@ -698,7 +722,10 @@ function Login() {
                           id="forgot-confirm-password"
                           name="forgotConfirmPassword"
                           value={forgotConfirmPassword}
-                          onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                          onChange={(e) => {
+                            setForgotConfirmPassword(e.target.value);
+                            if (forgotError) setForgotError('');
+                          }}
                           placeholder="••••••••••••"
                           autoComplete="new-password"
                           className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
@@ -710,16 +737,16 @@ function Login() {
 
                     <button
                       type="submit"
-                      disabled={forgotLoading}
+                      disabled={forgotLoading || !forgotNewPassword || !forgotConfirmPassword}
                       className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {forgotLoading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Updating password...</span>
+                          <span>Saving New Password...</span>
                         </>
                       ) : (
-                        <span>Save New Password &rarr;</span>
+                        <span>Save New Password &amp; Finish &rarr;</span>
                       )}
                     </button>
 
