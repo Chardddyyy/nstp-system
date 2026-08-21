@@ -16,7 +16,7 @@ function getPrimaryApiUrl() {
       return window.location.protocol + '//' + host + ':3001/api';
     }
 
-    return 'https://nstp-system.onrender.com/api';
+    return 'https://nstp-system-iw5p.onrender.com/api';
   }
   return 'http://localhost:3001/api';
 }
