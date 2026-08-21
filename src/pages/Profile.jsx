@@ -632,7 +632,12 @@ function Profile() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-semibold text-gray-700">Official Email Address</label>
+                    <span className="text-[10px] sm:text-[10.5px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Login &amp; Password Recovery
+                    </span>
+                  </div>
                   <input
                     type="email"
                     id="profile-email"
@@ -641,8 +646,12 @@ function Profile() {
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     disabled={!isEditing}
                     autoComplete="email"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100 font-medium"
+                    placeholder="e.g. admin@cvsu.edu.ph"
                   />
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Password recovery codes and system notices will be sent to this email address.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>

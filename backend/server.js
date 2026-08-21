@@ -627,6 +627,10 @@ async function ensureUserColumns() {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
   }
   userColumnsMigrated = true;
+  try {
+    await pool.execute("UPDATE users SET email = 'admin@cvsu.edu.ph' WHERE role = 'admin' AND (email IS NULL OR TRIM(email) = '')");
+    await pool.execute("UPDATE users SET email = CONCAT('instructor', id, '@cvsu.edu.ph') WHERE email IS NULL OR TRIM(email) = ''");
+  } catch (e) {}
   await ensureNstpIdAndAttendanceTables();
 }
 
