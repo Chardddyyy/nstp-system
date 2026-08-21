@@ -2929,23 +2929,26 @@ function StudentManagement() {
                       </div>
                     </div>
 
-                    {/* Registration Form Document Proof info in Edit Modal */}
+                    {/* Registration Form (COR/COE) Document Proof info in Edit Modal — Strictly Read-Only / Immutable */}
                     {(formData.registrationPhoto || formData.registration_photo) && (
-                      <div className="mt-3.5 pt-3 border-t border-emerald-200/80 flex items-center justify-between">
+                      <div className="mt-3.5 pt-3 border-t border-emerald-200/80 flex items-center justify-between bg-emerald-100/50 p-2.5 rounded-xl">
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-emerald-700" />
-                          <span className="text-xs font-bold text-emerald-950">Registration Form (COR) Attached</span>
+                          <FileText className="w-4 h-4 text-emerald-800 shrink-0" />
+                          <div>
+                            <span className="text-xs font-black text-emerald-950 block">Official Certificate of Registration (COR/COE)</span>
+                            <span className="text-[10px] text-emerald-700 font-bold block">🔒 Permanent student enrollment proof (Read-Only)</span>
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
                             const reg = formData.registrationPhoto || formData.registration_photo;
                             const isPdf = typeof reg === 'string' && reg.startsWith('data:application/pdf');
-                            setPhotoViewer({ url: reg, title: `${formData.name || 'Student'} - Registration Form (COR)`, isPdf });
+                            setPhotoViewer({ url: reg, title: `${formData.name || 'Student'} - Official Certificate of Registration (COR/COE)`, isPdf });
                           }}
-                          className="text-[11px] font-black text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer"
+                          className="text-[11px] font-black text-emerald-900 hover:text-white hover:bg-emerald-800 bg-white px-3 py-1.5 rounded-lg border border-emerald-300 shadow-2xs transition-all cursor-pointer shrink-0 ml-2"
                         >
-                          👁 Inspect COR
+                          👁 Inspect COE
                         </button>
                       </div>
                     )}

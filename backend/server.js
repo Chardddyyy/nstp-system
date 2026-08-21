@@ -1747,15 +1747,12 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       }
     } catch (_) {}
 
-    // Resolve photo values properly — strictly independent!
+    // 2x2 Photo: Editable by admin / instructor
     const new2x2 = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
-    const newReg = n(req.body.registrationPhoto) || n(req.body.registration_photo) || n(req.body.reg_form);
-    
-    // 2x2 Photo: If new provided, use it; otherwise keep current.id_photo_2x2 / current.photo / fallback2x2. NEVER use registrationPhoto!
     const finalPhoto = new2x2 !== null ? new2x2 : (current.id_photo_2x2 || current.photo || fallback2x2 || null);
 
-    // Registration Form (COR): If new provided, use it; otherwise keep current.registrationPhoto / current.registration_photo / fallbackReg. NEVER use 2x2 photo!
-    const finalRegPhoto = newReg !== null ? newReg : (current.registrationPhoto || current.registration_photo || current.reg_form || fallbackReg || null);
+    // Registration Form (COR/COE): STRICTLY IMMUTABLE - Always preserved from student's original enrollment proof
+    const finalRegPhoto = fallbackReg || current.registrationPhoto || current.registration_photo || current.reg_form || null;
 
     await pool.execute(
       `UPDATE students SET
