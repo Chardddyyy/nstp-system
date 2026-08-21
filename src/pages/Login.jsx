@@ -150,7 +150,12 @@ function Login() {
       setForgotSuccess(res?.message || 'Verification code sent to your email.');
       setForgotStep(2);
     } catch (err) {
-      setForgotError(err?.message || 'Failed to send reset code. Please check your email.');
+      var msg = err?.message || 'Failed to send reset code.';
+      if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('waking up') || msg.toLowerCase().includes('network')) {
+        setForgotError('Cloud server was waking up from sleep. It is now active — please click "Send 6-Digit Reset Code" again!');
+      } else {
+        setForgotError(msg);
+      }
     } finally {
       setForgotLoading(false);
     }
