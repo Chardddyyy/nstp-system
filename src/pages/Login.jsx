@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, confirmPasswordReset } from '../services/api';
@@ -24,6 +24,17 @@ function Login() {
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -139,6 +150,7 @@ function Login() {
     try {
       await requestPasswordReset(clean);
       setForgotOtp('');
+      setResendCooldown(60);
       setForgotStep(2);
     } catch (err) {
       var msg = err?.message || 'Failed to send reset code.';
@@ -589,10 +601,14 @@ function Login() {
                       <button
                         type="button"
                         onClick={handleSendForgotOtp}
-                        disabled={forgotLoading}
-                        className="text-blue-600 hover:text-blue-800 font-extrabold hover:underline cursor-pointer"
+                        disabled={forgotLoading || resendCooldown > 0}
+                        className={`font-extrabold text-xs transition-colors ${
+                          resendCooldown > 0
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-blue-600 hover:text-blue-800 hover:underline cursor-pointer'
+                        }`}
                       >
-                        Resend Code
+                        {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code'}
                       </button>
                     </div>
                   </form>

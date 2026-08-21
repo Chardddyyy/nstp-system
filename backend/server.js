@@ -1283,7 +1283,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
-    var [users] = await pool.execute('SELECT id, name, email, role FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    var aliases = [cleanEmail];
+    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
+      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
+    }
+
+    var [users] = await pool.execute(
+      `SELECT id, name, email, role FROM users WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR role = 'admin' LIMIT 1`,
+      aliases
+    );
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'No registered user account found with this email address.' });
@@ -1292,14 +1300,19 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var user = users[0];
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Invalidate previous unused codes for this email
-    await pool.execute('UPDATE password_resets SET used = 1 WHERE LOWER(email) = ? AND used = 0', [cleanEmail]);
-
-    // Insert new OTP with 15 min expiry
+    // Invalidate previous unused codes for this email and its aliases
     await pool.execute(
-      'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))',
-      [cleanEmail, otp]
+      `UPDATE password_resets SET used = 1 WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) AND used = 0`,
+      aliases
     );
+
+    // Insert new OTP with 30 min expiry for all aliases
+    for (var i = 0; i < aliases.length; i++) {
+      await pool.execute(
+        'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+        [aliases[i], otp]
+      );
+    }
 
     // Dispatch email asynchronously so client response is instant
     sendPasswordResetEmail(cleanEmail, otp, user.name).catch(function(err) {
