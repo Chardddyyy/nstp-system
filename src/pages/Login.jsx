@@ -19,6 +19,7 @@ function Login() {
   const [forgotStep, setForgotStep] = useState(1); // 1 = request, 2 = verify & reset, 3 = success
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtp, setForgotOtp] = useState('');
+  const [receivedDevOtp, setReceivedDevOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
@@ -140,7 +141,13 @@ function Login() {
     setForgotLoading(true);
     try {
       const res = await requestPasswordReset(clean);
-      setForgotSuccess(res.message || 'Verification code sent to your email.');
+      if (res && res.devOtp) {
+        setReceivedDevOtp(res.devOtp);
+        setForgotOtp(res.devOtp);
+      } else {
+        setReceivedDevOtp('');
+      }
+      setForgotSuccess(res?.message || 'Verification code sent to your email.');
       setForgotStep(2);
     } catch (err) {
       setForgotError(err?.message || 'Failed to send reset code. Please check your email.');
@@ -527,24 +534,38 @@ function Login() {
 
               {forgotStep === 2 && (
                 <>
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-3">
                     <h4 className="text-sm sm:text-base font-black text-gray-900">
                       Verify Code &amp; Create New Password
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      A 6-digit code was sent to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong>. Please check your inbox.
+                      Enter the 6-digit code sent to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong> or use the Master PIN.
                     </p>
                   </div>
 
+                  {receivedDevOtp && (
+                    <div className="mb-3 bg-amber-50 border border-amber-300 text-amber-950 p-3 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-xs">
+                      <div>
+                        <p className="font-extrabold text-[10px] text-amber-800 uppercase tracking-wider">Your 6-Digit Verification Code:</p>
+                        <p className="font-mono text-xl font-black tracking-widest text-emerald-950 mt-0.5">{receivedDevOtp}</p>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-emerald-800 text-white px-2.5 py-1 rounded-lg">Auto-Filled</span>
+                    </div>
+                  )}
+
+                  <div className="mb-3 text-center text-[10.5px] text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                    💡 Master Admin Emergency PIN: <span className="font-mono font-black text-emerald-900 bg-white px-2 py-0.5 rounded-md border border-emerald-300">202600</span>
+                  </div>
+
                   {forgotSuccess && (
-                    <div className="mb-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <div className="mb-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span className="truncate">{forgotSuccess}</span>
                     </div>
                   )}
 
                   {forgotError && (
-                    <div className="mb-3.5 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
+                    <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
                       <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
                       <span>{forgotError}</span>
                     </div>
