@@ -716,9 +716,10 @@ function StudentManagement() {
       emergencyContact: toTitleCase(String(student.emergencyContact || student.emergencyName || '')),
       emergencyName: toTitleCase(String(student.emergencyName || student.emergencyContact || '')),
       emergencyNumber: emerNo.slice(0, 11),
-      id_photo_2x2: String(student.id_photo_2x2 || student.idPhoto2x2 || student.photo || ''),
-      photo: String(student.id_photo_2x2 || student.photo || student.idPhoto2x2 || ''),
-      registrationPhoto: String(student.registrationPhoto || student.registration_photo || student.reg_form || '')
+      id_photo_2x2: String(student.id_photo_2x2 || student.idPhoto2x2 || student.photo || student.profilePicture || ''),
+      photo: String(student.photo || student.id_photo_2x2 || student.idPhoto2x2 || ''),
+      registrationPhoto: String(student.registrationPhoto || student.registration_photo || student.reg_form || student.cor || student.coe || student.photoUrl || ''),
+      registration_photo: String(student.registration_photo || student.registrationPhoto || student.reg_form || student.cor || student.coe || student.photoUrl || '')
     });
     setHeightInput(String(student.height || ''));
     setWeightInput(String(student.weight || ''));
@@ -2206,7 +2207,7 @@ function StudentManagement() {
                             <FileText className="w-3.5 h-3.5 text-emerald-600" />
                             Registration Form (COR)
                           </span>
-                          {currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.photoUrl ? (
+                          {currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.cor || currentViewStudent.coe || currentViewStudent.photoUrl ? (
                             <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                               Available
                             </span>
@@ -2219,7 +2220,7 @@ function StudentManagement() {
 
                         <div className="flex items-center gap-3 my-2">
                           {(() => {
-                            const regSrc = currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.photoUrl;
+                            const regSrc = currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.cor || currentViewStudent.coe || currentViewStudent.photoUrl;
                             const isPdf = typeof regSrc === 'string' && regSrc.startsWith('data:application/pdf');
 
                             return (

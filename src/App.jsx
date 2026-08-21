@@ -711,7 +711,10 @@ function App() {
 
   async function updateStudentFunc(id, data) {
     const updated = await studentsAPI.update(id, data);
-    setStudents(prev => prev.map(s => s.id === id ? updated : s));
+    setStudents(prev => prev.map(s => {
+      const match = (s.id && String(s.id) === String(id)) || (s.studentId && String(s.studentId) === String(id));
+      return match ? { ...s, ...updated } : s;
+    }));
     return updated;
   }
 

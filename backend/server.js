@@ -708,6 +708,52 @@ async function ensureStudentColumns() {
   }
 }
 
+// Auto-sync / restore students' Certificate of Registration (COR) & 2x2 Photos from original enrollment records
+async function restoreCorFromEnrollments() {
+  try {
+    // 1. Restore registrationPhoto/reg_form from enrollments table for any student whose COR was blank or corrupted/overwritten by 2x2 photo
+    await pool.execute(`
+      UPDATE students s
+      JOIN enrollments e ON (
+        s.studentId = e.studentId 
+        OR s.studentId = e.student_id 
+        OR (s.name = e.fullName AND s.department = e.department)
+      )
+      SET s.registrationPhoto = COALESCE(NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registrationPhoto),
+          s.registration_photo = COALESCE(NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registration_photo),
+          s.reg_form = COALESCE(NULLIF(e.reg_form, ''), NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), s.reg_form)
+      WHERE (
+        s.registrationPhoto IS NULL 
+        OR s.registrationPhoto = '' 
+        OR (s.registrationPhoto = s.photo AND e.registrationPhoto IS NOT NULL AND e.registrationPhoto != '' AND e.registrationPhoto != s.photo)
+        OR (s.registrationPhoto = s.id_photo_2x2 AND e.registrationPhoto IS NOT NULL AND e.registrationPhoto != '' AND e.registrationPhoto != s.id_photo_2x2)
+      )
+      AND (e.registrationPhoto IS NOT NULL OR e.registration_photo IS NOT NULL OR e.reg_form IS NOT NULL)
+    `);
+
+    // 2. Also restore 2x2 photo from enrollments if student has id_photo_2x2 in enrollments but missing or equal to regPhoto in students
+    await pool.execute(`
+      UPDATE students s
+      JOIN enrollments e ON (
+        s.studentId = e.studentId 
+        OR s.studentId = e.student_id 
+        OR (s.name = e.fullName AND s.department = e.department)
+      )
+      SET s.id_photo_2x2 = COALESCE(NULLIF(e.id_photo_2x2, ''), NULLIF(e.idPhoto2x2, ''), NULLIF(e.photo, ''), s.id_photo_2x2),
+          s.photo = COALESCE(NULLIF(e.photo, ''), NULLIF(e.id_photo_2x2, ''), NULLIF(e.idPhoto2x2, ''), s.photo)
+      WHERE (
+        s.id_photo_2x2 IS NULL 
+        OR s.id_photo_2x2 = '' 
+        OR (s.id_photo_2x2 = s.registrationPhoto AND e.id_photo_2x2 IS NOT NULL AND e.id_photo_2x2 != '' AND e.id_photo_2x2 != s.registrationPhoto)
+      )
+      AND (e.id_photo_2x2 IS NOT NULL OR e.idPhoto2x2 IS NOT NULL OR e.photo IS NOT NULL)
+    `);
+    console.log('[Auto-Heal] Successfully synced & verified students documents with original enrollment records.');
+  } catch (err) {
+    console.warn('[Auto-Heal Warning] Could not auto-sync COR documents from enrollments:', err.message);
+  }
+}
+
 var enrollmentColumnsMigrated = false;
 async function ensureEnrollmentColumns() {
   if (enrollmentColumnsMigrated) return;
@@ -1276,19 +1322,42 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
 // Get students — admins see all, instructors see only their department
 app.get('/api/students', authenticateToken, async (req, res) => {
   try {
+    const query = `
+      SELECT s.*,
+             COALESCE(NULLIF(s.registrationPhoto, ''), NULLIF(s.registration_photo, ''), NULLIF(s.reg_form, ''), e.registrationPhoto, e.registration_photo, e.reg_form) AS registrationPhoto,
+             COALESCE(NULLIF(s.registration_photo, ''), NULLIF(s.registrationPhoto, ''), NULLIF(s.reg_form, ''), e.registration_photo, e.registrationPhoto, e.reg_form) AS registration_photo,
+             COALESCE(NULLIF(s.reg_form, ''), NULLIF(s.registrationPhoto, ''), NULLIF(s.registration_photo, ''), e.reg_form, e.registrationPhoto, e.registration_photo) AS reg_form,
+             COALESCE(NULLIF(s.id_photo_2x2, ''), NULLIF(s.photo, ''), e.id_photo_2x2, e.idPhoto2x2, e.photo) AS id_photo_2x2,
+             COALESCE(NULLIF(s.photo, ''), NULLIF(s.id_photo_2x2, ''), e.photo, e.id_photo_2x2, e.idPhoto2x2) AS photo
+      FROM students s
+      LEFT JOIN enrollments e ON (s.studentId = e.studentId OR s.studentId = e.student_id)
+    `;
     let students;
     if (req.user.role === 'admin') {
-      [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
+      [students] = await pool.execute(query + ' ORDER BY s.created_at DESC');
     } else {
       [students] = await pool.execute(
-        'SELECT * FROM students WHERE department = ? ORDER BY created_at DESC',
+        query + ' WHERE s.department = ? ORDER BY s.created_at DESC',
         [req.user.department]
       );
     }
     res.json(students);
   } catch (error) {
-    console.error('Get students error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get students error (falling back to direct select):', error.message);
+    try {
+      let fallback;
+      if (req.user.role === 'admin') {
+        [fallback] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
+      } else {
+        [fallback] = await pool.execute(
+          'SELECT * FROM students WHERE department = ? ORDER BY created_at DESC',
+          [req.user.department]
+        );
+      }
+      res.json(fallback);
+    } catch (e2) {
+      res.status(500).json({ message: 'Server error' });
+    }
   }
 });
 
@@ -1663,12 +1732,30 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const finalMunicipality = n(req.body.municipality, current.municipality);
     const finalProvince = n(req.body.province, current.province);
 
-    // Resolve photo values properly
+    // Fetch enrollment record if existing in case current.registrationPhoto is missing
+    let fallbackReg = null;
+    let fallback2x2 = null;
+    try {
+      const [enrollmentRows] = await pool.execute(
+        'SELECT registrationPhoto, registration_photo, reg_form, id_photo_2x2, idPhoto2x2, photo FROM enrollments WHERE studentId = ? OR student_id = ? LIMIT 1',
+        [current.studentId, current.studentId]
+      );
+      if (enrollmentRows && enrollmentRows.length > 0) {
+        const er = enrollmentRows[0];
+        fallbackReg = er.registrationPhoto || er.registration_photo || er.reg_form || null;
+        fallback2x2 = er.id_photo_2x2 || er.idPhoto2x2 || er.photo || null;
+      }
+    } catch (_) {}
+
+    // Resolve photo values properly — strictly independent!
     const new2x2 = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
-    const newReg = n(req.body.registrationPhoto) || n(req.body.registration_photo);
+    const newReg = n(req.body.registrationPhoto) || n(req.body.registration_photo) || n(req.body.reg_form);
     
-    const finalPhoto = new2x2 || current.id_photo_2x2 || current.photo || current.registrationPhoto;
-    const finalRegPhoto = newReg || current.registrationPhoto || current.registration_photo || finalPhoto;
+    // 2x2 Photo: If new provided, use it; otherwise keep current.id_photo_2x2 / current.photo / fallback2x2. NEVER use registrationPhoto!
+    const finalPhoto = new2x2 !== null ? new2x2 : (current.id_photo_2x2 || current.photo || fallback2x2 || null);
+
+    // Registration Form (COR): If new provided, use it; otherwise keep current.registrationPhoto / current.registration_photo / fallbackReg. NEVER use 2x2 photo!
+    const finalRegPhoto = newReg !== null ? newReg : (current.registrationPhoto || current.registration_photo || current.reg_form || fallbackReg || null);
 
     await pool.execute(
       `UPDATE students SET
@@ -1707,6 +1794,18 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Student ID already exists. Please use a different Student ID.' });
     }
     res.status(500).json({ message: 'Server error: ' + (error.message || 'Unable to update student') });
+  }
+});
+
+// Restore student COR/COE documents from original enrollment records
+app.post('/api/students/restore-cor', authenticateToken, async (req, res) => {
+  try {
+    await restoreCorFromEnrollments();
+    const [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
+    res.json({ success: true, message: 'Student documents successfully restored and synced from enrollments!', students });
+  } catch (error) {
+    console.error('Restore COR error:', error);
+    res.status(500).json({ message: 'Failed to restore student documents: ' + error.message });
   }
 });
 
@@ -4491,7 +4590,8 @@ async function startServer() {
       ensureReportsDeptColumn(),
       ensureReportsBatchYear(),
       ensureReportComments(),
-      ensureConversationLastSender()
+      ensureConversationLastSender(),
+      restoreCorFromEnrollments()
     ]).catch(function(err) {
       console.warn('Schema migration warning:', err.message);
     });
