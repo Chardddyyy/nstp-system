@@ -460,9 +460,9 @@ async function ensureAllCoreTables() {
     }
   }
 
-  // Seed default admin user if not exists
+  // Seed default admin users if not exists
   try {
-    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE email = ?', ['admin@cvsu.edu.ph']);
+    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', ['admin@cvsu.edu.ph']);
     if (existingAdmin.length === 0) {
       const hashedPw = await bcrypt.hash('Admin@123', 12);
       await pool.execute(
@@ -470,6 +470,15 @@ async function ensureAllCoreTables() {
         ['admin@cvsu.edu.ph', hashedPw, 'admin', 'NSTP Administrator', 'NSTP Office', 'default']
       );
       console.log('Seeded default admin user: admin@cvsu.edu.ph');
+    }
+    const [existingRichard] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', ['richardbelen99@gmail.com']);
+    if (existingRichard.length === 0) {
+      const hashedPw2 = await bcrypt.hash('Admin@123', 12);
+      await pool.execute(
+        'INSERT INTO users (email, password, role, name, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
+        ['richardbelen99@gmail.com', hashedPw2, 'admin', 'NSTP Administrator', 'NSTP Office', 'default']
+      );
+      console.log('Seeded admin user: richardbelen99@gmail.com');
     }
   } catch (err) {
     console.warn('Admin seed notice:', err.message);
@@ -1301,56 +1310,68 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
     var configuredAdminEmail = String(rawUser).trim().toLowerCase();
 
-    // Check if user account exists in users table (supporting admin aliases or faculty emails)
+    // Look for user in users table (matching email, name, or admin aliases)
     var [users] = await pool.execute(
       `SELECT id, name, email, role FROM users 
-       WHERE LOWER(email) = ? 
+       WHERE LOWER(TRIM(email)) = ? 
+          OR LOWER(TRIM(name)) = ?
           OR (role = 'admin' AND (? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com', '${configuredAdminEmail}')))
        LIMIT 1`,
-      [cleanEmail, cleanEmail]
+      [cleanEmail, cleanEmail, cleanEmail]
     );
 
-    // If not in users table, check students table as well
+    // If not found in users table, search students table (by email, studentId, or contactNumber)
     if (users.length === 0) {
       var [studentUsers] = await pool.execute(
-        'SELECT id, name, email FROM students WHERE LOWER(email) = ? LIMIT 1',
-        [cleanEmail]
+        `SELECT id, name, email, studentId FROM students 
+         WHERE LOWER(TRIM(email)) = ? 
+            OR LOWER(TRIM(studentId)) = ? 
+            OR LOWER(TRIM(contactNumber)) = ?
+         LIMIT 1`,
+        [cleanEmail, cleanEmail, cleanEmail]
       );
       if (studentUsers.length > 0) {
         users = studentUsers;
       }
     }
 
+    // If still no account found:
     if (users.length === 0) {
-      return res.status(404).json({ message: 'No registered account found with this email address. Please make sure your account exists.' });
+      return res.status(400).json({
+        success: false,
+        message: `No registered account found with "${cleanEmail}". Please ensure you enter the email address used during enrollment or registration.`
+      });
     }
 
     var user = users[0];
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Invalidate previous unused codes for this email and user email
+    // Target email to send the OTP to: if user typed an email, send to cleanEmail; if cleanEmail was studentId and user has email, send to user.email
+    var targetDeliveryEmail = cleanEmail.includes('@') ? cleanEmail : (user.email ? user.email.toLowerCase() : cleanEmail);
+
+    // Invalidate previous unused codes for both cleanEmail and user.email
     await pool.execute(
-      'UPDATE password_resets SET used = 1 WHERE (LOWER(email) = ? OR LOWER(email) = ?) AND used = 0',
-      [cleanEmail, (user.email || '').toLowerCase()]
+      'UPDATE password_resets SET used = 1 WHERE (LOWER(TRIM(email)) = ? OR LOWER(TRIM(email)) = ?) AND used = 0',
+      [cleanEmail, (user.email || '').toLowerCase().trim()]
     );
 
-    // Insert new OTP with 10 min expiry for this email
+    // Insert new OTP with 10 min expiry for cleanEmail
     await pool.execute(
       'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
       [cleanEmail, otp]
     );
 
-    if (user.email && user.email.toLowerCase() !== cleanEmail) {
+    if (user.email && user.email.toLowerCase().trim() !== cleanEmail) {
       await pool.execute(
         'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
-        [user.email.toLowerCase(), otp]
+        [user.email.toLowerCase().trim(), otp]
       );
     }
 
     // Dispatch email
     try {
       await Promise.race([
-        sendPasswordResetEmail(cleanEmail, otp, user.name || cleanEmail),
+        sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch backgrounded')), 6000))
       ]);
     } catch (mailErr) {
@@ -1359,7 +1380,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     res.json({
       success: true,
-      message: `A 6-digit verification code has been sent to ${cleanEmail}. Please check your inbox.`
+      message: `A 6-digit verification code has been sent to ${targetDeliveryEmail}. Please check your inbox.`
     });
   } catch (err) {
     console.error('Forgot password error:', err);
@@ -1382,15 +1403,16 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
 
     var [resets] = await pool.execute(
       `SELECT id, email, otp_code FROM password_resets 
-       WHERE LOWER(email) = ? 
+       WHERE LOWER(TRIM(email)) = ? 
        AND otp_code = ? 
        AND used = 0 
+       AND (expires_at IS NULL OR expires_at > NOW())
        ORDER BY id DESC LIMIT 1`,
       [cleanEmail, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
-      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your email inbox.' });
+      return res.status(400).json({ message: 'Invalid or expired verification code. Please check the 6-digit code sent to your email inbox.' });
     }
 
     res.json({ success: true, message: 'Verification code verified successfully.' });
@@ -1416,30 +1438,50 @@ app.post('/api/auth/reset-password', async (req, res) => {
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
     var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
+    var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
+    var configuredAdminEmail = String(rawUser).trim().toLowerCase();
 
     var [resets] = await pool.execute(
       `SELECT id, email, otp_code FROM password_resets 
-       WHERE LOWER(email) = ? 
+       WHERE LOWER(TRIM(email)) = ? 
        AND otp_code = ? 
        AND used = 0 
+       AND (expires_at IS NULL OR expires_at > NOW())
        ORDER BY id DESC LIMIT 1`,
       [cleanEmail, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
-      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your email inbox.' });
+      return res.status(400).json({ message: 'Invalid or expired verification code. Please enter the 6-digit code sent to your email inbox.' });
     }
 
     var hashedPassword = await bcrypt.hash(new_password, 10);
 
-    // Update user password and clear active session
+    // Update users table
     var [updateRes] = await pool.execute(
-      'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) = ?',
-      [hashedPassword, cleanEmail]
+      `UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL 
+       WHERE LOWER(TRIM(email)) = ? 
+          OR LOWER(TRIM(name)) = ?
+          OR (role = 'admin' AND (? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com', '${configuredAdminEmail}')))`,
+      [hashedPassword, cleanEmail, cleanEmail, cleanEmail]
     );
 
+    // If not in users, update students table if applicable
     if (updateRes.affectedRows === 0) {
-      return res.status(404).json({ message: 'No registered user account found to update password.' });
+      try {
+        var [studRes] = await pool.execute(
+          `UPDATE students SET password = ? 
+           WHERE LOWER(TRIM(email)) = ? OR LOWER(TRIM(studentId)) = ?`,
+          [hashedPassword, cleanEmail, cleanEmail]
+        );
+        if (studRes.affectedRows > 0) {
+          updateRes = studRes;
+        }
+      } catch (_) {}
+    }
+
+    if (updateRes.affectedRows === 0) {
+      return res.status(400).json({ message: 'No registered user account found to update password.' });
     }
 
     // Mark OTP as used if matched from DB
