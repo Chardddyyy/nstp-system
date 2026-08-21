@@ -4901,7 +4901,11 @@ app.get('/api/active-count', async function(req, res) {
 
 // Heartbeat ping endpoint (Public)
 app.post('/api/telemetry/ping', function(req, res) {
-  var body = req.body || {};
+  var body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch (_) { body = {}; }
+  }
+  body = body || {};
   var sessionId = body.sessionId;
   var visitorId = body.visitorId;
   var user = body.user;
