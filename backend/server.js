@@ -1159,32 +1159,99 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     }
 
     var mailOptions = {
-      from: `"CvSU Naic NSTP Portal" <${emailUser}>`,
+      from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
       to: recipients.join(', '),
-      subject: `[CvSU NSTP Portal] Password Reset Verification Code: ${otpCode}`,
+      subject: `CvSU NSTP Verification Code: ${otpCode}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #d1fae5; border-radius: 16px; background-color: #ffffff;">
-          <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #047857; padding-bottom: 14px;">
-            <h2 style="color: #064e3b; margin: 0 0 4px 0; font-size: 20px; font-weight: 800;">Cavite State University - Naic Campus</h2>
-            <p style="color: #047857; margin: 0; font-size: 13px; font-weight: bold;">National Service Training Program (NSTP) Portal</p>
-          </div>
-          <div style="padding: 22px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; margin-bottom: 20px;">
-            <p style="color: #1f2937; font-size: 14px; margin: 0 0 10px 0;">Greetings, <strong>${userName || 'Faculty / Administrator'}</strong>,</p>
-            <p style="color: #4b5563; font-size: 13px; line-height: 1.6; margin: 0 0 16px 0;">
-              You requested a password reset for your NSTP System account (<strong>${targetEmail}</strong>). Please use the 6-digit verification code below to confirm and set your new password:
-            </p>
-            <div style="text-align: center; padding: 18px; background-color: #ffffff; border: 2px dashed #059669; border-radius: 14px; margin: 18px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-              <span style="font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #064e3b; font-family: monospace;">${otpCode}</span>
-            </div>
-            <p style="color: #4b5563; font-size: 12px; margin: 10px 0 0 0; text-align: center;">
-              ⏳ This code is valid for <strong>15 minutes</strong>. If you did not request a password reset, please ignore this email.
-            </p>
-          </div>
-          <div style="text-align: center; color: #9ca3af; font-size: 11px; margin-top: 14px;">
-            <p style="margin: 0 0 4px 0;">© ${new Date().getFullYear()} Cavite State University Naic Campus • NSTP Office</p>
-            <p style="margin: 0;">Authorized Academic &amp; Administrative Personnel Access</p>
-          </div>
-        </div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Reset OTP</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 24px 12px;">
+            <tr>
+              <td align="center">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;">
+                  
+                  <!-- Institutional Green & Gold Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 28px 24px; text-align: center;">
+                      <table align="center" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td align="center" style="padding-bottom: 12px;">
+                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="60" height="60" style="display: block; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
+                          </td>
+                        </tr>
+                        <tr>
+                          <td align="center">
+                            <h1 style="color: #ffffff; font-size: 19px; font-weight: 800; margin: 0 0 4px 0; letter-spacing: -0.3px; text-transform: uppercase;">Cavite State University</h1>
+                            <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 0 0 6px 0;">Naic Campus • NSTP Department</p>
+                            <span style="display: inline-block; background-color: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 11px; font-weight: bold; padding: 3px 12px; rounded: 12px; border-radius: 20px;">
+                              Account Password Recovery
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- Main Content Card -->
+                  <tr>
+                    <td style="padding: 32px 28px 24px 28px;">
+                      <p style="color: #111827; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">
+                        Hello, ${userName || 'Faculty / Administrator'}
+                      </p>
+                      <p style="color: #4b5563; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px 0;">
+                        You have requested to reset your password for the <strong>CvSU Naic NSTP Record Management Portal</strong>. Please use the 6-digit verification code below to verify your identity:
+                      </p>
+
+                      <!-- 6-Digit OTP Code Badge -->
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px dashed #059669; border-radius: 16px; margin: 24px 0;">
+                        <tr>
+                          <td align="center" style="padding: 22px 16px;">
+                            <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #047857; margin-bottom: 8px;">
+                              Your 6-Digit OTP Code
+                            </span>
+                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 12px; color: #064e3b; padding-left: 12px;">
+                              ${otpCode}
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="color: #6b7280; font-size: 12px; line-height: 1.5; margin: 0 0 16px 0; text-align: center;">
+                        ⏱️ This verification code is valid for <strong>15 minutes</strong>.
+                      </p>
+
+                      <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 20px;">
+                        <p style="color: #9ca3af; font-size: 11.5px; line-height: 1.5; margin: 0;">
+                          🔒 <strong>Security Tip:</strong> If you did not request a password reset, please ignore this message. Your account remains secure and no changes have been made.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Institutional Footer -->
+                  <tr>
+                    <td style="background-color: #064e3b; padding: 18px 24px; text-align: center; border-top: 1px solid #065f46;">
+                      <p style="color: #d1fae5; font-size: 11px; margin: 0 0 4px 0; font-weight: 600;">
+                        © ${new Date().getFullYear()} Cavite State University - Naic Campus
+                      </p>
+                      <p style="color: #6ee7b7; font-size: 10px; margin: 0;">
+                        National Service Training Program (CWTS / ROTC) Portal System
+                      </p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `
     };
 

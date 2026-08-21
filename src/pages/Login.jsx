@@ -24,7 +24,6 @@ function Login() {
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
-  const [forgotSuccess, setForgotSuccess] = useState('');
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -131,7 +130,6 @@ function Login() {
   const handleSendForgotOtp = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setForgotError('');
-    setForgotSuccess('');
     const clean = forgotEmail.trim().toLowerCase();
     if (!clean) {
       setForgotError('Please enter your registered email address');
@@ -139,9 +137,8 @@ function Login() {
     }
     setForgotLoading(true);
     try {
-      const res = await requestPasswordReset(clean);
+      await requestPasswordReset(clean);
       setForgotOtp('');
-      setForgotSuccess(res?.message || `A 6-digit verification code has been sent to ${clean}. Please check your Gmail inbox.`);
       setForgotStep(2);
     } catch (err) {
       var msg = err?.message || 'Failed to send reset code.';
@@ -178,9 +175,8 @@ function Login() {
     }
     setForgotLoading(true);
     try {
-      const res = await confirmPasswordReset(clean, otp, forgotNewPassword);
-      setForgotSuccess(res.message || 'Password reset successfully!');
-      setForgotStep(3);
+      await confirmPasswordReset(clean, otp, forgotNewPassword);
+      setForgotStep(4);
       setPassword(forgotNewPassword);
       setEmail(clean);
     } catch (err) {
@@ -358,7 +354,6 @@ function Login() {
                       setForgotNewPassword('');
                       setForgotConfirmPassword('');
                       setForgotError('');
-                      setForgotSuccess('');
                       setShowForgotPassword(true);
                     }}
                     className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95"
@@ -483,7 +478,7 @@ function Login() {
                       Forgot Your Password?
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      Enter your registered faculty or administrator email address below. We will send a secure 6-digit verification code to your email.
+                      Enter your registered faculty or administrator email address below to receive a 6-digit verification code in your Gmail.
                     </p>
                   </div>
 
@@ -533,33 +528,14 @@ function Login() {
 
               {forgotStep === 2 && (
                 <>
-                  <div className="text-center mb-3">
+                  <div className="text-center mb-4">
                     <h4 className="text-sm sm:text-base font-black text-gray-900">
-                      Enter Code from Your Gmail
+                      Enter Verification Code
                     </h4>
                     <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                      We sent a 6-digit verification code to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong>.
+                      We sent a 6-digit code to <strong className="text-emerald-900 font-bold">{forgotEmail}</strong>. Please enter the code from your Gmail inbox.
                     </p>
                   </div>
-
-                  <div className="mb-3.5 bg-emerald-50 border border-emerald-300/80 text-emerald-950 p-3.5 rounded-2xl text-xs flex items-start gap-3 shadow-xs">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-800 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1 text-left">
-                      <p className="font-black text-emerald-950 text-xs">Check Your Gmail Inbox</p>
-                      <p className="text-gray-600 text-[11px] mt-0.5 leading-snug">
-                        Open your Gmail inbox, copy the 6-digit code sent by <strong>CvSU Naic NSTP Portal</strong>, and paste it below.
-                      </p>
-                    </div>
-                  </div>
-
-                  {forgotSuccess && (
-                    <div className="mb-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="truncate">{forgotSuccess}</span>
-                    </div>
-                  )}
 
                   {forgotError && (
                     <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
@@ -568,9 +544,18 @@ function Login() {
                     </div>
                   )}
 
-                  <form onSubmit={handleConfirmReset} className="space-y-3.5">
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    setForgotError('');
+                    const otp = forgotOtp.trim();
+                    if (!otp || otp.length < 6) {
+                      setForgotError('Please enter the complete 6-digit verification code');
+                      return;
+                    }
+                    setForgotStep(3);
+                  }} className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 text-center">
+                      <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 text-center">
                         6-Digit Verification Code
                       </label>
                       <input
@@ -579,12 +564,60 @@ function Login() {
                         value={forgotOtp}
                         onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
                         placeholder="000000"
-                        className="w-full text-center tracking-[10px] sm:tracking-[14px] font-mono text-2xl py-2.5 bg-gray-50 border-2 border-emerald-700/40 rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-black text-emerald-950 shadow-inner"
+                        className="w-full text-center tracking-[10px] sm:tracking-[14px] font-mono text-2xl py-3 bg-gray-50 border-2 border-emerald-700/40 rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-black text-emerald-950 shadow-inner"
                         required
                         autoFocus
                       />
                     </div>
 
+                    <button
+                      type="submit"
+                      disabled={forgotOtp.length < 6}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      <span>Proceed to New Password &rarr;</span>
+                    </button>
+
+                    <div className="flex justify-between items-center pt-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => { setForgotStep(1); setForgotError(''); }}
+                        className="text-gray-500 hover:text-gray-800 font-bold cursor-pointer"
+                      >
+                        &larr; Change Email
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendForgotOtp}
+                        disabled={forgotLoading}
+                        className="text-blue-600 hover:text-blue-800 font-extrabold hover:underline cursor-pointer"
+                      >
+                        Resend Code
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+
+              {forgotStep === 3 && (
+                <>
+                  <div className="text-center mb-4">
+                    <h4 className="text-sm sm:text-base font-black text-gray-900">
+                      Create New Password
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                      Enter your new account password below to finish resetting your credentials.
+                    </p>
+                  </div>
+
+                  {forgotError && (
+                    <div className="mb-3.5 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 animate-shake">
+                      <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
+                      <span>{forgotError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleConfirmReset} className="space-y-3.5">
                     <div>
                       <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                         New Password
@@ -599,6 +632,7 @@ function Login() {
                           className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
                           minLength="6"
+                          autoFocus
                         />
                         <button
                           type="button"
@@ -643,28 +677,20 @@ function Login() {
                       )}
                     </button>
 
-                    <div className="flex justify-between items-center pt-2 text-xs">
+                    <div className="flex justify-start pt-1 text-xs">
                       <button
                         type="button"
-                        onClick={() => { setForgotStep(1); setForgotError(''); }}
+                        onClick={() => { setForgotStep(2); setForgotError(''); }}
                         className="text-gray-500 hover:text-gray-800 font-bold cursor-pointer"
                       >
-                        &larr; Change Email
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSendForgotOtp}
-                        disabled={forgotLoading}
-                        className="text-blue-600 hover:text-blue-800 font-extrabold hover:underline cursor-pointer"
-                      >
-                        Resend Code
+                        &larr; Back to Verification Code
                       </button>
                     </div>
                   </form>
                 </>
               )}
 
-              {forgotStep === 3 && (
+              {forgotStep === 4 && (
                 <div className="text-center py-3">
                   <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3.5 mx-auto shadow-sm border border-emerald-300">
                     <CheckCircle2 className="w-9 h-9 text-emerald-600" />
