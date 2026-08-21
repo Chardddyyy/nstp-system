@@ -629,6 +629,7 @@ function Login() {
                           value={forgotNewPassword}
                           onChange={(e) => setForgotNewPassword(e.target.value)}
                           placeholder="••••••••••••"
+                          autoComplete="new-password"
                           className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
                           minLength="6"
@@ -655,6 +656,7 @@ function Login() {
                           value={forgotConfirmPassword}
                           onChange={(e) => setForgotConfirmPassword(e.target.value)}
                           placeholder="••••••••••••"
+                          autoComplete="new-password"
                           className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
                           minLength="6"

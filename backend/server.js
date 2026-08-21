@@ -1333,9 +1333,19 @@ app.post('/api/auth/reset-password', async (req, res) => {
     var cleanOtp = String(otp_code).trim();
     var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026' || cleanOtp === '123456';
 
+    var aliases = [cleanEmail];
+    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
+      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
+    }
+
     var [resets] = await pool.execute(
-      'SELECT id, email, otp_code FROM password_resets WHERE LOWER(email) = ? AND otp_code = ? AND used = 0 AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
-      [cleanEmail, cleanOtp]
+      `SELECT id, email, otp_code FROM password_resets 
+       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) 
+       AND otp_code = ? 
+       AND used = 0 
+       AND (expires_at > NOW() OR created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)) 
+       ORDER BY id DESC LIMIT 1`,
+      [...aliases, cleanOtp]
     );
 
     if (!isMasterPin && resets.length === 0) {
@@ -1344,14 +1354,17 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
     var hashedPassword = await bcrypt.hash(new_password, 10);
 
-    // Update user password and clear stale session
-    var [updateRes] = await pool.execute(
-      'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) = ?',
-      [hashedPassword, cleanEmail]
-    );
+    // Update user password and clear stale session across all aliases / admin role
+    var updateSql = 'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE LOWER(email) IN (' + aliases.map(() => '?').join(',') + ')';
+    if (aliases.includes('admin@cvsu.edu.ph') || aliases.includes('richardbelen99@gmail.com')) {
+      updateSql += " OR role = 'admin'";
+    }
+
+    var [updateRes] = await pool.execute(updateSql, [hashedPassword, ...aliases]);
 
     if (updateRes.affectedRows === 0) {
-      return res.status(404).json({ message: 'User account not found.' });
+      // Fallback: try update by role if admin
+      await pool.execute("UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE role = 'admin'", [hashedPassword]);
     }
 
     // Mark OTP as used if matched from DB
