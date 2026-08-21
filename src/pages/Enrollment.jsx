@@ -900,11 +900,12 @@ function Enrollment() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
+                    <label htmlFor="lastName" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                     <input
                       ref={el => fieldRefs.current.lastName = el}
                       type="text"
                       name="lastName"
+                      id="lastName"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -919,11 +920,12 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
+                    <label htmlFor="firstName" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
                     <input
                       ref={el => fieldRefs.current.firstName = el}
                       type="text"
                       name="firstName"
+                      id="firstName"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -938,10 +940,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
+                    <label htmlFor="middleName" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
                     <input
                       type="text"
                       name="middleName"
+                      id="middleName"
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck="false"
@@ -954,31 +957,35 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
-                    <select
-                      name="suffix"
-                      value={formData.suffix || ''}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium cursor-pointer"
-                    >
-                      <option value="">None / (No Suffix)</option>
-                      <option value="Jr.">Jr. (Junior)</option>
-                      <option value="Sr.">Sr. (Senior)</option>
-                      <option value="II">II (The Second)</option>
-                      <option value="III">III (The Third)</option>
-                      <option value="IV">IV (The Fourth)</option>
-                      <option value="V">V (The Fifth)</option>
-                    </select>
+                    <label htmlFor="suffix" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                    <div className="relative">
+                      <select
+                        id="suffix"
+                        name="suffix"
+                        value={formData.suffix || ''}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium cursor-pointer relative z-10 pointer-events-auto"
+                      >
+                        <option value="">None / (No Suffix)</option>
+                        <option value="Jr.">Jr. (Junior)</option>
+                        <option value="Sr.">Sr. (Senior)</option>
+                        <option value="II">II (The Second)</option>
+                        <option value="III">III (The Third)</option>
+                        <option value="IV">IV (The Fourth)</option>
+                        <option value="V">V (The Fifth)</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student No. (9 digits) *</label>
+                    <label htmlFor="studentId" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student No. (9 digits) *</label>
                     <input
                       ref={el => fieldRefs.current.studentId = el}
                       type="text"
                       name="studentId"
+                      id="studentId"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -993,7 +1000,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <label htmlFor="street" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
                     <input
                       ref={el => fieldRefs.current.street = el}
                       type="text"
@@ -1015,7 +1022,7 @@ function Enrollment() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                    <label htmlFor="municipality" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                     <input
                       ref={el => fieldRefs.current.municipality = el}
                       type="text"
@@ -1035,7 +1042,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                    <label htmlFor="province" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
                     <input
                       ref={el => fieldRefs.current.province = el}
                       type="text"
@@ -1056,11 +1063,12 @@ function Enrollment() {
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                  <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                   <input
                     ref={el => fieldRefs.current.email = el}
                     type="email"
                     name="email"
+                    id="email"
                     required
                     autoComplete="off"
                     autoCorrect="off"
@@ -1075,7 +1083,6 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 2: Academic Information */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
@@ -1089,10 +1096,11 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                    <label htmlFor="program" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                     <select
                       ref={el => fieldRefs.current.program = el}
                       name="program"
+                      id="program"
                       required
                       value={formData.program}
                       onChange={handleChange}
@@ -1111,10 +1119,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                    <label htmlFor="section" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
                     <select
                       ref={el => fieldRefs.current.section = el}
                       name="section"
+                      id="section"
                       required
                       value={formData.section}
                       onChange={handleChange}
@@ -1130,10 +1139,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                    <label htmlFor="yearLevel" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                     <select
                       ref={el => fieldRefs.current.yearLevel = el}
                       name="yearLevel"
+                      id="yearLevel"
                       required
                       value={formData.yearLevel}
                       onChange={handleChange}
@@ -1150,7 +1160,6 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 3: NSTP Component Selection */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
@@ -1221,7 +1230,6 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 4: Demographic & Emergency Info */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
@@ -1234,7 +1242,7 @@ function Enrollment() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birthdate *</label>
+                  <label htmlFor="birthDate" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birthdate *</label>
                   <input
                     ref={el => fieldRefs.current.birthMonth = el}
                     type="date"
@@ -1264,7 +1272,6 @@ function Enrollment() {
                         safeY = currentYr.toString();
                       }
                       
-                      // Auto-compute age
                       const birth = new Date(parseInt(safeY), parseInt(m) - 1, parseInt(d));
                       let calcAge = '';
                       if (!isNaN(birth.getTime())) {
@@ -1298,11 +1305,12 @@ function Enrollment() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
+                    <label htmlFor="age" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
                     <input
                       ref={el => fieldRefs.current.age = el}
                       type="text"
                       name="age"
+                      id="age"
                       readOnly
                       placeholder="Auto-computed"
                       value={formData.age || ''}
@@ -1312,10 +1320,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
+                    <label htmlFor="civilStatus" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
                     <select
                       ref={el => fieldRefs.current.civilStatus = el}
                       name="civilStatus"
+                      id="civilStatus"
                       required
                       value={formData.civilStatus}
                       onChange={handleChange}
@@ -1331,10 +1340,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
+                    <label htmlFor="sex" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                     <select
                       ref={el => fieldRefs.current.sex = el}
                       name="sex"
+                      id="sex"
                       required
                       value={formData.sex}
                       onChange={handleChange}
@@ -1348,10 +1358,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                    <label htmlFor="registeredVoter" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
                     <select
                       ref={el => fieldRefs.current.registeredVoter = el}
                       name="registeredVoter"
+                      id="registeredVoter"
                       required
                       value={formData.registeredVoter || ''}
                       onChange={handleChange}
@@ -1367,7 +1378,7 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                    <label htmlFor="heightInput" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Height *</span>
                       {formData.height && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.height} cm</span>}
                     </label>
@@ -1375,6 +1386,8 @@ function Enrollment() {
                       <input
                         ref={el => fieldRefs.current.height = el}
                         type="text"
+                        name="height"
+                        id="heightInput"
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
@@ -1391,6 +1404,8 @@ function Enrollment() {
                         className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.height ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                       />
                       <select
+                        id="heightUnit"
+                        name="heightUnit"
                         value={heightUnit}
                         onChange={(e) => {
                           const newUnit = e.target.value;
@@ -1410,7 +1425,7 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                    <label htmlFor="weightInput" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Weight *</span>
                       {formData.weight && <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">System: {formData.weight} kg</span>}
                     </label>
@@ -1418,6 +1433,8 @@ function Enrollment() {
                       <input
                         ref={el => fieldRefs.current.weight = el}
                         type="text"
+                        name="weight"
+                        id="weightInput"
                         autoComplete="off"
                         autoCorrect="off"
                         spellCheck="false"
@@ -1434,6 +1451,8 @@ function Enrollment() {
                         className={`flex-1 min-w-0 px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.weight ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                       />
                       <select
+                        id="weightUnit"
+                        name="weightUnit"
                         value={weightUnit}
                         onChange={(e) => {
                           const newUnit = e.target.value;
@@ -1452,10 +1471,11 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
+                    <label htmlFor="bloodType" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                     <select
                       ref={el => fieldRefs.current.bloodType = el}
                       name="bloodType"
+                      id="bloodType"
                       required
                       value={formData.bloodType}
                       onChange={handleChange}
@@ -1479,11 +1499,12 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                    <label htmlFor="contactNumber" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
                     <input
                       ref={el => fieldRefs.current.contactNumber = el}
                       type="text"
                       name="contactNumber"
+                      id="contactNumber"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -1521,11 +1542,12 @@ function Enrollment() {
 
                 <div className="grid md:grid-cols-3 gap-4 mt-4">
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <label htmlFor="facebookAccount" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
                     <input
                       ref={el => fieldRefs.current.facebookAccount = el}
                       type="text"
                       name="facebookAccount"
+                      id="facebookAccount"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -1540,11 +1562,12 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
+                    <label htmlFor="emergencyContact" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                     <input
                       ref={el => fieldRefs.current.emergencyContact = el}
                       type="text"
                       name="emergencyContact"
+                      id="emergencyContact"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -1559,11 +1582,12 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
+                    <label htmlFor="emergencyNumber" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                     <input
                       ref={el => fieldRefs.current.emergencyNumber = el}
                       type="tel"
                       name="emergencyNumber"
+                      id="emergencyNumber"
                       required
                       autoComplete="off"
                       autoCorrect="off"
@@ -1600,7 +1624,6 @@ function Enrollment() {
                 </div>
               </div>
 
-              {/* Step 5: Certificate of Registration (COR / Registration Form) Verification */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
@@ -1945,9 +1968,11 @@ function Enrollment() {
 
               {/* Terms & Agreement Box */}
               <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-6 shadow-2xs">
-                <label className="flex items-start gap-3 cursor-pointer select-none">
+                <label htmlFor="terms_agreed" className="flex items-start gap-3 cursor-pointer select-none">
                   <input
                     type="checkbox"
+                    id="terms_agreed"
+                    name="terms_agreed"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
                     className="w-5 h-5 rounded-lg border-emerald-300 text-emerald-700 focus:ring-emerald-500 mt-0.5 cursor-pointer shrink-0"

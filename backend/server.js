@@ -1166,21 +1166,20 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
     var transporter = nodemailer.createTransport(transporterConfig);
 
-    // Send directly to the target email provided by the user
     var deliveryEmail = targetEmail;
 
     var mailOptions = {
       from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
       to: deliveryEmail,
-      subject: `[CvSU NSTP] Verification Code: ${otpCode}`,
-      text: `Cavite State University - Naic Campus\nNSTP Department Account Recovery\n\nHello ${userName || 'User'},\n\nYour 6-digit verification code is: ${otpCode}\n\nThis verification code is valid for 15 minutes.\n\n© ${new Date().getFullYear()} Cavite State University - Naic Campus NSTP Office`,
+      subject: `NSTP System - Password Reset OTP`,
+      text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n[ ${otpCode.split('').join(' ')} ]\n\nImportant Reminders:\n\nThis OTP is only valid for 10 minutes.\n\nFor your security, please do not share this code with anyone.\n\nIf you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\n[Cavite State University-Naic]\n\nThis is an automated email. Please do not reply to this address.`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset OTP</title>
+          <title>NSTP System - Password Reset OTP</title>
         </head>
         <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6; padding: 24px 12px;">
@@ -1188,21 +1187,21 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
               <td align="center">
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;">
                   
-                  <!-- Institutional Green & Gold Header -->
+                  <!-- Institutional Green Header -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 28px 24px; text-align: center;">
                       <table align="center" border="0" cellspacing="0" cellpadding="0">
                         <tr>
-                          <td align="center" style="padding-bottom: 12px;">
-                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="60" height="60" style="display: block; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
+                          <td align="center" style="padding-bottom: 10px;">
+                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="56" height="56" style="display: block; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
                           </td>
                         </tr>
                         <tr>
                           <td align="center">
-                            <h1 style="color: #ffffff; font-size: 19px; font-weight: 800; margin: 0 0 4px 0; letter-spacing: -0.3px; text-transform: uppercase;">Cavite State University</h1>
-                            <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 0 0 6px 0;">Naic Campus • NSTP Department</p>
-                            <span style="display: inline-block; background-color: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 11px; font-weight: bold; padding: 3px 12px; rounded: 12px; border-radius: 20px;">
-                              Account Password Recovery
+                            <h1 style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 0 0 4px 0; letter-spacing: -0.3px; text-transform: uppercase;">Cavite State University</h1>
+                            <p style="color: #a7f3d0; font-size: 12.5px; font-weight: 600; margin: 0 0 6px 0;">Naic Campus • NSTP Department</p>
+                            <span style="display: inline-block; background-color: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 11px; font-weight: bold; padding: 3px 12px; border-radius: 20px;">
+                              Password Reset OTP
                             </span>
                           </td>
                         </tr>
@@ -1212,48 +1211,56 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
                   <!-- Main Content Card -->
                   <tr>
-                    <td style="padding: 32px 28px 24px 28px;">
-                      <p style="color: #111827; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">
-                        Hello, ${userName || 'User'}
+                    <td style="padding: 28px 24px 20px 24px;">
+                      <p style="color: #111827; font-size: 15px; font-weight: 700; margin: 0 0 14px 0;">
+                        Hi <span style="color: #047857;">${deliveryEmail}</span>,
                       </p>
-                      <p style="color: #4b5563; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px 0;">
-                        You have requested to reset your password for the <strong>CvSU Naic NSTP Record Management Portal</strong>. Please use the 6-digit verification code below to verify your identity:
+                      <p style="color: #374151; font-size: 13.5px; line-height: 1.6; margin: 0 0 18px 0;">
+                        We received a request to reset the password for your <strong>NSTP System</strong> account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:
                       </p>
 
                       <!-- 6-Digit OTP Code Badge -->
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px dashed #059669; border-radius: 16px; margin: 24px 0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px dashed #059669; border-radius: 16px; margin: 20px 0;">
                         <tr>
-                          <td align="center" style="padding: 22px 16px;">
+                          <td align="center" style="padding: 20px 16px;">
                             <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #047857; margin-bottom: 8px;">
-                              Your 6-Digit OTP Code
+                              One-Time Password (OTP)
                             </span>
-                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 900; letter-spacing: 12px; color: #064e3b; padding-left: 12px;">
+                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #064e3b; padding-left: 10px;">
                               ${otpCode}
                             </span>
                           </td>
                         </tr>
                       </table>
 
-                      <p style="color: #6b7280; font-size: 12px; line-height: 1.5; margin: 0 0 16px 0; text-align: center;">
-                        ⏱️ This verification code is valid for <strong>15 minutes</strong>.
-                      </p>
-
-                      <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 20px;">
-                        <p style="color: #9ca3af; font-size: 11.5px; line-height: 1.5; margin: 0;">
-                          🔒 <strong>Security Tip:</strong> If you did not request a password reset, please ignore this message. Your account remains secure and no changes have been made.
+                      <!-- Important Reminders Box -->
+                      <div style="background-color: #fefce8; border-left: 4px solid #eab308; padding: 14px 16px; border-radius: 8px; margin: 20px 0;">
+                        <p style="color: #854d0e; font-size: 12px; font-weight: 700; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                          ⚠️ Important Reminders:
                         </p>
+                        <ul style="color: #713f12; font-size: 12px; line-height: 1.6; margin: 0; padding-left: 18px;">
+                          <li>This OTP is only valid for <strong>10 minutes</strong>.</li>
+                          <li>For your security, please <strong>do not share</strong> this code with anyone.</li>
+                          <li>If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.</li>
+                        </ul>
+                      </div>
+
+                      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #4b5563; font-size: 12.5px; line-height: 1.5;">
+                        <p style="margin: 0 0 4px 0;">Best regards,</p>
+                        <p style="margin: 0 0 2px 0; font-weight: 700; color: #064e3b;">NSTP System Administrator</p>
+                        <p style="margin: 0; color: #6b7280; font-weight: 600;">[Cavite State University-Naic]</p>
                       </div>
                     </td>
                   </tr>
 
-                  <!-- Institutional Footer -->
+                  <!-- Footer -->
                   <tr>
-                    <td style="background-color: #064e3b; padding: 18px 24px; text-align: center; border-top: 1px solid #065f46;">
+                    <td style="background-color: #064e3b; padding: 16px 24px; text-align: center; border-top: 1px solid #065f46;">
                       <p style="color: #d1fae5; font-size: 11px; margin: 0 0 4px 0; font-weight: 600;">
-                        © ${new Date().getFullYear()} Cavite State University - Naic Campus
+                        This is an automated email. Please do not reply to this address.
                       </p>
                       <p style="color: #6ee7b7; font-size: 10px; margin: 0;">
-                        National Service Training Program (CWTS / ROTC) Portal System
+                        © ${new Date().getFullYear()} Cavite State University - Naic Campus • NSTP Office
                       </p>
                     </td>
                   </tr>
@@ -1291,12 +1298,28 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
+    var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
+    var configuredAdminEmail = String(rawUser).trim().toLowerCase();
 
-    // Check if user account actually exists in the database
+    // Check if user account exists in users table (supporting admin aliases or faculty emails)
     var [users] = await pool.execute(
-      'SELECT id, name, email, role FROM users WHERE LOWER(email) = ? LIMIT 1',
-      [cleanEmail]
+      `SELECT id, name, email, role FROM users 
+       WHERE LOWER(email) = ? 
+          OR (role = 'admin' AND (? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com', '${configuredAdminEmail}')))
+       LIMIT 1`,
+      [cleanEmail, cleanEmail]
     );
+
+    // If not in users table, check students table as well
+    if (users.length === 0) {
+      var [studentUsers] = await pool.execute(
+        'SELECT id, name, email FROM students WHERE LOWER(email) = ? LIMIT 1',
+        [cleanEmail]
+      );
+      if (studentUsers.length > 0) {
+        users = studentUsers;
+      }
+    }
 
     if (users.length === 0) {
       return res.status(404).json({ message: 'No registered account found with this email address. Please make sure your account exists.' });
@@ -1305,23 +1328,30 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var user = users[0];
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Invalidate previous unused codes for this email
+    // Invalidate previous unused codes for this email and user email
     await pool.execute(
-      'UPDATE password_resets SET used = 1 WHERE LOWER(email) = ? AND used = 0',
-      [cleanEmail]
+      'UPDATE password_resets SET used = 1 WHERE (LOWER(email) = ? OR LOWER(email) = ?) AND used = 0',
+      [cleanEmail, (user.email || '').toLowerCase()]
     );
 
-    // Insert new OTP with 30 min expiry for this email
+    // Insert new OTP with 10 min expiry for this email
     await pool.execute(
-      'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))',
+      'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
       [cleanEmail, otp]
     );
 
-    // Dispatch email with 4-second timeout so response is quick yet ensures mailer initiates
+    if (user.email && user.email.toLowerCase() !== cleanEmail) {
+      await pool.execute(
+        'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
+        [user.email.toLowerCase(), otp]
+      );
+    }
+
+    // Dispatch email
     try {
       await Promise.race([
-        sendPasswordResetEmail(cleanEmail, otp, user.name),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch backgrounded')), 4000))
+        sendPasswordResetEmail(cleanEmail, otp, user.name || cleanEmail),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch backgrounded')), 6000))
       ]);
     } catch (mailErr) {
       console.warn('Mail dispatch notice:', mailErr.message);

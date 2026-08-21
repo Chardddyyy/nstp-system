@@ -323,7 +323,7 @@ function Login() {
               )}
 
               <div>
-                <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                   Email Address
                 </label>
                 <div className="relative">
@@ -348,7 +348,7 @@ function Login() {
               </div>
 
               <div>
-                <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                   Password
                 </label>
                 <div className="relative">

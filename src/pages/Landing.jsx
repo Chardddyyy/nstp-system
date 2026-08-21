@@ -45,32 +45,82 @@ const FAQ_ITEMS = [
   {
     q: "Who is required to take NSTP?",
     category: "Enrollment",
-    a: "Under Republic Act No. 9163 (NSTP Law of 2001), all male and female students enrolled in any baccalaureate degree or two-year technical-vocational course in Higher Education Institutions (HEIs) are required to complete one (1) NSTP component as a mandatory graduation requirement."
+    a: "Under Republic Act No. 9163 (NSTP Law of 2001), all male and female Filipino students enrolled in any baccalaureate degree or two-year technical-vocational course in Higher Education Institutions (HEIs) are required to complete one (1) NSTP component as a mandatory graduation prerequisite."
   },
   {
     q: "How many units and semesters is the NSTP course?",
     category: "Academics",
-    a: "NSTP is a 6-credit-unit course taken across two (2) consecutive semesters: NSTP 1 (3 Units) during the First Semester and NSTP 2 (3 Units) during the Second Semester under the exact same component chosen."
+    a: "NSTP is a 6-credit-unit course taken across two (2) consecutive semesters: NSTP 1 (3 Units) during the First Semester and NSTP 2 (3 Units) during the Second Semester under the exact same component chosen. A total of 54 to 90 training hours are required per semester."
   },
   {
     q: "How do I choose between CWTS, LTS, and ROTC?",
     category: "Programs",
-    a: "Students may freely choose based on their career goals and interests:\n• CWTS (Civic Welfare Training Service): Community health, coastal sanitation, tree planting, and civic welfare.\n• LTS (Literacy Training Service): Teaching literacy and numeracy to school children and out-of-school youth.\n• ROTC (Reserve Officers' Training Corps): Military discipline, defense training, leadership, and civil defense."
+    a: "Students may freely choose based on their interests and career goals:\n• CWTS (Civic Welfare Training Service): Focuses on community health, environmental management, disaster risk reduction, and social welfare programs.\n• LTS (Literacy Training Service): Focuses on teaching literacy and numeracy to school children and out-of-school youth.\n• ROTC (Reserve Officers' Training Corps): Focuses on military discipline, leadership development, civil defense, and national defense preparedness."
   },
   {
-    q: "What documents are required to enroll online?",
+    q: "What activities are conducted under the ROTC Track?",
+    category: "ROTC",
+    a: "ROTC training includes military drills and ceremonies, marksmanship and weapons familiarization, map reading, basic first aid and combat casualty care, military tactics, disaster response operations, and leadership development conducted every weekend."
+  },
+  {
+    q: "What are the uniform and grooming requirements for ROTC cadets?",
+    category: "ROTC",
+    a: "Cadets are required to wear the prescribed Army/Naval/Air ROTC Type A or B Uniform (or prescribed fatigue/combat boots and garrison belt), proper military regulation haircut (white side wall for males, hairnet/bun for females), and military ID."
+  },
+  {
+    q: "Is ROTC open to female students?",
+    category: "ROTC",
+    a: "Yes! Republic Act No. 9163 guarantees equal opportunity. Female cadets undergo the exact same leadership, drill, and tactical training, and can advance to corps commander and commissioned reserve officer ranks."
+  },
+  {
+    q: "What activities are conducted during CWTS community immersion?",
+    category: "CWTS",
+    a: "CWTS students participate in tree planting and urban gardening, coastal and river cleanups along Cavite shores, health and nutrition educational drives, solid waste management, disaster preparedness drills, and community surveying."
+  },
+  {
+    q: "What is the prescribed attire for CWTS activities?",
+    category: "CWTS",
+    a: "CWTS students wear the official CvSU NSTP shirt, comfortable dark pants or jogging pants, closed rubber shoes, and their official CvSU NSTP QR ID Card during campus lectures and community immersion."
+  },
+  {
+    q: "What is Literacy Training Service (LTS) and who should enroll?",
+    category: "LTS",
+    a: "LTS is designed to train students to become teachers of literacy and numeracy to elementary pupils, out-of-school youth, and other marginalized sectors. It is highly recommended for Education, Arts & Sciences, and Communication students, but is open to all degree programs."
+  },
+  {
+    q: "Where are LTS tutorials and teaching sessions conducted?",
+    category: "LTS",
+    a: "LTS students are deployed to partner public elementary schools, daycare centers, and barangay community learning centers within Naic, Tanza, Maragondon, and nearby Cavite municipalities under instructor supervision."
+  },
+  {
+    q: "What documents are required to enroll online in the NSTP portal?",
     category: "Requirements",
-    a: "You need a clear digital copy/photo of your official CvSU Registration Form (Certificate of Registration / COR) showing your enrolled subjects for the semester, your 9-digit Student ID Number, and your official CvSU email address."
+    a: "You need a clear digital photo or PDF of your official CvSU Registration Form (Certificate of Registration / COR) for the current semester, your valid 9-digit Student ID Number, personal contact details, and a 2x2 ID photo."
   },
   {
-    q: "Can I transfer or shift to another NSTP component?",
+    q: "What is the minimum attendance requirement to pass NSTP?",
     category: "Policies",
-    a: "Generally, students must complete both NSTP 1 and NSTP 2 in the same component. Any exceptional request to transfer components must be submitted to and approved by the NSTP Campus Coordinator before the start of the semester."
+    a: "Students must attend at least 80% to 85% of all scheduled training and community sessions. Unexcused absences exceeding the allowable limit will result in an Incomplete (INC) or Dropped (DRP) grade."
   },
   {
-    q: "What should I do if the online portal is closed?",
+    q: "Is NSTP tuition-free in Cavite State University?",
     category: "Enrollment",
-    a: "Please check the Scheduled Opening banner on the landing page for the official enrollment window dates. If you missed the schedule or have special concerns, visit the NSTP Office located at CvSU Naic Campus."
+    a: "Yes. Under the Universal Access to Quality Tertiary Education Act (RA 10931 / Free Higher Education), undergraduate Filipino students enrolled in State Universities like CvSU pay zero tuition and school fees for NSTP."
+  },
+  {
+    q: "Can I shift or transfer to another NSTP component between semesters?",
+    category: "Policies",
+    a: "Under CHED guidelines, students must complete both NSTP 1 and NSTP 2 in the same component. Shifting to another track between semesters is strictly disallowed except under officially approved exceptional medical or administrative petitions."
+  },
+  {
+    q: "What is the NSTP Serial Number and how is it issued?",
+    category: "Academics",
+    a: "Upon passing both NSTP 1 and NSTP 2, CHED (for CWTS/LTS) or the Department of National Defense / AFP (for ROTC) issues an official National NSTP Serial Number. This number is certified in your Transcript of Records (TOR) and permanent scholastic file."
+  },
+  {
+    q: "What should I do if the online enrollment portal is closed?",
+    category: "Enrollment",
+    a: "Check the Scheduled Window dates on the landing page. If you missed the deadline or have enrollment issues with your COR, visit the CvSU Naic NSTP Office during office hours or message your department coordinator."
   }
 ];
 
@@ -696,10 +746,10 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2.5 max-w-full overflow-hidden">
-                      <p className="text-amber-200 text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-tight inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full whitespace-nowrap truncate">
+                    <div className="mt-2.5 max-w-full">
+                      <p className="text-amber-200 text-[10px] xs:text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full text-left break-words">
                         <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                        <span className="truncate">{enrollmentStatus.customNotice}</span>
+                        <span className="break-words">{enrollmentStatus.customNotice}</span>
                       </p>
                     </div>
                   )}
@@ -879,7 +929,7 @@ function Landing() {
 
             {/* Category Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {['All', 'Enrollment', 'Academics', 'Programs', 'Requirements', 'Policies'].map((cat) => (
+              {['All', 'ROTC', 'CWTS', 'LTS', 'Enrollment', 'Academics', 'Requirements', 'Policies'].map((cat) => (
                 <button
                   key={cat}
                   type="button"

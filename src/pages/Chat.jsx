@@ -354,13 +354,8 @@ function Chat() {
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    // Mirror-flip to match the scaleX(-1) preview
-    ctx.save();
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    // Capture photo directly without mirror flip
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.restore();
     const photoData = canvas.toDataURL('image/png');
     // Reset draw state — image will be loaded onto drawCanvasRef via useEffect after re-render
     drawHistoryRef.current = [];
@@ -2689,7 +2684,6 @@ function Chat() {
                       playsInline
                       muted
                       className="w-full h-full object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
                     />
                   )}
 
@@ -2702,7 +2696,6 @@ function Chat() {
                         playsInline
                         muted
                         className="w-full h-full object-cover"
-                        style={{ transform: 'scaleX(-1)' }}
                       />
                     </div>
                   )}
@@ -2794,7 +2787,7 @@ function Chat() {
                 
                 <div className="flex-1 relative bg-black rounded-xl overflow-hidden flex items-center justify-center" style={{ minHeight: '50vh', maxHeight: '70vh' }}>
                   {!capturedPhoto ? (
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ maxHeight: '70vh', transform: 'scaleX(-1)' }} />
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ maxHeight: '70vh' }} />
                   ) : (
                     <img src={capturedPhoto} alt="Captured" className="w-full h-full object-contain" style={{ maxHeight: '70vh' }} />
                   )}
