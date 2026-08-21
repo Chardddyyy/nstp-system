@@ -109,22 +109,25 @@ async function apiCall(endpoint, options) {
     }
   }
 
-  if (!response || !response.ok) {
-    var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
-    if (response && (response.status === 403 || response.status === 401) && token) {
-      localStorage.removeItem('nstp_token');
-      if (!window.__nstp_session_expired__) {
-        window.__nstp_session_expired__ = true;
-        window.dispatchEvent(new CustomEvent('nstp-session-expired', {
-          detail: { code: error.code, message: error.message }
-        }));
+    if (!response || !response.ok) {
+      if (response && response.status === 503) {
+        throw new Error('Cloud backend is currently sleeping or suspended. If using Render, please check your Render dashboard to resume the service.');
       }
+      var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
+      if (response && (response.status === 403 || response.status === 401) && token) {
+        localStorage.removeItem('nstp_token');
+        if (!window.__nstp_session_expired__) {
+          window.__nstp_session_expired__ = true;
+          window.dispatchEvent(new CustomEvent('nstp-session-expired', {
+            detail: { code: error.code, message: error.message }
+          }));
+        }
+      }
+      var apiErr = new Error(error.message || (response && response.status === 404 ? 'Resource not found' : 'API request failed'));
+      apiErr.status = response ? response.status : 0;
+      apiErr.code = error.code;
+      throw apiErr;
     }
-    var apiErr = new Error(error.message || 'API request failed');
-    apiErr.status = response ? response.status : 0;
-    apiErr.code = error.code;
-    throw apiErr;
-  }
 
   return response.json();
 }
@@ -642,7 +645,7 @@ function isTelemetryCooldown() {
 
 function markTelemetryOffline() {
   isTelemetryServerOffline = true;
-  telemetryOfflineUntil = Date.now() + 45000;
+  telemetryOfflineUntil = Date.now() + 90000;
 }
 
 function markTelemetryOnline() {
@@ -658,14 +661,16 @@ export function pingTelemetry(data) {
   var url = getPrimaryApiUrl() + '/telemetry/ping';
   return fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: typeof data === 'string' ? data : JSON.stringify(data)
   })
   .then(function(res) { 
     if (res.ok) {
       markTelemetryOnline();
-      return res.json();
+      return res.json().catch(function() { return getClientSideTelemetry(); });
     }
+    markTelemetryOffline();
     return getClientSideTelemetry(); 
   })
   .catch(function() { 
@@ -693,6 +698,7 @@ export function getTelemetryStats() {
           return data;
         });
       }
+      markTelemetryOffline();
       return getClientSideTelemetry();
     })
     .catch(function() { 

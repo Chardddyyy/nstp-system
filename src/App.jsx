@@ -161,6 +161,7 @@ function App() {
     }
 
     const sendPing = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       pingTelemetry({
         sessionId: sid,
         visitorId: vid,
@@ -176,7 +177,7 @@ function App() {
     };
 
     sendPing();
-    const interval = setInterval(sendPing, 8000);
+    const interval = setInterval(sendPing, 25000);
     return () => clearInterval(interval);
   }, [user]);
 
