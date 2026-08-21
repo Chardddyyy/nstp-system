@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
-import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
+import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 
 function Enrollment() {
   const { submitEnrollment } = useAuth();
@@ -13,6 +13,9 @@ function Enrollment() {
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
 
   useEffect(() => {
+    syncEnrollmentScheduleFromServer().then(st => {
+      if (st) setEnrollmentStatus(st);
+    });
     const updateSchedule = () => setEnrollmentStatus(calculateEnrollmentStatus());
     window.addEventListener('nstp_enrollment_schedule_changed', updateSchedule);
     const interval = setInterval(updateSchedule, 10000);

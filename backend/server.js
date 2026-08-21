@@ -443,6 +443,12 @@ async function ensureAllCoreTables() {
       INDEX idx_attendance_student (student_id),
       INDEX idx_attendance_dept (department),
       INDEX idx_attendance_date (scanned_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value LONGTEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
   ];
 
@@ -3705,6 +3711,66 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Update enrollment error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── ENROLLMENT PORTAL SETTINGS & SCHEDULE ENDPOINTS ─────────────────────────────
+
+// Get Enrollment Portal Schedule & Status (Public endpoint for Students & Admin)
+app.get('/api/settings/enrollment', async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT setting_value FROM system_settings WHERE setting_key = ? LIMIT 1', ['enrollment_schedule']);
+    if (rows && rows.length > 0 && rows[0].setting_value) {
+      let schedule = null;
+      try {
+        schedule = JSON.parse(rows[0].setting_value);
+      } catch (_) {}
+      if (schedule) {
+        return res.json({ success: true, schedule });
+      }
+    }
+    // Default fallback
+    res.json({
+      success: true,
+      schedule: {
+        mode: 'AUTO',
+        openAt: '',
+        closeAt: '',
+        customNotice: 'Online Enrollment for Academic Year 2026-2027 is now open.'
+      }
+    });
+  } catch (error) {
+    console.warn('Get enrollment settings warning:', error.message);
+    res.json({
+      success: true,
+      schedule: {
+        mode: 'AUTO',
+        openAt: '',
+        closeAt: '',
+        customNotice: 'Online Enrollment for Academic Year 2026-2027 is now open.'
+      }
+    });
+  }
+});
+
+// Update Enrollment Portal Schedule & Status (Admin Only)
+app.post('/api/settings/enrollment', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required to change enrollment portal settings' });
+  }
+  try {
+    const schedule = req.body;
+    await pool.execute(
+      `INSERT INTO system_settings (setting_key, setting_value) 
+       VALUES ('enrollment_schedule', ?) 
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = CURRENT_TIMESTAMP`,
+      [JSON.stringify(schedule)]
+    );
+    auditLog('update_enrollment_schedule', req.user.id, `mode: ${schedule.mode}, openAt: ${schedule.openAt}, closeAt: ${schedule.closeAt}`, req.ip || 'unknown');
+    res.json({ success: true, message: 'Enrollment portal settings saved successfully', schedule });
+  } catch (error) {
+    console.error('Update enrollment settings error:', error);
+    res.status(500).json({ message: 'Failed to save enrollment settings: ' + error.message });
   }
 });
 

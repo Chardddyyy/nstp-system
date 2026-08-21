@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
+import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -200,10 +200,18 @@ function AdminDashboard() {
   const [scheduleStatus, setScheduleStatus] = useState(() => calculateEnrollmentStatus());
 
   useEffect(() => {
+    // Initial sync from server API on mount
+    syncEnrollmentScheduleFromServer().then(st => {
+      if (st) {
+        setScheduleStatus(st);
+        setScheduleConfig(st.schedule || getEnrollmentSchedule());
+      }
+    });
+
     const handleScheduleChange = (e) => {
       if (e.detail) {
         setScheduleStatus(e.detail);
-        setScheduleConfig(e.detail.schedule);
+        setScheduleConfig(e.detail.schedule || getEnrollmentSchedule());
       }
     };
     window.addEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
@@ -814,6 +822,96 @@ function AdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Online Enrollment Portal Control & Timed Schedule Center */}
+        {!viewingArchive && (
+          <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md mb-4 sm:mb-6 border border-emerald-700/50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
+            
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
+              <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0">
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner ${
+                  scheduleStatus.isOpen 
+                    ? 'bg-emerald-500/20 border-emerald-400/40 text-amber-300' 
+                    : 'bg-rose-500/20 border-rose-400/40 text-rose-300'
+                }`}>
+                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
+                </div>
+                
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-200">
+                      Online Enrollment Portal Control
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs ${
+                      scheduleStatus.isOpen
+                        ? 'bg-emerald-400 text-emerald-950 border-emerald-300'
+                        : 'bg-rose-500 text-white border-rose-400'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-950 animate-ping' : 'bg-white'}`}></span>
+                      {scheduleStatus.isOpen ? 'PORTAL IS OPEN' : 'PORTAL IS CLOSED'}
+                    </span>
+                    <span className="bg-white/10 text-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-white/10">
+                      {scheduleConfig.mode === 'AUTO' ? '🕒 Auto Timed' : scheduleConfig.mode === 'FORCE_OPEN' ? '🟢 Force Open' : '🔴 Force Close'}
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-sm sm:text-lg font-black text-white leading-snug">
+                    {scheduleStatus.headline}
+                  </h3>
+                  
+                  <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5 opacity-90">
+                    {scheduleStatus.subtext || scheduleConfig.customNotice}
+                  </p>
+                  
+                  {(scheduleConfig.academicYear || scheduleConfig.semester || scheduleConfig.closeAt) && (
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 text-[11px] text-amber-200 font-bold flex-wrap">
+                      <span>🎓 A.Y. {scheduleConfig.academicYear || '2026-2027'}</span>
+                      <span>•</span>
+                      <span>📖 {scheduleConfig.semester || '1st Semester'}</span>
+                      {scheduleConfig.closeAt && (
+                        <>
+                          <span>•</span>
+                          <span>⌛ Deadline: {new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalOpen(true)}
+                  className="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                >
+                  <Clock className="w-4 h-4 text-emerald-950" />
+                  <span>Configure Schedule &amp; Notice</span>
+                </button>
+                
+                {scheduleStatus.isOpen ? (
+                  <button
+                    type="button"
+                    onClick={quickForceClose}
+                    className="px-3.5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-rose-500"
+                  >
+                    <span>Close Portal Now</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={quickForceOpen}
+                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-emerald-400"
+                  >
+                    <span>Open Portal Now</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Interactive Analytics & Program Distribution Panel */}
         <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
@@ -2177,7 +2275,7 @@ function AdminDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={quickForceOpen}
+                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_OPEN' }))}
                       className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
                         scheduleConfig.mode === 'FORCE_OPEN'
                           ? 'bg-green-600 text-white border-green-600 shadow-md'
@@ -2188,7 +2286,7 @@ function AdminDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={quickForceClose}
+                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_CLOSE' }))}
                       className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
                         scheduleConfig.mode === 'FORCE_CLOSE'
                           ? 'bg-rose-600 text-white border-rose-600 shadow-md'
@@ -2197,6 +2295,36 @@ function AdminDashboard() {
                     >
                       🔴 Force Close
                     </button>
+                  </div>
+                </div>
+
+                {/* Academic Year & Semester */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                      🎓 Academic Year
+                    </label>
+                    <input
+                      type="text"
+                      value={scheduleConfig.academicYear || ''}
+                      onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
+                      placeholder="e.g. 2026-2027"
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
+                      📖 Semester
+                    </label>
+                    <select
+                      value={scheduleConfig.semester || '1st Semester'}
+                      onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                    >
+                      <option value="1st Semester">1st Semester</option>
+                      <option value="2nd Semester">2nd Semester</option>
+                      <option value="Summer">Summer</option>
+                    </select>
                   </div>
                 </div>
 
@@ -2217,7 +2345,7 @@ function AdminDashboard() {
                 {/* Closing Date & Time */}
                 <div>
                   <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                    ⌛ Automatic Closing Date &amp; Time
+                    ⌛ Automatic Closing Date &amp; Time (Deadline)
                   </label>
                   <input
                     type="datetime-local"
@@ -2241,6 +2369,22 @@ function AdminDashboard() {
                     className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
                   />
                 </div>
+
+                {/* Live Student Preview */}
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
+                    👁 Student View Live Preview
+                  </span>
+                  <div className="bg-emerald-900 text-white p-3 rounded-xl text-xs">
+                    <p className="font-bold text-amber-300">
+                      {scheduleConfig.customNotice || 'Online Enrollment is open.'}
+                    </p>
+                    <p className="text-[11px] text-emerald-200 mt-0.5">
+                      Academic Year: {scheduleConfig.academicYear || '2026-2027'} ({scheduleConfig.semester || '1st Semester'})
+                      {scheduleConfig.closeAt && ` • Deadline: ${new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2 shrink-0">
@@ -2248,14 +2392,14 @@ function AdminDashboard() {
                   <button
                     type="button"
                     onClick={quickForceOpen}
-                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all"
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
                     Open Now
                   </button>
                   <button
                     type="button"
                     onClick={quickForceClose}
-                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all"
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
                     Close Now
                   </button>
@@ -2264,7 +2408,7 @@ function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setScheduleModalOpen(false)}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-colors"
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2274,7 +2418,7 @@ function AdminDashboard() {
                       handleSaveSchedule(scheduleConfig);
                       setScheduleModalOpen(false);
                     }}
-                    className="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl text-xs font-black transition-all shadow-md active:scale-95"
+                    className="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     Save &amp; Apply Schedule
                   </button>

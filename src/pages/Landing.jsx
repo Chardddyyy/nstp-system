@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats } from '../services/api';
-import { calculateEnrollmentStatus } from '../utils/enrollmentSchedule';
+import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 
 // Actual CvSU Naic campus photography
 const CAROUSEL_IMAGES = [
@@ -91,6 +91,9 @@ function Landing() {
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
 
   useEffect(() => {
+    syncEnrollmentScheduleFromServer().then(st => {
+      if (st) setEnrollmentStatus(st);
+    });
     const updateSchedule = () => setEnrollmentStatus(calculateEnrollmentStatus());
     window.addEventListener('nstp_enrollment_schedule_changed', updateSchedule);
     const interval = setInterval(updateSchedule, 10000);
