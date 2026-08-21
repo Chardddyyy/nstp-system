@@ -1142,6 +1142,9 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       host: smtpHost,
       port: smtpPort,
       secure: smtpPort === 465,
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 5000,
       auth: {
         user: emailUser,
         pass: emailPass
@@ -1185,9 +1188,14 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       `
     };
 
-    var info = await transporter.sendMail(mailOptions);
-    console.log(`[AUTH] Password reset email successfully sent to ${recipients.join(', ')} (MessageId: ${info.messageId})`);
-    return { sent: true, method: 'smtp', messageId: info.messageId };
+    try {
+      var info = await transporter.sendMail(mailOptions);
+      console.log(`[AUTH] Password reset email successfully sent to ${recipients.join(', ')} (MessageId: ${info.messageId})`);
+      return { sent: true, method: 'smtp', messageId: info.messageId };
+    } catch (sendErr) {
+      console.warn('[AUTH] SMTP dispatch notice:', sendErr.message);
+      return { sent: false, error: sendErr.message };
+    }
   } else {
     console.log(`[AUTH / DEV] Password Reset Code for ${targetEmail}: ${otpCode}`);
     return { sent: true, method: 'mock', otp: otpCode };
@@ -1222,11 +1230,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       [cleanEmail, otp]
     );
 
-    try {
-      await sendPasswordResetEmail(cleanEmail, otp, user.name);
-    } catch (mailErr) {
-      console.warn('Mail dispatch warning:', mailErr.message);
-    }
+    // Dispatch email asynchronously so client response is instant
+    sendPasswordResetEmail(cleanEmail, otp, user.name).catch(function(err) {
+      console.warn('Background mail dispatch warning:', err.message);
+    });
 
     res.json({
       success: true,
