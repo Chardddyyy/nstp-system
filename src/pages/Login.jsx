@@ -11,7 +11,6 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Signing in...');
   const [activeSessionWarning, setActiveSessionWarning] = useState(null);
-  const [cachedPassword, setCachedPassword] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -32,7 +31,6 @@ function Login() {
 
     setLoading(true);
     setLoadingText('Verifying credentials...');
-    setCachedPassword(password);
 
     const timer1 = setTimeout(() => {
       setLoadingText('Waking up Cloud Server (please wait ~15s)...');
@@ -77,40 +75,6 @@ function Login() {
       } else {
         setError(errMsg || 'Server connection failed. Please try again.');
       }
-      setPassword('');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForceLogin = async () => {
-    const cleanEmail = email.trim().toLowerCase();
-    const pwToUse = password || cachedPassword;
-    if (!cleanEmail || !pwToUse) {
-      setActiveSessionWarning(null);
-      setError('Please re-enter your password to sign in.');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingText('Disconnecting previous session & signing in...');
-    setActiveSessionWarning(null);
-
-    try {
-      const result = await login(cleanEmail, pwToUse, true);
-      if (result.success) {
-        if (result.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/instructor/dashboard');
-        }
-      } else {
-        setError(result.message || 'Login failed. Please try again.');
-        setPassword('');
-      }
-    } catch (err) {
-      console.error('Force login error:', err);
-      setError(err?.message || 'Login failed. Please try again.');
       setPassword('');
     } finally {
       setLoading(false);
@@ -307,7 +271,7 @@ function Login() {
         </div>
       </main>
 
-      {/* Concurrent Active Session Confirmation Modal */}
+      {/* Concurrent Active Session Notice Modal */}
       {activeSessionWarning && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white text-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-300">
@@ -315,31 +279,18 @@ function Login() {
               <AlertTriangle className="w-7 h-7" />
             </div>
             <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-2">
-              Account Active on Another Device
+              Account Currently Active
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 text-center mb-6 leading-relaxed">
               {activeSessionWarning}
-              <br /><br />
-              <span className="font-semibold text-emerald-900">
-                Do you want to disconnect the other session and sign in on this device?
-              </span>
             </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setActiveSessionWarning(null)}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleForceLogin}
-                className="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                Disconnect &amp; Sign In
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSessionWarning(null)}
+              className="w-full py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+            >
+              Understood
+            </button>
           </div>
         </div>
       )}

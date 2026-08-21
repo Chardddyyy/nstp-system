@@ -1025,8 +1025,7 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device within the last 15 seconds (active realtime heartbeat)
-    var forceLogin = req.body && (req.body.forceLogin === true || req.body.forceLogin === 'true');
+    // Check if account has an active session in another device within the last 25 seconds (active realtime heartbeat)
     var isDeviceActivelyInUse = false;
 
     if (user.current_session_id && String(user.current_session_id).trim() !== '') {
@@ -1036,7 +1035,7 @@ app.post('/api/auth/login', async function(req, res) {
         secondsSinceActive !== undefined &&
         !isNaN(Number(secondsSinceActive)) &&
         Number(secondsSinceActive) >= 0 &&
-        Number(secondsSinceActive) < 15
+        Number(secondsSinceActive) < 25
       ) {
         isDeviceActivelyInUse = true;
       } else {
@@ -1045,12 +1044,11 @@ app.post('/api/auth/login', async function(req, res) {
       }
     }
 
-    if (isDeviceActivelyInUse && !forceLogin) {
-      auditLog('login_prompt_active_session', user.id, `prompt_concurrent_login: ${email}`, ip);
-      return res.status(200).json({
-        warning: true,
+    if (isDeviceActivelyInUse) {
+      auditLog('login_blocked_active_session', user.id, `blocked_concurrent_login: ${email}`, ip);
+      return res.status(409).json({
         activeSession: true,
-        message: '⚠️ Account In Use: This account is currently active on another device. Do you want to disconnect the other session and sign in on this device?'
+        message: 'Account Currently Active: This account is already signed in and in use on another device. To protect ongoing work and avoid interruption, simultaneous logins on the same account are blocked. Please wait for the active session to log out.'
       });
     }
 

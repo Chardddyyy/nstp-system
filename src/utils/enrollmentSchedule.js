@@ -1,9 +1,8 @@
 // Utility to manage NSTP Online Enrollment Schedule & Status
+import { settingsAPI } from '../services/api';
 
 const STORAGE_KEY = 'nstp_enrollment_schedule';
 const LEGACY_KEY = 'nstp_enrollment_open';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://nstp-system.onrender.com';
 
 export const DEFAULT_SCHEDULE = {
   mode: 'AUTO', // 'AUTO' | 'FORCE_OPEN' | 'FORCE_CLOSE'
@@ -44,17 +43,14 @@ export function getEnrollmentSchedule() {
  */
 export async function syncEnrollmentScheduleFromServer() {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/settings/enrollment`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.schedule) {
-        const updated = { ...DEFAULT_SCHEDULE, ...data.schedule };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        const status = calculateEnrollmentStatus(updated);
-        localStorage.setItem(LEGACY_KEY, JSON.stringify(status.isOpen));
-        window.dispatchEvent(new CustomEvent('nstp_enrollment_schedule_changed', { detail: status }));
-        return status;
-      }
+    const data = await settingsAPI.getEnrollmentSchedule();
+    if (data && data.schedule) {
+      const updated = { ...DEFAULT_SCHEDULE, ...data.schedule };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      const status = calculateEnrollmentStatus(updated);
+      localStorage.setItem(LEGACY_KEY, JSON.stringify(status.isOpen));
+      window.dispatchEvent(new CustomEvent('nstp_enrollment_schedule_changed', { detail: status }));
+      return status;
     }
   } catch (err) {
     console.warn('[Schedule Sync Notice] Using local schedule cache:', err.message);
@@ -65,7 +61,7 @@ export async function syncEnrollmentScheduleFromServer() {
 /**
  * Save schedule object to localStorage AND sync to server API
  */
-export function saveEnrollmentSchedule(schedule, token = null) {
+export async function saveEnrollmentSchedule(schedule) {
   const updated = { ...DEFAULT_SCHEDULE, ...schedule };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   
@@ -76,17 +72,11 @@ export function saveEnrollmentSchedule(schedule, token = null) {
   // Trigger custom window event for real-time reactivity across components
   window.dispatchEvent(new CustomEvent('nstp_enrollment_schedule_changed', { detail: currentStatus }));
 
-  // Asynchronously send to server if token or localStorage token available
-  const authToken = token || localStorage.getItem('token') || sessionStorage.getItem('token');
-  if (authToken) {
-    fetch(`${API_BASE_URL}/api/settings/enrollment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify(updated)
-    }).catch(e => console.warn('[Server Schedule Save Notice]:', e.message));
+  // Asynchronously send to server DB
+  try {
+    await settingsAPI.saveEnrollmentSchedule(updated);
+  } catch (e) {
+    console.warn('[Server Schedule Save Notice]:', e.message);
   }
 
   return currentStatus;

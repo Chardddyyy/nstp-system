@@ -218,23 +218,32 @@ function AdminDashboard() {
     return () => window.removeEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
   }, []);
 
-  const handleSaveSchedule = (newConfig) => {
-    const updatedStatus = saveEnrollmentSchedule(newConfig);
+  const handleSaveSchedule = async (newConfig) => {
     setScheduleConfig(newConfig);
+    const updatedStatus = await saveEnrollmentSchedule(newConfig);
     setScheduleStatus(updatedStatus);
     showNotif('success', `Enrollment Schedule Saved: Portal is ${updatedStatus.isOpen ? 'OPEN' : 'CLOSED'}`);
   };
 
-  const quickForceOpen = () => {
-    handleSaveSchedule({ ...scheduleConfig, mode: 'FORCE_OPEN' });
+  const quickForceOpen = async () => {
+    const next = { ...scheduleConfig, mode: 'FORCE_OPEN' };
+    setScheduleConfig(next);
+    const updatedStatus = await saveEnrollmentSchedule(next);
+    setScheduleStatus(updatedStatus);
   };
 
-  const quickForceClose = () => {
-    handleSaveSchedule({ ...scheduleConfig, mode: 'FORCE_CLOSE' });
+  const quickForceClose = async () => {
+    const next = { ...scheduleConfig, mode: 'FORCE_CLOSE' };
+    setScheduleConfig(next);
+    const updatedStatus = await saveEnrollmentSchedule(next);
+    setScheduleStatus(updatedStatus);
   };
 
-  const _quickSetAuto = () => {
-    handleSaveSchedule({ ...scheduleConfig, mode: 'AUTO' });
+  const _quickSetAuto = async () => {
+    const next = { ...scheduleConfig, mode: 'AUTO' };
+    setScheduleConfig(next);
+    const updatedStatus = await saveEnrollmentSchedule(next);
+    setScheduleStatus(updatedStatus);
   };
   
   // Close notification panel when clicking outside
@@ -595,7 +604,7 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Hero Header - Single-Line Compact Mobile Layout */}
+        {/* Hero Header - Compact Responsive Layout */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
           <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -607,15 +616,15 @@ function AdminDashboard() {
                 <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               
-              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
-              <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                 </h1>
-                <p className="text-emerald-200 text-[10px] xs:text-[11px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">
-                  {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'} 👋`}
+                <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
+                  {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'}`}
                 </p>
               </div>
             </div>
@@ -748,18 +757,18 @@ function AdminDashboard() {
                 )}
               </div>
 
-              {/* User Profile Button - Full Display on Mobile & Desktop */}
+              {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0 flex flex-col justify-center">
-                  <p className="font-extrabold text-[10.5px] sm:text-xs text-white leading-tight truncate max-w-[70px] xs:max-w-[100px] sm:max-w-none">{user?.name || 'Admin'}</p>
-                  <p className="text-[8.5px] sm:text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
+                <div className="text-left min-w-0 hidden sm:flex flex-col justify-center">
+                  <p className="font-extrabold text-xs text-white leading-tight truncate max-w-[120px]">{user?.name || 'Admin'}</p>
+                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
                 </div>
               </button>
             </div>
@@ -825,54 +834,52 @@ function AdminDashboard() {
 
         {/* Online Enrollment Portal Control & Timed Schedule Center */}
         {!viewingArchive && (
-          <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md mb-4 sm:mb-6 border border-emerald-700/50 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none -mr-16 -mt-16"></div>
-            
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 relative z-10">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm mb-4 sm:mb-6 border border-gray-200 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0">
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 border shadow-inner ${
+                <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center shrink-0 border ${
                   scheduleStatus.isOpen 
-                    ? 'bg-emerald-500/20 border-emerald-400/40 text-amber-300' 
-                    : 'bg-rose-500/20 border-rose-400/40 text-rose-300'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                    : 'bg-rose-50 border-rose-200 text-rose-700'
                 }`}>
-                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-200">
-                      Online Enrollment Portal Control
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
+                      Enrollment Portal Status
                     </span>
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                       scheduleStatus.isOpen
-                        ? 'bg-emerald-400 text-emerald-950 border-emerald-300'
-                        : 'bg-rose-500 text-white border-rose-400'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-950 animate-ping' : 'bg-white'}`}></span>
-                      {scheduleStatus.isOpen ? 'PORTAL IS OPEN' : 'PORTAL IS CLOSED'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
+                      {scheduleStatus.isOpen ? 'Portal is Open' : 'Portal is Closed'}
                     </span>
-                    <span className="bg-white/10 text-emerald-200 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-white/10">
-                      {scheduleConfig.mode === 'AUTO' ? '🕒 Auto Timed' : scheduleConfig.mode === 'FORCE_OPEN' ? '🟢 Force Open' : '🔴 Force Close'}
+                    <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-gray-200">
+                      {scheduleConfig.mode === 'AUTO' ? 'Auto-Timed Schedule' : scheduleConfig.mode === 'FORCE_OPEN' ? 'Manual Override: Open' : 'Manual Override: Closed'}
                     </span>
                   </div>
                   
-                  <h3 className="text-sm sm:text-lg font-black text-white leading-snug">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
                     {scheduleStatus.headline}
                   </h3>
                   
-                  <p className="text-emerald-100 text-xs sm:text-sm font-medium mt-0.5 opacity-90">
+                  <p className="text-gray-600 text-xs sm:text-sm font-medium mt-0.5">
                     {scheduleStatus.subtext || scheduleConfig.customNotice}
                   </p>
                   
                   {(scheduleConfig.academicYear || scheduleConfig.semester || scheduleConfig.closeAt) && (
-                    <div className="flex items-center gap-2 sm:gap-3 mt-2 text-[11px] text-amber-200 font-bold flex-wrap">
-                      <span>🎓 A.Y. {scheduleConfig.academicYear || '2026-2027'}</span>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 text-[11px] text-gray-600 font-semibold flex-wrap">
+                      <span>Academic Year {scheduleConfig.academicYear || '2026-2027'}</span>
                       <span>•</span>
-                      <span>📖 {scheduleConfig.semester || '1st Semester'}</span>
+                      <span>{scheduleConfig.semester || '1st Semester'}</span>
                       {scheduleConfig.closeAt && (
                         <>
                           <span>•</span>
-                          <span>⌛ Deadline: {new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>Deadline: {new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </>
                       )}
                     </div>
@@ -885,17 +892,17 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setScheduleModalOpen(true)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                 >
-                  <Clock className="w-4 h-4 text-emerald-950" />
-                  <span>Configure Schedule &amp; Notice</span>
+                  <Clock className="w-4 h-4 text-emerald-200" />
+                  <span>Configure Schedule</span>
                 </button>
                 
                 {scheduleStatus.isOpen ? (
                   <button
                     type="button"
                     onClick={quickForceClose}
-                    className="px-3.5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-rose-500"
+                    className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-rose-200"
                   >
                     <span>Close Portal Now</span>
                   </button>
@@ -903,7 +910,7 @@ function AdminDashboard() {
                   <button
                     type="button"
                     onClick={quickForceOpen}
-                    className="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-emerald-400"
+                    className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all border border-emerald-200"
                   >
                     <span>Open Portal Now</span>
                   </button>
@@ -1511,21 +1518,19 @@ function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:items-center sm:space-x-3">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-nowrap sm:items-center sm:space-x-3 w-full sm:w-auto">
                 <button type="button"
-                  
                   onClick={() => setShowArchiveModal(true)}
-                  className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                  className="bg-white/20 hover:bg-white/30 px-3 sm:px-4 py-2.5 rounded-xl transition-colors flex items-center justify-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm font-bold text-center cursor-pointer active:scale-95"
                 >
-                  <History className="w-5 h-5" />
+                  <History className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>View Archive</span>
                 </button>
                 <button type="button"
-                  
                   onClick={handleNewBatch}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 px-6 py-2 rounded-lg font-semibold transition-colors flex items-center space-x-2"
+                  className="bg-amber-400 hover:bg-amber-500 text-emerald-950 px-3 sm:px-6 py-2.5 rounded-xl font-black transition-all shadow-md flex items-center justify-center space-x-1.5 sm:space-x-2 text-xs sm:text-sm text-center cursor-pointer active:scale-95"
                 >
-                  <RotateCcw className="w-5 h-5" />
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Start New Batch</span>
                 </button>
               </div>
@@ -2217,17 +2222,18 @@ function AdminDashboard() {
       )}
 
         {/* Admin Enrollment Timed Schedule Modal */}
+        {/* Enrollment Schedule Settings Modal */}
         {scheduleModalOpen && (
-          <div className="fixed inset-0 bg-emerald-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
-            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-emerald-100 flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-6 flex items-center justify-between shrink-0">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-emerald-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                  <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-200">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-black tracking-tight">Enrollment Schedule Settings</h3>
-                    <p className="text-emerald-200 text-xs font-medium">Set opening date, time, &amp; auto-close schedule</p>
+                    <h3 className="text-base sm:text-lg font-bold tracking-tight">Enrollment Schedule &amp; Settings</h3>
+                    <p className="text-emerald-200 text-xs font-normal">Configure portal open/close dates and public announcement</p>
                   </div>
                 </div>
                 <button
@@ -2241,59 +2247,62 @@ function AdminDashboard() {
 
               <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[75vh]">
                 {/* Current Live Status Banner */}
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-2 ${
+                <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-2 ${
                   scheduleStatus.isOpen 
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
                     : 'bg-rose-50 border-rose-200 text-rose-900'
                 }`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`}></span>
-                    <div>
-                      <p className="text-xs font-black uppercase tracking-wider">{scheduleStatus.headline}</p>
-                      <p className="text-[11px] font-medium opacity-90 mt-0.5">{scheduleStatus.subtext}</p>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold uppercase tracking-wider truncate">{scheduleStatus.headline}</p>
+                      <p className="text-[11px] font-normal text-gray-600 mt-0.5 truncate">{scheduleStatus.subtext}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border shadow-2xs shrink-0">
-                    {scheduleConfig.mode}
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-white rounded-md border text-gray-700 shrink-0">
+                    {scheduleConfig.mode === 'AUTO' ? 'Auto-Timed' : scheduleConfig.mode === 'FORCE_OPEN' ? 'Always Open' : 'Always Closed'}
                   </span>
                 </div>
 
-                {/* Control Mode Options */}
+                {/* Operation Mode Selector */}
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-2">Operation Mode</label>
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Portal Operation Mode</label>
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'AUTO' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'AUTO'
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                          ? 'bg-emerald-800 text-white border-emerald-800 shadow-sm'
                           : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      🕒 Auto Timed
+                      <Clock className="w-4 h-4" />
+                      <span>Auto Schedule</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_OPEN' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'FORCE_OPEN'
-                          ? 'bg-green-600 text-white border-green-600 shadow-md'
-                          : 'bg-gray-50 text-green-700 border-green-200 hover:bg-green-50'
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
+                          : 'bg-gray-50 text-emerald-800 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      🟢 Force Open
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Always Open</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_CLOSE' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-extrabold text-center transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'FORCE_CLOSE'
-                          ? 'bg-rose-600 text-white border-rose-600 shadow-md'
-                          : 'bg-gray-50 text-rose-700 border-rose-200 hover:bg-rose-50'
+                          ? 'bg-rose-700 text-white border-rose-700 shadow-sm'
+                          : 'bg-gray-50 text-rose-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      🔴 Force Close
+                      <Power className="w-4 h-4" />
+                      <span>Always Closed</span>
                     </button>
                   </div>
                 </div>
@@ -2301,25 +2310,25 @@ function AdminDashboard() {
                 {/* Academic Year & Semester */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                      🎓 Academic Year
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Academic Year
                     </label>
                     <input
                       type="text"
                       value={scheduleConfig.academicYear || ''}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
                       placeholder="e.g. 2026-2027"
-                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                      📖 Semester
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Semester
                     </label>
                     <select
                       value={scheduleConfig.semester || '1st Semester'}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
-                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                     >
                       <option value="1st Semester">1st Semester</option>
                       <option value="2nd Semester">2nd Semester</option>
@@ -2330,56 +2339,56 @@ function AdminDashboard() {
 
                 {/* Opening Date & Time */}
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                    📅 Opening Date &amp; Time
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Opening Date &amp; Time
                   </label>
                   <input
                     type="datetime-local"
                     value={scheduleConfig.openAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">Leave empty to open immediately when Auto Timed mode is selected.</p>
+                  <p className="text-[11px] text-gray-500 mt-1">Leave empty to open immediately in Auto mode.</p>
                 </div>
 
                 {/* Closing Date & Time */}
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                    ⌛ Automatic Closing Date &amp; Time (Deadline)
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Closing Date &amp; Time (Deadline)
                   </label>
                   <input
                     type="datetime-local"
                     value={scheduleConfig.closeAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
-                  <p className="text-[10px] text-gray-500 mt-1">Enrollment will automatically close when this date and time is reached.</p>
+                  <p className="text-[11px] text-gray-500 mt-1">Registration will automatically close when this deadline is reached.</p>
                 </div>
 
                 {/* Announcement Notice */}
                 <div>
-                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider mb-1">
-                    📢 Student Notice / Announcement Text
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Public Notice to Applicants
                   </label>
                   <input
                     type="text"
                     value={scheduleConfig.customNotice || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
                     placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-medium"
+                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
                 </div>
 
                 {/* Live Student Preview */}
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1.5">
-                    👁 Student View Live Preview
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1">
+                    Applicant View Preview
                   </span>
-                  <div className="bg-emerald-900 text-white p-3 rounded-xl text-xs">
-                    <p className="font-bold text-amber-300">
+                  <div className="bg-emerald-900 text-white p-3 rounded-lg text-xs">
+                    <p className="font-semibold text-emerald-100">
                       {scheduleConfig.customNotice || 'Online Enrollment is open.'}
                     </p>
-                    <p className="text-[11px] text-emerald-200 mt-0.5">
+                    <p className="text-[11px] text-emerald-300 mt-1">
                       Academic Year: {scheduleConfig.academicYear || '2026-2027'} ({scheduleConfig.semester || '1st Semester'})
                       {scheduleConfig.closeAt && ` • Deadline: ${new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
                     </p>
@@ -2387,19 +2396,19 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2 shrink-0">
+              <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2 shrink-0">
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={quickForceOpen}
-                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
                   >
                     Open Now
                   </button>
                   <button
                     type="button"
                     onClick={quickForceClose}
-                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
                   >
                     Close Now
                   </button>
@@ -2408,7 +2417,7 @@ function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setScheduleModalOpen(false)}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2418,9 +2427,9 @@ function AdminDashboard() {
                       handleSaveSchedule(scheduleConfig);
                       setScheduleModalOpen(false);
                     }}
-                    className="px-5 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl text-xs font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                   >
-                    Save &amp; Apply Schedule
+                    Save Changes
                   </button>
                 </div>
               </div>

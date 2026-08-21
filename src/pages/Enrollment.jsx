@@ -750,9 +750,10 @@ function Enrollment() {
             )}
 
             {enrollmentStatus.customNotice && (
-              <p className="text-amber-800 text-xs font-semibold bg-amber-50 border border-amber-200 p-3 rounded-xl">
-                📢 {enrollmentStatus.customNotice}
-              </p>
+              <div className="text-emerald-900 text-xs sm:text-sm font-medium bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex items-start gap-2.5 text-left">
+                <AlertCircle className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span>{enrollmentStatus.customNotice}</span>
+              </div>
             )}
 
             <div className="pt-2">

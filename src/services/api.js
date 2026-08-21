@@ -818,6 +818,22 @@ export const callsAPI = {
   getWebRTCSignaling: async () => ({ offer_sdp: null, answer_sdp: null, ice_candidates: [] })
 };
 
+export const settingsAPI = {
+  getEnrollmentSchedule: async () => {
+    try {
+      return await apiCall('/settings/enrollment');
+    } catch (_) {
+      return { success: false, schedule: null };
+    }
+  },
+  saveEnrollmentSchedule: async (schedule) => {
+    return await apiCall('/settings/enrollment', {
+      method: 'POST',
+      body: JSON.stringify(schedule)
+    });
+  }
+};
+
 
 
 

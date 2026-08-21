@@ -696,10 +696,10 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2 overflow-hidden max-w-full">
-                      <p className="text-amber-300 text-[10px] xs:text-xs font-bold bg-black/35 px-2.5 sm:px-3 py-1 rounded-xl border border-amber-400/25 leading-tight inline-flex items-center gap-1.5 max-w-full truncate shadow-xs">
-                        <span className="shrink-0">📢</span>
-                        <span className="truncate">{enrollmentStatus.customNotice}</span>
+                    <div className="mt-2.5 max-w-full">
+                      <p className="text-amber-200 text-xs sm:text-sm font-semibold bg-emerald-950/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-2 shadow-xs">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                        <span>{enrollmentStatus.customNotice}</span>
                       </p>
                     </div>
                   )}

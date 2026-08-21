@@ -2842,13 +2842,14 @@ function StudentManagement() {
                   </div>
 
                   {/* 4. 2x2 ID Photo Update / Camera Capture */}
+                  {/* 4. 2x2 ID Photo Update / Camera Capture */}
                   <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 mt-3">
                     <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-emerald-700" />
-                      4. Official 2x2 ID Picture
+                      4. Official 2x2 ID Photo
                     </label>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Edit or update student 2x2 photo before generating or printing the NSTP ID card.
+                      Update student 2x2 photo for official NSTP ID card generation and record verification.
                     </p>
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
@@ -2858,10 +2859,10 @@ function StudentManagement() {
                             <img src={formData.id_photo_2x2 || formData.photo} alt="2x2 Preview" className="w-full h-full object-cover" />
                             <button
                               type="button"
-                              onClick={() => setPhotoViewer({ url: formData.id_photo_2x2 || formData.photo, title: '2x2 ID Photo Preview', isPdf: false })}
+                              onClick={() => setPhotoViewer({ url: formData.id_photo_2x2 || formData.photo, title: `${formData.name || 'Student'} - 2x2 ID Photo Preview`, isPdf: false })}
                               className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold cursor-pointer"
                             >
-                              🔍 View
+                              Expand
                             </button>
                           </>
                         ) : (
@@ -2877,9 +2878,9 @@ function StudentManagement() {
                         <button
                           type="button"
                           onClick={() => startLiveCamera('edit', 'environment')}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                         >
-                          <Camera className="w-4 h-4 text-amber-300" />
+                          <Camera className="w-4 h-4 text-emerald-200" />
                           <span>Take with Camera</span>
                         </button>
 
@@ -2929,14 +2930,14 @@ function StudentManagement() {
                       </div>
                     </div>
 
-                    {/* Registration Form (COR/COE) Document Proof info in Edit Modal — Strictly Read-Only / Immutable */}
+                    {/* Registration Form (COR) Document Proof info in Edit Modal — Strictly Read-Only */}
                     {(formData.registrationPhoto || formData.registration_photo) && (
-                      <div className="mt-3.5 pt-3 border-t border-emerald-200/80 flex items-center justify-between bg-emerald-100/50 p-2.5 rounded-xl">
-                        <div className="flex items-center gap-2">
+                      <div className="mt-3.5 pt-3 border-t border-emerald-200/80 flex items-center justify-between bg-emerald-100/60 p-3 rounded-xl">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <FileText className="w-4 h-4 text-emerald-800 shrink-0" />
-                          <div>
-                            <span className="text-xs font-black text-emerald-950 block">Official Certificate of Registration (COR/COE)</span>
-                            <span className="text-[10px] text-emerald-700 font-bold block">🔒 Permanent student enrollment proof (Read-Only)</span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-black text-emerald-950 block truncate">Certificate of Registration (COR)</span>
+                            <span className="text-[10px] text-emerald-700 font-medium block truncate">Submitted enrollment document • Permanent record</span>
                           </div>
                         </div>
                         <button
@@ -2944,11 +2945,11 @@ function StudentManagement() {
                           onClick={() => {
                             const reg = formData.registrationPhoto || formData.registration_photo;
                             const isPdf = typeof reg === 'string' && reg.startsWith('data:application/pdf');
-                            setPhotoViewer({ url: reg, title: `${formData.name || 'Student'} - Official Certificate of Registration (COR/COE)`, isPdf });
+                            setPhotoViewer({ url: reg, title: `${formData.name || 'Student'} - Certificate of Registration (COR)`, isPdf });
                           }}
-                          className="text-[11px] font-black text-emerald-900 hover:text-white hover:bg-emerald-800 bg-white px-3 py-1.5 rounded-lg border border-emerald-300 shadow-2xs transition-all cursor-pointer shrink-0 ml-2"
+                          className="text-[11px] font-bold text-emerald-900 hover:text-white hover:bg-emerald-800 bg-white px-3 py-1.5 rounded-lg border border-emerald-300 shadow-2xs transition-all cursor-pointer shrink-0 ml-2"
                         >
-                          👁 Inspect COE
+                          View COR Document
                         </button>
                       </div>
                     )}
