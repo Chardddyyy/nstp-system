@@ -1129,6 +1129,7 @@ app.get('/api/auth/verify-session', authenticateToken, async (req, res) => {
 
 // ── Password Reset Table & Email Helper ────────────────────────────────────
 var passwordResetsTableCreated = false;
+var inMemoryResetOtps = new Map();
 async function ensurePasswordResetsTable() {
   if (passwordResetsTableCreated) return;
   try {
