@@ -1140,13 +1140,15 @@ async function ensurePasswordResetsTable() {
 }
 
 async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
-  var emailUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-  var emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'ujpszuwwcbmocsic';
+  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
+  var emailUser = String(rawUser).trim().toLowerCase() || 'richardbelen99@gmail.com';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'ujpszuwwcbmocsic';
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'ujpszuwwcbmocsic';
   var smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
   var smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465;
 
   if (emailUser && emailPass) {
-    var transporterConfig = String(emailUser).toLowerCase().includes('@gmail.com') ? {
+    var transporterConfig = emailUser.includes('@gmail.com') ? {
       service: 'gmail',
       auth: {
         user: emailUser,
@@ -1173,7 +1175,8 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     var mailOptions = {
       from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
       to: deliveryEmail,
-      subject: `CvSU NSTP Verification Code: ${otpCode}`,
+      subject: `[CvSU NSTP] Verification Code: ${otpCode}`,
+      text: `Cavite State University - Naic Campus\nNSTP Department Account Recovery\n\nHello ${userName || 'Faculty / Administrator'},\n\nYour 6-digit verification code is: ${otpCode}\n\nThis verification code is valid for 15 minutes.\n\n© ${new Date().getFullYear()} Cavite State University - Naic Campus NSTP Office`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
@@ -1322,10 +1325,15 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       );
     }
 
-    // Dispatch email asynchronously so client response is instant
-    sendPasswordResetEmail(cleanEmail, otp, user.name).catch(function(err) {
-      console.warn('Background mail dispatch warning:', err.message);
-    });
+    // Dispatch email with 4-second timeout so response is quick yet ensures mailer initiates
+    try {
+      await Promise.race([
+        sendPasswordResetEmail(cleanEmail, otp, user.name),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch backgrounded')), 4000))
+      ]);
+    } catch (mailErr) {
+      console.warn('Mail dispatch notice:', mailErr.message);
+    }
 
     res.json({
       success: true,
