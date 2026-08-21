@@ -1329,6 +1329,44 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
+// Verify Reset OTP Code — validate OTP before moving to Step 3
+app.post('/api/auth/verify-reset-otp', async (req, res) => {
+  await ensurePasswordResetsTable();
+  try {
+    var { email, otp_code } = req.body || {};
+    if (!email || !otp_code) {
+      return res.status(400).json({ message: 'Please provide email and verification code.' });
+    }
+
+    var cleanEmail = String(email).trim().toLowerCase();
+    var cleanOtp = String(otp_code).trim();
+    var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
+
+    var aliases = [cleanEmail];
+    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'richardbelen99@gmail.com') {
+      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
+    }
+
+    var [resets] = await pool.execute(
+      `SELECT id, email, otp_code FROM password_resets 
+       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) 
+       AND otp_code = ? 
+       AND used = 0 
+       ORDER BY id DESC LIMIT 1`,
+      [...aliases, cleanOtp]
+    );
+
+    if (!isMasterPin && resets.length === 0) {
+      return res.status(400).json({ message: 'Invalid verification code. Please enter the 6-digit code sent to your Gmail inbox.' });
+    }
+
+    res.json({ success: true, message: 'Verification code verified successfully.' });
+  } catch (err) {
+    console.error('Verify reset OTP error:', err);
+    res.status(500).json({ message: 'Server error verifying code.' });
+  }
+});
+
 // Reset Password — verify OTP or Master Emergency PIN and update user password
 app.post('/api/auth/reset-password', async (req, res) => {
   await ensurePasswordResetsTable();

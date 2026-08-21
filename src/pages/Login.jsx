@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { requestPasswordReset, confirmPasswordReset } from '../services/api';
+import { requestPasswordReset, verifyResetOtp, confirmPasswordReset } from '../services/api';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, KeyRound, X, RefreshCw } from 'lucide-react';
 
 function Login() {
@@ -159,6 +159,26 @@ function Login() {
       } else {
         setForgotError(msg);
       }
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleVerifyOtpOnly = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setForgotError('');
+    const clean = forgotEmail.trim().toLowerCase();
+    const otp = forgotOtp.trim();
+    if (!otp || otp.length < 6) {
+      setForgotError('Please enter the complete 6-digit verification code sent to your Gmail.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await verifyResetOtp(clean, otp);
+      setForgotStep(3);
+    } catch (err) {
+      setForgotError(err?.message || 'Invalid verification code. Please check the 6-digit code sent to your Gmail inbox.');
     } finally {
       setForgotLoading(false);
     }
@@ -556,16 +576,7 @@ function Login() {
                     </div>
                   )}
 
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    setForgotError('');
-                    const otp = forgotOtp.trim();
-                    if (!otp || otp.length < 6) {
-                      setForgotError('Please enter the complete 6-digit verification code');
-                      return;
-                    }
-                    setForgotStep(3);
-                  }} className="space-y-4">
+                  <form onSubmit={handleVerifyOtpOnly} className="space-y-4">
                     <div>
                       <label className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-2 text-center">
                         6-Digit Verification Code
@@ -584,10 +595,17 @@ function Login() {
 
                     <button
                       type="submit"
-                      disabled={forgotOtp.length < 6}
+                      disabled={forgotLoading || forgotOtp.length < 6}
                       className="w-full py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      <span>Proceed to New Password &rarr;</span>
+                      {forgotLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Verifying Code...</span>
+                        </>
+                      ) : (
+                        <span>Proceed to New Password &rarr;</span>
+                      )}
                     </button>
 
                     <div className="flex justify-between items-center pt-1 text-xs">

@@ -517,6 +517,13 @@ export function requestPasswordReset(email) {
   });
 }
 
+export function verifyResetOtp(email, otp_code) {
+  return apiCall('/auth/verify-reset-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email: email, otp_code: otp_code })
+  });
+}
+
 export function confirmPasswordReset(email, otp_code, new_password) {
   return apiCall('/auth/reset-password', {
     method: 'POST',
@@ -530,6 +537,7 @@ export const authAPI = {
   logout: logoutUser,
   verifySession: verifySession,
   requestPasswordReset: requestPasswordReset,
+  verifyResetOtp: verifyResetOtp,
   confirmPasswordReset: confirmPasswordReset
 };
 
