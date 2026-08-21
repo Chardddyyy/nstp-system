@@ -678,16 +678,16 @@ function Landing() {
               <div className="flex items-start space-x-3.5">
                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
                   enrollmentStatus.isOpen
-                    ? 'bg-emerald-500 text-white shadow-emerald-900/50'
-                    : 'bg-amber-400 text-emerald-950'
+                    ? 'bg-emerald-600 text-white shadow-emerald-950/50'
+                    : 'bg-rose-600 text-white shadow-rose-950/50'
                 }`}>
                   {enrollmentStatus.isOpen ? <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" /> : <Clock className="w-6 h-6 sm:w-7 sm:h-7" />}
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-black text-white leading-tight">{enrollmentStatus.headline}</h3>
                     <span className={`text-[10px] sm:text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                      enrollmentStatus.isOpen ? 'bg-amber-400 text-emerald-950 animate-pulse' : 'bg-rose-500 text-white'
+                      enrollmentStatus.isOpen ? 'bg-emerald-500 text-white animate-pulse' : 'bg-rose-500 text-white'
                     }`}>
                       {enrollmentStatus.isOpen ? 'Portal Active' : 'Portal Closed'}
                     </span>
@@ -696,10 +696,10 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2.5 max-w-full">
-                      <p className="text-amber-200 text-xs sm:text-sm font-semibold bg-emerald-950/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-2 shadow-xs">
+                    <div className="mt-2.5 max-w-full overflow-hidden">
+                      <p className="text-amber-200 text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-tight inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full whitespace-nowrap truncate">
                         <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                        <span>{enrollmentStatus.customNotice}</span>
+                        <span className="truncate">{enrollmentStatus.customNotice}</span>
                       </p>
                     </div>
                   )}

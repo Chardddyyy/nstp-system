@@ -604,10 +604,10 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* Hero Header - Compact Responsive Layout */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+        {/* Hero Header - Responsive Clean Layout */}
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3.5 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-4 relative z-10 w-full">
+            <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
@@ -620,11 +620,16 @@ function AdminDashboard() {
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
-                  {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
-                </h1>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight">
+                    {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
+                  </h1>
+                  <span className="bg-amber-400/20 text-amber-300 text-[8.5px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
+                    {user?.department ? `${user.department} Admin` : 'Admin'}
+                  </span>
+                </div>
                 <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
-                  {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Admin'}`}
+                  {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Administrator'}`}
                 </p>
               </div>
             </div>
@@ -760,13 +765,13 @@ function AdminDashboard() {
               {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0 hidden sm:flex flex-col justify-center">
+                <div className="text-left min-w-0 hidden md:flex flex-col justify-center">
                   <p className="font-extrabold text-xs text-white leading-tight truncate max-w-[120px]">{user?.name || 'Admin'}</p>
                   <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
                 </div>
@@ -2225,38 +2230,38 @@ function AdminDashboard() {
         {/* Enrollment Schedule Settings Modal */}
         {scheduleModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <div className="bg-emerald-900 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-                <div className="flex items-center space-x-3">
-                  <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-200">
-                    <Calendar className="w-5 h-5" />
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-[92%] sm:w-full overflow-hidden border border-gray-200 flex flex-col my-auto max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+              <div className="bg-emerald-900 text-white p-3.5 sm:p-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-200 shrink-0">
+                    <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold tracking-tight">Enrollment Schedule &amp; Settings</h3>
-                    <p className="text-emerald-200 text-xs font-normal">Configure portal open/close dates and public announcement</p>
+                    <h3 className="text-sm sm:text-base font-bold tracking-tight">Enrollment Schedule Settings</h3>
+                    <p className="text-emerald-200 text-[10px] sm:text-xs">Configure portal dates and student announcement</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setScheduleModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  className="w-7 h-7 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto max-h-[75vh]">
+              <div className="p-3.5 sm:p-5 space-y-3.5 overflow-y-auto max-h-[62vh]">
                 {/* Current Live Status Banner */}
-                <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-2 ${
+                <div className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
                   scheduleStatus.isOpen 
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
                     : 'bg-rose-50 border-rose-200 text-rose-900'
                 }`}>
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-wider truncate">{scheduleStatus.headline}</p>
-                      <p className="text-[11px] font-normal text-gray-600 mt-0.5 truncate">{scheduleStatus.subtext}</p>
+                      <p className="text-xs font-bold uppercase tracking-wider">{scheduleStatus.headline}</p>
+                      <p className="text-[11px] font-normal text-gray-600 mt-0.5">{scheduleStatus.subtext}</p>
                     </div>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-white rounded-md border text-gray-700 shrink-0">
@@ -2266,51 +2271,51 @@ function AdminDashboard() {
 
                 {/* Operation Mode Selector */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Portal Operation Mode</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">Portal Operation Mode</label>
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'AUTO' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'AUTO'
                           ? 'bg-emerald-800 text-white border-emerald-800 shadow-sm'
                           : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      <Clock className="w-4 h-4" />
-                      <span>Auto Schedule</span>
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Auto Timed</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_OPEN' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'FORCE_OPEN'
                           ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
                           : 'bg-gray-50 text-emerald-800 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Always Open</span>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Force Open</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_CLOSE' }))}
-                      className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
+                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
                         scheduleConfig.mode === 'FORCE_CLOSE'
                           ? 'bg-rose-700 text-white border-rose-700 shadow-sm'
                           : 'bg-gray-50 text-rose-700 border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      <Power className="w-4 h-4" />
-                      <span>Always Closed</span>
+                      <Power className="w-3.5 h-3.5" />
+                      <span>Force Close</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Academic Year & Semester */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">
                       Academic Year
                     </label>
                     <input
@@ -2318,17 +2323,17 @@ function AdminDashboard() {
                       value={scheduleConfig.academicYear || ''}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
                       placeholder="e.g. 2026-2027"
-                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                    <label className="block text-[11px] font-bold text-gray-700 mb-1">
                       Semester
                     </label>
                     <select
                       value={scheduleConfig.semester || '1st Semester'}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
-                      className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
+                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                     >
                       <option value="1st Semester">1st Semester</option>
                       <option value="2nd Semester">2nd Semester</option>
@@ -2339,35 +2344,35 @@ function AdminDashboard() {
 
                 {/* Opening Date & Time */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
                     Opening Date &amp; Time
                   </label>
                   <input
                     type="datetime-local"
                     value={scheduleConfig.openAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
-                  <p className="text-[11px] text-gray-500 mt-1">Leave empty to open immediately in Auto mode.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Leave empty to open immediately in Auto mode.</p>
                 </div>
 
                 {/* Closing Date & Time */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
                     Closing Date &amp; Time (Deadline)
                   </label>
                   <input
                     type="datetime-local"
                     value={scheduleConfig.closeAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
-                  <p className="text-[11px] text-gray-500 mt-1">Registration will automatically close when this deadline is reached.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Registration closes automatically when this deadline is reached.</p>
                 </div>
 
                 {/* Announcement Notice */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
                     Public Notice to Applicants
                   </label>
                   <input
@@ -2375,20 +2380,20 @@ function AdminDashboard() {
                     value={scheduleConfig.customNotice || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
                     placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
-                    className="w-full px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
+                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
                   />
                 </div>
 
                 {/* Live Student Preview */}
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-200">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1">
                     Applicant View Preview
                   </span>
-                  <div className="bg-emerald-900 text-white p-3 rounded-lg text-xs">
+                  <div className="bg-emerald-900 text-white p-2.5 rounded-lg text-xs">
                     <p className="font-semibold text-emerald-100">
                       {scheduleConfig.customNotice || 'Online Enrollment is open.'}
                     </p>
-                    <p className="text-[11px] text-emerald-300 mt-1">
+                    <p className="text-[10px] text-emerald-300 mt-0.5">
                       Academic Year: {scheduleConfig.academicYear || '2026-2027'} ({scheduleConfig.semester || '1st Semester'})
                       {scheduleConfig.closeAt && ` • Deadline: ${new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
                     </p>
@@ -2396,28 +2401,28 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2 shrink-0">
-                <div className="flex gap-2">
+              <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={quickForceOpen}
-                    className="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
                   >
                     Open Now
                   </button>
                   <button
                     type="button"
                     onClick={quickForceClose}
-                    className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    className="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
                   >
                     Close Now
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={() => setScheduleModalOpen(false)}
-                    className="px-3.5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -2427,7 +2432,7 @@ function AdminDashboard() {
                       handleSaveSchedule(scheduleConfig);
                       setScheduleModalOpen(false);
                     }}
-                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                    className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                   >
                     Save Changes
                   </button>
