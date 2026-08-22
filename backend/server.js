@@ -1243,10 +1243,10 @@ async function ensurePasswordResetsTable() {
 async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'richardbelen99@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'ujpszuwwcbmocsic';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
   var emailPass = String(rawPass).replace(/\s+/g, '').trim();
   if (!emailPass || emailPass.length < 8) {
-    emailPass = 'ujpszuwwcbmocsic';
+    emailPass = 'dbusndgszozlgttd';
   }
 
   console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Valid for 10 minutes)`);
