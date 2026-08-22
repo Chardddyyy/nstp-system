@@ -1388,42 +1388,40 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
     var transporter = nodemailer.createTransport(transporterConfig);
     var deliveryEmail = targetEmail;
+    var formattedOtp = otpCode.split('').join(' ');
 
     var mailOptions = {
-      from: `"Cavite State University - NSTP Portal" <${emailUser}>`,
+      from: `"NSTP System Administrator" <${emailUser}>`,
       to: deliveryEmail,
-      subject: `NSTP Portal - Your Password Reset Code is ${otpCode}`,
-      text: `Hi ${userName || deliveryEmail},\n\nWe received a request to reset the password for your Cavite State University - Naic NSTP System account (${deliveryEmail}).\n\nYour 6-Digit One-Time Password (OTP) is:\n\n   [ ${otpCode.split('').join(' ')} ]\n\nImportant Reminders:\n• This OTP code will expire in 10 minutes.\n• Do not share this verification code with anyone.\n• If you did not request a password reset, please ignore this email. Your account remains secure.\n\nBest regards,\nNSTP Department\nCavite State University - Naic Campus\nNaic, Cavite, Philippines\n\nThis is an automated institutional message. Please do not reply directly.`,
+      subject: `NSTP System - Password Reset OTP`,
+      text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n[ ${formattedOtp} ]\n\nImportant Reminders:\n\nThis OTP is only valid for 10 minutes.\n\nFor your security, please do not share this code with anyone.\n\nIf you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
       html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>NSTP Portal - Password Reset OTP</title>
+          <title>NSTP System - Password Reset OTP</title>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
           <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 12px;">
             <tr>
               <td align="center">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 12px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
                   
                   <!-- Institutional Green Header -->
                   <tr>
-                    <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 32px 24px; text-align: center;">
+                    <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 28px 24px; text-align: center;">
                       <table align="center" border="0" cellspacing="0" cellpadding="0">
                         <tr>
-                          <td align="center" style="padding-bottom: 12px;">
-                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="60" height="60" style="display: block; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
+                          <td align="center" style="padding-bottom: 10px;">
+                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="56" height="56" style="display: block; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
                           </td>
                         </tr>
                         <tr>
                           <td align="center">
-                            <h1 style="color: #ffffff; font-size: 19px; font-weight: 900; margin: 0 0 4px 0; letter-spacing: -0.2px; text-transform: uppercase;">Cavite State University</h1>
-                            <p style="color: #a7f3d0; font-size: 13px; font-weight: 700; margin: 0 0 8px 0;">Naic Campus • NSTP Office</p>
-                            <span style="display: inline-block; background-color: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 11.5px; font-weight: 800; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
-                              Password Reset Verification
-                            </span>
+                            <h1 style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
+                            <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 0;">NSTP System Verification</p>
                           </td>
                         </tr>
                       </table>
@@ -1432,52 +1430,53 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
                   <!-- Main Content Card -->
                   <tr>
-                    <td style="padding: 30px 26px 24px 26px;">
-                      <p style="color: #0f172a; font-size: 15px; font-weight: 800; margin: 0 0 12px 0;">
-                        Hello <span style="color: #047857;">${userName || deliveryEmail}</span>,
+                    <td style="padding: 28px 26px 20px 26px;">
+                      <p style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 0 0 16px 0;">
+                        Hi <span style="color: #047857;">${deliveryEmail}</span>,
                       </p>
-                      <p style="color: #334155; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px 0;">
-                        We received a request to reset your password for the <strong>CvSU Naic NSTP Portal</strong>. Use the 6-digit verification code below to proceed:
+                      <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 18px 0;">
+                        We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:
                       </p>
 
                       <!-- 6-Digit OTP Code Box -->
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px dashed #059669; border-radius: 16px; margin: 22px 0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 14px; margin: 20px 0;">
                         <tr>
-                          <td align="center" style="padding: 22px 16px;">
-                            <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #047857; margin-bottom: 8px;">
-                              Your 6-Digit Reset Code
+                          <td align="center" style="padding: 20px 14px;">
+                            <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 6px;">
+                              One-Time Password (OTP)
                             </span>
-                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 900; letter-spacing: 12px; color: #064e3b; padding-left: 12px;">
-                              ${otpCode}
+                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #064e3b; padding-left: 10px;">
+                              [ ${formattedOtp} ]
                             </span>
                           </td>
                         </tr>
                       </table>
 
                       <!-- Important Reminders Box -->
-                      <div style="background-color: #fefce8; border-left: 4px solid #eab308; padding: 14px 16px; border-radius: 8px; margin: 20px 0;">
-                        <p style="color: #854d0e; font-size: 12px; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-                          Important Security Reminders:
+                      <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 8px; margin: 20px 0;">
+                        <p style="color: #92400e; font-size: 12.5px; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.3px;">
+                          Important Reminders:
                         </p>
-                        <ul style="color: #713f12; font-size: 12px; margin: 0; padding-left: 18px; line-height: 1.6;">
-                          <li>This code will expire in <strong>10 minutes</strong>.</li>
-                          <li>Do not share this code with anyone.</li>
-                          <li>If you did not request this reset, your account is safe and you can ignore this email.</li>
+                        <ul style="color: #78350f; font-size: 12.5px; margin: 0; padding-left: 18px; line-height: 1.6;">
+                          <li style="margin-bottom: 4px;">This OTP is only valid for <strong>10 minutes</strong>.</li>
+                          <li style="margin-bottom: 4px;">For your security, please do not share this code with anyone.</li>
+                          <li>If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.</li>
                         </ul>
                       </div>
 
-                      <p style="color: #64748b; font-size: 11.5px; line-height: 1.5; margin: 20px 0 0 0; text-align: center;">
-                        If you need further assistance, visit the CvSU Naic NSTP Office during regular campus hours.
-                      </p>
+                      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; color: #334155; font-size: 13.5px; line-height: 1.6;">
+                        <p style="margin: 0;"><strong>Best regards,</strong><br>
+                        NSTP System Administrator<br>
+                        Cavite State University - Naic</p>
+                      </div>
                     </td>
                   </tr>
 
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 16px 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+                    <td style="padding: 14px 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
                       <p style="color: #94a3b8; font-size: 11px; margin: 0; font-weight: 500;">
-                        © ${new Date().getFullYear()} Cavite State University - Naic Campus • NSTP Office<br>
-                        Truth • Integrity • Excellence • Service
+                        This is an automated email. Please do not reply to this address.
                       </p>
                     </td>
                   </tr>
