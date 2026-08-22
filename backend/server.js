@@ -1360,7 +1360,10 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       auth: {
         user: emailUser,
         pass: emailPass
-      }
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 3000,
+      socketTimeout: 5000
     });
     var info = await transporter1.sendMail(mailOptions);
     console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
@@ -1368,7 +1371,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   } catch (err1) {
     console.warn('[AUTH] Gmail service dispatch notice:', err1.message);
     
-    // Method 2: Direct SSL Port 465 (Most reliable for cloud servers like Render)
+    // Method 2: Direct SSL Port 465 (Reliable for cloud servers like Render)
     try {
       var transporter2 = nodemailer.createTransport({
         host: 'smtp.gmail.com',
@@ -1378,7 +1381,10 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
           user: emailUser,
           pass: emailPass
         },
-        tls: { rejectUnauthorized: false }
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 5000,
+        greetingTimeout: 3000,
+        socketTimeout: 5000
       });
       var info2 = await transporter2.sendMail(mailOptions);
       console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info2.messageId})`);
@@ -1396,7 +1402,10 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
             user: emailUser,
             pass: emailPass
           },
-          tls: { rejectUnauthorized: false }
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 5000,
+          greetingTimeout: 3000,
+          socketTimeout: 5000
         });
         var info3 = await transporter3.sendMail(mailOptions);
         console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId})`);
