@@ -274,11 +274,22 @@ function App() {
       }
     };
 
+    // 5. Instant Concurrent Login Attempt Alert
+    const handleConcurrentLogin = (payload) => {
+      pushNotification({
+        title: '🔒 Security Alert: Sign-in Attempt Detected',
+        message: payload?.message || 'Another device or browser attempted to sign in to this account.',
+        type: 'warning'
+      });
+    };
+
     socket.on('chat:message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:ended', handleCallEnded);
+    socket.on('concurrent_login_detected', handleConcurrentLogin);
+    socket.on('concurrent_login_alert', handleConcurrentLogin);
 
     return () => {
       socket.off('chat:message', handleChatMessage);
@@ -286,6 +297,8 @@ function App() {
       socket.off('enrollment:new', handleNewEnrollment);
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
+      socket.off('concurrent_login_detected', handleConcurrentLogin);
+      socket.off('concurrent_login_alert', handleConcurrentLogin);
     };
   }, [user, pushNotification]);
 

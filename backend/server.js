@@ -1139,11 +1139,29 @@ app.post('/api/auth/login', async function(req, res) {
 
     if (isDeviceActivelyInUse && !forceLogin) {
       auditLog('login_prompt_active_session', user.id, `prompt_concurrent_login: ${email}`, ip);
+      // Alert the currently active session in real-time via Socket.io
+      if (typeof io !== 'undefined') {
+        io.to('user_' + user.id).emit('concurrent_login_detected', {
+          ip: ip,
+          timestamp: new Date().toISOString(),
+          message: 'Security Notice: Another device/browser is attempting to access this account.'
+        });
+      }
       return res.status(200).json({
         warning: true,
         activeSession: true,
-        message: 'This account is currently active on another device. Do you want to sign in on this device and continue?'
+        message: 'This account is currently active on another device. An alert has been sent to the active session. Do you want to sign in on this device and continue?'
       });
+    }
+
+    if (forceLogin && isDeviceActivelyInUse) {
+      if (typeof io !== 'undefined') {
+        io.to('user_' + user.id).emit('concurrent_login_alert', {
+          ip: ip,
+          timestamp: new Date().toISOString(),
+          message: 'Notice: A concurrent sign-in was completed from another device.'
+        });
+      }
     }
 
     var sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
@@ -1458,12 +1476,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email
+    // Dispatch email directly with reliable transport
     try {
-      await Promise.race([
-        sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Email dispatch backgrounded')), 6000))
-      ]);
+      const mailRes = await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
+      if (mailRes && !mailRes.sent) {
+        console.warn('[AUTH] SMTP dispatch returned notice:', mailRes.error);
+      }
     } catch (mailErr) {
       console.warn('Mail dispatch notice:', mailErr.message);
     }

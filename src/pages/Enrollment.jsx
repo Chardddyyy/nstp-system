@@ -262,7 +262,11 @@ function Enrollment() {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
     
-    // Natural True-to-life Unmirrored Capture (Text & Faces in correct orientation)
+    // Natural Phone Camera Capture: Mirror front-facing selfie, unmirror back-facing document
+    if (facingMode === 'user') {
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, 0, 0, w, h);
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
@@ -1802,11 +1806,11 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => startLiveCamera('idphoto', 'environment')}
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                        onClick={() => startLiveCamera('idphoto', 'user')}
+                        className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                       >
-                        <Camera className="w-4 h-4 text-amber-400" />
-                        Take 2x2 Portrait
+                        <Camera className="w-4 h-4 text-amber-300" />
+                        <span>Take Photo with Camera</span>
                       </button>
                     </div>
                   </div>
@@ -1895,8 +1899,8 @@ function Enrollment() {
                         autoPlay
                         className="w-full h-full object-cover enrollment-camera-video"
                         style={{ 
-                          transform: 'none',
-                          WebkitTransform: 'none'
+                          transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                          WebkitTransform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
                         }}
                       />
                       

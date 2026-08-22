@@ -24,7 +24,8 @@ export function initSocket() {
   }
 
   socket = io(serverUrl, {
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
+    upgrade: true,
     auth: { token: token ? `Bearer ${token}` : null },
     reconnection: true,
     reconnectionAttempts: 15,
@@ -38,6 +39,14 @@ export function initSocket() {
 
   socket.on('disconnect', (reason) => {
     console.log('[Socket.io] 🟡 Disconnected:', reason);
+  });
+
+  socket.on('concurrent_login_detected', (data) => {
+    console.warn('[Security Notice] Concurrent login attempt detected:', data);
+    if (typeof window !== 'undefined' && window.alert) {
+      // Non-blocking alert / notification banner
+      window.dispatchEvent(new CustomEvent('nstp_security_alert', { detail: data }));
+    }
   });
 
   socket.on('connect_error', (err) => {

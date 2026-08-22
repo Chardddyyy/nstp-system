@@ -176,6 +176,11 @@ function StudentManagement() {
     canvas.height = 600;
     const ctx = canvas.getContext('2d');
     
+    // Front camera mirror selfie effect
+    if (facingMode === 'user') {
+      ctx.translate(600, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
 
     const base64Data = canvas.toDataURL('image/jpeg', 0.82);
@@ -1867,7 +1872,7 @@ function StudentManagement() {
                         {/* Live Camera Button */}
                         <button
                           type="button"
-                          onClick={() => startLiveCamera('add', 'environment')}
+                          onClick={() => startLiveCamera('add', 'user')}
                           className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                         >
                           <Camera className="w-4 h-4 text-amber-300" />
@@ -2950,7 +2955,7 @@ function StudentManagement() {
                         {/* Live Camera Button */}
                         <button
                           type="button"
-                          onClick={() => startLiveCamera('edit', 'environment')}
+                          onClick={() => startLiveCamera('edit', 'user')}
                           className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                         >
                           <Camera className="w-4 h-4 text-emerald-200" />
@@ -3092,6 +3097,10 @@ function StudentManagement() {
                   playsInline
                   muted
                   className="w-full h-full object-cover"
+                  style={{
+                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                    WebkitTransform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                  }}
                 />
                 
                 {/* 2x2 Frame Overlay Guide */}
