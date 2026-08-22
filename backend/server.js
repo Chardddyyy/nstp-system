@@ -1539,8 +1539,7 @@ const handleVerifyOtp = async (req, res) => {
 
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
-    var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
-    var isValid = isMasterPin;
+    var isValid = false;
 
     // Check in-memory first
     var memRecord = inMemoryResetOtps.get(cleanEmail);
@@ -1600,10 +1599,9 @@ const handleResetPassword = async (req, res) => {
 
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
-    var isMasterPin = cleanOtp === '202600' || cleanOtp === 'CvSU2026';
     var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
     var configuredAdminEmail = String(rawUser).trim().toLowerCase();
-    var isValid = isMasterPin;
+    var isValid = false;
 
     var memRecord = inMemoryResetOtps.get(cleanEmail);
     if (memRecord && memRecord.otp === cleanOtp && !memRecord.used && memRecord.expiresAt > Date.now()) {
