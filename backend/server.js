@@ -1320,8 +1320,8 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                           
                           <!-- 1-Click Auto-Fill & Continue Button -->
                           <div>
-                            <a href="https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 800; padding: 9px 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); text-transform: uppercase; letter-spacing: 0.5px;">
-                              👉 Auto-Fill Code & Reset Password
+                            <a href="https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 800; padding: 10px 22px; border-radius: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); text-transform: uppercase; letter-spacing: 0.5px;">
+                              Auto-Fill Code & Reset Password
                             </a>
                           </div>
                         </td>
