@@ -844,6 +844,120 @@ async function restoreCorFromEnrollments() {
   }
 }
 
+// Auto-sync any Approved enrollments into students table if they are missing
+async function syncApprovedEnrollmentsToStudents() {
+  try {
+    const [approvedEnrollments] = await pool.execute(
+      "SELECT * FROM enrollments WHERE status = 'Approved'"
+    );
+    if (!approvedEnrollments || approvedEnrollments.length === 0) return;
+
+    for (const enrollment of approvedEnrollments) {
+      const studentIdVal = enrollment.studentId || enrollment.student_id;
+      if (!studentIdVal) continue;
+
+      const [existing] = await pool.execute(
+        'SELECT id FROM students WHERE studentId = ?',
+        [studentIdVal]
+      );
+
+      if (existing.length === 0) {
+        let birthDate = enrollment.birthDate || enrollment.birth_date;
+        if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
+          birthDate = `${enrollment.birthYear}-${String(enrollment.birthMonth).padStart(2, '0')}-${String(enrollment.birthDay).padStart(2, '0')}`;
+        } else if (!birthDate && enrollment.birth_month && enrollment.birth_day && enrollment.birth_year) {
+          birthDate = `${enrollment.birth_year}-${String(enrollment.birth_month).padStart(2, '0')}-${String(enrollment.birth_day).padStart(2, '0')}`;
+        }
+
+        const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || null;
+        const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.reg_form || null;
+
+        const fName = enrollment.firstName || enrollment.first_name || '';
+        const lName = enrollment.lastName || enrollment.last_name || '';
+        const mName = enrollment.middleName || enrollment.middle_name || '';
+        const sfx = enrollment.suffix || '';
+        const fullName = enrollment.student_name || enrollment.fullName || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim();
+        const dept = enrollment.department || enrollment.nstpComponent || 'CWTS';
+        const emailVal = enrollment.email || '';
+        const sec = enrollment.section || 'A';
+        const prog = enrollment.program || enrollment.course || '';
+        const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
+        const streetVal = enrollment.street || '';
+        const munVal = enrollment.municipality || '';
+        const provVal = enrollment.province || '';
+        const addr = enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '';
+        const contact = enrollment.contactNumber || enrollment.contact_number || '';
+        const gndr = enrollment.gender || enrollment.sex || '';
+        const bMonth = enrollment.birthMonth || enrollment.birth_month || null;
+        const bDay = enrollment.birthDay || enrollment.birth_day || null;
+        const bYear = enrollment.birthYear || enrollment.birth_year || null;
+        const ageVal = enrollment.age || null;
+        const civStat = enrollment.civilStatus || enrollment.civil_status || null;
+        const hVal = enrollment.height || null;
+        const wVal = enrollment.weight || null;
+        const bType = enrollment.bloodType || enrollment.blood_type || null;
+        const fbVal = enrollment.facebookAccount || enrollment.facebook_account || null;
+        const emergName = enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || null;
+        const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
+        const voterVal = enrollment.registeredVoter || enrollment.registered_voter || 'No';
+
+        await pool.execute(
+          `INSERT INTO students (
+            studentId, name, email, department, status,
+            section, year, program, address, contactNumber,
+            gender, birthDate, birthMonth, birthDay, birthYear,
+            age, civilStatus, height, weight,
+            bloodType, facebookAccount, emergencyContact, emergencyNumber,
+            street, municipality, province,
+            firstName, lastName, middleName, suffix, registeredVoter,
+            registrationPhoto, registration_photo, photo, id_photo_2x2
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            studentIdVal,
+            fullName,
+            emailVal,
+            dept,
+            'Active',
+            sec,
+            yr,
+            prog,
+            addr,
+            contact,
+            gndr,
+            birthDate || null,
+            bMonth,
+            bDay,
+            bYear,
+            ageVal,
+            civStat,
+            hVal,
+            wVal,
+            bType,
+            fbVal,
+            emergName,
+            emergNum,
+            streetVal,
+            munVal,
+            provVal,
+            fName,
+            lName,
+            mName,
+            sfx,
+            voterVal,
+            enrollmentReg,
+            enrollmentReg,
+            enrollment2x2,
+            enrollment2x2
+          ]
+        );
+        console.log(`[SYNC] Auto-synced approved enrollment for student ${studentIdVal} (${fullName}) into students table.`);
+      }
+    }
+  } catch (err) {
+    console.warn('[SYNC Warning] syncApprovedEnrollmentsToStudents notice:', err.message);
+  }
+}
+
 var enrollmentColumnsMigrated = false;
 async function ensureEnrollmentColumns() {
   if (enrollmentColumnsMigrated) return;
@@ -1867,38 +1981,21 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
 // Get students — admins see all, instructors see only their department
 app.get('/api/students', authenticateToken, async (req, res) => {
   try {
-    const query = `
-      SELECT s.*,
-             COALESCE(NULLIF(s.registrationPhoto, ''), NULLIF(s.registration_photo, ''), NULLIF(s.reg_form, ''), e.registrationPhoto, e.registration_photo, e.reg_form) AS registrationPhoto,
-             COALESCE(NULLIF(s.registration_photo, ''), NULLIF(s.registrationPhoto, ''), NULLIF(s.reg_form, ''), e.registration_photo, e.registrationPhoto, e.reg_form) AS registration_photo,
-             COALESCE(NULLIF(s.reg_form, ''), NULLIF(s.registrationPhoto, ''), NULLIF(s.registration_photo, ''), e.reg_form, e.registrationPhoto, e.registration_photo) AS reg_form,
-             COALESCE(NULLIF(s.id_photo_2x2, ''), NULLIF(s.photo, ''), e.id_photo_2x2, e.idPhoto2x2, e.photo) AS id_photo_2x2,
-             COALESCE(NULLIF(s.photo, ''), NULLIF(s.id_photo_2x2, ''), e.photo, e.id_photo_2x2, e.idPhoto2x2) AS photo
-      FROM students s
-      LEFT JOIN (
-        SELECT studentId, student_id,
-               MAX(registrationPhoto) AS registrationPhoto,
-               MAX(registration_photo) AS registration_photo,
-               MAX(reg_form) AS reg_form,
-               MAX(id_photo_2x2) AS id_photo_2x2,
-               MAX(idPhoto2x2) AS idPhoto2x2,
-               MAX(photo) AS photo
-        FROM enrollments
-        GROUP BY COALESCE(NULLIF(studentId, ''), student_id)
-      ) e ON (s.studentId = e.studentId OR s.studentId = e.student_id)
-    `;
+    // Auto-sync any Approved enrollments missing from students table
+    await syncApprovedEnrollmentsToStudents().catch(e => console.warn('[SYNC NOTICE]', e.message));
+
     let students;
     if (req.user.role === 'admin') {
-      [students] = await pool.execute(query + ' ORDER BY s.created_at DESC');
+      [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
     } else {
       [students] = await pool.execute(
-        query + ' WHERE s.department = ? ORDER BY s.created_at DESC',
+        'SELECT * FROM students WHERE department = ? ORDER BY created_at DESC',
         [req.user.department]
       );
     }
     res.json(students);
   } catch (error) {
-    console.error('Get students error (falling back to direct select):', error.message);
+    console.error('Get students error:', error.message);
     try {
       let fallback;
       if (req.user.role === 'admin') {
@@ -1911,7 +2008,7 @@ app.get('/api/students', authenticateToken, async (req, res) => {
       }
       res.json(fallback);
     } catch (e2) {
-      res.status(500).json({ message: 'Server error' });
+      res.status(500).json({ message: 'Server error retrieving students' });
     }
   }
 });
@@ -4130,131 +4227,133 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
       const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
       const enrollment = enrollments[0];
       
-      try {
-        // Check if student with this ID already exists
-        const [existingStudents] = await pool.execute(
-          'SELECT id FROM students WHERE studentId = ?',
-          [enrollment.studentId]
-        );
-        
-        if (existingStudents.length === 0) {
-          // Build birthdate from separate fields if available
-          let birthDate = enrollment.birthDate || enrollment.birth_date;
-          if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
-            birthDate = `${enrollment.birthYear}-${String(enrollment.birthMonth).padStart(2, '0')}-${String(enrollment.birthDay).padStart(2, '0')}`;
-          } else if (!birthDate && enrollment.birth_month && enrollment.birth_day && enrollment.birth_year) {
-            birthDate = `${enrollment.birth_year}-${String(enrollment.birth_month).padStart(2, '0')}-${String(enrollment.birth_day).padStart(2, '0')}`;
-          }
-          
-          const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || null;
-          const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.reg_form || null;
-
+      if (enrollment) {
+        try {
           const studentIdVal = enrollment.studentId || enrollment.student_id;
-          const fName = enrollment.firstName || enrollment.first_name || '';
-          const lName = enrollment.lastName || enrollment.last_name || '';
-          const mName = enrollment.middleName || enrollment.middle_name || '';
-          const sfx = enrollment.suffix || '';
-          const fullName = enrollment.student_name || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim();
-          const dept = enrollment.department || enrollment.nstpComponent || 'CWTS';
-          const emailVal = enrollment.email || '';
-          const sec = enrollment.section || 'A';
-          const prog = enrollment.program || enrollment.course || '';
-          const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
-          const streetVal = enrollment.street || '';
-          const munVal = enrollment.municipality || '';
-          const provVal = enrollment.province || '';
-          const addr = enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '';
-          const contact = enrollment.contactNumber || enrollment.contact_number || '';
-          const gndr = enrollment.gender || enrollment.sex || '';
-          const bMonth = enrollment.birthMonth || enrollment.birth_month || null;
-          const bDay = enrollment.birthDay || enrollment.birth_day || null;
-          const bYear = enrollment.birthYear || enrollment.birth_year || null;
-          const ageVal = enrollment.age || null;
-          const civStat = enrollment.civilStatus || enrollment.civil_status || null;
-          const hVal = enrollment.height || null;
-          const wVal = enrollment.weight || null;
-          const bType = enrollment.bloodType || enrollment.blood_type || null;
-          const fbVal = enrollment.facebookAccount || enrollment.facebook_account || null;
-          const emergName = enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || null;
-          const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
-          const voterVal = enrollment.registeredVoter || enrollment.registered_voter || 'No';
+          if (studentIdVal) {
+            // Check if student with this ID already exists
+            const [existingStudents] = await pool.execute(
+              'SELECT id FROM students WHERE studentId = ?',
+              [studentIdVal]
+            );
+            
+            if (existingStudents.length === 0) {
+              // Build birthdate from separate fields if available
+              let birthDate = enrollment.birthDate || enrollment.birth_date;
+              if (!birthDate && enrollment.birthMonth && enrollment.birthDay && enrollment.birthYear) {
+                birthDate = `${enrollment.birthYear}-${String(enrollment.birthMonth).padStart(2, '0')}-${String(enrollment.birthDay).padStart(2, '0')}`;
+              } else if (!birthDate && enrollment.birth_month && enrollment.birth_day && enrollment.birth_year) {
+                birthDate = `${enrollment.birth_year}-${String(enrollment.birth_month).padStart(2, '0')}-${String(enrollment.birth_day).padStart(2, '0')}`;
+              }
+              
+              const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || null;
+              const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.reg_form || null;
 
-          await pool.execute(
-            `INSERT INTO students (
-              studentId, name, email, department, status,
-              section, year, program, address, contactNumber,
-              gender, birthDate, birthMonth, birthDay, birthYear,
-              age, civilStatus, height, weight,
-              bloodType, facebookAccount, emergencyContact, emergencyNumber,
-              street, municipality, province,
-              firstName, lastName, middleName, suffix, registeredVoter,
-              registrationPhoto, registration_photo, photo, id_photo_2x2
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              studentIdVal,
-              fullName,
-              emailVal,
-              dept,
-              'Active',
-              sec,
-              yr,
-              prog,
-              addr,
-              contact,
-              gndr,
-              birthDate || null,
-              bMonth,
-              bDay,
-              bYear,
-              ageVal,
-              civStat,
-              hVal,
-              wVal,
-              bType,
-              fbVal,
-              emergName,
-              emergNum,
-              streetVal,
-              munVal,
-              provVal,
-              fName,
-              lName,
-              mName,
-              sfx,
-              voterVal,
-              enrollmentReg,
-              enrollmentReg,
-              enrollment2x2,
-              enrollment2x2
-            ]
-          );
+              const fName = enrollment.firstName || enrollment.first_name || '';
+              const lName = enrollment.lastName || enrollment.last_name || '';
+              const mName = enrollment.middleName || enrollment.middle_name || '';
+              const sfx = enrollment.suffix || '';
+              const fullName = enrollment.student_name || enrollment.fullName || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim();
+              const dept = enrollment.department || enrollment.nstpComponent || 'CWTS';
+              const emailVal = enrollment.email || '';
+              const sec = enrollment.section || 'A';
+              const prog = enrollment.program || enrollment.course || '';
+              const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
+              const streetVal = enrollment.street || '';
+              const munVal = enrollment.municipality || '';
+              const provVal = enrollment.province || '';
+              const addr = enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '';
+              const contact = enrollment.contactNumber || enrollment.contact_number || '';
+              const gndr = enrollment.gender || enrollment.sex || '';
+              const bMonth = enrollment.birthMonth || enrollment.birth_month || null;
+              const bDay = enrollment.birthDay || enrollment.birth_day || null;
+              const bYear = enrollment.birthYear || enrollment.birth_year || null;
+              const ageVal = enrollment.age || null;
+              const civStat = enrollment.civilStatus || enrollment.civil_status || null;
+              const hVal = enrollment.height || null;
+              const wVal = enrollment.weight || null;
+              const bType = enrollment.bloodType || enrollment.blood_type || null;
+              const fbVal = enrollment.facebookAccount || enrollment.facebook_account || null;
+              const emergName = enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || null;
+              const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
+              const voterVal = enrollment.registeredVoter || enrollment.registered_voter || 'No';
+
+              await pool.execute(
+                `INSERT INTO students (
+                  studentId, name, email, department, status,
+                  section, year, program, address, contactNumber,
+                  gender, birthDate, birthMonth, birthDay, birthYear,
+                  age, civilStatus, height, weight,
+                  bloodType, facebookAccount, emergencyContact, emergencyNumber,
+                  street, municipality, province,
+                  firstName, lastName, middleName, suffix, registeredVoter,
+                  registrationPhoto, registration_photo, photo, id_photo_2x2
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  studentIdVal,
+                  fullName,
+                  emailVal,
+                  dept,
+                  'Active',
+                  sec,
+                  yr,
+                  prog,
+                  addr,
+                  contact,
+                  gndr,
+                  birthDate || null,
+                  bMonth,
+                  bDay,
+                  bYear,
+                  ageVal,
+                  civStat,
+                  hVal,
+                  wVal,
+                  bType,
+                  fbVal,
+                  emergName,
+                  emergNum,
+                  streetVal,
+                  munVal,
+                  provVal,
+                  fName,
+                  lName,
+                  mName,
+                  sfx,
+                  voterVal,
+                  enrollmentReg,
+                  enrollmentReg,
+                  enrollment2x2,
+                  enrollment2x2
+                ]
+              );
+            }
+
+            // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
+            const year = new Date().getFullYear();
+            const dept = (enrollment.department || 'CWTS').toUpperCase();
+            const [trackRows] = await pool.execute(
+              'SELECT COUNT(*) as count FROM students WHERE department = ?',
+              [dept]
+            ).catch(() => [[{ count: 0 }]]);
+            const trackCount = ((trackRows && trackRows[0]?.count) || 1);
+            const countPadded = String(trackCount).padStart(5, '0');
+            const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
+            const token = `NSTP-${studentIdVal}-${matriculationNumber}`;
+
+            await pool.execute(
+              `UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), id_issued_at = COALESCE(id_issued_at, NOW()) WHERE studentId = ?`,
+              [matriculationNumber, token, studentIdVal]
+            ).catch(() => {});
+
+            await pool.execute(
+              `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
+              [matriculationNumber, token, id]
+            ).catch(() => {});
+          }
+        } catch (insertError) {
+          console.error('Error inserting student during enrollment approval:', insertError);
         }
-
-        // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
-        const year = new Date().getFullYear();
-        const dept = (enrollment.department || 'CWTS').toUpperCase();
-        const [trackRows] = await pool.execute(
-          'SELECT COUNT(*) as count FROM students WHERE department = ?',
-          [dept]
-        ).catch(() => [[{ count: 0 }]]);
-        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
-        const countPadded = String(trackCount).padStart(5, '0');
-        const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
-        const token = `NSTP-${enrollment.studentId}-${matriculationNumber}`;
-
-        await pool.execute(
-          `UPDATE students SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?), id_issued_at = COALESCE(id_issued_at, NOW()) WHERE studentId = ?`,
-          [matriculationNumber, token, enrollment.studentId]
-        ).catch(() => {});
-
-        await pool.execute(
-          `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
-          [matriculationNumber, token, id]
-        ).catch(() => {});
-
-      } catch (insertError) {
-        console.error('Error inserting student:', insertError);
-        throw insertError;
       }
     }
 
@@ -5245,7 +5344,8 @@ async function startServer() {
       ensureReportsBatchYear(),
       ensureReportComments(),
       ensureConversationLastSender(),
-      restoreCorFromEnrollments()
+      restoreCorFromEnrollments(),
+      syncApprovedEnrollmentsToStudents()
     ]).catch(function(err) {
       console.warn('Schema migration warning:', err.message);
     });
