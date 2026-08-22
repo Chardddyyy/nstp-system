@@ -1403,74 +1403,25 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var configuredAdminEmail = String(rawUser).trim().toLowerCase();
     var users = [];
 
-    // 1. Search in users table (Exact email or name/username)
-    try {
-      var [foundUsers] = await pool.execute(
-        `SELECT id, name, email, role FROM users 
-         WHERE LOWER(TRIM(email)) = ? 
-            OR LOWER(TRIM(name)) = ?
-         LIMIT 1`,
-        [cleanEmail, cleanEmail]
-      );
-      users = foundUsers;
+    // 1. Search strictly in users table (Instructors and Admins only)
+    var [foundUsers] = await pool.execute(
+      `SELECT id, name, email, role FROM users 
+       WHERE LOWER(TRIM(email)) = ? 
+          OR LOWER(TRIM(name)) = ?
+       LIMIT 1`,
+      [cleanEmail, cleanEmail]
+    );
 
-      if (users.length === 0) {
-        var [studentUsers] = await pool.execute(
-          `SELECT id, name, email, studentId FROM students 
-           WHERE LOWER(TRIM(email)) = ? 
-              OR LOWER(TRIM(studentId)) = ? 
-              OR LOWER(TRIM(contactNumber)) = ?
-           LIMIT 1`,
-          [cleanEmail, cleanEmail, cleanEmail]
-        );
-        if (studentUsers.length > 0) {
-          users = studentUsers;
-        }
-      }
-
-      if (users.length === 0) {
-        var [enrollmentUsers] = await pool.execute(
-          `SELECT id, student_name as name, email, studentId FROM enrollments 
-           WHERE LOWER(TRIM(email)) = ? 
-              OR LOWER(TRIM(studentId)) = ? 
-              OR LOWER(TRIM(contactNumber)) = ?
-           LIMIT 1`,
-          [cleanEmail, cleanEmail, cleanEmail]
-        );
-        if (enrollmentUsers.length > 0) {
-          users = enrollmentUsers;
-        }
-      }
-    } catch (dbErr) {
-      console.warn('DB lookup during forgot-password failed:', dbErr.message);
-    }
-
-    // If not found in DB but input is an email address, treat it as a direct recipient so user receives code
-    if (users.length === 0 && cleanEmail.includes('@')) {
-      users = [{ id: 0, name: cleanEmail.split('@')[0], email: cleanEmail, role: 'user' }];
-    }
-
-    if (users.length === 0) {
-      return res.status(400).json({
+    if (foundUsers.length === 0) {
+      return res.status(404).json({
         success: false,
-        message: `Please enter a valid email address or registered student ID.`
+        message: `No Instructor or Administrator account found with "${cleanEmail}". Password reset is strictly for registered system staff (Admins and Instructors).`
       });
     }
 
-    var user = users[0];
+    var user = foundUsers[0];
+    var targetDeliveryEmail = user.email ? user.email.toLowerCase().trim() : cleanEmail;
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Target email to send the OTP to: exact registered user's email
-    var targetDeliveryEmail = (user.email && user.email.includes('@')) 
-      ? user.email.toLowerCase().trim() 
-      : (cleanEmail.includes('@') ? cleanEmail : null);
-
-    if (!targetDeliveryEmail) {
-      return res.status(400).json({
-        success: false,
-        message: `No email address found for this account. Please enter your email address.`
-      });
-    }
 
     // Save in-memory
     inMemoryResetOtps.set(cleanEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false });
@@ -1482,7 +1433,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     try {
       await pool.execute(
         'UPDATE password_resets SET used = 1 WHERE (LOWER(TRIM(email)) = ? OR LOWER(TRIM(email)) = ?) AND used = 0',
-        [cleanEmail, (user.email || '').toLowerCase().trim()]
+        [cleanEmail, targetDeliveryEmail]
       );
 
       await pool.execute(
@@ -1493,7 +1444,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email in background (non-blocking for sub-second instant response)
+    // Dispatch email in background directly to Instructor or Admin's email
     sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).catch(function(mailErr) {
       console.warn('[AUTH] Background mail dispatch notice:', mailErr.message);
     });
@@ -1619,40 +1570,23 @@ const handleResetPassword = async (req, res) => {
     }
 
     var hashedPassword = await bcrypt.hash(new_password, 10);
-    var updated = false;
 
-    // Update users table
+    // Update users table for Instructor or Admin
     try {
-      var [updateRes] = await pool.execute(
+      await pool.execute(
         `UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL 
-         WHERE LOWER(TRIM(email)) = ? 
-            OR LOWER(TRIM(name)) = ?
-            OR (role = 'admin' AND (? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com', '${configuredAdminEmail}')))`,
-        [hashedPassword, cleanEmail, cleanEmail, cleanEmail]
+         WHERE LOWER(TRIM(email)) = ? OR LOWER(TRIM(name)) = ?`,
+        [hashedPassword, cleanEmail, cleanEmail]
       );
-
-      if (updateRes.affectedRows > 0) {
-        updated = true;
-      } else {
-        var [studRes] = await pool.execute(
-          `UPDATE students SET password = ? 
-           WHERE LOWER(TRIM(email)) = ? OR LOWER(TRIM(studentId)) = ?`,
-          [hashedPassword, cleanEmail, cleanEmail]
-        );
-        if (studRes.affectedRows > 0) {
-          updated = true;
-        }
-      }
 
       if (dbResetId) {
         await pool.execute('UPDATE password_resets SET used = 1 WHERE id = ?', [dbResetId]);
       }
     } catch (dbUpdateErr) {
       console.warn('Database update password notice:', dbUpdateErr.message);
-      updated = true; // allow flow to succeed
     }
 
-    auditLog('password_reset_success', null, `email: ${cleanEmail}`, req.ip);
+    auditLog('password_reset_success', null, `staff_email: ${cleanEmail}`, req.ip);
 
     res.json({
       success: true,
