@@ -1249,15 +1249,10 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
   if (emailUser && emailPass) {
     var transporterConfig = emailUser.includes('@gmail.com') ? {
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
+      service: 'gmail',
       auth: {
         user: emailUser,
         pass: emailPass
-      },
-      tls: {
-        rejectUnauthorized: false
       }
     } : {
       host: smtpHost,
@@ -1475,15 +1470,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email directly with reliable transport
-    try {
-      const mailRes = await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
-      if (mailRes && !mailRes.sent) {
-        console.warn('[AUTH] SMTP dispatch returned notice:', mailRes.error);
-      }
-    } catch (mailErr) {
-      console.warn('Mail dispatch notice:', mailErr.message);
-    }
+    // Dispatch email in background (non-blocking for instant sub-second response)
+    sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).catch(function(mailErr) {
+      console.warn('[AUTH] Background mail dispatch error:', mailErr.message);
+    });
 
     res.json({
       success: true,
