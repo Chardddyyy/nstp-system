@@ -60,7 +60,12 @@ export function NstpIdCard({ student }) {
   };
 
   const currentTheme = deptColors[dept] || deptColors.CWTS;
-  const DeptIcon = currentTheme.icon;
+  const nameLen = studentName.length;
+  const nameFontSizeClass = nameLen > 32 
+    ? 'text-[5.5px] leading-[1.1]' 
+    : nameLen > 22 
+    ? 'text-[6.5px] leading-[1.15]' 
+    : 'text-[7.8px] leading-tight';
 
   return (
     <div className="id-card-portrait relative w-[53.98mm] h-[85.6mm] bg-white rounded-xl shadow-md border-2 border-emerald-900 overflow-hidden flex flex-col justify-between text-slate-900 select-none box-border">
@@ -111,11 +116,11 @@ export function NstpIdCard({ student }) {
         </div>
 
         {/* Student Name */}
-        <div className="w-full mt-0.5">
-          <h3 className="text-[7.8px] font-black text-slate-900 uppercase truncate leading-tight">
+        <div className="w-full mt-0.5 px-0.5 min-h-[4.5mm] flex flex-col items-center justify-center">
+          <h3 className={`font-black text-slate-900 uppercase break-words text-center ${nameFontSizeClass}`}>
             {studentName}
           </h3>
-          <p className="text-[4.5px] font-extrabold text-emerald-800 uppercase tracking-widest leading-tight">
+          <p className="text-[4.5px] font-extrabold text-emerald-800 uppercase tracking-widest leading-tight mt-0.5">
             STUDENT
           </p>
         </div>

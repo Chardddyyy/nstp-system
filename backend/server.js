@@ -1443,15 +1443,11 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.warn('DB lookup during forgot-password failed, checking default accounts:', dbErr.message);
     }
 
-    if (users.length === 0 && cleanEmail.includes('@')) {
-      users = [{ id: 0, name: cleanEmail.split('@')[0], email: cleanEmail, role: 'user' }];
-    }
-
-    // If still no account found (e.g. invalid string without @):
+    // STRICT CHECK: If account does not exist in users, students, or enrollments, reject immediately!
     if (users.length === 0) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: `Please enter a valid email address or student ID.`
+        message: `No registered account found with "${cleanEmail}". Please ensure you enter the email address used during enrollment or registration.`
       });
     }
 

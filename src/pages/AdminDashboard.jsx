@@ -916,17 +916,6 @@ function AdminDashboard() {
               <div className="flex items-center gap-2 flex-wrap shrink-0">
                 <button
                   type="button"
-                  onClick={handleManualBackup}
-                  disabled={isBackingUp}
-                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                  title="Upload 100% complete MySQL snapshot to Google Drive"
-                >
-                  <Cloud className={`w-4 h-4 text-blue-200 ${isBackingUp ? 'animate-bounce' : ''}`} />
-                  <span>{isBackingUp ? 'Backing Up to GDrive...' : 'Backup to GDrive'}</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => setScheduleModalOpen(true)}
                   className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                 >
@@ -2304,51 +2293,8 @@ function AdminDashboard() {
                     </div>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 bg-white rounded-md border text-gray-700 shrink-0">
-                    {scheduleConfig.mode === 'AUTO' ? 'Auto-Timed' : scheduleConfig.mode === 'FORCE_OPEN' ? 'Always Open' : 'Always Closed'}
+                    Enrollment Schedule
                   </span>
-                </div>
-
-                {/* Operation Mode Selector */}
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1.5">Portal Operation Mode</label>
-                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'AUTO' }))}
-                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                        scheduleConfig.mode === 'AUTO'
-                          ? 'bg-emerald-800 text-white border-emerald-800 shadow-sm'
-                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Auto Timed</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_OPEN' }))}
-                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                        scheduleConfig.mode === 'FORCE_OPEN'
-                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm'
-                          : 'bg-gray-50 text-emerald-800 border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Force Open</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScheduleConfig(prev => ({ ...prev, mode: 'FORCE_CLOSE' }))}
-                      className={`py-2 px-1 rounded-xl border text-[10.5px] sm:text-xs font-bold text-center transition-all cursor-pointer flex flex-col items-center gap-1 ${
-                        scheduleConfig.mode === 'FORCE_CLOSE'
-                          ? 'bg-rose-700 text-white border-rose-700 shadow-sm'
-                          : 'bg-gray-50 text-rose-700 border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Power className="w-3.5 h-3.5" />
-                      <span>Force Close</span>
-                    </button>
-                  </div>
                 </div>
 
                 {/* Academic Year & Semester */}
@@ -2450,28 +2396,12 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between gap-2 shrink-0">
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={quickForceOpen}
-                    className="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                  >
-                    Open Now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={quickForceClose}
-                    className="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[11px] font-bold transition-all cursor-pointer"
-                  >
-                    Close Now
-                  </button>
-                </div>
+              <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2 shrink-0">
                 <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={() => setScheduleModalOpen(false)}
-                    className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
