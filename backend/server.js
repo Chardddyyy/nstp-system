@@ -1357,6 +1357,29 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       </html>`
   };
 
+  // Method 0: HTTPS Webhook / REST API (Port 443 — 100% works on Render without SMTP port blocking)
+  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL;
+  if (webhookUrl) {
+    try {
+      var hookRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: deliveryEmail,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html
+        })
+      });
+      if (hookRes.ok) {
+        console.log(`[AUTH] Email successfully delivered via HTTPS Webhook to ${deliveryEmail}`);
+        return { sent: true, method: 'https-webhook' };
+      }
+    } catch (hookErr) {
+      console.warn('[AUTH] HTTPS Webhook dispatch notice:', hookErr.message);
+    }
+  }
+
   // Method 1: service: 'gmail'
   try {
     var transporter1 = nodemailer.createTransport({
@@ -1365,9 +1388,9 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
         user: emailUser,
         pass: emailPass
       },
-      connectionTimeout: 5000,
-      greetingTimeout: 3000,
-      socketTimeout: 5000
+      connectionTimeout: 4000,
+      greetingTimeout: 2000,
+      socketTimeout: 4000
     });
     var info = await transporter1.sendMail(mailOptions);
     console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
