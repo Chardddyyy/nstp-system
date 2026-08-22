@@ -153,11 +153,20 @@ function Login() {
       setResendCooldown(60);
       setForgotStep(2);
     } catch (err) {
-      var msg = err?.message || 'Failed to send reset code.';
-      if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('waking up') || msg.toLowerCase().includes('network')) {
-        setForgotError('Cloud server was waking up from sleep. It is now active — please click "Send 6-Digit Reset Code" again!');
-      } else {
-        setForgotError(msg);
+      // Auto-retry once in case cloud server was cold-starting
+      try {
+        await new Promise(r => setTimeout(r, 1500));
+        await requestPasswordReset(clean);
+        setForgotOtp('');
+        setResendCooldown(60);
+        setForgotStep(2);
+      } catch (retryErr) {
+        var msg = retryErr?.message || err?.message || 'Failed to send reset code.';
+        if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('waking up') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('failed to fetch')) {
+          setForgotError('Cloud server was waking up from sleep. It is now active — please click "Send 6-Digit Reset Code" again!');
+        } else {
+          setForgotError(msg);
+        }
       }
     } finally {
       setForgotLoading(false);
