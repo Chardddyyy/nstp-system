@@ -1062,8 +1062,10 @@ function StudentManagement() {
               <span>students</span>
 
               <div className="flex items-center gap-1.5 ml-2 sm:ml-4 pl-2 sm:pl-4 border-l border-gray-200">
-                <span className="text-gray-500 text-xs">Per page:</span>
+                <label htmlFor="students-per-page" className="text-gray-500 text-xs">Per page:</label>
                 <select
+                  id="students-per-page"
+                  name="studentsPerPage"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -1237,8 +1239,10 @@ function StudentManagement() {
                   <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-2.5">CHED Report Header Settings</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Semester</label>
+                      <label htmlFor="export-sem" className="block text-[11px] font-semibold text-gray-600 mb-1">Semester</label>
                       <select
+                        id="export-sem"
+                        name="exportSem"
                         value={exportSem}
                         onChange={(e) => setExportSem(e.target.value)}
                         className="w-full text-xs font-medium border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
@@ -1248,9 +1252,11 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-gray-600 mb-1">Academic Year</label>
+                      <label htmlFor="export-acad-year" className="block text-[11px] font-semibold text-gray-600 mb-1">Academic Year</label>
                       <input
                         type="text"
+                        id="export-acad-year"
+                        name="exportAcadYear"
                         value={exportAcadYear}
                         onChange={(e) => setExportAcadYear(e.target.value)}
                         placeholder="e.g. 2025-2026"
@@ -1330,9 +1336,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
+                      <label htmlFor="add-last-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
                         type="text"
+                        id="add-last-name"
                         name="lastName"
                         value={formData.lastName || ''}
                         onChange={handleFormFieldChange}
@@ -1342,9 +1349,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
+                      <label htmlFor="add-first-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
                       <input
                         type="text"
+                        id="add-first-name"
                         name="firstName"
                         value={formData.firstName || ''}
                         onChange={handleFormFieldChange}
@@ -1354,9 +1362,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
+                      <label htmlFor="add-middle-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
                       <input
                         type="text"
+                        id="add-middle-name"
                         name="middleName"
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
@@ -1365,8 +1374,9 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                      <label htmlFor="add-suffix" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
                       <select
+                        id="add-suffix"
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
@@ -1385,9 +1395,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
+                      <label htmlFor="add-student-id" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
                         type="text"
+                        id="add-student-id"
                         name="studentId"
                         value={formData.studentId || ''}
                         onChange={handleFormFieldChange}
@@ -1398,9 +1409,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                      <label htmlFor="add-email" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                       <input
                         type="email"
+                        id="add-email"
                         name="email"
                         value={formData.email || ''}
                         onChange={handleFormFieldChange}
@@ -1412,9 +1424,10 @@ function StudentManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <label htmlFor="add-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
                     <input
                       type="text"
+                      id="add-street"
                       name="street"
                       value={formData.street || ''}
                       onChange={handleFormFieldChange}
@@ -1426,9 +1439,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                      <label htmlFor="add-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                       <input
                         type="text"
+                        id="add-municipality"
                         name="municipality"
                         value={formData.municipality || ''}
                         onChange={handleFormFieldChange}
@@ -1438,9 +1452,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <label htmlFor="add-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
                       <input
                         type="text"
+                        id="add-province"
                         name="province"
                         value={formData.province || ''}
                         onChange={handleFormFieldChange}
@@ -1461,8 +1476,9 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                      <label htmlFor="add-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
+                        id="add-program"
                         name="program"
                         value={formData.program || ''}
                         onChange={handleFormFieldChange}
@@ -1480,8 +1496,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                      <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
                       <select
+                        id="add-section"
                         name="section"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
@@ -1496,8 +1513,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <label htmlFor="add-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                       <select
+                        id="add-year-level"
                         name="yearLevel"
                         value={formData.yearLevel || formData.year || ''}
                         onChange={handleFormFieldChange}
@@ -1512,8 +1530,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
                       <select
+                        id="add-department"
                         name="department"
                         value={formData.department || ''}
                         onChange={handleFormFieldChange}
@@ -1539,9 +1558,10 @@ function StudentManagement() {
                   {/* Birth Date */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
+                      <label htmlFor="add-birth-month" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
                       <input
                         type="text"
+                        id="add-birth-month"
                         name="birthMonth"
                         value={formData.birthMonth || ''}
                         onChange={handleFormFieldChange}
@@ -1551,9 +1571,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
+                      <label htmlFor="add-birth-day" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
                       <input
                         type="text"
+                        id="add-birth-day"
                         name="birthDay"
                         value={formData.birthDay || ''}
                         onChange={handleFormFieldChange}
@@ -1563,9 +1584,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
+                      <label htmlFor="add-birth-year" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
                       <input
                         type="text"
+                        id="add-birth-year"
                         name="birthYear"
                         value={formData.birthYear || ''}
                         onChange={handleFormFieldChange}
@@ -1579,9 +1601,10 @@ function StudentManagement() {
                   {/* Age, Civil Status, Sex, Registered Voter */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
+                      <label htmlFor="add-age" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
                       <input
                         type="text"
+                        id="add-age"
                         name="age"
                         readOnly
                         placeholder="Auto-computed"
@@ -1590,8 +1613,9 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Civil Status *</label>
+                      <label htmlFor="add-civil-status" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Civil Status *</label>
                       <select
+                        id="add-civil-status"
                         name="civilStatus"
                         value={formData.civilStatus || ''}
                         onChange={handleFormFieldChange}
@@ -1606,8 +1630,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Sex *</label>
+                      <label htmlFor="add-sex" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Sex *</label>
                       <select
+                        id="add-sex"
                         name="sex"
                         value={formData.sex || formData.gender || ''}
                         onChange={handleFormFieldChange}
@@ -1620,8 +1645,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Registered Voter *</label>
+                      <label htmlFor="add-registered-voter" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Registered Voter *</label>
                       <select
+                        id="add-registered-voter"
                         name="registeredVoter"
                         value={formData.registeredVoter || ''}
                         onChange={handleFormFieldChange}
@@ -1638,13 +1664,15 @@ function StudentManagement() {
                   {/* Height & Weight with units */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <label htmlFor="add-height" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Height *</span>
                         {formData.height && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.height} cm</span>}
                       </label>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
+                          id="add-height"
+                          name="height"
                           placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
                           value={heightInput}
                           onChange={(e) => {
@@ -1657,6 +1685,8 @@ function StudentManagement() {
                           required
                         />
                         <select
+                          id="add-height-unit"
+                          name="heightUnit"
                           value={heightUnit}
                           onChange={(e) => {
                             const newUnit = e.target.value;
@@ -1674,13 +1704,15 @@ function StudentManagement() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <label htmlFor="add-weight" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Weight *</span>
                         {formData.weight && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.weight} kg</span>}
                       </label>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
+                          id="add-weight"
+                          name="weight"
                           placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
                           value={weightInput}
                           onChange={(e) => {
@@ -1693,6 +1725,8 @@ function StudentManagement() {
                           required
                         />
                         <select
+                          id="add-weight-unit"
+                          name="weightUnit"
                           value={weightUnit}
                           onChange={(e) => {
                             const newUnit = e.target.value;
@@ -1712,8 +1746,9 @@ function StudentManagement() {
                   {/* Blood Type & Contact Number */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
+                      <label htmlFor="add-blood-type" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
+                        id="add-blood-type"
                         name="bloodType"
                         value={formData.bloodType || ''}
                         onChange={handleFormFieldChange}
@@ -1736,9 +1771,10 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                      <label htmlFor="add-contact-number" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
                       <input
                         type="text"
+                        id="add-contact-number"
                         name="contactNumber"
                         value={formData.contactNumber || '09'}
                         onChange={handleFormFieldChange}
@@ -1754,9 +1790,10 @@ function StudentManagement() {
 
                   {/* Facebook Account */}
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <label htmlFor="add-facebook-account" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
                     <input
                       type="text"
+                      id="add-facebook-account"
                       name="facebookAccount"
                       value={formData.facebookAccount || ''}
                       onChange={handleFormFieldChange}
@@ -1768,9 +1805,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
+                      <label htmlFor="add-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
                         type="text"
+                        id="add-emergency-contact"
                         name="emergencyContact"
                         value={formData.emergencyContact || formData.emergencyName || ''}
                         onChange={handleFormFieldChange}
@@ -1780,9 +1818,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
+                      <label htmlFor="add-emergency-number" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                       <input
                         type="tel"
+                        id="add-emergency-number"
                         name="emergencyNumber"
                         value={formData.emergencyNumber || ''}
                         onChange={handleFormFieldChange}
@@ -1836,12 +1875,14 @@ function StudentManagement() {
                         </button>
 
                         {/* File Upload Button */}
-                        <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
+                        <label htmlFor="add-file-input" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
                           <Upload className="w-3.5 h-3.5 text-emerald-700" />
                           <span>{formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? 'Change File' : 'Upload File'}</span>
                           <input
                             ref={fileInputAddRef}
                             type="file"
+                            id="add-file-input"
+                            name="fileInputAdd"
                             accept="image/*"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
@@ -2373,9 +2414,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
+                      <label htmlFor="edit-last-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
                         type="text"
+                        id="edit-last-name"
                         name="lastName"
                         value={formData.lastName || ''}
                         onChange={handleFormFieldChange}
@@ -2385,9 +2427,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
+                      <label htmlFor="edit-first-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">First Name *</label>
                       <input
                         type="text"
+                        id="edit-first-name"
                         name="firstName"
                         value={formData.firstName || ''}
                         onChange={handleFormFieldChange}
@@ -2397,9 +2440,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
+                      <label htmlFor="edit-middle-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Middle Name</label>
                       <input
                         type="text"
+                        id="edit-middle-name"
                         name="middleName"
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
@@ -2408,8 +2452,9 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
+                      <label htmlFor="edit-suffix" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Suffix</label>
                       <select
+                        id="edit-suffix"
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
@@ -2428,9 +2473,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
+                      <label htmlFor="edit-student-id" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
                         type="text"
+                        id="edit-student-id"
                         name="studentId"
                         value={formData.studentId || ''}
                         onChange={handleFormFieldChange}
@@ -2441,9 +2487,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                      <label htmlFor="edit-email" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                       <input
                         type="email"
+                        id="edit-email"
                         name="email"
                         value={formData.email || ''}
                         onChange={handleFormFieldChange}
@@ -2456,9 +2503,10 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                      <label htmlFor="edit-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
                       <input
                         type="text"
+                        id="edit-street"
                         name="street"
                         value={formData.street || ''}
                         onChange={handleFormFieldChange}
@@ -2468,9 +2516,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                      <label htmlFor="edit-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                       <input
                         type="text"
+                        id="edit-municipality"
                         name="municipality"
                         value={formData.municipality || ''}
                         onChange={handleFormFieldChange}
@@ -2480,9 +2529,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <label htmlFor="edit-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
                       <input
                         type="text"
+                        id="edit-province"
                         name="province"
                         value={formData.province || ''}
                         onChange={handleFormFieldChange}
@@ -2503,8 +2553,9 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                      <label htmlFor="edit-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
+                        id="edit-program"
                         name="program"
                         value={formData.program || ''}
                         onChange={handleFormFieldChange}
@@ -2522,8 +2573,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                      <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
                       <select
+                        id="edit-section"
                         name="section"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
@@ -2538,8 +2590,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <label htmlFor="edit-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                       <select
+                        id="edit-year-level"
                         name="yearLevel"
                         value={formData.yearLevel || formData.year || '1st Year'}
                         onChange={handleFormFieldChange}
@@ -2553,8 +2606,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
                       <select
+                        id="edit-department"
                         name="department"
                         value={formData.department || ''}
                         onChange={handleFormFieldChange}
@@ -2580,9 +2634,10 @@ function StudentManagement() {
                   {/* Birth Date */}
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
+                      <label htmlFor="edit-birth-month" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
                       <input
                         type="text"
+                        id="edit-birth-month"
                         name="birthMonth"
                         value={formData.birthMonth || ''}
                         onChange={handleFormFieldChange}
@@ -2592,9 +2647,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
+                      <label htmlFor="edit-birth-day" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Day *</label>
                       <input
                         type="text"
+                        id="edit-birth-day"
                         name="birthDay"
                         value={formData.birthDay || ''}
                         onChange={handleFormFieldChange}
@@ -2604,9 +2660,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
+                      <label htmlFor="edit-birth-year" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Year *</label>
                       <input
                         type="text"
+                        id="edit-birth-year"
                         name="birthYear"
                         value={formData.birthYear || ''}
                         onChange={handleFormFieldChange}
@@ -2620,12 +2677,13 @@ function StudentManagement() {
                   {/* Age, Civil Status, Sex, Registered Voter */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <label htmlFor="edit-age" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Age *</span>
                         <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">Auto</span>
                       </label>
                       <input
                         type="text"
+                        id="edit-age"
                         name="age"
                         readOnly
                         placeholder="Auto-computed"
@@ -2634,8 +2692,9 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
+                      <label htmlFor="edit-civil-status" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
                       <select
+                        id="edit-civil-status"
                         name="civilStatus"
                         value={formData.civilStatus || ''}
                         onChange={handleFormFieldChange}
@@ -2650,8 +2709,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
+                      <label htmlFor="edit-sex" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                       <select
+                        id="edit-sex"
                         name="sex"
                         value={formData.sex || formData.gender || ''}
                         onChange={handleFormFieldChange}
@@ -2664,8 +2724,9 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                      <label htmlFor="edit-registered-voter" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
                       <select
+                        id="edit-registered-voter"
                         name="registeredVoter"
                         value={formData.registeredVoter || ''}
                         onChange={handleFormFieldChange}
@@ -2682,13 +2743,15 @@ function StudentManagement() {
                   {/* Height & Weight with units */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <label htmlFor="edit-height" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Height *</span>
                         {formData.height && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.height} cm</span>}
                       </label>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
+                          id="edit-height"
+                          name="height"
                           placeholder={heightUnit === 'cm' ? 'e.g. 165' : heightUnit === 'ft' ? "e.g. 5'8\" or 5.7" : 'e.g. 1.65'}
                           value={heightInput}
                           onChange={(e) => {
@@ -2701,6 +2764,8 @@ function StudentManagement() {
                           required
                         />
                         <select
+                          id="edit-height-unit"
+                          name="editHeightUnit"
                           value={heightUnit}
                           onChange={(e) => {
                             const newUnit = e.target.value;
@@ -2718,13 +2783,15 @@ function StudentManagement() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                      <label htmlFor="edit-weight" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Weight *</span>
                         {formData.weight && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">System: {formData.weight} kg</span>}
                       </label>
                       <div className="flex gap-1.5">
                         <input
                           type="text"
+                          id="edit-weight"
+                          name="weight"
                           placeholder={weightUnit === 'kg' ? 'e.g. 55' : 'e.g. 120'}
                           value={weightInput}
                           onChange={(e) => {
@@ -2737,6 +2804,8 @@ function StudentManagement() {
                           required
                         />
                         <select
+                          id="edit-weight-unit"
+                          name="editWeightUnit"
                           value={weightUnit}
                           onChange={(e) => {
                             const newUnit = e.target.value;
@@ -2756,8 +2825,9 @@ function StudentManagement() {
                   {/* Blood Type & Contact Number */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
+                      <label htmlFor="edit-blood-type" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
+                        id="edit-blood-type"
                         name="bloodType"
                         value={formData.bloodType || ''}
                         onChange={handleFormFieldChange}
@@ -2780,9 +2850,10 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                      <label htmlFor="edit-contact-number" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
                       <input
                         type="text"
+                        id="edit-contact-number"
                         name="contactNumber"
                         value={formData.contactNumber || '09'}
                         onChange={handleFormFieldChange}
@@ -2798,9 +2869,10 @@ function StudentManagement() {
 
                   {/* Facebook Account */}
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <label htmlFor="edit-facebook-account" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
                     <input
                       type="text"
+                      id="edit-facebook-account"
                       name="facebookAccount"
                       value={formData.facebookAccount || ''}
                       onChange={handleFormFieldChange}
@@ -2813,9 +2885,10 @@ function StudentManagement() {
                   {/* Emergency Contact Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200/60">
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
+                      <label htmlFor="edit-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
                         type="text"
+                        id="edit-emergency-contact"
                         name="emergencyContact"
                         value={formData.emergencyContact || formData.emergencyName || ''}
                         onChange={handleFormFieldChange}
@@ -2825,9 +2898,10 @@ function StudentManagement() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
+                      <label htmlFor="edit-emergency-number" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact No. *</label>
                       <input
                         type="tel"
+                        id="edit-emergency-number"
                         name="emergencyNumber"
                         value={formData.emergencyNumber || '09'}
                         onChange={handleFormFieldChange}
@@ -2841,7 +2915,6 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  {/* 4. 2x2 ID Photo Update / Camera Capture */}
                   {/* 4. 2x2 ID Photo Update / Camera Capture */}
                   <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 mt-3">
                     <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-1.5">
@@ -2885,12 +2958,14 @@ function StudentManagement() {
                         </button>
 
                         {/* File Upload Button */}
-                        <label className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
+                        <label htmlFor="edit-file-input" className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-800 font-bold text-xs rounded-xl border border-gray-300 shadow-2xs cursor-pointer active:scale-95 transition-all">
                           <Upload className="w-3.5 h-3.5 text-emerald-700" />
                           <span>{formData.id_photo_2x2 || formData.photo ? 'Change Photo' : 'Upload Photo'}</span>
                           <input
                             ref={fileInputEditRef}
                             type="file"
+                            id="edit-file-input"
+                            name="fileInputEdit"
                             accept="image/*"
                             onChange={(e) => {
                               const file = e.target.files?.[0];

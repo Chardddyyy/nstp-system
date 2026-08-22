@@ -1750,6 +1750,8 @@ function Chat() {
                   <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
+                    id="chat-search-conversations"
+                    name="chatSearchTerm"
                     placeholder="Search conversations..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -2107,6 +2109,8 @@ function Chat() {
                             <div className="flex items-center space-x-2 px-2 py-1">
                               <input
                                 type="text"
+                                id={`chat-edit-msg-${message.id}`}
+                                name="chatEditMessage"
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
                                 className="flex-1 px-2 py-1 text-xs sm:text-sm bg-white text-gray-800 rounded border"
@@ -2320,9 +2324,9 @@ function Chat() {
               {/* Input Area - Ultra Sleek Single Line Height */}
               <div className="bg-white px-2 py-1.5 sm:px-3 sm:py-2 border-t border-gray-200 flex-shrink-0 relative">
                 {/* Hidden File Inputs */}
-                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                <input type="file" ref={galleryInputRef} onChange={handleGallerySelect} accept="image/*" className="hidden" />
-                <input type="file" ref={cameraInputRef} onChange={handleCameraCapture} accept="image/*" capture="environment" className="hidden" />
+                <input type="file" id="chat-file-input" name="chatFileInput" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                <input type="file" id="chat-gallery-input" name="chatGalleryInput" ref={galleryInputRef} onChange={handleGallerySelect} accept="image/*" className="hidden" />
+                <input type="file" id="chat-camera-input" name="chatCameraInput" ref={cameraInputRef} onChange={handleCameraCapture} accept="image/*" capture="environment" className="hidden" />
                 
                 {/* Mobile Attachment Popover */}
                 {showAttachMenu && (
@@ -2401,6 +2405,8 @@ function Chat() {
                   ) : (
                     <input
                       type="text"
+                      id="chat-message-composer"
+                      name="chatMessageText"
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
@@ -2931,7 +2937,7 @@ function Chat() {
                         style={{ background: c }} />
                     ))}
                     <label className="w-7 h-7 rounded-full border-2 border-gray-600 overflow-hidden cursor-pointer" title="Custom color">
-                      <input type="color" value={drawColor} onChange={e => setDrawColor(e.target.value)} className="w-full h-full opacity-0 cursor-pointer" />
+                      <input type="color" id="chat-draw-color" name="drawColor" value={drawColor} onChange={e => setDrawColor(e.target.value)} className="w-full h-full opacity-0 cursor-pointer" />
                       <div className="w-full h-full -mt-7 flex items-center justify-center text-xs">🎨</div>
                     </label>
                   </div>
@@ -2956,6 +2962,8 @@ function Chat() {
                     <span className="text-xs text-gray-400 w-10 flex-shrink-0">{drawTextPos ? '📍 Set' : '📍 Tap'}</span>
                     <input
                       type="text"
+                      id="chat-draw-text"
+                      name="drawText"
                       value={drawText}
                       onChange={e => setDrawText(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && commitDrawText()}

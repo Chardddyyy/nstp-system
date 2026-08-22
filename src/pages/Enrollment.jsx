@@ -1638,6 +1638,8 @@ function Enrollment() {
                 <input
                   ref={photoInputRef}
                   type="file"
+                  id="regform-file-input"
+                  name="regformFileInput"
                   accept="image/*,.heic,.heif,application/pdf,.pdf"
                   onChange={handlePhotoChange}
                   className="hidden"
@@ -1646,6 +1648,8 @@ function Enrollment() {
                 <input
                   ref={cameraInputRef}
                   type="file"
+                  id="regform-camera-input"
+                  name="regformCameraInput"
                   accept="image/*"
                   capture="environment"
                   onChange={handlePhotoChange}
@@ -1756,6 +1760,8 @@ function Enrollment() {
                 <input
                   ref={idPhotoInputRef}
                   type="file"
+                  id="idphoto-file-input"
+                  name="idphotoFileInput"
                   accept="image/*,.heic,.heif"
                   onChange={handleIdPhotoChange}
                   className="hidden"
@@ -1764,6 +1770,8 @@ function Enrollment() {
                 <input
                   ref={idCameraInputRef}
                   type="file"
+                  id="idphoto-camera-input"
+                  name="idphotoCameraInput"
                   accept="image/*"
                   capture="user"
                   onChange={handleIdPhotoChange}
@@ -2014,7 +2022,7 @@ function Enrollment() {
           onClick={() => setShowTermsModal(false)}
         >
           <div 
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col border border-emerald-100/80 overflow-hidden"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col border border-emerald-100/80 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -2024,8 +2032,8 @@ function Enrollment() {
                   <Shield className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight">Terms of Service &amp; Privacy Policy</h3>
-                  <p className="text-emerald-200 text-xs font-medium">Cavite State University Naic • NSTP Portal Guidelines</p>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight">Terms of Service &amp; Data Privacy Policy</h3>
+                  <p className="text-emerald-200 text-xs font-medium">Cavite State University - Naic Campus • NSTP Office</p>
                 </div>
               </div>
               <button
@@ -2041,43 +2049,55 @@ function Enrollment() {
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-xs sm:text-sm text-gray-700 leading-relaxed">
               {/* Terms Section */}
               <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100/80">
-                <h4 className="text-sm font-black text-emerald-950 mb-2.5 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-600" />
-                  Terms of Service &amp; Student Agreement
+                <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-700" />
+                  1. Terms of Service &amp; Student Undertaking
                 </h4>
-                <ul className="space-y-2 text-gray-600 font-medium">
+                <ul className="space-y-2.5 text-gray-600 font-medium">
                   <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Truthful Submission:</strong> All details provided in this online enrollment form must match your official CvSU Registration Form.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Truthful Submission:</strong> All personal, academic, and contact details submitted through this portal must be authentic and strictly match the student's official Certificate of Registration (COR).</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Mandatory Attendance:</strong> Enrolled students are obligated to complete mandatory training hours for their chosen NSTP component (CWTS / LTS / ROTC).</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Course Requirements &amp; Attendance:</strong> Under Republic Act No. 9163 (NSTP Act of 2001), enrolled students are required to complete 54 to 90 training hours per semester across two consecutive semesters in their chosen component (CWTS, LTS, or ROTC).</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Code of Conduct:</strong> Students must abide by the rules and policies set by Cavite State University and the NSTP Office.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Component Continuity:</strong> Shifting between NSTP components across semesters is strictly prohibited under CHED regulations, except under formally approved medical or administrative petitions.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Code of Discipline:</strong> Students must adhere to the Cavite State University Student Handbook, respecting university property, community members, faculty, and training personnel.</span>
                   </li>
                 </ul>
               </div>
 
               {/* Privacy Policy Section */}
               <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200/80">
-                <h4 className="text-sm font-black text-emerald-950 mb-2.5 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-600" />
-                  Data Privacy Policy (RA 10173 Compliance)
+                <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-emerald-700" />
+                  2. Data Privacy Policy (Republic Act No. 10173 Compliance)
                 </h4>
                 <p className="text-gray-600 font-medium mb-3">
-                  In compliance with Republic Act No. 10173 (Data Privacy Act of 2012), Cavite State University Naic respects and protects your personal data privacy:
+                  In compliance with Republic Act No. 10173 (Data Privacy Act of 2012) and National Privacy Commission regulations, Cavite State University - Naic Campus is committed to safeguarding personal information:
                 </p>
-                <ul className="space-y-2 text-gray-600 font-medium">
+                <ul className="space-y-2.5 text-gray-600 font-medium">
                   <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Collection Purpose:</strong> Personal information and uploaded registration forms are strictly processed for NSTP course registration and CHED/DND compliance reporting.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Scope and Purpose of Collection:</strong> The portal collects personal data (complete name, student ID, birthdate, sex, blood type, contact numbers, address, 2x2 ID picture, and Certificate of Registration) strictly for NSTP course registration, grading evaluation, and national accreditation.</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Security Protection:</strong> Data is securely stored and accessed exclusively by authorized CvSU NSTP administrators and department heads.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Confidentiality and Security Controls:</strong> All records and digital documents are secured with encryption and access controls. Processing is restricted exclusively to authorized university administrators, NSTP coordinators, and department heads.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Authorized Government Reporting:</strong> Information is disclosed only to the Commission on Higher Education (CHED) or Department of National Defense / Armed Forces of the Philippines (DND/AFP) for issuance of National NSTP Serial Numbers.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Data Subject Rights:</strong> Enrolled students hold the right to be informed, access, and request correction of their personal data upon written request to the CvSU Naic NSTP Office.</span>
                   </li>
                 </ul>
               </div>
@@ -2107,10 +2127,6 @@ function Enrollment() {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md border border-emerald-100 overflow-hidden text-center p-6 sm:p-8 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-emerald-900 border border-amber-300 flex items-center justify-center mx-auto mb-4 shadow-inner">
-              <Award className="w-8 h-8 text-emerald-700" />
-            </div>
-
             <h3 className="text-lg sm:text-xl font-black text-emerald-950 mb-2">
               Confirm Selected NSTP Component
             </h3>

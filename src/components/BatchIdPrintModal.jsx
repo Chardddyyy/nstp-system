@@ -123,11 +123,13 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
         {/* Filter Toolbar */}
         <div className="p-2 sm:px-3.5 sm:py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-xs shrink-0">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1 min-w-0">
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-1 sm:gap-1.5 min-w-[140px] flex-1 max-w-xs">
+            <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[160px] sm:min-w-[200px] flex items-center gap-1.5">
               <div className="relative flex-1">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  id="batch-id-search-input"
+                  name="batchIdSearch"
                   value={searchInput}
                   onChange={(e) => {
                     setSearchInput(e.target.value);
@@ -155,6 +157,8 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
             </form>
 
             <select
+              id="batch-id-dept-filter"
+              name="batchIdDeptFilter"
               value={departmentFilter}
               onChange={(e) => {
                 setDepartmentFilter(e.target.value);
@@ -217,9 +221,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
                     }`}
                   >
                     <div className="w-full flex items-center justify-between pb-1 border-b border-slate-100">
-                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <label htmlFor={`batch-select-student-${st.id}`} className="flex items-center gap-1.5 cursor-pointer select-none">
                         <input
                           type="checkbox"
+                          id={`batch-select-student-${st.id}`}
+                          name={`batchSelectStudent_${st.id}`}
                           checked={isSelected}
                           onChange={() => toggleSelectOne(st.id)}
                           className="w-3.5 h-3.5 rounded text-emerald-700 focus:ring-emerald-500 cursor-pointer"

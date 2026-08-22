@@ -522,8 +522,10 @@ function Reports() {
               <span>reports</span>
 
               <div className="flex items-center gap-1.5 ml-2 sm:ml-4 pl-2 sm:pl-4 border-l border-gray-200">
-                <span className="text-gray-500 text-xs">Per page:</span>
+                <label htmlFor="reports-per-page" className="text-gray-500 text-xs">Per page:</label>
                 <select
+                  id="reports-per-page"
+                  name="reportsPerPage"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -623,9 +625,11 @@ function Reports() {
               <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Title *</label>
+                  <label htmlFor="create-report-title" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Report Title *</label>
                   <input
                     type="text"
+                    id="create-report-title"
+                    name="reportTitle"
                     value={createForm.title}
                     onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
@@ -633,10 +637,12 @@ function Reports() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                  <label htmlFor="create-report-description" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                     Description / Instructions <span className="text-gray-400 font-normal lowercase">(optional)</span>
                   </label>
                   <textarea
+                    id="create-report-description"
+                    name="reportDescription"
                     value={createForm.description}
                     onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none h-32 resize-none font-medium"
@@ -645,8 +651,10 @@ function Reports() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Assign To Department</label>
+                    <label htmlFor="create-report-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Assign To Department</label>
                     <select
+                      id="create-report-department"
+                      name="reportDepartment"
                       value={createForm.department}
                       onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })}
                       className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
@@ -658,9 +666,11 @@ function Reports() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Due Date</label>
+                    <label htmlFor="create-report-due-date" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Due Date</label>
                     <input
                       type="date"
+                      id="create-report-due-date"
+                      name="reportDueDate"
                       min={getTodayLocalStr()}
                       value={createForm.dueDate}
                       onChange={(e) => setCreateForm({ ...createForm, dueDate: e.target.value })}
@@ -674,6 +684,8 @@ function Reports() {
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Reference File (Optional)</label>
                   <input
                     type="file"
+                    id="create-report-file-input"
+                    name="reportFileInput"
                     ref={fileInputRef}
                     onChange={handleReferenceFileChange}
                     className="hidden"
@@ -741,8 +753,10 @@ function Reports() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Report Content</label>
+                  <label htmlFor="submit-report-content" className="block text-sm font-medium text-gray-700 mb-1">Report Content *</label>
                   <textarea
+                    id="submit-report-content"
+                    name="reportContent"
                     value={submitForm.content}
                     onChange={(e) => setSubmitForm({ ...submitForm, content: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-32 resize-none"
@@ -755,6 +769,8 @@ function Reports() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Attach File (Optional)</label>
                   <input
                     type="file"
+                    id="submit-report-file-input"
+                    name="reportSubmitFileInput"
                     ref={submitFileRef}
                     onChange={handleAttachmentChange}
                     className="hidden"
@@ -938,6 +954,8 @@ function Reports() {
                 <div className="flex space-x-2">
                   <input
                     type="text"
+                    id="report-comment-input"
+                    name="reportComment"
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Type your reply..."

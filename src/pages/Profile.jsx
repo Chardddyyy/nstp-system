@@ -554,6 +554,8 @@ function Profile() {
                 {/* Hidden file input */}
                 <input
                   type="file"
+                  id="profile-picture-input"
+                  name="profilePictureInput"
                   ref={fileInputRef}
                   onChange={handleProfilePictureChange}
                   accept="image/*"
@@ -788,6 +790,7 @@ function Profile() {
               <form onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }} className="space-y-4">
                 <input
                   type="text"
+                  id="change-pass-username"
                   name="username"
                   value={user?.email || ''}
                   autoComplete="username"
@@ -879,7 +882,7 @@ function Profile() {
               </div>
 
               <div className="space-y-3">
-                <input type="text" name="username" value={f.email || ''} autoComplete="username" className="hidden" readOnly />
+                <input type="text" id="add-instructor-username" name="username" value={f.email || ''} autoComplete="username" className="hidden" readOnly />
                 {/* Role */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Role <span className="text-red-500">*</span></label>
@@ -1016,7 +1019,7 @@ function Profile() {
 
             {/* Form Body */}
             <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto">
-              <input type="text" name="username" value={editInstructorForm.email || ''} autoComplete="username" className="hidden" readOnly />
+              <input type="text" id="edit-instructor-username" name="username" value={editInstructorForm.email || ''} autoComplete="username" className="hidden" readOnly />
               {/* Account Role */}
               <div>
                 <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Account Role</label>
@@ -1032,9 +1035,11 @@ function Profile() {
 
               {/* Full Name */}
               <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Full Name *</label>
+                <label htmlFor="edit-instructor-fullname" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Full Name *</label>
                 <input
                   type="text"
+                  id="edit-instructor-fullname"
+                  name="editInstructorFullName"
                   value={editInstructorForm.name}
                   onChange={e => setEditInstructorForm(prev => ({ ...prev, name: e.target.value.replace(/[0-9]/g, '') }))}
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
@@ -1044,9 +1049,11 @@ function Profile() {
 
               {/* Email Address */}
               <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
+                <label htmlFor="edit-instructor-email" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                 <input
                   type="email"
+                  id="edit-instructor-email"
+                  name="editInstructorEmail"
                   value={editInstructorForm.email}
                   onChange={e => setEditInstructorForm(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
@@ -1075,12 +1082,14 @@ function Profile() {
 
               {/* Change/Reset Password */}
               <div>
-                <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                <label htmlFor="edit-instructor-newpass" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                   Set New Password <span className="text-gray-400 font-normal lowercase">(leave blank to keep current)</span>
                 </label>
                 <div className="relative">
                   <input
                     type={showEditPassword ? 'text' : 'password'}
+                    id="edit-instructor-newpass"
+                    name="editInstructorNewPass"
                     value={editInstructorForm.newPassword}
                     onChange={e => setEditInstructorForm(prev => ({ ...prev, newPassword: e.target.value }))}
                     placeholder="Enter new password (min 6 chars)..."
@@ -1233,8 +1242,8 @@ function Profile() {
                         ))}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-xs">Size</span>
-                        <input type="range" min={2} max={20} value={brushSize} onChange={e => setBrushSize(+e.target.value)} className="flex-1 h-1 accent-blue-500" />
+                        <label htmlFor="profile-editor-brush-size" className="text-gray-400 text-xs">Size</label>
+                        <input type="range" id="profile-editor-brush-size" name="brushSize" min={2} max={20} value={brushSize} onChange={e => setBrushSize(+e.target.value)} className="flex-1 h-1 accent-blue-500" />
                         <span className="text-gray-300 text-xs w-4">{brushSize}</span>
                       </div>
                     </div>
@@ -1245,6 +1254,8 @@ function Profile() {
                     <div className="space-y-2">
                       <input
                         type="text"
+                        id="profile-editor-text-input"
+                        name="editorText"
                         value={editorText}
                         onChange={e => setEditorText(e.target.value)}
                         placeholder="Type text, then tap on photo"

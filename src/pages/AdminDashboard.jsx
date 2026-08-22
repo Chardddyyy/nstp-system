@@ -1249,6 +1249,8 @@ function AdminDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   <input
                     type="text"
+                    id="admin-enrollment-search"
+                    name="enrollmentSearch"
                     placeholder="Search by name, ID, email…"
                     value={enrollmentSearch}
                     onChange={(e) => setEnrollmentSearch(e.target.value)}
@@ -2352,11 +2354,13 @@ function AdminDashboard() {
                 {/* Academic Year & Semester */}
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                    <label htmlFor="schedule-academic-year" className="block text-[11px] font-bold text-gray-700 mb-1">
                       Academic Year
                     </label>
                     <input
                       type="text"
+                      id="schedule-academic-year"
+                      name="academicYear"
                       value={scheduleConfig.academicYear || ''}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
                       placeholder="e.g. 2026-2027"
@@ -2364,10 +2368,12 @@ function AdminDashboard() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                    <label htmlFor="schedule-semester" className="block text-[11px] font-bold text-gray-700 mb-1">
                       Semester
                     </label>
                     <select
+                      id="schedule-semester"
+                      name="semester"
                       value={scheduleConfig.semester || '1st Semester'}
                       onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
                       className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
@@ -2381,11 +2387,13 @@ function AdminDashboard() {
 
                 {/* Opening Date & Time */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  <label htmlFor="schedule-open-at" className="block text-[11px] font-bold text-gray-700 mb-1">
                     Opening Date &amp; Time
                   </label>
                   <input
                     type="datetime-local"
+                    id="schedule-open-at"
+                    name="openAt"
                     value={scheduleConfig.openAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
                     className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
@@ -2395,11 +2403,13 @@ function AdminDashboard() {
 
                 {/* Closing Date & Time */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  <label htmlFor="schedule-close-at" className="block text-[11px] font-bold text-gray-700 mb-1">
                     Closing Date &amp; Time (Deadline)
                   </label>
                   <input
                     type="datetime-local"
+                    id="schedule-close-at"
+                    name="closeAt"
                     value={scheduleConfig.closeAt || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
                     className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
@@ -2409,11 +2419,13 @@ function AdminDashboard() {
 
                 {/* Announcement Notice */}
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                  <label htmlFor="schedule-custom-notice" className="block text-[11px] font-bold text-gray-700 mb-1">
                     Public Notice to Applicants
                   </label>
                   <input
                     type="text"
+                    id="schedule-custom-notice"
+                    name="customNotice"
                     value={scheduleConfig.customNotice || ''}
                     onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
                     placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."

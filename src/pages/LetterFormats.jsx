@@ -207,6 +207,8 @@ export default function LetterFormats() {
             <Search className="w-4 h-4 text-emerald-700/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              id="letter-format-search"
+              name="letterSearch"
               placeholder={user?.role === 'instructor' && user?.department ? `Search ${user.department} & general letter formats...` : "Search letter formats by title or description..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -374,9 +376,11 @@ export default function LetterFormats() {
 
               <form onSubmit={handleSaveTemplate} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Letter Title *</label>
+                  <label htmlFor="letter-format-title" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Letter Title *</label>
                   <input
                     type="text"
+                    id="letter-format-title"
+                    name="letterTitle"
                     required
                     placeholder="e.g. ROTC Absence & Medical Clearance Form"
                     value={title}
@@ -388,8 +392,10 @@ export default function LetterFormats() {
                 {/* Only Admin sees the Category selector; for Instructors it's automatically their department */}
                 {user?.role === 'admin' && (
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
+                    <label htmlFor="letter-format-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
                     <select
+                      id="letter-format-department"
+                      name="letterDepartment"
                       value={department}
                       onChange={e => setDepartment(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600"
@@ -403,9 +409,11 @@ export default function LetterFormats() {
                 )}
 
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description &amp; Guidelines (Optional)</label>
+                  <label htmlFor="letter-format-description" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Description &amp; Guidelines (Optional)</label>
                   <textarea
                     rows={3}
+                    id="letter-format-description"
+                    name="letterDescription"
                     placeholder="Enter optional description, instructions, or template body guidelines..."
                     value={description}
                     onChange={e => setDescription(e.target.value)}
@@ -421,6 +429,8 @@ export default function LetterFormats() {
                   <input
                     ref={fileInputRef}
                     type="file"
+                    id="letter-format-file-input"
+                    name="letterFileInput"
                     onChange={handleFileChange}
                     accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt"
                     className="hidden"

@@ -381,6 +381,8 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                id="attendance-matrix-search"
+                name="matrixSearch"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search cadet..."
@@ -391,6 +393,8 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             {/* Department Filter (For Admin) */}
             {currentUser?.role === 'admin' && (
               <select
+                id="attendance-matrix-dept"
+                name="matrixDept"
                 value={selectedDept}
                 onChange={(e) => setSelectedDept(e.target.value)}
                 className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer"

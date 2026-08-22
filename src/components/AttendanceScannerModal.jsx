@@ -384,6 +384,8 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                 <span>Attendance Day</span>
               </label>
               <select
+                id="scanner-attendance-day"
+                name="attendanceDay"
                 value={selectedDay}
                 onChange={(e) => setSelectedDay(e.target.value)}
                 className="px-3 py-2 bg-white rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-xs focus:outline-none cursor-pointer shadow-xs"
@@ -396,9 +398,11 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
 
             {/* Activity Input */}
             <div className="flex-1 min-w-[180px]">
-              <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Session / Activity Name</label>
+              <label htmlFor="scanner-activity-name" className="block text-[10px] font-black uppercase text-slate-500 mb-1">Session / Activity Name</label>
               <input
                 type="text"
+                id="scanner-activity-name"
+                name="activityName"
                 value={activityName}
                 onChange={(e) => setActivityName(e.target.value)}
                 placeholder="e.g. Tree Planting, Drill, Lecture..."
@@ -459,6 +463,8 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
             <form onSubmit={handleManualSubmit} className="w-full max-w-[320px] flex gap-2">
               <input
                 type="text"
+                id="scanner-manual-input"
+                name="manualStudentId"
                 value={manualInput}
                 onChange={(e) => setManualInput(e.target.value)}
                 placeholder="Or type Student ID..."

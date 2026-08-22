@@ -3,7 +3,7 @@ import {
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
   Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, 
   CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, 
-  Search, Check, HeartHandshake, Menu, X, Layers, FileText
+  Search, Check, HeartHandshake, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats } from '../services/api';
@@ -129,6 +129,23 @@ function Landing() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
+  const [showAllFaqs, setShowAllFaqs] = useState(false);
+  
+  // Device Permissions Notice Banner (shown on first load / dismissal stored in localStorage)
+  const [showDeviceNotice, setShowDeviceNotice] = useState(() => {
+    try {
+      return !localStorage.getItem('nstp_device_notice_acknowledged');
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissDeviceNotice = () => {
+    try {
+      localStorage.setItem('nstp_device_notice_acknowledged', 'true');
+    } catch (_) {}
+    setShowDeviceNotice(false);
+  };
   
   // Navigation Dropdown & Mobile Menu State
   const [openDropdown, setOpenDropdown] = useState(null); // 'resources' | null
@@ -903,40 +920,51 @@ function Landing() {
         </div>
       </section>
 
-      {/* ── Searchable & Filterable FAQ Interactive Accordion ────────── */}
-      <section id="faq" className="py-12 sm:py-20 px-4 bg-slate-50 border-t border-slate-200/80">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-6 sm:mb-10">
+      {/* ── Searchable & Filterable FAQ Interactive Accordion (Compact 2-Column Design) ────────── */}
+      <section id="faq" className="py-10 sm:py-14 px-4 bg-slate-50 border-t border-slate-200/80">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-5 sm:mb-8">
             <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-              Knowledge Base & FAQ
+              Knowledge Base &amp; FAQ
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3">Frequently Asked Questions</h2>
-            <p className="text-slate-600 text-xs sm:text-base mt-1.5">Quick answers regarding enrollment, components, units, and campus policies</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2.5">Frequently Asked Questions</h2>
+            <p className="text-slate-600 text-xs sm:text-sm mt-1">Quick answers regarding enrollment, components, units, and campus policies</p>
           </div>
 
           {/* Interactive Search & Filter Box */}
-          <div className="mb-6 space-y-3">
+          <div className="mb-5 space-y-2.5 max-w-3xl mx-auto">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
+                id="faq-search-input"
+                name="faqSearch"
                 value={faqSearch}
                 onChange={(e) => setFaqSearch(e.target.value)}
-                placeholder="Search questions (e.g. graduation, CWTS, documents)..."
-                className="w-full pl-11 pr-4 py-3 bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+                placeholder="Search questions (e.g. graduation, CWTS, documents, units)..."
+                className="w-full pl-11 pr-4 py-2.5 bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
               />
+              {faqSearch && (
+                <button
+                  type="button"
+                  onClick={() => setFaqSearch('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {['All', 'ROTC', 'CWTS', 'LTS', 'Enrollment', 'Academics', 'Requirements', 'Policies'].map((cat) => (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 justify-start sm:justify-center">
+              {['All', 'ROTC', 'CWTS', 'LTS', 'Enrollment', 'Academics', 'Policies'].map((cat) => (
                 <button
                   key={cat}
                   type="button"
-                  onClick={() => setFaqCategory(cat)}
+                  onClick={() => { setFaqCategory(cat); setOpenFaqIndex(null); }}
                   className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                     faqCategory === cat 
-                      ? 'bg-emerald-800 text-white shadow-2xs' 
+                      ? 'bg-emerald-800 text-white shadow-2xs scale-102' 
                       : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -946,32 +974,41 @@ function Landing() {
             </div>
           </div>
 
-          {/* Interactive Accordion List */}
-          <div className="space-y-3">
+          {/* Compact 2-Column Responsive Accordion Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5 items-start">
             {filteredFaqs.length > 0 ? (
-              filteredFaqs.map((item, idx) => {
+              (showAllFaqs || faqSearch || faqCategory !== 'All' 
+                ? filteredFaqs 
+                : filteredFaqs.slice(0, 6)
+              ).map((item, idx) => {
                 const isOpen = openFaqIndex === idx;
                 return (
                   <div 
                     key={idx} 
-                    className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs overflow-hidden transition-all duration-200"
+                    className={`bg-white rounded-2xl border transition-all duration-200 shadow-2xs overflow-hidden ${
+                      isOpen ? 'border-emerald-400/80 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-slate-300'
+                    }`}
                   >
                     <button
                       type="button"
                       onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left gap-3.5 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                      className="w-full p-3.5 sm:p-4 flex items-start justify-between text-left gap-3 hover:bg-slate-50/70 transition-colors cursor-pointer"
                     >
-                      <span className="text-xs sm:text-sm md:text-base font-black text-slate-900 flex items-center gap-2.5">
-                        <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                        {item.q}
-                      </span>
-                      <div className={`w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 bg-emerald-600 text-white' : ''}`}>
-                        <ChevronDown className="w-4 h-4" />
+                      <div className="min-w-0 flex-1">
+                        <span className="inline-block text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md mb-1.5">
+                          {item.category}
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                          {item.q}
+                        </h4>
+                      </div>
+                      <div className={`w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0 transition-transform duration-200 mt-0.5 ${isOpen ? 'rotate-180 bg-emerald-600 text-white' : ''}`}>
+                        <ChevronDown className="w-3.5 h-3.5" />
                       </div>
                     </button>
 
                     {isOpen && (
-                      <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 whitespace-pre-line animate-fade-in">
+                      <div className="px-3.5 sm:px-4 pb-3.5 sm:pb-4 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100 whitespace-pre-line bg-slate-50/50 animate-fade-in">
                         {item.a}
                       </div>
                     )}
@@ -979,11 +1016,25 @@ function Landing() {
                 );
               })
             ) : (
-              <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 text-slate-500 text-xs">
+              <div className="col-span-full p-8 text-center bg-white rounded-3xl border border-slate-200 text-slate-500 text-xs">
                 No matching questions found for "{faqSearch}". Try another keyword or browse all topics.
               </div>
             )}
           </div>
+
+          {/* Toggle to Show More/Fewer Questions when browsing All */}
+          {!faqSearch && faqCategory === 'All' && filteredFaqs.length > 6 && (
+            <div className="text-center mt-5">
+              <button
+                type="button"
+                onClick={() => setShowAllFaqs(!showAllFaqs)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 text-xs font-bold shadow-2xs hover:bg-emerald-50 transition-all cursor-pointer"
+              >
+                <span>{showAllFaqs ? 'Show Fewer Questions' : `View All ${filteredFaqs.length} Questions`}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllFaqs ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1015,13 +1066,13 @@ function Landing() {
               <ul className="space-y-1.5 sm:space-y-2 text-emerald-200 text-[10px] sm:text-xs md:text-sm font-medium w-full flex flex-col items-end">
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
-                    href="https://cvsu.edu.ph/"
+                    href="https://cvsu-naic.edu.ph/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
-                    title="Cavite State University Official Portal"
+                    title="Cavite State University Naic Campus Official Website"
                   >
-                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Cavite State University</span>
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">cvsu-naic.edu.ph</span>
                     <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
@@ -1031,8 +1082,9 @@ function Landing() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
+                    title="Cavite State University - Naic Official Facebook Page"
                   >
-                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">CvSU - Naic FB</span>
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">Cavite State University - Naic</span>
                     <Facebook className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
@@ -1137,6 +1189,88 @@ function Landing() {
           <ChevronDown className="w-5 h-5 stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
         )}
       </button>
+
+      {/* Device & Privacy Permissions Notice Modal / Floating Banner */}
+      {showDeviceNotice && (
+        <div className="fixed inset-x-3 bottom-3 sm:bottom-6 sm:right-6 sm:left-auto sm:max-w-md z-50 animate-slide-up">
+          <div className="bg-emerald-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-3xl p-4 sm:p-5 shadow-2xl text-white">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-white leading-tight">Device Capabilities &amp; Privacy Notice</h4>
+                  <p className="text-[10px] text-emerald-300 font-medium">CvSU Naic NSTP Portal Guidelines</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissDeviceNotice}
+                className="w-6 h-6 rounded-full bg-emerald-900 hover:bg-emerald-800 flex items-center justify-center text-emerald-300 hover:text-white transition-colors cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <p className="text-[11px] sm:text-xs text-emerald-100/90 leading-relaxed mb-3">
+              This portal utilizes the following device capabilities exclusively for official student registration and communication:
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mb-3.5 text-[10px] sm:text-[11px]">
+              <div className="bg-emerald-900/60 border border-emerald-800/80 rounded-xl p-2 flex items-start gap-2">
+                <Camera className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-bold">Camera</strong>
+                  <span className="text-emerald-300/90 text-[9.5px]">2x2 ID &amp; COR scan</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-900/60 border border-emerald-800/80 rounded-xl p-2 flex items-start gap-2">
+                <Mic className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-bold">Microphone</strong>
+                  <span className="text-emerald-300/90 text-[9.5px]">Voice notes &amp; calls</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-900/60 border border-emerald-800/80 rounded-xl p-2 flex items-start gap-2">
+                <HardDrive className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-bold">Storage / Files</strong>
+                  <span className="text-emerald-300/90 text-[9.5px]">PDF/JPG upload &amp; save</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-900/60 border border-emerald-800/80 rounded-xl p-2 flex items-start gap-2">
+                <BellRing className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block text-white font-bold">System Alerts</strong>
+                  <span className="text-emerald-300/90 text-[9.5px]">Enrollment &amp; updates</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-900/80">
+              <Link
+                to="/enrollment"
+                onClick={handleDismissDeviceNotice}
+                className="text-[10px] sm:text-xs text-amber-300 hover:text-amber-200 font-bold underline"
+              >
+                Go to Enrollment &rarr;
+              </Link>
+              <button
+                type="button"
+                onClick={handleDismissDeviceNotice}
+                className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
+              >
+                I Understand &amp; Allow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
