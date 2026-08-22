@@ -36,6 +36,22 @@ function Login() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // 1-Click Auto-Fill from Email Link
+  useEffect(() => {
+    try {
+      const search = window.location.search || window.location.hash.split('?')[1] || '';
+      const params = new URLSearchParams(search);
+      const urlOtp = params.get('otp') || params.get('code');
+      const urlEmail = params.get('email');
+      if (urlOtp && urlEmail) {
+        setForgotEmail(urlEmail.trim().toLowerCase());
+        setForgotOtp(urlOtp.trim());
+        setShowForgotPassword(true);
+        setForgotStep(2);
+      }
+    } catch (_) {}
+  }, []);
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
