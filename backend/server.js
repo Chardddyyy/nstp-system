@@ -1493,12 +1493,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email directly
-    try {
-      await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
-    } catch (mailErr) {
-      console.warn('[AUTH] Mail dispatch notice:', mailErr.message);
-    }
+    // Dispatch email in background (non-blocking for sub-second instant response)
+    sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).catch(function(mailErr) {
+      console.warn('[AUTH] Background mail dispatch notice:', mailErr.message);
+    });
 
     res.json({
       success: true,
