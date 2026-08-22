@@ -1253,11 +1253,15 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
   var deliveryEmail = targetEmail;
   var formattedOtp = otpCode.split('').join(' ');
+  var timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   var mailOptions = {
     from: `"NSTP System Administrator" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `NSTP System - Password Reset OTP`,
+    subject: `NSTP System - Password Reset OTP: ${otpCode} (${timeStr})`,
+    headers: {
+      'X-Entity-Ref-ID': `${Date.now()}-${otpCode}`
+    },
     text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n[ ${formattedOtp} ]\n\nImportant Reminders:\n\nThis OTP is only valid for 10 minutes.\n\nFor your security, please do not share this code with anyone.\n\nIf you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
     html: `
       <!DOCTYPE html>
