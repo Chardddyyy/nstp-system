@@ -8,17 +8,87 @@ var pool = require('./config/database');
 var { getDbConfig } = require('./config/dbEnv');
 var { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
 
+var http = require('http');
+var { Server: SocketIOServer } = require('socket.io');
+var { initCronScheduler, recordBackupTimestamp } = require('./utils/cronScheduler');
+var { uploadMedia, isConfigured: isCloudinaryConfigured } = require('./config/cloudinary');
+
 var bcrypt = require('bcryptjs');
 var ExcelJS = require('exceljs');
 var nodemailer = require('nodemailer');
 var path = require('path');
 var fs = require('fs');
 var app = express();
+var httpServer = http.createServer(app);
 var PORT = process.env.PORT || 3001;
+
+// ── Socket.io Setup with Auto-Reconnect & Handshake Auth ──────────────────────
+var io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
+  },
+  maxHttpBufferSize: 5e7 // 50MB buffer
+});
+
+// Attach io to every express request
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // ── Security: JWT Secret configuration ──────────────────────────────────────
 var JWT_SECRET = process.env.JWT_SECRET || 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
 var JWT_EXPIRY = '30d';
+
+// Socket.io JWT Auth Middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) return next();
+  try {
+    const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+    const decoded = jwt.verify(cleanToken, JWT_SECRET);
+    socket.user = decoded;
+  } catch (_) {}
+  next();
+});
+
+// Socket.io Connection & Room Manager
+io.on('connection', (socket) => {
+  const user = socket.user;
+  if (user && user.id) {
+    socket.join(`user_${user.id}`);
+    if (user.department) socket.join(`dept_${user.department}`);
+    if (user.role === 'admin') socket.join('role_admin');
+  }
+
+  socket.on('join_conversation', (convId) => {
+    if (convId) socket.join(`conv_${convId}`);
+  });
+
+  socket.on('leave_conversation', (convId) => {
+    if (convId) socket.leave(`conv_${convId}`);
+  });
+
+  socket.on('typing', ({ convId, userName }) => {
+    if (convId) socket.to(`conv_${convId}`).emit('user_typing', { convId, userName });
+  });
+
+  socket.on('stop_typing', ({ convId, userName }) => {
+    if (convId) socket.to(`conv_${convId}`).emit('user_stop_typing', { convId, userName });
+  });
+
+  socket.on('call_signal', (data) => {
+    if (data && data.targetUserId) {
+      io.to(`user_${data.targetUserId}`).emit('call_signal', {
+        fromUserId: user?.id,
+        signal: data.signal,
+        callId: data.callId
+      });
+    }
+  });
+});
 
 // ── Helmet: sets 15+ security headers ────────────────────────────────────────
 app.use(helmet({
@@ -5062,6 +5132,36 @@ app.get('/api/system/health', authenticateToken, async (req, res) => {
   }
 });
 
+// ── Cloud Media Upload Endpoint (Cloudinary with Local Fallback) ─────────────
+app.post('/api/upload/media', authenticateToken, async (req, res) => {
+  try {
+    const { file, folder } = req.body || {};
+    if (!file) return res.status(400).json({ message: 'File payload is required' });
+    const result = await uploadMedia(file, folder || 'nstp/uploads');
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('Media upload error:', err);
+    res.status(500).json({ message: 'Failed to process media upload: ' + err.message });
+  }
+});
+
+// ── Manual Instant Database Backup Endpoint (Admin Only) ──────────────────────
+app.post('/api/backup/now', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const activityName = (req.body && req.body.activity) || `Manual Backup by ${req.user.name || 'Admin'}`;
+    await autoSaveToGDrive(activityName);
+    await recordBackupTimestamp('manual');
+    res.json({
+      success: true,
+      message: 'Complete database snapshot successfully uploaded to Google Drive!',
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Manual backup error:', err);
+    res.status(500).json({ message: 'Backup execution failed: ' + err.message });
+  }
+});
+
 // Global error handling middleware
 app.use(function(err, req, res, next) {
   console.error('Unhandled server error:', err);
@@ -5084,10 +5184,15 @@ app.get('/api/ping', function(req, res) {
 async function startServer() {
   var db = getDbConfig();
 
-  // Start listening immediately so Render health checks pass on boot
-  app.listen(PORT, '0.0.0.0', function() {
-    console.log('Server running on port ' + PORT);
+  // Start listening on HTTP + WebSocket Server immediately
+  httpServer.listen(PORT, '0.0.0.0', function() {
+    console.log('Server + Socket.io running on port ' + PORT);
     console.log('API available at http://localhost:' + PORT + '/api and http://127.0.0.1:' + PORT + '/api');
+    try {
+      initCronScheduler();
+    } catch (cronErr) {
+      console.warn('Cron scheduler initialization warning:', cronErr.message);
+    }
   });
 
   let dbConnected = false;

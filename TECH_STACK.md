@@ -17,6 +17,7 @@ Ang sumusunod ay ang kumpletong listahan ng lahat ng teknolohiya, frameworks, li
 | **heic2any** (`heic2any`) | Image Processing | Awtomatikong nagko-convert ng mga `.HEIC` at `.HEIF` photos mula sa iPhone/iPad papuntang standard `.JPEG` bago i-upload. |
 | **HTML5 Canvas / WebRTC API** | Camera Engine | Built-in browser camera capture na may unmirrored (normal) viewfinder para sa malinaw na pagkuha ng COR at 2x2 ID photo. |
 | **qrcode & html5-qrcode** | QR Code Engine | Para sa pag-generate ng digital student ID QR codes at pag-scan ng attendance gamit ang mobile o laptop camera. |
+| **socket.io-client** (`socket.io-client`) | Real-time Engine | Zero-latency WebSocket client para sa instant real-time chat, video/voice calls, live attendance matrix, at instant enrollment notifications. |
 | **xlsx (SheetJS)** (`xlsx`) | Excel Processing | Ginagamit sa pag-export at pag-download ng student masterlists at attendance papuntang `.xlsx` Excel spreadsheets. |
 | **xss** (`xss`) | Frontend Security | Sanitization library upang linisin ang mga user input at maiwasan ang Cross-Site Scripting (XSS) attacks. |
 
@@ -28,6 +29,9 @@ Ang sumusunod ay ang kumpletong listahan ng lahat ng teknolohiya, frameworks, li
 | :--- | :--- | :--- |
 | **Node.js** | Runtime Environment | Asynchronous, event-driven JavaScript runtime na nagpapatakbo sa backend server. |
 | **Express.js** (`express`) | Web Framework | Minimalist at mabilis na backend REST API framework para sa routing, middleware handling, at API endpoints. |
+| **Socket.io** (`socket.io`) | WebSocket Engine | Full-duplex bidirectional event server para sa instant chat messaging, WebRTC signaling, at real-time telemetry/attendance broadcasts. |
+| **node-cron** (`node-cron`) | Task Scheduler | Automated cron scheduler para sa automated midnight database dump sa Google Drive at maintenance tasks. |
+| **Cloudinary** (`cloudinary`) | Cloud Media Storage | Intelligent media storage pipeline na may auto-compression at CDN delivery para sa student photos, CORs, at attachments. |
 | **mysql2 / mysql2/promise** | Database Driver | High-performance MySQL client na sumusuporta sa Connection Pooling, SSL connections, at prepared statements para labanan ang SQL Injection. |
 | **jsonwebtoken (JWT)** (`jsonwebtoken`) | Authentication | Stateless session authentication para sa secure login ng Admins at Instructors gamit ang Bearer Tokens. |
 | **bcryptjs** (`bcryptjs`) | Password Security | Secure cryptographic password hashing (12 salt rounds) upang hindi mabasa ang passwords kahit sa database. |

@@ -864,6 +864,24 @@ export const settingsAPI = {
   }
 };
 
+export const backupAPI = {
+  triggerBackupNow: async (activity = 'Manual Admin Backup') => {
+    return await apiCall('/backup/now', {
+      method: 'POST',
+      body: JSON.stringify({ activity })
+    });
+  }
+};
+
+export const mediaAPI = {
+  uploadMedia: async (file, folder = 'nstp/uploads') => {
+    return await apiCall('/upload/media', {
+      method: 'POST',
+      body: JSON.stringify({ file, folder })
+    });
+  }
+};
+
 
 
 

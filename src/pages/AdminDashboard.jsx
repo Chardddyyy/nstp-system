@@ -1,12 +1,12 @@
 import { useAuth } from '../context/AuthContext';
-import { archivesAPI } from '../services/api';
+import { archivesAPI, backupAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck, Cloud
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -244,6 +244,26 @@ function AdminDashboard() {
     setScheduleConfig(next);
     const updatedStatus = await saveEnrollmentSchedule(next);
     setScheduleStatus(updatedStatus);
+  };
+
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupSuccessMsg, setBackupSuccessMsg] = useState('');
+
+  const handleManualBackup = async () => {
+    try {
+      setIsBackingUp(true);
+      setBackupSuccessMsg('');
+      const res = await backupAPI.triggerBackupNow(`Manual Backup by ${user?.name || 'Admin'}`);
+      if (res && res.success) {
+        setBackupSuccessMsg('✅ 100% Complete Snapshot uploaded to Google Drive!');
+        showNotif('success', 'Full database snapshot saved directly to Google Drive!');
+        setTimeout(() => setBackupSuccessMsg(''), 6000);
+      }
+    } catch (err) {
+      showNotif('error', 'Backup failed: ' + (err.message || 'Error'));
+    } finally {
+      setIsBackingUp(false);
+    }
   };
   
   // Close notification panel when clicking outside
@@ -896,6 +916,17 @@ function AdminDashboard() {
               <div className="flex items-center gap-2 flex-wrap shrink-0">
                 <button
                   type="button"
+                  onClick={handleManualBackup}
+                  disabled={isBackingUp}
+                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  title="Upload 100% complete MySQL snapshot to Google Drive"
+                >
+                  <Cloud className={`w-4 h-4 text-blue-200 ${isBackingUp ? 'animate-bounce' : ''}`} />
+                  <span>{isBackingUp ? 'Backing Up to GDrive...' : 'Backup to GDrive'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setScheduleModalOpen(true)}
                   className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                 >
@@ -922,6 +953,12 @@ function AdminDashboard() {
                 )}
               </div>
             </div>
+            {backupSuccessMsg && (
+              <div className="mt-3 p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-between animate-fade-in">
+                <span>{backupSuccessMsg}</span>
+                <span className="text-[10px] text-emerald-600 font-mono">Google Drive Webhook Active</span>
+              </div>
+            )}
           </div>
         )}
 

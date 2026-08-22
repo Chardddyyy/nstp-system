@@ -3,6 +3,7 @@ import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense
 import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
+import { initSocket, disconnectSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
 import Landing from './pages/Landing';
@@ -207,6 +208,86 @@ function App() {
   const dismissToast = useCallback((toastId) => {
     setToasts(prev => prev.filter(t => t.id !== toastId));
   }, []);
+
+  // ── Real-Time WebSockets (Socket.io) Instant Dispatcher ────────────────────
+  useEffect(() => {
+    if (!user) {
+      disconnectSocket();
+      return;
+    }
+
+    const socket = initSocket();
+    if (!socket) return;
+
+    // 1. Instant Real-time Chat Messages (0ms latency without waiting for 8s polling)
+    const handleChatMessage = (payload) => {
+      if (!payload || !payload.conversationId || !payload.message) return;
+      const { conversationId, message } = payload;
+      setMessages(prev => {
+        const existing = prev[conversationId] || [];
+        if (existing.some(m => m.id === message.id)) return prev;
+        return {
+          ...prev,
+          [conversationId]: [...existing, message]
+        };
+      });
+      window.dispatchEvent(new CustomEvent('nstp_socket_chat_message', { detail: payload }));
+    };
+
+    // 2. Instant Attendance Scanned Sync
+    const handleAttendanceScanned = (payload) => {
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated', { detail: payload }));
+      if (user.role === 'admin' || (payload.student && payload.student.department === user.department)) {
+        pushNotification({
+          title: 'Live Attendance Logged',
+          message: `${payload.student?.name || payload.studentId || 'A student'} logged attendance (${payload.record?.activity_name || 'NSTP Session'})`,
+          type: 'attendance',
+          link: '/students'
+        });
+      }
+    };
+
+    // 3. Instant New Enrollment Notification (Admin)
+    const handleNewEnrollment = (payload) => {
+      if (user.role === 'admin' && payload?.enrollment) {
+        setPendingEnrollments(prev => [payload.enrollment, ...prev]);
+        pushNotification({
+          title: 'New Online Enrollment',
+          message: `${payload.enrollment.name || payload.enrollment.studentId || 'A student'} submitted an enrollment application`,
+          type: 'enrollment',
+          link: '/admin/dashboard'
+        });
+      }
+    };
+
+    // 4. Instant Incoming Call Alert
+    const handleIncomingCall = (payload) => {
+      if (payload?.call) {
+        setIncomingCall(payload.call);
+      }
+    };
+
+    const handleCallEnded = (payload) => {
+      if (payload?.callId) {
+        setIncomingCall(null);
+        setOutgoingCallStatus(null);
+      }
+    };
+
+    socket.on('chat:message', handleChatMessage);
+    socket.on('attendance:scanned', handleAttendanceScanned);
+    socket.on('enrollment:new', handleNewEnrollment);
+    socket.on('call:incoming', handleIncomingCall);
+    socket.on('call:ended', handleCallEnded);
+
+    return () => {
+      socket.off('chat:message', handleChatMessage);
+      socket.off('attendance:scanned', handleAttendanceScanned);
+      socket.off('enrollment:new', handleNewEnrollment);
+      socket.off('call:incoming', handleIncomingCall);
+      socket.off('call:ended', handleCallEnded);
+    };
+  }, [user, pushNotification]);
 
   function resetRealtimeBaseline() {
     baselineReady.current = false;
