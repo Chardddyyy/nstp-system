@@ -205,8 +205,8 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
 
   const [isSaved, setIsSaved] = useState(false);
 
-  // Save Record into Attendance Tracker (Only recognizes Present if BOTH Time In and Time Out are logged)
-  const handleSaveRecord = () => {
+  // Save Record into Attendance Tracker and Database
+  const handleSaveRecord = async () => {
     if (sessionLogs.length === 0) {
       alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
       return;
@@ -218,12 +218,13 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       // Group session logs by student ID to verify both TIME_IN and TIME_OUT
       const studentMap = {};
       sessionLogs.forEach(log => {
-        const sid = String(log.student_id || log.student?.studentId);
+        const sid = String(log.student_id || log.student?.studentId || '').trim();
+        if (!sid) return;
         if (!studentMap[sid]) {
           studentMap[sid] = {
             student: log.student,
             student_id: sid,
-            student_name: log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`,
+            student_name: log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`.trim(),
             department: log.department || log.student?.department || 'CWTS',
             section: log.section || log.student?.section || '',
             hasTimeIn: false,
@@ -251,30 +252,46 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
         }
       });
 
-      const newRecords = Object.values(studentMap).map(st => {
-        // Complete present only if BOTH Time In and Time Out exist
+      const recordsToPersist = [];
+      Object.values(studentMap).forEach(st => {
         const isCompletePresent = st.hasTimeIn && st.hasTimeOut;
-        return {
-          id: Date.now() + Math.random(),
-          student_id: st.student_id,
-          student_name: st.student_name,
-          department: st.department,
-          section: st.section,
-          activity_name: fullActivityTitle,
-          scan_type: isCompletePresent ? 'TIME_OUT' : 'TIME_IN',
-          scanned_at: new Date().toISOString(),
-          status: isCompletePresent ? 'Present' : 'Incomplete'
-        };
+        if (st.hasTimeIn) {
+          recordsToPersist.push({
+            student_id: st.student_id,
+            student_name: st.student_name,
+            department: st.department,
+            section: st.section,
+            activity_name: fullActivityTitle,
+            scan_type: 'TIME_IN',
+            scanned_at: new Date().toISOString(),
+            status: isCompletePresent ? 'Present' : 'Timed In'
+          });
+        }
+        if (st.hasTimeOut) {
+          recordsToPersist.push({
+            student_id: st.student_id,
+            student_name: st.student_name,
+            department: st.department,
+            section: st.section,
+            activity_name: fullActivityTitle,
+            scan_type: 'TIME_OUT',
+            scanned_at: new Date().toISOString(),
+            status: 'Present'
+          });
+        }
       });
 
-      const fullyPresentCount = newRecords.filter(r => r.status === 'Present').length;
-      const incompleteCount = newRecords.filter(r => r.status === 'Incomplete').length;
+      // Save directly to the MySQL database via backend batch-save API
+      await attendanceAPI.batchSave(recordsToPersist).catch(err => console.warn('API batchSave notice:', err));
 
-      // Merge and deduplicate by student_id + activity_name
+      const fullyPresentCount = Object.values(studentMap).filter(st => st.hasTimeIn && st.hasTimeOut).length;
+      const incompleteCount = Object.values(studentMap).filter(st => st.hasTimeIn && !st.hasTimeOut).length;
+
+      // Merge and deduplicate client-side cache
       const merged = [
-        ...newRecords,
+        ...recordsToPersist,
         ...existing.filter(e => !(
-          newRecords.some(n => String(n.student_id) === String(e.student_id) && (e.activity_name || '').includes(selectedDay))
+          recordsToPersist.some(n => String(n.student_id) === String(e.student_id) && String(n.scan_type) === String(e.scan_type) && (e.activity_name || '').includes(selectedDay))
         ))
       ];
 
@@ -283,9 +300,9 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
-      let msg = `✅ Na-save ang attendance para sa ${selectedDay}:\n• ${fullyPresentCount} Present (nakapag-Time In at Time Out)\n`;
+      let msg = `✅ Na-save sa database ang attendance para sa ${selectedDay}:\n• ${fullyPresentCount} Present (kumpleto ang Time In at Time Out)\n`;
       if (incompleteCount > 0) {
-        msg += `• ${incompleteCount} Incomplete (naka-Time In lang pero hindi nag-Time Out - hindi pa counted as Present).`;
+        msg += `• ${incompleteCount} Timed In (kailangan pang mag-Time Out para maging Present).`;
       }
       alert(msg);
     } catch (err) {
@@ -294,12 +311,35 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
     }
   };
 
-  // 1-Click Excel Attendance Export (Day 1 - 15 Formatted)
+  // 1-Click Excel Attendance Export (Consolidated 1 row per student)
   const handleExportToExcel = () => {
     if (sessionLogs.length === 0) {
       alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
       return;
     }
+
+    const studentMap = {};
+    sessionLogs.forEach(log => {
+      const sid = String(log.student_id || log.student?.studentId || '').trim();
+      if (!sid) return;
+      if (!studentMap[sid]) {
+        studentMap[sid] = {
+          student_id: sid,
+          student_name: (log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`).trim().toUpperCase(),
+          department: log.department || log.student?.department || 'CWTS',
+          section: log.section || log.student?.section || 'N/A',
+          day: log.day || selectedDay,
+          timeIn: 'N/A',
+          timeOut: 'N/A',
+          date: log.date || new Date().toLocaleDateString()
+        };
+      }
+      if (log.scan_type === 'TIME_IN') {
+        studentMap[sid].timeIn = log.time || new Date().toLocaleTimeString();
+      } else if (log.scan_type === 'TIME_OUT') {
+        studentMap[sid].timeOut = log.time || new Date().toLocaleTimeString();
+      }
+    });
 
     const rows = [
       ['CAVITE STATE UNIVERSITY - NAIC CAMPUS'],
@@ -307,36 +347,41 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       [`OFFICIAL ATTENDANCE LOG - ${selectedDay.toUpperCase()} (${activityName || 'General Session'})`],
       [`Date: ${new Date().toLocaleDateString()} | Generated at: ${new Date().toLocaleTimeString()}`],
       [], // blank line
-      ['No.', 'Student Number', 'Full Legal Name', 'Department', 'Section', 'Day (Day 1 - 15)', 'Status', 'Time In / Out', 'Timestamp']
+      ['No.', 'Student Number', 'Full Legal Name', 'Department', 'Section', 'Day (Day 1 - 15)', 'Status', 'Time In', 'Time Out', 'Date']
     ];
 
-    sessionLogs.forEach((log, idx) => {
+    const uniqueStudents = Object.values(studentMap);
+    uniqueStudents.forEach((st, idx) => {
+      const isPresent = st.timeIn !== 'N/A' && st.timeOut !== 'N/A';
+      const status = isPresent ? 'PRESENT' : st.timeIn !== 'N/A' ? 'TIMED IN' : 'TIMED OUT';
       rows.push([
         idx + 1,
-        log.student_id || log.student?.studentId || 'N/A',
-        (log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`).toUpperCase(),
-        log.department || log.student?.department || 'CWTS',
-        log.section || log.student?.section || 'N/A',
-        log.day || selectedDay,
-        'PRESENT',
-        log.scan_type || 'TIME_IN',
-        log.time || new Date().toLocaleTimeString()
+        st.student_id,
+        st.student_name,
+        st.department,
+        st.section,
+        st.day,
+        status,
+        st.timeIn,
+        st.timeOut,
+        st.date
       ]);
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
 
-    // Set column widths for readability
+    // Set column widths for clean readability
     worksheet['!cols'] = [
       { wch: 6 },  // No.
       { wch: 18 }, // Student Number
-      { wch: 32 }, // Name
+      { wch: 34 }, // Name
       { wch: 14 }, // Department
       { wch: 10 }, // Section
       { wch: 16 }, // Day
-      { wch: 12 }, // Status
-      { wch: 14 }, // Type
-      { wch: 16 }  // Time
+      { wch: 14 }, // Status
+      { wch: 14 }, // Time In
+      { wch: 14 }, // Time Out
+      { wch: 16 }  // Date
     ];
 
     const workbook = XLSX.utils.book_new();

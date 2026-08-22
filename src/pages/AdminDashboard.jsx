@@ -644,9 +644,6 @@ function AdminDashboard() {
                   <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight">
                     {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                   </h1>
-                  <span className="bg-amber-400/20 text-amber-300 text-[8.5px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
-                    {user?.department ? `${user.department} Admin` : 'Admin'}
-                  </span>
                 </div>
                 <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Administrator'}`}
@@ -1206,32 +1203,6 @@ function AdminDashboard() {
                       : pendingEnrollments.length}
                   </span>
                 </h3>
-
-                {/* Admin Timed Enrollment Schedule & Switch Button */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setScheduleModalOpen(true)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer border shrink-0 ${
-                      scheduleStatus.isOpen
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 active:scale-95'
-                        : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-500 active:scale-95'
-                    }`}
-                    title="Configure automatic date/time opening and closing schedule for enrollment"
-                  >
-                    <span className={`w-2 h-2 rounded-full ${scheduleStatus.isOpen ? 'bg-amber-300 animate-ping' : 'bg-white'}`}></span>
-                    <span>{scheduleStatus.isOpen ? 'Portal OPEN' : 'Portal CLOSED'}</span>
-                    <Clock className="w-3.5 h-3.5 ml-1" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setScheduleModalOpen(true)}
-                    className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <Calendar className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Set Date &amp; Time Schedule</span>
-                  </button>
-                </div>
               </div>
               {pendingEnrollments.length > 0 && (
                 <div className="relative w-full sm:w-64">

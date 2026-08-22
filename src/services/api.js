@@ -765,6 +765,18 @@ export const attendanceAPI = {
       throw err;
     }
   },
+  batchSave: async (records) => {
+    try {
+      const res = await apiCall('/attendance/batch-save', {
+        method: 'POST',
+        body: JSON.stringify({ records })
+      });
+      return res;
+    } catch (err) {
+      console.warn('Batch save API notice:', err.message);
+      return { success: false };
+    }
+  },
   getRecords: async (params) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     try {

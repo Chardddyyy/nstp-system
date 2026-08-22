@@ -4478,6 +4478,59 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
   }
 });
 
+// POST batch save attendance records from session
+app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
+  try {
+    const { records } = req.body || {};
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ message: 'No attendance records provided' });
+    }
+
+    let savedCount = 0;
+    for (const r of records) {
+      const sid = r.student_id || r.studentId;
+      if (!sid) continue;
+      const sName = r.student_name || r.name || '';
+      const dept = r.department || (req.user.role === 'instructor' ? req.user.department : 'CWTS');
+      const sec = r.section || '';
+      const act = r.activity_name || 'NSTP Session';
+      const sType = r.scan_type || 'TIME_IN';
+      const statusVal = r.status || (sType === 'TIME_OUT' ? 'Present' : 'Timed In');
+      const scanDate = r.scanned_at ? new Date(r.scanned_at) : new Date();
+
+      const [existing] = await pool.execute(
+        `SELECT id FROM attendance_records 
+         WHERE student_id = ? 
+           AND activity_name = ? 
+           AND scan_type = ? 
+           AND DATE(scanned_at) = DATE(?) LIMIT 1`,
+        [sid, act, sType, scanDate]
+      );
+
+      if (existing.length === 0) {
+        await pool.execute(
+          `INSERT INTO attendance_records (
+            student_id, student_name, department, section,
+            activity_name, scan_type, scanned_by, scanned_at, status, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [sid, sName, dept, sec, act, sType, req.user.id, scanDate, statusVal, r.notes || null]
+        );
+        savedCount++;
+      } else {
+        await pool.execute(
+          `UPDATE attendance_records SET status = ?, student_name = ?, department = ?, section = ? WHERE id = ?`,
+          [statusVal, sName, dept, sec, existing[0].id]
+        );
+      }
+    }
+
+    res.json({ success: true, message: `Successfully saved ${savedCount} attendance records`, count: savedCount });
+  } catch (err) {
+    console.error('Batch save attendance error:', err);
+    res.status(500).json({ message: 'Server error saving attendance records' });
+  }
+});
+
 // GET attendance history/logs
 app.get('/api/attendance', authenticateToken, async (req, res) => {
   try {
@@ -4489,10 +4542,10 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
         department VARCHAR(50) NULL,
         section VARCHAR(50) NULL,
         activity_name VARCHAR(255) DEFAULT 'NSTP Session',
-        scan_type ENUM('TIME_IN', 'TIME_OUT') DEFAULT 'TIME_IN',
+        scan_type VARCHAR(50) DEFAULT 'TIME_IN',
         scanned_by INT NULL,
         scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status ENUM('Present', 'Late', 'Excused', 'Absent') DEFAULT 'Present',
+        status VARCHAR(50) DEFAULT 'Present',
         notes TEXT NULL,
         INDEX idx_attendance_student (student_id),
         INDEX idx_attendance_dept (department),
