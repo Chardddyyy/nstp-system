@@ -1783,7 +1783,17 @@ app.get('/api/students', authenticateToken, async (req, res) => {
              COALESCE(NULLIF(s.id_photo_2x2, ''), NULLIF(s.photo, ''), e.id_photo_2x2, e.idPhoto2x2, e.photo) AS id_photo_2x2,
              COALESCE(NULLIF(s.photo, ''), NULLIF(s.id_photo_2x2, ''), e.photo, e.id_photo_2x2, e.idPhoto2x2) AS photo
       FROM students s
-      LEFT JOIN enrollments e ON (s.studentId = e.studentId OR s.studentId = e.student_id)
+      LEFT JOIN (
+        SELECT studentId, student_id,
+               MAX(registrationPhoto) AS registrationPhoto,
+               MAX(registration_photo) AS registration_photo,
+               MAX(reg_form) AS reg_form,
+               MAX(id_photo_2x2) AS id_photo_2x2,
+               MAX(idPhoto2x2) AS idPhoto2x2,
+               MAX(photo) AS photo
+        FROM enrollments
+        GROUP BY COALESCE(NULLIF(studentId, ''), student_id)
+      ) e ON (s.studentId = e.studentId OR s.studentId = e.student_id)
     `;
     let students;
     if (req.user.role === 'admin') {
@@ -2044,6 +2054,9 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     }
     if (!['CWTS', 'LTS', 'ROTC'].includes(department)) {
       return res.status(400).json({ message: 'Invalid department. Must be CWTS, LTS, or ROTC.' });
+    }
+    if (req.user.role === 'instructor' && department !== req.user.department) {
+      return res.status(403).json({ message: `Instructors can only add students to their assigned department (${req.user.department})` });
     }
     if (!/^\d{9}$/.test(sanitizeStr(studentId, 20))) {
       return res.status(400).json({ message: 'Student ID must be exactly 9 digits.' });

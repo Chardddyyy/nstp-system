@@ -16,13 +16,15 @@ export default defineConfig({
   ],
   build: {
     sourcemap: false,
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-icons': ['lucide-react'],
-          'vendor-xlsx': ['xlsx']
+          'vendor-xlsx': ['xlsx'],
+          'vendor-qr': ['qrcode', 'html5-qrcode'],
+          'vendor-media': ['heic2any']
         }
       }
     }

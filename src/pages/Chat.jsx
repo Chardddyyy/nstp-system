@@ -354,6 +354,8 @@ function Chat() {
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     // Capture photo directly without mirror flip
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const photoData = canvas.toDataURL('image/png');
