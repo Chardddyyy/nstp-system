@@ -1618,28 +1618,48 @@ function Chat() {
   const getUserStatus = (userId) => {
     if (userId === user?.id) return 'online';
     const targetUser = (allUsers || []).find(u => Number(u.id) === Number(userId));
-    if (!targetUser || !targetUser.last_active_at) return 'offline';
-    const lastActive = new Date(targetUser.last_active_at).getTime();
+    if (!targetUser) return 'offline';
+    const rawTime = targetUser.last_active_at || targetUser.updated_at;
+    if (!rawTime) return 'offline';
+    const lastActive = new Date(rawTime).getTime();
     if (isNaN(lastActive)) return 'offline';
     const diffMs = Date.now() - lastActive;
-    // Mark online if active within last 3 minutes
-    return diffMs < 3 * 60 * 1000 ? 'online' : 'offline';
+    // Mark online if active within last 4 minutes
+    return diffMs < 4 * 60 * 1000 ? 'online' : 'offline';
   };
 
   const getLastSeen = (userId) => {
     const targetUser = (allUsers || []).find(u => Number(u.id) === Number(userId));
-    if (!targetUser || !targetUser.last_active_at) return 'recently';
-    const lastActive = new Date(targetUser.last_active_at).getTime();
-    if (isNaN(lastActive)) return 'recently';
-    const diffSec = Math.floor((Date.now() - lastActive) / 1000);
-    if (diffSec < 60) return 'just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin} min${diffMin !== 1 ? 's' : ''} ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr} hr${diffHr !== 1 ? 's' : ''} ago`;
-    const diffDays = Math.floor(diffHr / 24);
-    if (diffDays === 1) return 'yesterday';
-    return `${diffDays} days ago`;
+    if (!targetUser) return 'Offline';
+    const rawTime = targetUser.last_active_at || targetUser.updated_at || targetUser.created_at;
+    if (!rawTime) return 'Offline';
+    const lastActive = new Date(rawTime);
+    const lastActiveMs = lastActive.getTime();
+    if (isNaN(lastActiveMs)) return 'Offline';
+
+    const diffSec = Math.floor((Date.now() - lastActiveMs) / 1000);
+    if (diffSec < 120) return 'Online now';
+    if (diffSec < 3600) {
+      const diffMin = Math.floor(diffSec / 60);
+      return `Active ${diffMin} min${diffMin !== 1 ? 's' : ''} ago`;
+    }
+
+    const now = new Date();
+    const isToday = now.toDateString() === lastActive.toDateString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = yesterday.toDateString() === lastActive.toDateString();
+
+    const timeStr = lastActive.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) {
+      return `Active today at ${timeStr}`;
+    }
+    if (isYesterday) {
+      return `Active yesterday at ${timeStr}`;
+    }
+    const dateStr = lastActive.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return `Active on ${dateStr} at ${timeStr}`;
   };
 
 
@@ -1922,7 +1942,7 @@ function Chat() {
                         return (
                           <p className={`text-[10px] sm:text-xs flex items-center leading-tight ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
                             <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mr-1 flex-shrink-0 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                            <span className="truncate">{isOnline ? 'Online' : `Last seen ${getLastSeen(partnerId)}`}</span>
+                            <span className="truncate">{isOnline ? 'Online now' : getLastSeen(partnerId)}</span>
                           </p>
                         );
                       })()

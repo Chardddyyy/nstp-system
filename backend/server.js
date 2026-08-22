@@ -231,6 +231,9 @@ function authenticateToken(req, res, next) {
     }
 
     req.user = user;
+    if (user && user.id) {
+      pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
+    }
     next();
   });
 }
@@ -1400,15 +1403,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var configuredAdminEmail = String(rawUser).trim().toLowerCase();
     var users = [];
 
-    // Try DB search if available
+    // 1. Search in users table (Exact email or name/username)
     try {
       var [foundUsers] = await pool.execute(
         `SELECT id, name, email, role FROM users 
          WHERE LOWER(TRIM(email)) = ? 
             OR LOWER(TRIM(name)) = ?
-            OR (role = 'admin' AND (? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com', '${configuredAdminEmail}')))
          LIMIT 1`,
-        [cleanEmail, cleanEmail, cleanEmail]
+        [cleanEmail, cleanEmail]
       );
       users = foundUsers;
 
@@ -1428,10 +1430,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
       if (users.length === 0) {
         var [enrollmentUsers] = await pool.execute(
-          `SELECT id, student_name as name, email, student_id as studentId FROM enrollments 
+          `SELECT id, student_name as name, email, studentId FROM enrollments 
            WHERE LOWER(TRIM(email)) = ? 
-              OR LOWER(TRIM(student_id)) = ? 
-              OR LOWER(TRIM(contact_number)) = ?
+              OR LOWER(TRIM(studentId)) = ? 
+              OR LOWER(TRIM(contactNumber)) = ?
            LIMIT 1`,
           [cleanEmail, cleanEmail, cleanEmail]
         );
@@ -1454,8 +1456,17 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     var user = users[0];
     var otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Target email to send the OTP to: if user typed an email, send to cleanEmail; if cleanEmail was studentId and user has email, send to user.email
-    var targetDeliveryEmail = cleanEmail.includes('@') ? cleanEmail : (user.email ? user.email.toLowerCase() : cleanEmail);
+    // Target email to send the OTP to: exact registered user's email
+    var targetDeliveryEmail = (user.email && user.email.includes('@')) 
+      ? user.email.toLowerCase().trim() 
+      : (cleanEmail.includes('@') ? cleanEmail : null);
+
+    if (!targetDeliveryEmail) {
+      return res.status(400).json({
+        success: false,
+        message: `No registered email address found for account "${cleanEmail}". Please contact the NSTP Administrator.`
+      });
+    }
 
     // Save in-memory
     inMemoryResetOtps.set(cleanEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false });
@@ -1663,7 +1674,7 @@ app.post('/forgot-password', (req, res, next) => {
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, last_active_at FROM users'
+      'SELECT id, email, name, role, department, avatar, profilePicture, COALESCE(last_active_at, updated_at, created_at) as last_active_at FROM users'
     );
     res.json(users);
   } catch (error) {
