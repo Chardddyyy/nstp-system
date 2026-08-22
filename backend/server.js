@@ -1496,10 +1496,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 });
 
 // Verify Reset OTP Code — validate OTP before moving to Step 3
-app.post('/api/auth/verify-reset-otp', async (req, res) => {
+const handleVerifyOtp = async (req, res) => {
   await ensurePasswordResetsTable();
   try {
-    var { email, otp_code } = req.body || {};
+    var body = req.body || {};
+    var email = body.email;
+    var otp_code = body.otp || body.otp_code || body.code;
     if (!email || !otp_code) {
       return res.status(400).json({ message: 'Please provide email and verification code.' });
     }
@@ -1544,13 +1546,19 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
     console.error('Verify reset OTP error:', err);
     res.status(500).json({ message: err.message || 'Server error verifying code.' });
   }
-});
+};
+app.post('/api/auth/verify-reset-otp', handleVerifyOtp);
+app.post('/api/auth/verify-otp', handleVerifyOtp);
+app.post('/verify-otp', handleVerifyOtp);
 
-// Reset Password — verify OTP or Master Emergency PIN and update user password
-app.post('/api/auth/reset-password', async (req, res) => {
+// Reset Password — verify OTP and update user password
+const handleResetPassword = async (req, res) => {
   await ensurePasswordResetsTable();
   try {
-    var { email, otp_code, new_password } = req.body || {};
+    var body = req.body || {};
+    var email = body.email;
+    var otp_code = body.otp || body.otp_code || body.code;
+    var new_password = body.newPassword || body.new_password || body.password;
     if (!email || !otp_code || !new_password) {
       return res.status(400).json({ message: 'Please provide email, verification code, and new password.' });
     }
@@ -1641,6 +1649,14 @@ app.post('/api/auth/reset-password', async (req, res) => {
     console.error('Reset password error:', err);
     res.status(500).json({ message: err.message || 'Server error resetting password.' });
   }
+};
+app.post('/api/auth/reset-password', handleResetPassword);
+app.post('/reset-password', handleResetPassword);
+
+// Alias for forgot-password
+app.post('/forgot-password', (req, res, next) => {
+  req.url = '/api/auth/forgot-password';
+  app._router.handle(req, res, next);
 });
 
 // ===== USER ROUTES =====
