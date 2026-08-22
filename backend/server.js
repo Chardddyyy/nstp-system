@@ -1241,146 +1241,148 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'richardbelen99@gmail.com';
   var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'ujpszuwwcbmocsic';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'ujpszuwwcbmocsic';
-  var smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-  var smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 465;
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
+  if (!emailPass || emailPass.length < 8) {
+    emailPass = 'ujpszuwwcbmocsic';
+  }
 
   console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Valid for 10 minutes)`);
 
-  if (emailUser && emailPass) {
-    var transporterConfig = emailUser.includes('@gmail.com') ? {
+  var deliveryEmail = targetEmail;
+  var formattedOtp = otpCode.split('').join(' ');
+
+  var mailOptions = {
+    from: `"NSTP System Administrator" <${emailUser}>`,
+    to: deliveryEmail,
+    subject: `NSTP System - Password Reset OTP`,
+    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n[ ${formattedOtp} ]\n\nImportant Reminders:\n\nThis OTP is only valid for 10 minutes.\n\nFor your security, please do not share this code with anyone.\n\nIf you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
+    html: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NSTP System - Password Reset OTP</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 12px;">
+          <tr>
+            <td align="center">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+                
+                <!-- Institutional Green Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 28px 24px; text-align: center;">
+                    <table align="center" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td align="center" style="padding-bottom: 10px;">
+                          <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="56" height="56" style="display: block; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td align="center">
+                          <h1 style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
+                          <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 0;">NSTP System Verification</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Main Content Card -->
+                <tr>
+                  <td style="padding: 28px 26px 20px 26px;">
+                    <p style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 0 0 16px 0;">
+                      Hi <span style="color: #047857;">${deliveryEmail}</span>,
+                    </p>
+                    <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 18px 0;">
+                      We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:
+                    </p>
+
+                    <!-- 6-Digit OTP Code Box -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 14px; margin: 20px 0;">
+                      <tr>
+                        <td align="center" style="padding: 20px 14px;">
+                          <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 6px;">
+                            One-Time Password (OTP)
+                          </span>
+                          <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #064e3b; padding-left: 10px;">
+                            [ ${formattedOtp} ]
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Important Reminders Box -->
+                    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 8px; margin: 20px 0;">
+                      <p style="color: #92400e; font-size: 12.5px; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.3px;">
+                        Important Reminders:
+                      </p>
+                      <ul style="color: #78350f; font-size: 12.5px; margin: 0; padding-left: 18px; line-height: 1.6;">
+                        <li style="margin-bottom: 4px;">This OTP is only valid for <strong>10 minutes</strong>.</li>
+                        <li style="margin-bottom: 4px;">For your security, please do not share this code with anyone.</li>
+                        <li>If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.</li>
+                      </ul>
+                    </div>
+
+                    <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; color: #334155; font-size: 13.5px; line-height: 1.6;">
+                      <p style="margin: 0;"><strong>Best regards,</strong><br>
+                      NSTP System Administrator<br>
+                      Cavite State University - Naic</p>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 14px 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+                    <p style="color: #94a3b8; font-size: 11px; margin: 0; font-weight: 500;">
+                      This is an automated email. Please do not reply to this address.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>`
+  };
+
+  // Primary attempt: service: gmail
+  try {
+    var transporter1 = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: emailUser,
         pass: emailPass
       }
-    } : {
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    };
-
-    var transporter = nodemailer.createTransport(transporterConfig);
-    var deliveryEmail = targetEmail;
-    var formattedOtp = otpCode.split('').join(' ');
-
-    var mailOptions = {
-      from: `"NSTP System Administrator" <${emailUser}>`,
-      to: deliveryEmail,
-      subject: `NSTP System - Password Reset OTP`,
-      text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n[ ${formattedOtp} ]\n\nImportant Reminders:\n\nThis OTP is only valid for 10 minutes.\n\nFor your security, please do not share this code with anyone.\n\nIf you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
-      html: `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>NSTP System - Password Reset OTP</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 12px;">
-            <tr>
-              <td align="center">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 540px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
-                  
-                  <!-- Institutional Green Header -->
-                  <tr>
-                    <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 28px 24px; text-align: center;">
-                      <table align="center" border="0" cellspacing="0" cellpadding="0">
-                        <tr>
-                          <td align="center" style="padding-bottom: 10px;">
-                            <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="56" height="56" style="display: block; border-radius: 50%; background: #ffffff; padding: 3px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td align="center">
-                            <h1 style="color: #ffffff; font-size: 18px; font-weight: 800; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
-                            <p style="color: #a7f3d0; font-size: 13px; font-weight: 600; margin: 0;">NSTP System Verification</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-
-                  <!-- Main Content Card -->
-                  <tr>
-                    <td style="padding: 28px 26px 20px 26px;">
-                      <p style="color: #0f172a; font-size: 15px; font-weight: 700; margin: 0 0 16px 0;">
-                        Hi <span style="color: #047857;">${deliveryEmail}</span>,
-                      </p>
-                      <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 18px 0;">
-                        We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:
-                      </p>
-
-                      <!-- 6-Digit OTP Code Box -->
-                      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 2px dashed #059669; border-radius: 14px; margin: 20px 0;">
-                        <tr>
-                          <td align="center" style="padding: 20px 14px;">
-                            <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 6px;">
-                              One-Time Password (OTP)
-                            </span>
-                            <span style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #064e3b; padding-left: 10px;">
-                              [ ${formattedOtp} ]
-                            </span>
-                          </td>
-                        </tr>
-                      </table>
-
-                      <!-- Important Reminders Box -->
-                      <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 8px; margin: 20px 0;">
-                        <p style="color: #92400e; font-size: 12.5px; font-weight: 800; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.3px;">
-                          Important Reminders:
-                        </p>
-                        <ul style="color: #78350f; font-size: 12.5px; margin: 0; padding-left: 18px; line-height: 1.6;">
-                          <li style="margin-bottom: 4px;">This OTP is only valid for <strong>10 minutes</strong>.</li>
-                          <li style="margin-bottom: 4px;">For your security, please do not share this code with anyone.</li>
-                          <li>If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.</li>
-                        </ul>
-                      </div>
-
-                      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; color: #334155; font-size: 13.5px; line-height: 1.6;">
-                        <p style="margin: 0;"><strong>Best regards,</strong><br>
-                        NSTP System Administrator<br>
-                        Cavite State University - Naic</p>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <!-- Footer -->
-                  <tr>
-                    <td style="padding: 14px 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
-                      <p style="color: #94a3b8; font-size: 11px; margin: 0; font-weight: 500;">
-                        This is an automated email. Please do not reply to this address.
-                      </p>
-                    </td>
-                  </tr>
-
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>`
-    };
-
+    });
+    var info = await transporter1.sendMail(mailOptions);
+    console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
+    return { sent: true, method: 'gmail-service', messageId: info.messageId };
+  } catch (err1) {
+    console.warn('[AUTH] Primary Gmail service dispatch notice:', err1.message);
+    // Fallback attempt: SMTP host on port 587
     try {
-      var info = await transporter.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
-      return { sent: true, method: 'smtp', messageId: info.messageId };
-    } catch (sendErr) {
-      console.warn('[AUTH] SMTP dispatch error:', sendErr.message);
-      return { sent: false, error: sendErr.message };
+      var transporter2 = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        },
+        tls: { rejectUnauthorized: false }
+      });
+      var info2 = await transporter2.sendMail(mailOptions);
+      console.log(`[AUTH] Password reset email successfully delivered via fallback port 587 to ${deliveryEmail} (MessageId: ${info2.messageId})`);
+      return { sent: true, method: 'smtp-587', messageId: info2.messageId };
+    } catch (err2) {
+      console.error('[AUTH] SMTP fallback failed:', err2.message);
+      return { sent: false, error: err2.message };
     }
-  } else {
-    console.log(`[AUTH / DEV] Password Reset Code for ${targetEmail}: ${otpCode}`);
-    return { sent: true, method: 'mock', otp: otpCode };
   }
 }
 
@@ -1423,23 +1425,33 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           users = studentUsers;
         }
       }
+
+      if (users.length === 0) {
+        var [enrollmentUsers] = await pool.execute(
+          `SELECT id, student_name as name, email, student_id as studentId FROM enrollments 
+           WHERE LOWER(TRIM(email)) = ? 
+              OR LOWER(TRIM(student_id)) = ? 
+              OR LOWER(TRIM(contact_number)) = ?
+           LIMIT 1`,
+          [cleanEmail, cleanEmail, cleanEmail]
+        );
+        if (enrollmentUsers.length > 0) {
+          users = enrollmentUsers;
+        }
+      }
     } catch (dbErr) {
       console.warn('DB lookup during forgot-password failed, checking default accounts:', dbErr.message);
-      if (
-        cleanEmail === 'richardbelen99@gmail.com' ||
-        cleanEmail === 'admin@cvsu.edu.ph' ||
-        cleanEmail === configuredAdminEmail ||
-        cleanEmail.includes('@')
-      ) {
-        users = [{ id: 1, name: 'Admin', email: cleanEmail, role: 'admin' }];
-      }
     }
 
-    // If still no account found:
+    if (users.length === 0 && cleanEmail.includes('@')) {
+      users = [{ id: 0, name: cleanEmail.split('@')[0], email: cleanEmail, role: 'user' }];
+    }
+
+    // If still no account found (e.g. invalid string without @):
     if (users.length === 0) {
       return res.status(400).json({
         success: false,
-        message: `No registered account found with "${cleanEmail}". Please ensure you enter the email address used during enrollment or registration.`
+        message: `Please enter a valid email address or student ID.`
       });
     }
 
