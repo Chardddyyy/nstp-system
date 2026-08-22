@@ -1358,18 +1358,20 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   };
 
   // Method 0: HTTPS Webhook / REST API (Port 443 — 100% works on Render without SMTP port blocking)
-  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL;
+  var defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
+  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || defaultWebhookUrl;
   if (webhookUrl) {
     try {
       var hookRes = await fetch(webhookUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           to: deliveryEmail,
           subject: mailOptions.subject,
           text: mailOptions.text,
           html: mailOptions.html
-        })
+        }),
+        redirect: 'follow'
       });
       if (hookRes.ok) {
         console.log(`[AUTH] Email successfully delivered via HTTPS Webhook to ${deliveryEmail}`);
