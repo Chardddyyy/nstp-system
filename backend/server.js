@@ -2026,10 +2026,40 @@ function buildChedWorkbook(students, info = {}) {
   // ── Data rows starting at row 13 ──
   let r = 13;
   students.forEach((s, idx) => {
-    const surname    = s.lastName  || (s.name || '').split(',')[0]?.trim() || '';
-    const firstPart  = s.firstName || (s.name || '').split(',')[1]?.trim() || '';
-    const firstName  = s.firstName || firstPart.split(' ')[0] || '';
-    const middleName = s.middleName || firstPart.split(' ').slice(1).join(' ') || '';
+    let surname = s.lastName || '';
+    let firstName = s.firstName || '';
+    let middleName = s.middleName || '';
+
+    if (!surname && s.name && s.name.includes(',')) {
+      const parts = s.name.split(',');
+      surname = parts[0].trim();
+      const firstParts = (parts[1] || '').trim().split(/\s+/);
+      firstName = firstParts[0] || '';
+      middleName = firstParts.slice(1).join(' ') || '';
+    } else if (!surname && s.name) {
+      const nameTokens = s.name.trim().split(/\s+/);
+      surname = nameTokens[nameTokens.length - 1] || '';
+      firstName = nameTokens.slice(0, -1).join(' ') || '';
+    }
+
+    let street = s.street || '';
+    let municipality = s.municipality || '';
+    let province = s.province || '';
+
+    if (!street && !municipality && (s.address || s.homeAddress)) {
+      const fullAddr = s.address || s.homeAddress || '';
+      const addrParts = fullAddr.split(',').map(p => p.trim());
+      if (addrParts.length >= 3) {
+        street = addrParts[0];
+        municipality = addrParts[1];
+        province = addrParts.slice(2).join(', ');
+      } else if (addrParts.length === 2) {
+        street = addrParts[0];
+        municipality = addrParts[1];
+      } else {
+        street = fullAddr;
+      }
+    }
 
     let birthdate = '';
     if (s.birthDate) {
@@ -2046,13 +2076,13 @@ function buildChedWorkbook(students, info = {}) {
       firstName,
       middleName,
       s.program || s.course || '',
-      s.gender         || '',
+      s.gender  || s.sex    || '',
       birthdate,
-      s.street         || '',
+      street,
       '',
-      s.municipality   || '',
+      municipality,
       '',
-      s.province       || '',
+      province,
       s.contactNumber  || '',
       s.email          || '',
     ];
@@ -2081,19 +2111,19 @@ app.get('/api/students/ched-export', authenticateToken, async (req, res) => {
     const year    = req.query.year    || '2025-2026';
     const semester = `${sem}, Academic Year: ${year}`;
 
-    // Build WHERE conditions
-    const conditions = ["s.status = 'Active'"];
-    const params = [];
+    // Build WHERE conditions (active students only)
+    const conditions = ['(s.status IS NULL OR s.status = ? OR s.status = ?)'];
+    const params = ['Active', 'active'];
     if (dept !== 'All')    { conditions.push('s.department = ?'); params.push(dept); }
     if (program !== 'All') { conditions.push('s.program = ?');    params.push(program); }
     const where = conditions.join(' AND ');
 
+    // Query students directly (no Cartesian join to avoid multiplying rows)
     const [rows] = await pool.execute(
-      `SELECT s.*, e.firstName, e.lastName, e.middleName, e.street, e.municipality, e.province
+      `SELECT s.*
        FROM students s
-       LEFT JOIN enrollments e ON e.studentId = s.studentId AND e.status = 'Approved'
        WHERE ${where}
-       ORDER BY s.name`,
+       ORDER BY s.name ASC`,
       params
     );
 
