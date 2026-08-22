@@ -1353,7 +1353,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       </html>`
   };
 
-  // Primary attempt: service: gmail
+  // Method 1: service: 'gmail'
   try {
     var transporter1 = nodemailer.createTransport({
       service: 'gmail',
@@ -1366,13 +1366,14 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
     return { sent: true, method: 'gmail-service', messageId: info.messageId };
   } catch (err1) {
-    console.warn('[AUTH] Primary Gmail service dispatch notice:', err1.message);
-    // Fallback attempt: SMTP host on port 587
+    console.warn('[AUTH] Gmail service dispatch notice:', err1.message);
+    
+    // Method 2: Direct SSL Port 465 (Most reliable for cloud servers like Render)
     try {
       var transporter2 = nodemailer.createTransport({
         host: 'smtp.gmail.com',
-        port: 587,
-        secure: false,
+        port: 465,
+        secure: true,
         auth: {
           user: emailUser,
           pass: emailPass
@@ -1380,14 +1381,44 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
         tls: { rejectUnauthorized: false }
       });
       var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email successfully delivered via fallback port 587 to ${deliveryEmail} (MessageId: ${info2.messageId})`);
-      return { sent: true, method: 'smtp-587', messageId: info2.messageId };
+      console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info2.messageId})`);
+      return { sent: true, method: 'smtp-465', messageId: info2.messageId };
     } catch (err2) {
-      console.error('[AUTH] SMTP fallback failed:', err2.message);
-      return { sent: false, error: err2.message };
+      console.warn('[AUTH] SSL 465 fallback notice:', err2.message);
+
+      // Method 3: STARTTLS Port 587
+      try {
+        var transporter3 = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          auth: {
+            user: emailUser,
+            pass: emailPass
+          },
+          tls: { rejectUnauthorized: false }
+        });
+        var info3 = await transporter3.sendMail(mailOptions);
+        console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId})`);
+        return { sent: true, method: 'smtp-587', messageId: info3.messageId };
+      } catch (err3) {
+        console.error('[AUTH] All email dispatch methods failed:', err3.message);
+        return { sent: false, error: err3.message };
+      }
     }
   }
 }
+
+// Diagnostic test endpoint to test email delivery in real-time
+app.get('/api/auth/test-email', async (req, res) => {
+  var target = req.query.email || 'richardbelen99@gmail.com';
+  var testOtp = '123456';
+  var result = await sendPasswordResetEmail(target, testOtp, 'Test User');
+  res.json({
+    target: target,
+    result: result
+  });
+});
 
 // Forgot Password — generate OTP and send to registered email
 app.post('/api/auth/forgot-password', async (req, res) => {
