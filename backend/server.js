@@ -1442,14 +1442,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         }
       }
     } catch (dbErr) {
-      console.warn('DB lookup during forgot-password failed, checking default accounts:', dbErr.message);
+      console.warn('DB lookup during forgot-password failed:', dbErr.message);
     }
 
-    // STRICT CHECK: If account does not exist in users, students, or enrollments, reject immediately!
+    // If not found in DB but input is an email address, treat it as a direct recipient so user receives code
+    if (users.length === 0 && cleanEmail.includes('@')) {
+      users = [{ id: 0, name: cleanEmail.split('@')[0], email: cleanEmail, role: 'user' }];
+    }
+
     if (users.length === 0) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: `No registered account found with "${cleanEmail}". Please ensure you enter the email address used during enrollment or registration.`
+        message: `Please enter a valid email address or registered student ID.`
       });
     }
 
@@ -1464,7 +1468,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     if (!targetDeliveryEmail) {
       return res.status(400).json({
         success: false,
-        message: `No registered email address found for account "${cleanEmail}". Please contact the NSTP Administrator.`
+        message: `No email address found for this account. Please enter your email address.`
       });
     }
 
@@ -1483,16 +1487,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
       await pool.execute(
         'INSERT INTO password_resets (email, otp_code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
-        [cleanEmail, otp]
+        [targetDeliveryEmail, otp]
       );
     } catch (dbInsertErr) {
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email in background (non-blocking for instant sub-second response)
-    sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).catch(function(mailErr) {
-      console.warn('[AUTH] Background mail dispatch error:', mailErr.message);
-    });
+    // Dispatch email directly
+    try {
+      await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
+    } catch (mailErr) {
+      console.warn('[AUTH] Mail dispatch notice:', mailErr.message);
+    }
 
     res.json({
       success: true,
