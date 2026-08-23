@@ -30,22 +30,23 @@ Pangunahing layunin ng sistema na tugunan ang mga sumusunod na matagalang sulira
 │         │                       ├── Helmet.js & Rate Limiter Security Layer              │
 │         │                       ├── BcryptJS Password Hash Engine (12 Rounds)            │
 │         │                       ├── Auto-Provisioning Schema Migration Manager           │
-│         │                       └── 45-Second TCP Keepalive Connection Monitor           │
+│         │                       ├── 45-Second TCP Keepalive Connection Monitor           │
+│         │                       └── HTTPS Webhook Dispatcher (Google Apps Script API)    │
 │         │                                                                                │
-│         ├── Connection Pool (mysql2/promise with SSL Support)                            │
+│         ├── Connection Pool (mysql2/promise with SSL TLS 1.3)                            │
 │         ▼                                                                                │
-│   [ RELATIONAL DATABASE ] ───── MySQL 8.0 (15 Normalized Relational Tables)              │
+│   [ RELATIONAL DATABASE ] ───── Aiven Cloud MySQL 8.0 (15 Normalized Relational Tables)  │
 │         │                                                                                │
-│         └── Webhook Event Triggers (On Approval / New Submission)                        │
+│         └── Webhook Event Triggers (On Approval / Cloud OTP Dispatch / Auto Backup)      │
 │         ▼                                                                                │
-│   [ CLOUD STORAGE & BACKUP ] ── Google Apps Script / Google Drive Automated Sheets       │
+│   [ CLOUD STORAGE & EMAIL ] ─── Google Drive & Google Apps Script Webhooks (Port 443)    │
 │                                                                                          │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 * **Frontend:** React 19, Vite 7, Tailwind CSS v4, Bootstrap 5, React Router DOM v7, Lucide Icons, Canvas API, `heic2any`, `xlsx`, `qrcode`, `html5-qrcode`.
-* **Backend:** Node.js, Express.js, `mysql2/promise`, `jsonwebtoken` (JWT), `bcryptjs`, `helmet`, `express-rate-limit`, `multer`, `exceljs`, `cors`, `dotenv`.
-* **Database & Cloud:** MySQL 8.0 (15 Relational Tables with 45-second TCP Keepalive ping), Google Drive / Google Apps Script Cloud Sync.
+* **Backend:** Node.js, Express.js, `mysql2/promise`, `jsonwebtoken` (JWT), `bcryptjs`, `helmet`, `express-rate-limit`, `multer`, `exceljs`, `nodemailer`, `cors`, `dotenv`.
+* **Database & Cloud:** Aiven Cloud MySQL 8.0 (15 Relational Tables with 45-second TCP Keepalive ping), Google Drive / Google Apps Script Cloud Sync (HTTPS Port 443).
 
 ---
 
@@ -127,7 +128,8 @@ Ang sentrong imbakan at tagapamahala ng lahat ng student records sa pamantasan.
   * **Reject with Reason:** Maaaring tanggihan ang application na may kasamang malinaw na paliwanag (e.g., *Malabo ang COR* o *Maling Track ang napili*).
 * **4.4. 1-Click CHED Standardized Masterlist Excel Exporter (`xlsx` / `exceljs`):**
   * Ang pinakamahalagang feature para sa compliance ng pamantasan.
-  * Sa isang pindot, awtomatikong bubuo ang system ng opisyal na `.xlsx` spreadsheet na may pormal na header, columns (Student No., Complete Name, Course, Sex, Track, Contact), at standard CHED formatting na handa nang ipasa sa Commission on Higher Education.
+  * **Deduplicated Query Engine:** Tinitiyak na ang eksaktong bilang lamang ng aktibong estudyante sa track ang kasama nang walang redundant duplicate rows na dulot ng multi-table cross joins.
+  * Awtomatikong bubuo ang system ng opisyal na `.xlsx` spreadsheet na may pormal na header, columns (Student No., Complete Name, Course, Sex, Track, Contact), at standard CHED formatting na handa nang ipasa sa Commission on Higher Education.
 * **4.5. Batch Bulk Actions:** Kakayahang mag-approve, magbura, o mag-assign ng section sa maraming estudyante nang sabay-sabay.
 
 ---
@@ -140,23 +142,27 @@ Modernong identification system para sa lahat ng opisyal na NSTP students.
     * Opisyal na CvSU Logo at Campus Seal.
     * 2x2 Photo ng Estudyante.
     * Kumpletong Pangalan, Student Number, Track (CWTS/ROTC/LTS), at Course.
+    * **Dynamic Typography Auto-Scaling:** Awtomatikong nag-a-adjust ang laki ng font para sa mahahabang pangalan at degree programs upang maiwasan ang text overflow.
     * **Dynamic Attendance QR Code** na naglalaman ng secure encrypted student token.
 * **5.2. Batch ID Card Print Layout (`BatchIdPrintModal.jsx`):**
   * Nagbibigay ng print-ready layout (e.g., 4 to 8 ID cards bawat A4/Letter page) para sa maramihang pag-print ng ID cards nang walang misalignment.
 
 ---
 
-### 📲 Module 6: QR Code Attendance Scanner at Attendance Matrix (`AttendanceScannerModal.jsx` & `StudentAttendanceMatrixModal.jsx`)
+### 📲 Module 6: QR Code Attendance Scanner at Consolidated Matrix (`AttendanceScannerModal.jsx` & `StudentAttendanceMatrixModal.jsx`)
 Paperless at mabilisang pagtatala ng attendance tuwing may Sunday NSTP training o community activities.
 
 * **6.1. Live Camera QR Code Scanner (`html5-qrcode`):**
   * Ginagamit ng Instructor o Admin ang camera ng kanilang smartphone o laptop upang i-scan ang QR code sa ID ng estudyante.
   * **Instant Verification:** Awtomatikong nagpapakita ng berdeng checkmark, pangalan ng estudyante, at timestamp kapag validated ang scan.
-  * **Duplicate Scan Prevention:** Hindi pinapayagan ang double scan sa parehong session upang maiwasan ang daya.
-* **6.2. Student Attendance Matrix Modal (`StudentAttendanceMatrixModal.jsx`):**
+  * **Flexible Status Tracking:** Sumusuporta sa `Timed In`, `Timed Out`, `Present`, `Late`, at `Excused`.
+* **6.2. MySQL Batch Saving API (`POST /api/attendance/batch-save`):**
+  * Sa pagpindot ng *"Save Record"*, awtomatikong ipinapadala at ini-save ang buong session data (Time In at Time Out) sa MySQL database upang hindi mawala ang logs kahit mag-refresh ang browser.
+* **6.3. Consolidated 1-Line per Student Excel Export:**
+  * Pinagsasama (groups) ang multiple scans ng parehong estudyante sa iisang linya lamang sa Excel na may magkahiwalay na kolum para sa **Time In** at **Time Out**.
+* **6.4. Student Attendance Matrix Modal (`StudentAttendanceMatrixModal.jsx`):**
   * Isang komprehensibong spreadsheet-style matrix na nagpapakita ng complete attendance history ng buong klase sa bawat training date o session.
   * Awtomatikong nagkakalkula ng **Total Presents**, **Absents**, at **Attendance Percentage**.
-  * Maaaring i-export sa Excel sa isang click.
 
 ---
 
@@ -188,13 +194,20 @@ Sentralisadong submission at approval hub para sa mga accomplishment reports, le
 
 ---
 
-### 💬 Module 9: Real-time Communication & Messaging Hub (`Chat.jsx`)
-Built-in communication platform para sa opisyal at ligtas na koordinasyon sa pagitan ng NSTP Office at mga Instructors nang hindi na kailangang gumamit ng personal na social media.
+### 💬 Module 9: Real-time Communication & Live Presence Hub (`Chat.jsx`)
+Built-in communication platform para sa opisyal at ligtas na koordinasyon sa pagitan ng NSTP Office at mga Instructors.
 
 * **9.1. Direct 1-on-1 Messaging:** Ligtas at pribadong real-time chat sa pagitan ng Admin/Coordinator at mga Indibidwal na NSTP Instructors.
 * **9.2. Official Group Channels:** Nakalaang broadcast at discussion channels para sa bawat component track (ROTC Faculty Group, CWTS Faculty Group, LTS Faculty Group).
-* **9.3. Multimedia & Document File Sharing:** Suporta sa pagpapadala ng images, PDF guidelines, memo circulars, at activity spreadsheets sa loob ng chat.
-* **9.4. Unread Counters & Online Status Indicators:** Real-time na pagpapakita kung sino ang aktibong online at badge counter para sa mga hindi pa nababasang mensahe.
+* **9.3. Dynamic Real-Time Presence Engine:**
+  * Awtomatikong nagtatala ng `last_active_at` timestamp sa bawat user request.
+  * Nagpapakita ng eksaktong presence status:
+    * **`Online now`** (kung aktibo sa loob ng 4 na minuto)
+    * **`Active X mins ago`** (kung aktibo sa nakaraang oras)
+    * **`Active today at HH:MM AM/PM`** (kung kanina nag-online)
+    * **`Active yesterday at HH:MM AM/PM`** (kung kahapon)
+    * **`Active on MMM DD at HH:MM AM/PM`** (kung mas matagal nang offline).
+* **9.4. Multimedia & Document File Sharing:** Suporta sa pagpapadala ng images, PDF guidelines, memo circulars, at activity spreadsheets sa loob ng chat.
 * **9.5. Searchable Conversation History:** Mabilisang paghahanap sa mga nakaraang instructions, announcements, at diskusyon.
 
 ---
@@ -221,19 +234,20 @@ Awtomatikong generator ng mga opisyal at pormal na university letters.
 
 ---
 
-### 🔒 Module 12: Audit Trail, Data Privacy, at Google Drive Auto-Backup
-Ang security at compliance foundation ng buong sistema.
+### 🔑 Module 12: Authentication, Cloud HTTPS Webhook & Password Reset System
+Ang pinakabagong cloud-native security at account recovery infrastructure.
 
-* **12.1. Immutable Audit Trail Logging (`audit_logs` table):**
-  * Lahat ng mahahalagang aksyon (User Login, Student Approval, Grade Update, Data Deletion, Export) ay permanenteng naitatala kasama ang:
-    * `user_id` / Pangalan ng umaksyon.
-    * `action` / Detalye ng ginawa.
-    * `ip_address` / IP kung saan nanggaling ang request.
-    * `timestamp` / Eksaktong oras at petsa.
-* **12.2. Automated Google Drive Cloud Backup (Google Apps Script Webhooks):**
-  * Sa tuwing may na-a-approve na estudyante o nagpapatakbo ng automated scheduled backup, awtomatikong nagpapadala ang backend ng data payload sa Google Drive / Google Sheets upang magkaroon ng off-site redundancy sakaling magkaroon ng problema sa database host.
-* **12.3. Active Telemetry Monitoring (`active_visitors` table):**
-  * Sumusubaybay sa real-time session heartbeats upang malaman ang bilang ng kasalukuyang gumagamit ng system nang walang paglabag sa privacy.
+* **12.1. Strict Staff-Only Account Recovery:**
+  * Ang Forgot Password workflow ay eksklusibo sa mga rehistradong **Instructors at Admins** (`users` table). Hindi pinapayagan ang mga hindi awtorisadong email address.
+* **12.2. Google Apps Script Webhook (Port 443 HTTPS Dispatch):**
+  * Upang malampasan ang outbound SMTP port blocking ng cloud hosts (Render), ang email dispatch ay dumadaan sa isang Google Apps Script Webhook sa Port 443.
+  * Direktang ipinapadala ng Google ang email mula sa opisyal na sender (`richardbelen99@gmail.com`) papunta sa inbox ng nagre-request na guro o admin sa loob lamang ng 1 segundo.
+* **12.3. Dynamic Subject Line Engine:**
+  * Bawat email ay may kasamang dynamic timestamp at OTP code sa Subject Line (e.g. *`NSTP System - Password Reset OTP: 849201 (01:06 AM)`*) upang maiwasan ang pag-ipon o pag-collapse ng Gmail sa iisang conversation thread.
+* **12.4. 1-Click Auto-Fill Integration:**
+  * Ang email ay may kasamang modernong *"Auto-Fill Code & Reset Password"* action button. Pag-click nito, awtomatikong magbubukas ang NSTP login portal na may pre-populated email at OTP sa Step 2.
+* **12.5. Non-Bypassable Security Policy:**
+  * Walang anumang master bypass o backdoor pins; 100% kailangang ma-verify ang tunay na 6-digit OTP na ipinadala sa Gmail inbox.
 
 ---
 
@@ -258,7 +272,8 @@ Ang sistema ay gumagamit ng **MySQL 8.0** na may normalized relational tables pa
 │ 11. current_batch            - Kasalukuyang active school year at semester configuration  │
 │ 12. audit_logs               - Forensic audit trail (Timestamp, User, Action, IP Address) │
 │ 13. active_visitors          - Real-time traffic at online telemetry tracking             │
-│ 14. attendance_records       - QR code at barcode scan logs ng student time-in / time-out │
+│ 14. attendance_records       - QR code scan logs (studentId, event, session, status, time)│
+│ 15. password_resets          - Dynamic 6-digit OTP tokens na may 10-minute expiration     │
 └───────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -275,11 +290,11 @@ Ang buong sistema ay mahigpit na sumusunod sa **Data Privacy Act of 2012** sa pa
 
 ---
 
-## 🎙️ 6. Gabay sa Oral Defense (Top 10 Questions and Answers para sa Panelists)
+## 🎙️ 6. Gabay sa Oral Defense (Top 12 Questions and Answers para sa Panelists)
 
 ### ❓ Tanong 1: *"Ano ang pinaka-unique feature ng inyong system kumpara sa tradisyunal na Google Forms?"*
 > **💡 Sagot:**  
-> *"Ang Google Forms po ay simpleng data collector lamang na walang relational integrity, walang unmirrored camera capture, walang auto-conversion para sa iPhone HEIC photos, walang built-in QR Code attendance scanning, at hindi nakakapag-generate ng standardized 1-Click CHED Masterlists. Ang aming system ay isang **end-to-end relational academic management ecosystem** na kumpleto mula sa enrollment, ID printing, attendance tracking, hanggang sa official CHED report compliance."*
+> *"Ang Google Forms po ay simpleng data collector lamang na walang relational integrity, walang unmirrored camera capture, walang auto-conversion para sa iPhone HEIC photos, walang built-in QR Code attendance scanning, walang live staff chat with presence tracking, at hindi nakakapag-generate ng standardized 1-Click CHED Masterlists. Ang aming system ay isang **end-to-end relational academic management ecosystem** na kumpleto mula sa enrollment, ID printing, attendance tracking, hanggang sa official CHED report compliance."*
 
 ### ❓ Tanong 2: *"Bakit React 19 at Node.js ang napili ninyong Tech Stack sa halip na traditional PHP?"*
 > **💡 Sagot:**  
@@ -303,19 +318,27 @@ Ang buong sistema ay mahigpit na sumusunod sa **Data Privacy Act of 2012** sa pa
 
 ### ❓ Tanong 7: *"Paano gumagana ang inyong 1-Click CHED Masterlist generation?"*
 > **💡 Sagot:**  
-> *"Gumagamit po tayo ng backend spreadsheet engine (`exceljs` / `xlsx`). Kapag pinindot ng Admin ang 'Export CHED Masterlist', kinukuha ng server ang lahat ng aprubadong estudyante sa MySQL database, inaayos ang format ayon sa opisyal na template ng CHED (kasama ang institutional header, tracking code, at demographic columns), at ibinubuga ito bilang isang ready-to-print `.xlsx` file."*
+> *"Gumagamit po tayo ng backend spreadsheet engine (`exceljs` / `xlsx`). Kapag pinindot ng Admin ang 'Export CHED Masterlist', kinukuha ng server ang lahat ng aprubadong estudyante sa MySQL database nang direkta at walang duplicates, inaayos ang format ayon sa opisyal na template ng CHED (kasama ang institutional header, tracking code, at demographic columns), at ibinubuga ito bilang isang ready-to-print `.xlsx` file."*
 
-### ❓ Tanong 8: *"Paano pinapagana ang QR Code Attendance System?"*
+### ❓ Tanong 8: *"Paano pinapagana ang QR Code Attendance System at paano ito naitatala sa database?"*
 > **💡 Sagot:**  
-> *"Bawat aprubadong estudyante ay binibigyan ng unique digital ID na may encrypted QR code. Gamit ang smartphone o laptop camera ng Instructor at ang `html5-qrcode` library, ini-scan ang QR code. Agad itong bine-verify ng backend at naitatala sa `attendance_records` table na may eksaktong session timestamp at protection laban sa duplicate scans."*
+> *"Bawat aprubadong estudyante ay binibigyan ng unique digital ID na may encrypted QR code. Gamit ang smartphone o laptop camera ng Instructor at ang `html5-qrcode` library, ini-scan ang QR code para sa Time In at Time Out. Sa pag-save, nagpapadala ng batch request sa `POST /api/attendance/batch-save` upang mai-persist ang complete session sa MySQL, at kapag ini-export sa Excel, naka-consolidate ito sa iisang linya kada estudyante."*
 
-### ❓ Tanong 9: *"Ano ang mangyayari sa mga records kapag natapos na ang kasalukuyang Semester o Academic Year?"*
+### ❓ Tanong 9: *"Paano ninyo nalutas ang cloud SMTP email blocking sa libreng hosting tulad ng Render?"*
+> **💡 Sagot:**  
+> *"Dahil bina-block po ng cloud firewalls tulad ng Render ang papalabas na SMTP ports (25, 465, 587) upang maiwasan ang spam, gumawa tayo ng **Cloud HTTPS Webhook Bridge gamit ang Google Apps Script**. Ang backend ay nagpapadala ng secure HTTPS POST request sa Port 443 na pinapayagan ng lahat ng cloud hosts, at direktang si Google ang nagpapadala ng verification email mula sa opisyal na university sender address."*
+
+### ❓ Tanong 10: *"Paano gumagana ang Live Presence at Last Seen sa Chat Hub?"*
+> **💡 Sagot:**  
+> *"Bawat authenticated user request o interaction ay awtomatikong nag-a-update ng `last_active_at` timestamp sa `users` table. Sa frontend, dynamic itong kino-compute ng `getUserStatus` at `getLastSeen` upang magpakita ng 'Online now' (kung active sa loob ng 4 na minuto), 'Active X mins ago', 'Active today at [Time]', o 'Active yesterday' sa halip na static o pekeng text."*
+
+### ❓ Tanong 11: *"Ano ang mangyayari sa mga records kapag natapos na ang kasalukuyang Semester o Academic Year?"*
 > **💡 Sagot:**  
 > *"Mayroon po tayong **Batch Management at Archival System** (`current_batch` at `archived_years` tables). Maaaring lumipat ang Admin sa susunod na Academic Year o Semester. Ang mga nakaraang records ay ligtas na naka-archive at nananatiling searchable para sa historical reference nang hindi humahalo sa mga bagong freshmen enrollees."*
 
-### ❓ Tanong 10: *"Ano ang inyong plano para sa Future Enhancements o susunod na bersyon ng sistema?"*
+### ❓ Tanong 12: *"Ano ang inyong plano para sa Future Enhancements o susunod na bersyon ng sistema?"*
 > **💡 Sagot:**  
-> *"Para po sa susunod na enhancement, pinaplano nating magdagdag ng: (1) **Automated SMS & Email Notifications** para sa class cancellations at emergency alerts, (2) **GPS Geofenced Attendance Scanning** para sa off-campus community immersion, at (3) **Direct SIS Integration** sa pangunahing University Portal ng Cavite State University."*
+> *"Para po sa susunod na enhancement, pinaplano nating magdagdag ng: (1) **Automated SMS Notifications** para sa emergency training cancellations, (2) **GPS Geofenced Attendance Scanning** para sa off-campus community immersion, at (3) **Direct SIS Integration** sa pangunahing University Portal ng Cavite State University."*
 
 ---
 
@@ -336,8 +359,8 @@ Upang lalong mapalawak at mapatatag ang pagpapatupad ng **CvSU Naic NSTP Record 
 ---
 
 ### 💻 B. Teknikal na Rekomendasyon para sa mga Susunod na Developers (Technical Enhancements)
-1. **Pagsasama ng SMS & Email Notification Gateway (Twilio / PhilSMS / Semaphore API):**
-   * Maglagay ng automated broadcast system na magpapadala ng libreng text messages o emails sa mga estudyante tuwing may emergency cancellation ng training, class announcements, o paalala bago ang submission deadline.
+1. **Pagsasama ng SMS Gateway (Twilio / PhilSMS / Semaphore API):**
+   * Maglagay ng automated broadcast system na magpapadala ng libreng text messages sa mga estudyante tuwing may emergency cancellation ng training, class announcements, o paalala bago ang submission deadline.
 2. **GPS Geofencing para sa Community Immersion Attendance:**
    * Magdagdag ng geolocation validation sa QR Code Attendance Scanner upang masiguro na ang estudyante at guro ay pisikal na nasa loob ng nakatalagang Partner Barangay o Campus Field bago ma-validate ang time-in.
 3. **AI-Powered OCR (Optical Character Recognition) Document Verification:**
@@ -357,4 +380,5 @@ Upang lalong mapalawak at mapatatag ang pagpapatupad ng **CvSU Naic NSTP Record 
 * **Republic Act No. 9163.** (2002). *An Act Establishing the National Service Training Program (NSTP) for Tertiary Level Students*. Congress of the Philippines.
 * **Republic Act No. 10173.** (2012). *Data Privacy Act of 2012*. National Privacy Commission of the Philippines.
 * **Cavite State University - Naic.** (2024). *CvSU Naic Campus Institutional Standards and Manual of Operations*.
+
 
