@@ -503,9 +503,18 @@ function Landing() {
           </div>
         </div>
 
+        {/* ── Mobile Backdrop Overlay (Auto-closes when tapping outside) ── */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         {/* ── Mobile Slide-down Full Drawer Navigation ──────────────────── */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-3.5 space-y-3 animate-slide-up shadow-2xl">
+          <div className="relative z-40 lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-3.5 space-y-3 animate-slide-up shadow-2xl">
             
             {/* Quick Actions in Mobile Drawer */}
             <div className="grid grid-cols-2 gap-2 pb-3 border-b border-emerald-800/80">
@@ -763,10 +772,10 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2.5 max-w-full">
-                      <p className="text-amber-200 text-[10px] xs:text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full text-left break-words">
+                    <div className="mt-2.5 max-w-full overflow-hidden">
+                      <p className="text-amber-200 text-[9.5px] xs:text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full text-left whitespace-nowrap overflow-hidden text-ellipsis">
                         <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                        <span className="break-words">{enrollmentStatus.customNotice}</span>
+                        <span className="truncate">{enrollmentStatus.customNotice}</span>
                       </p>
                     </div>
                   )}
@@ -1139,27 +1148,27 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {/* Total Users */}
+              {/* Total Users / Visitors */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Users</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Registered</p>
                   <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
                     {totalUsersCount.toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              {/* Active Online */}
+              {/* Total Active Students (Pulsing Green Indicator) */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-800/90 border border-emerald-600/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
-                <div className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                <div className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                 </div>
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Active Online</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Total Active Students</p>
                   <p className="text-[11px] sm:text-sm font-black text-emerald-300 leading-tight mt-0.5">
-                    {activeOnlineCount}
+                    {(telemetry.totalStudents || telemetry.totalRegisteredUsers || totalUsersCount || 0).toLocaleString()}
                   </p>
                 </div>
               </div>

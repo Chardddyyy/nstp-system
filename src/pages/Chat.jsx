@@ -1224,6 +1224,7 @@ function Chat() {
   const handleReaction = (messageId, emoji) => {
     addReaction(activeConversation.id, messageId, emoji);
     setShowEmojiPicker(false);
+    setShowMessageMenu(null);
   };
 
   const isMessageDeletedForMe = (message) => {
@@ -2098,7 +2099,7 @@ function Chat() {
                     return (
                       <div key={message.id}
                         data-is-own={isOwn}
-                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} overflow-hidden max-w-full`}>
+                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full relative my-1`}>
                         {/* Avatar */}
                         <div className="flex-shrink-0 self-end mb-1">
                           {isOwn ? (
@@ -2292,27 +2293,28 @@ function Chat() {
 
                           {/* Message Menu Button */}
                           {editingMessage?.id !== message.id && (
-                            <div data-message-menu className={`absolute top-1 ${isOwn ? '-left-6' : '-right-6'} opacity-75 sm:opacity-0 group-hover:opacity-100 transition-opacity`}>
+                            <div data-message-menu className={`absolute top-1 ${isOwn ? '-left-7' : '-right-7'} opacity-85 sm:opacity-0 group-hover:opacity-100 transition-opacity z-10`}>
                               <button type="button"
                                 onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
-                                className="p-1 text-gray-500 hover:text-gray-700 active:scale-95 touch-manipulation cursor-pointer"
+                                className="p-1.5 text-gray-500 hover:text-gray-700 active:scale-95 touch-manipulation cursor-pointer rounded-full hover:bg-gray-100"
                                 title="Options"
                               >
-                                <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <MoreVertical className="w-4 h-4" />
                               </button>
                             </div>
                           )}
 
                           {/* Message Options Menu */}
                           {showMessageMenu === message.id && (
-                            <div data-message-menu className={`absolute top-7 ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-xl shadow-2xl border border-gray-200 py-1.5 z-40 min-w-[150px] max-w-[200px] animate-fade-in`}>
+                            <div data-message-menu className={`absolute top-8 ${isOwn ? 'right-0 origin-top-right' : 'left-0 origin-top-left'} bg-white rounded-2xl shadow-2xl border border-gray-200 py-1.5 z-50 w-44 xs:w-48 max-w-[calc(100vw-36px)] animate-fade-in ring-1 ring-black/10`}>
                               {/* Emoji Reactions */}
-                              <div className="flex gap-1 px-2 py-1 border-b border-gray-100">
+                              <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 bg-gray-50/80 rounded-t-xl">
                                 {EMOJI_LIST.map(emoji => (
                                   <button type="button"
                                     key={emoji}
                                     onClick={() => handleReaction(message.id, emoji)}
-                                    className="hover:bg-gray-100 rounded px-1"
+                                    className="hover:scale-125 hover:bg-white active:scale-95 rounded-lg p-1 transition-all text-base cursor-pointer"
+                                    title={`React with ${emoji}`}
                                   >
                                     {emoji}
                                   </button>
@@ -2322,10 +2324,10 @@ function Chat() {
                               {/* Edit - only for own text messages (not voice, file, or image) */}
                               {isOwn && !message.type && (
                                 <button type="button"
-                                  onClick={() => handleStartEdit(message)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                                  onClick={() => { handleStartEdit(message); setShowMessageMenu(null); }}
+                                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 flex items-center gap-2 cursor-pointer transition-colors"
                                 >
-                                  Edit
+                                  <span>Edit Message</span>
                                 </button>
                               )}
 
@@ -2334,23 +2336,23 @@ function Chat() {
                                 <>
                                   <button type="button"
                                     onClick={() => handleDelete(message.id, false)}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                    className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
                                   >
-                                    Delete for me
+                                    <span>Delete for me</span>
                                   </button>
                                   <button type="button"
                                     onClick={() => handleDelete(message.id, true)}
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                    className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
                                   >
-                                    Delete for everyone
+                                    <span>Delete for everyone</span>
                                   </button>
                                 </>
                               ) : (
                                 <button type="button"
                                   onClick={() => handleDelete(message.id, false)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer transition-colors"
                                 >
-                                  Delete for me
+                                  <span>Delete for me</span>
                                 </button>
                               )}
                             </div>

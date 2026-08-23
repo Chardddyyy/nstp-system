@@ -1787,16 +1787,28 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     if (parseInt(id) === req.user.id) {
       return res.status(400).json({ message: 'You cannot delete your own account.' });
     }
-    const [target] = await pool.execute('SELECT id, role FROM users WHERE id = ?', [id]);
+    const [target] = await pool.execute('SELECT id, role, email FROM users WHERE id = ?', [id]);
     if (target.length === 0) return res.status(404).json({ message: 'User not found.' });
     if (target[0].role === 'admin') {
       return res.status(403).json({ message: 'Admin accounts cannot be deleted.' });
     }
+
+    // Safely remove or dissociate all referencing child records across relational tables:
+    try { await pool.execute('DELETE FROM conversation_participants WHERE user_id = ?', [id]); } catch (e1) { console.warn('Clean conversation_participants warning:', e1.message); }
+    try { await pool.execute('DELETE FROM report_comments WHERE user_id = ?', [id]); } catch (e2) { console.warn('Clean report_comments warning:', e2.message); }
+    try { await pool.execute('DELETE FROM report_submissions WHERE user_id = ?', [id]); } catch (e3) { console.warn('Clean report_submissions warning:', e3.message); }
+    try { await pool.execute('UPDATE students SET instructor_id = NULL WHERE instructor_id = ?', [id]); } catch (e4) { console.warn('Clean students instructor_id warning:', e4.message); }
+    try { await pool.execute('DELETE FROM messages WHERE sender_id = ?', [id]); } catch (e5) { console.warn('Clean messages sender_id warning:', e5.message); }
+    if (target[0].email) {
+      try { await pool.execute('DELETE FROM password_resets WHERE LOWER(TRIM(email)) = ?', [String(target[0].email).trim().toLowerCase()]); } catch (e6) { console.warn('Clean password_resets warning:', e6.message); }
+    }
+
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
-    res.json({ message: 'Instructor deleted successfully.' });
+    console.log(`[USER DELETED] User ID ${id} (${target[0].email}) successfully removed by Admin ID ${req.user.id}`);
+    res.json({ success: true, message: 'Instructor deleted successfully.' });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error deleting user.' });
   }
 });
 

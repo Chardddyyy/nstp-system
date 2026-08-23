@@ -424,6 +424,11 @@ function Profile() {
     try {
       await usersAPI.delete(id);
       setInstructors(prev => prev.filter(i => i.id !== id));
+      try {
+        const stored = JSON.parse(localStorage.getItem('nstp_users') || '[]');
+        localStorage.setItem('nstp_users', JSON.stringify(stored.filter(u => u.id !== id)));
+      } catch (_) {}
+      alert(`Instructor "${name}" deleted successfully.`);
     } catch (error) {
       alert(error?.message || 'Failed to delete instructor.');
     } finally {
