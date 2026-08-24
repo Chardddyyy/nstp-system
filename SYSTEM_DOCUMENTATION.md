@@ -194,21 +194,35 @@ Sentralisadong submission at approval hub para sa mga accomplishment reports, le
 
 ---
 
-### 💬 Module 9: Real-time Communication & Live Presence Hub (`Chat.jsx`)
-Built-in communication platform para sa opisyal at ligtas na koordinasyon sa pagitan ng NSTP Office at mga Instructors.
+### 💬 Module 9: Real-time Communication, WebRTC Calling & Live Presence Hub (`Chat.jsx`)
+Built-in institutional communication platform para sa opisyal, ligtas, at real-time na koordinasyon sa pagitan ng NSTP Administrator at mga NSTP Instructors.
 
-* **9.1. Direct 1-on-1 Messaging:** Ligtas at pribadong real-time chat sa pagitan ng Admin/Coordinator at mga Indibidwal na NSTP Instructors.
-* **9.2. Official Group Channels:** Nakalaang broadcast at discussion channels para sa bawat component track (ROTC Faculty Group, CWTS Faculty Group, LTS Faculty Group).
-* **9.3. Dynamic Real-Time Presence Engine:**
-  * Awtomatikong nagtatala ng `last_active_at` timestamp sa bawat user request.
+* **9.1. Direct 1-on-1 & Official Track Group Channels:**
+  * Ligtas at pribadong real-time direct chat sa pagitan ng Admin at individual instructors.
+  * Dedicated automatic group channels para sa bawat academic track: *ROTC Faculty Group*, *CWTS Faculty Group*, *LTS Faculty Group*, at *All Instructors Official Broadcast Room*.
+* **9.2. Real-Time WebSocket Engine (`Socket.IO`):**
+  * Gumagamit ng full-duplex WebSocket connections para sa zero-latency message delivery (<50ms), typing indicators, real-time unread badges, at instant reaction broadcasts.
+* **9.3. Peer-to-Peer (P2P) Live Voice & Video Calling (`WebRTC API`):**
+  * Built-in direct voice at high-definition video calls sa pagitan ng mga guro at admin gamit ang native `RTCPeerConnection` at `MediaStream`.
+  * May live camera flipping/toggle, microphone mute/unmute, call duration timer, at screen sharing (`getDisplayMedia`).
+* **9.4. Voice Audio Notes Engine (`MediaRecorder API`):**
+  * One-tap voice message recording gamit ang device microphone at client-side Opus audio encoding.
+  * May kasamang real-time animated equalizer pulses at interactive waveform playback progress bar.
+* **9.5. Dynamic Real-Time Presence & Activity Tracker:**
+  * Awtomatikong nagtatala ng `last_active_at` timestamp sa bawat user heartbeat/request.
   * Nagpapakita ng eksaktong presence status:
     * **`Online now`** (kung aktibo sa loob ng 4 na minuto)
     * **`Active X mins ago`** (kung aktibo sa nakaraang oras)
     * **`Active today at HH:MM AM/PM`** (kung kanina nag-online)
     * **`Active yesterday at HH:MM AM/PM`** (kung kahapon)
     * **`Active on MMM DD at HH:MM AM/PM`** (kung mas matagal nang offline).
-* **9.4. Multimedia & Document File Sharing:** Suporta sa pagpapadala ng images, PDF guidelines, memo circulars, at activity spreadsheets sa loob ng chat.
-* **9.5. Searchable Conversation History:** Mabilisang paghahanap sa mga nakaraang instructions, announcements, at diskusyon.
+* **9.6. Multimedia Attachments, Document Downloads & In-App Lightbox:**
+  * Suporta sa pagpapadala ng images na may full-screen zoomable lightbox preview.
+  * Suporta sa pag-attach ng PDF guidelines, memo circulars, Word files, at Excel spreadsheets na may direct click-to-download functionality.
+* **9.7. Emoji Reactions, Inline Message Editing & Dual Deletion:**
+  * Hover reaction bar na may instant auto-closing reaction modal pagkapili ng emoji (👍, ❤️, 😂, 😮, 😢, 🙏).
+  * Inline message editing para sa sariling mga mensahe.
+  * Dual-mode message deletion: `"Delete for me"` (itinatago sa sariling view) at `"Delete for everyone"` (tinatanggal sa buong server at channel).
 
 ---
 

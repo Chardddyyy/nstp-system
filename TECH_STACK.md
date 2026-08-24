@@ -13,9 +13,12 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Tailwind CSS v4** (`tailwindcss`, `@tailwindcss/vite`) | CSS Framework | `^4.0.0` | Modernong utility-first styling para sa customized CvSU institutional green-and-gold design system, glassmorphic floating modals, animations, at fully responsive mobile layout. |
 | **Bootstrap 5** (`bootstrap`) | UI Grid Utilities | `^5.3.3` | Karagdagang grid system, responsive tables, at fallback utilities para sa multi-device display consistency. |
 | **React Router DOM v7** (`react-router-dom`) | Client-Side Routing | `^7.2.0` | Namamahala sa declarative browser routing, deep linking, URL query parameter auto-fill (para sa 1-click password reset), at Role-Based Protected Routes (`Admin`, `Instructor`). |
+| **Socket.IO Client** (`socket.io-client`) | Real-Time WebSocket Client | `^4.8.3` | Nagbibigay ng zero-latency bi-directional WebSocket connection para sa live chat messaging, typing indicators, read receipts, online presence updates, at real-time reaction broadcasts. |
+| **WebRTC API** (`RTCPeerConnection`, `MediaStream`) | P2P Voice & Video Call Engine | *Native Browser API* | Peer-to-peer real-time high-definition voice at video calling sa pagitan ng mga guro at admin, kasama ang live audio/video track toggling at screen sharing (`getDisplayMedia`). |
+| **HTML5 MediaRecorder API** | Voice Notes Engine | *Native Browser API* | Nagre-record ng audio voice messages diretso mula sa mikropono ng user gamit ang client-side Opus/WebM encoding na may real-time animated waveform audio progress bar. |
+| **HTML5 Canvas & WebRTC Camera API** | Camera Engine | *Native Browser API* | Nagbibigay ng unmirrored (natural orientation) live camera capture para sa Certificate of Registration (COR) at 2x2 Formal Student ID photos nang may client-side image compression. |
 | **Lucide React** (`lucide-react`) | Iconography | `^1.16.0` | Modern, lightweight, at scalable SVG vector icons para sa action buttons, metrics cards, indicators, at intuitive navigation. |
 | **heic2any** (`heic2any`) | Client Image Converter | `^0.0.4` | Awtomatikong nagko-convert ng mga high-efficiency `.HEIC` at `.HEIF` photos mula sa iPhone/iPad camera papuntang standard compressed `.JPEG` sa browser bago i-upload. |
-| **HTML5 Canvas & WebRTC API** | Camera Engine | *Native Browser API* | Nagbibigay ng unmirrored (natural orientation) live camera capture para sa Certificate of Registration (COR) at 2x2 Formal Student ID photos nang may client-side image compression. |
 | **qrcode** (`qrcode`) | QR Code Generator | `^1.5.4` | Lumilikha ng secure, high-density digital QR codes para sa student digital ID cards na naglalaman ng encrypted token para sa attendance. |
 | **html5-qrcode** (`html5-qrcode`) | QR Code Scanner Engine | `^2.3.8` | Cross-platform camera scanner para sa real-time attendance verification gamit ang anumang smartphone o laptop camera. |
 | **xlsx (SheetJS)** (`xlsx`) | Client Spreadsheet Engine | `^0.18.5` | Para sa pag-export at pag-download ng student attendance sheets, class rosters, at attendance matrix papuntang formatted `.xlsx` Excel spreadsheets. |
@@ -29,6 +32,7 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | :--- | :--- | :--- | :--- |
 | **Node.js** | Runtime Environment | `v20+ / v24` | High-performance, event-driven, non-blocking asynchronous JavaScript runtime na nagpapatakbo sa REST API backend server. |
 | **Express.js** (`express`) | Web Application Framework | `^4.21.2` | Minimalist at matatag na backend framework para sa API routing, middleware execution, multipart handling, at JSON response formatting. |
+| **Socket.IO Server** (`socket.io`) | WebSocket & Signaling Server | `^4.8.3` | Namamahala sa server-side WebSocket events, room subscriptions (group tracks & direct chats), live user connection tracking, at WebRTC SDP/ICE candidate call signaling. |
 | **mysql2 / mysql2/promise** | Database Driver | `^3.12.0` | High-performance MySQL client na may full async/await support, Connection Pooling (max 10 connections), SSL encryption, at Parameterized Prepared Statements para sa proteksyon laban sa SQL Injection. |
 | **jsonwebtoken (JWT)** (`jsonwebtoken`) | Authentication & Security | `^9.0.2` | Stateless cryptographic token provider para sa secure authentication ng Admin at Instructors na may single-session token validation at automatic expiration. |
 | **bcryptjs** (`bcryptjs`) | Password Cryptography | `^3.0.2` | One-way cryptographic password hashing algorithm na may 10–12 salt rounds upang matiyak na protektado ang user passwords laban sa data exposure. |
@@ -43,11 +47,27 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 
 ---
 
-## 🗄️ 3. Database, Storage, at Cloud Infrastructure
+## 💬 3. Real-Time Messaging, Voice, and Video Call Architecture (Communication Stack)
+
+| Tampok / Feature | Ginamit na Teknolohiya | Detalye ng Implementasyon at Benepisyo |
+| :--- | :--- | :--- |
+| **Instant Text Messaging** | `Socket.IO` (WebSockets) | Real-time bi-directional message transfer na walang HTTP polling delays; awtomatikong lumalabas ang mensahe sa tatanggap sa loob ng <50 milliseconds. |
+| **Live P2P Video Calling** | `WebRTC API` (`RTCPeerConnection`) | Peer-to-peer encrypted high-definition video call sa pagitan ng mga guro at admin na may live camera toggle at floating control HUD. |
+| **Live P2P Voice Calling** | `WebRTC Audio Stream` + `getUserMedia` | Kristal-linaw na voice calls nang hindi gumagamit ng external third-party PBX services; may dynamic mute/unmute control. |
+| **Voice Audio Notes** | `MediaRecorder API` + Opus Codec | Direktang pagre-record ng boses gamit ang mikropono; may visual playing state, animated equalizer pulses, at scrubbable progress bar. |
+| **Multimedia & File Sharing** | `FileReader` + Base64 / Cloud Storage | Suporta sa pag-attach ng mga larawan (may full-screen lightbox preview), PDF memos, Word documents, at Excel matrices na may direct download triggers. |
+| **Message Reactions** | Custom Emoji Engine + Socket Events | Mabilisang pag-react ng emojis (👍, ❤️, 😂, 😮, 😢, 🙏) na awtomatikong nagsasara ng reaction popover pagka-pindot. |
+| **Message Editing & Dual Deletion** | Optimistic UI + MySQL Soft/Hard Delete | Kakayahang mag-edit ng sariling mensahe, at pagpili sa pagitan ng `"Delete for me"` (itinatago lamang sa sarili) o `"Delete for everyone"` (tinatanggal sa buong channel). |
+| **Live Presence & Activity Engine** | Timestamp Tracker (`last_active_at`) | Granular na pagsubaybay sa online status ng mga guro: `Online now` (<4m), `Active X mins ago`, `Active today at...`, `Active yesterday at...`. |
+| **Relational Integrity** | MySQL `conversations`, `participants`, `messages` | Ganap na normalized database architecture na may Foreign Key cascades at safe deletion filters. |
+
+---
+
+## 🗄️ 4. Database, Storage, at Cloud Infrastructure
 
 | Komponent / Serbisyo | Kategorya | Detalye at Gamit (Details & Functions) |
 | :--- | :--- | :--- |
-| **Aiven Cloud MySQL 8.0** | Relational Database (RDBMS) | Managed Cloud MySQL 8.0 na may SSL TLS 1.3 encryption, automatic backups, at 15 normalized relational tables (`users`, `students`, `enrollments`, `attendance_records`, `password_resets`, `reports`, `conversations`, `audit_logs`, atbp.). |
+| **Aiven Cloud MySQL 8.0** | Relational Database (RDBMS) | Managed Cloud MySQL 8.0 na may SSL TLS 1.3 encryption, automatic backups, at 15 normalized relational tables (`users`, `students`, `enrollments`, `attendance_records`, `password_resets`, `reports`, `conversations`, `messages`, `conversation_participants`, `audit_logs`, atbp.). |
 | **TCP Keepalive Mechanism** | Connection Continuity Engine | Awtomatikong nagpapadala ng heartbeat query (`SELECT 1`) bawat 45 segundo upang mapanatiling gising ang cloud database pool at maiwasan ang idle connection timeouts. |
 | **Self-Healing Schema Auto-Provisioner** | Migration Engine | Sinusuri at awtomatikong lumilikha ng mga kulang na tables, columns, at default admin accounts sa bawat pag-start ng server. |
 | **Google Drive & Google Sheets** | Off-site Redundancy Storage | Awtomatikong cloud backup para sa student enrollment records at database snapshots gamit ang Google Apps Script Webhooks. |
@@ -56,7 +76,7 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 
 ---
 
-## 🔒 4. Security & Compliance Matrix (RA 10173 Compliant)
+## 🔒 5. Security & Compliance Matrix (RA 10173 Compliant)
 
 | Security Domain | Teknolohiyang Ginamit | Mekanismo ng Proteksyon |
 | :--- | :--- | :--- |
@@ -67,3 +87,4 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Bot / Spam Defense** | Google reCAPTCHA v2 + Rate Limiters | Awtomatikong hinaharang ang automated scripts, bots, at rapid submission floods. |
 | **Forensic Accountability** | Audit Trail (`audit_logs`) | Detalyadong audit logs sa bawat login, student approval, grade update, at export kasama ang IP address at timestamp. |
 | **Password Reset Security** | Non-Bypassable 6-Digit OTP | Dynamic 10-minute expiration OTP na ipinapadala lamang sa opisyal na rehistradong email ng guro o admin nang walang anumang master code bypass. |
+| **Communication Privacy** | Token-authenticated WebSockets & WebRTC | Tanging mga authenticated users na may valid JWT ang pinapayagang sumali sa mga conversation rooms at makipag-ugnayan sa P2P calls. |
