@@ -278,7 +278,7 @@ function Landing() {
     };
   }, []);
 
-  const totalUsersCount = telemetry.totalRegisteredUsers || telemetry.totalUsers || telemetry.totalVisitors || 0;
+  const totalVisitorsCount = telemetry.totalVisitors || telemetry.totalRegisteredUsers || telemetry.totalUsers || 0;
   const activeOnlineCount = telemetry.activeOnlineCount || 1;
 
   const startTimer = useCallback(() => {
@@ -1148,13 +1148,13 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {/* Enrolled Students */}
+              {/* Total Website Visitors */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Enrolled Students</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Visitors</p>
                   <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
-                    {(telemetry.totalStudents || 0).toLocaleString()}
+                    {totalVisitorsCount.toLocaleString()}
                   </p>
                 </div>
               </div>
