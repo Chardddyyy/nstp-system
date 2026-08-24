@@ -880,9 +880,6 @@ function AdminDashboard() {
                       <span className={`w-1.5 h-1.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
                       {scheduleStatus.isOpen ? 'Portal is Open' : 'Portal is Closed'}
                     </span>
-                    <span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-gray-200">
-                      {scheduleConfig.mode === 'AUTO' ? 'Auto-Timed Schedule' : scheduleConfig.mode === 'FORCE_OPEN' ? 'Manual Override: Open' : 'Manual Override: Closed'}
-                    </span>
                   </div>
                   
                   <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">

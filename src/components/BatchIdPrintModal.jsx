@@ -121,10 +121,11 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
         </div>
 
         {/* Filter Toolbar */}
-        <div className="p-2 sm:px-3.5 sm:py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-xs shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1 min-w-0">
-            <form onSubmit={handleSearchSubmit} className="flex-1 min-w-[160px] sm:min-w-[200px] flex items-center gap-1.5">
-              <div className="relative flex-1">
+        <div className="p-2 sm:px-3.5 sm:py-2.5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+          {/* Search form and Department filter */}
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:flex-1 sm:min-w-0">
+            <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-1.5 min-w-0">
+              <div className="relative flex-1 min-w-0">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -164,7 +165,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
                 setDepartmentFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-2 sm:px-2.5 py-1.5 bg-white rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs"
+              className="px-2 sm:px-2.5 py-1.5 bg-white rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 focus:outline-none cursor-pointer text-xs shrink-0"
             >
               <option value="All">All Tracks</option>
               <option value="CWTS">CWTS</option>
@@ -173,11 +174,12 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Action Buttons: Select/Deselect All & Print A4 */}
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
             <button
               type="button"
               onClick={toggleSelectAll}
-              className="px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer text-[10.5px] sm:text-xs"
+              className="flex-1 sm:flex-initial justify-center px-2 sm:px-3 py-1.5 rounded-lg sm:rounded-xl bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-1 cursor-pointer text-[10.5px] sm:text-xs"
             >
               {selectedIds.size === filteredStudents.length ? <CheckSquare className="w-3.5 h-3.5 text-emerald-700" /> : <Square className="w-3.5 h-3.5 text-slate-400" />}
               <span>{selectedIds.size === filteredStudents.length ? 'Deselect All' : 'Select All'} ({selectedIds.size})</span>
@@ -187,7 +189,7 @@ export function BatchIdPrintModal({ isOpen, onClose, defaultDepartment = 'All' }
               type="button"
               onClick={handlePrint}
               disabled={selectedStudentsList.length === 0}
-              className="px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 text-[10.5px] sm:text-xs"
+              className="flex-1 sm:flex-initial justify-center px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 text-[10.5px] sm:text-xs"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Print A4</span>
