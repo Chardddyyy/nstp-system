@@ -1148,27 +1148,27 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {/* Total Users / Visitors */}
+              {/* Enrolled Students */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Registered</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Enrolled Students</p>
                   <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
-                    {totalUsersCount.toLocaleString()}
+                    {(telemetry.totalStudents || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
 
-              {/* Total Active Students (Pulsing Green Indicator) */}
+              {/* Active Online Visitors (Pulsing Green Indicator) */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-800/90 border border-emerald-600/80 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <div className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
                 </div>
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Total Active Students</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-200 tracking-wider leading-none">Active Online</p>
                   <p className="text-[11px] sm:text-sm font-black text-emerald-300 leading-tight mt-0.5">
-                    {(telemetry.totalStudents || telemetry.totalRegisteredUsers || totalUsersCount || 0).toLocaleString()}
+                    {activeOnlineCount}
                   </p>
                 </div>
               </div>
