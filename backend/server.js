@@ -5197,13 +5197,13 @@ app.get('/api/telemetry/stats', async function(req, res) {
     var dbStudents = (studentRows[0] && studentRows[0].count) || 0;
     var dbUsers = (userRows[0] && userRows[0].count) || 0;
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var totalUsageCount = Math.max(totalRegisteredUsers, totalUniqueVisitors.size);
+    var totalUsageCount = Math.max(dbStudents, totalUniqueVisitors.size);
     var activeOnlineCount = Math.max(activeSessions.size, activeList.length);
 
     res.json({
       totalVisitors: totalUsageCount,
       totalRegisteredUsers: totalRegisteredUsers,
-      totalUsers: totalRegisteredUsers > 0 ? totalRegisteredUsers : totalUsageCount,
+      totalUsers: dbStudents > 0 ? dbStudents : totalUsageCount,
       totalStudents: dbStudents,
       activeOnlineCount: activeOnlineCount,
       activeUsers: activeList

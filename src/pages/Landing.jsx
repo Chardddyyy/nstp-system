@@ -278,7 +278,7 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = telemetry.totalVisitors || telemetry.totalRegisteredUsers || telemetry.totalUsers || 0;
+  const totalStudentsCount = telemetry.totalStudents ?? (telemetry.totalRegisteredUsers || 5);
   const activeOnlineCount = telemetry.activeOnlineCount || 1;
 
   const startTimer = useCallback(() => {
@@ -994,8 +994,10 @@ function Landing() {
                 return (
                   <div 
                     key={idx} 
-                    className={`bg-white rounded-2xl border transition-all duration-200 shadow-2xs overflow-hidden ${
-                      isOpen ? 'border-emerald-400/80 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-slate-300'
+                    className={`bg-white rounded-2xl border transition-all duration-300 shadow-2xs overflow-hidden ${
+                      isOpen 
+                        ? 'md:col-span-2 border-emerald-400/80 ring-2 ring-emerald-500/10 shadow-md' 
+                        : 'col-span-1 border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <button
@@ -1148,13 +1150,13 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {/* Total Website Visitors */}
+              {/* Enrolled Students */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Visitors</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Enrolled Students</p>
                   <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
-                    {totalVisitorsCount.toLocaleString()}
+                    {totalStudentsCount.toLocaleString()}
                   </p>
                 </div>
               </div>
