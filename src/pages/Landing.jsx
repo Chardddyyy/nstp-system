@@ -280,7 +280,6 @@ function Landing() {
     };
   }, []);
 
-  const totalStudentsCount = telemetry.totalStudents ?? (telemetry.totalRegisteredUsers || 5);
   const totalVisitorsCount = telemetry.totalVisitors ?? 12;
   const activeOnlineCount = telemetry.activeOnlineCount || 1;
 

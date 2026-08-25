@@ -964,6 +964,17 @@ function AdminDashboard() {
                     <span>Open Portal Now</span>
                   </button>
                 )}
+
+                <button
+                  type="button"
+                  onClick={handleManualBackup}
+                  disabled={isBackingUp}
+                  className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs sm:text-sm rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-xs disabled:opacity-50"
+                  title="Save complete database snapshot directly to Google Drive"
+                >
+                  <Cloud className="w-4 h-4 text-emerald-300" />
+                  <span>{isBackingUp ? 'Backing Up...' : 'Backup to GDrive'}</span>
+                </button>
               </div>
             </div>
             {backupSuccessMsg && (

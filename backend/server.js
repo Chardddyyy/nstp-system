@@ -804,42 +804,41 @@ async function ensureStudentColumns() {
 // Auto-sync / restore students' Certificate of Registration (COR) & 2x2 Photos from original enrollment records
 async function restoreCorFromEnrollments() {
   try {
-    // 1. Restore registrationPhoto/reg_form from enrollments table for any student whose COR was blank or corrupted/overwritten by 2x2 photo
+    // 1. Sync registration form / COR documents
     await pool.execute(`
       UPDATE students s
       JOIN enrollments e ON (
         s.studentId = e.studentId 
-        OR s.studentId = e.student_id 
-        OR (s.name = e.fullName AND s.department = e.department)
+        OR (s.name = e.student_name AND s.department = e.department)
       )
-      SET s.registrationPhoto = COALESCE(NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registrationPhoto),
-          s.registration_photo = COALESCE(NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registration_photo),
-          s.reg_form = COALESCE(NULLIF(e.reg_form, ''), NULLIF(e.registrationPhoto, ''), NULLIF(e.registration_photo, ''), s.reg_form)
+      SET s.registrationPhoto = COALESCE(NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registrationPhoto),
+          s.registration_photo = COALESCE(NULLIF(e.registration_photo, ''), NULLIF(e.reg_form, ''), s.registration_photo),
+          s.reg_form = COALESCE(NULLIF(e.reg_form, ''), NULLIF(e.registration_photo, ''), s.reg_form)
       WHERE (
         s.registrationPhoto IS NULL 
         OR s.registrationPhoto = '' 
-        OR (s.registrationPhoto = s.photo AND e.registrationPhoto IS NOT NULL AND e.registrationPhoto != '' AND e.registrationPhoto != s.photo)
-        OR (s.registrationPhoto = s.id_photo_2x2 AND e.registrationPhoto IS NOT NULL AND e.registrationPhoto != '' AND e.registrationPhoto != s.id_photo_2x2)
+        OR s.registration_photo IS NULL 
+        OR s.registration_photo = ''
       )
-      AND (e.registrationPhoto IS NOT NULL OR e.registration_photo IS NOT NULL OR e.reg_form IS NOT NULL)
+      AND (e.registration_photo IS NOT NULL OR e.reg_form IS NOT NULL)
     `);
 
-    // 2. Also restore 2x2 photo from enrollments if student has id_photo_2x2 in enrollments but missing or equal to regPhoto in students
+    // 2. Also restore 2x2 photo from enrollments
     await pool.execute(`
       UPDATE students s
       JOIN enrollments e ON (
         s.studentId = e.studentId 
-        OR s.studentId = e.student_id 
-        OR (s.name = e.fullName AND s.department = e.department)
+        OR (s.name = e.student_name AND s.department = e.department)
       )
-      SET s.id_photo_2x2 = COALESCE(NULLIF(e.id_photo_2x2, ''), NULLIF(e.idPhoto2x2, ''), NULLIF(e.photo, ''), s.id_photo_2x2),
-          s.photo = COALESCE(NULLIF(e.photo, ''), NULLIF(e.id_photo_2x2, ''), NULLIF(e.idPhoto2x2, ''), s.photo)
+      SET s.id_photo_2x2 = COALESCE(NULLIF(e.id_photo_2x2, ''), NULLIF(e.photo, ''), s.id_photo_2x2),
+          s.photo = COALESCE(NULLIF(e.photo, ''), NULLIF(e.id_photo_2x2, ''), s.photo)
       WHERE (
         s.id_photo_2x2 IS NULL 
         OR s.id_photo_2x2 = '' 
-        OR (s.id_photo_2x2 = s.registrationPhoto AND e.id_photo_2x2 IS NOT NULL AND e.id_photo_2x2 != '' AND e.id_photo_2x2 != s.registrationPhoto)
+        OR s.photo IS NULL 
+        OR s.photo = ''
       )
-      AND (e.id_photo_2x2 IS NOT NULL OR e.idPhoto2x2 IS NOT NULL OR e.photo IS NOT NULL)
+      AND (e.id_photo_2x2 IS NOT NULL OR e.photo IS NOT NULL)
     `);
     console.log('[Auto-Heal] Successfully synced & verified students documents with original enrollment records.');
   } catch (err) {

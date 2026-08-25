@@ -24,6 +24,7 @@ function Login() {
   const [forgotShowPassword, setForgotShowPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -673,6 +674,16 @@ function Login() {
                       <strong className="block text-emerald-950 font-black text-xs sm:text-sm mt-0.5 break-all">{forgotEmail}</strong>
                     </div>
                   </div>
+
+                  {forgotSuccess && (
+                    <div className="mb-3.5 bg-emerald-50 border-2 border-emerald-300 text-emerald-900 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-fade-in">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block text-emerald-950 font-extrabold mb-0.5">Code Detected</strong>
+                        <span>{forgotSuccess}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {forgotError && (
                     <div className="mb-3.5 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">

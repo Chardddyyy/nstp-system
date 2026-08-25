@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 
 import { getAvatarSrc } from '../utils/avatars';
 
@@ -1265,7 +1265,7 @@ function Chat() {
     setShowMessageMenu(null);
   };
 
-  const isMessageDeletedForMe = (message) => {
+  const isMessageDeletedForMe = useCallback((message) => {
     if (message.deletedForMe) return true;
     const raw = message.deleted_for ?? message.deletedFor;
     if (!raw || !user?.id) return false;
@@ -1273,11 +1273,11 @@ function Chat() {
       const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
       return Array.isArray(arr) && arr.includes(user.id);
     } catch { return false; }
-  };
+  }, [user?.id]);
 
-  const isMessageDeletedForEveryone = (message) => {
+  const isMessageDeletedForEveryone = useCallback((message) => {
     return message.deleted_for_everyone === true || message.deleted_for_everyone === 1 || message.type === 'deleted';
-  };
+  }, []);
 
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
@@ -1526,7 +1526,9 @@ function Chat() {
   const activePartnerName = getConversationPartnerName(activeConversation);
 
   // Get messages for active conversation - MUST be declared AFTER activeConversation
-  const currentMessages = activeConversation ? (messages[activeConversation.id] || []) : [];
+  const currentMessages = useMemo(() => {
+    return activeConversation ? (messages[activeConversation.id] || []) : [];
+  }, [activeConversation, messages]);
 
   // Extract all media, documents, and voice notes from the active conversation (Messenger-style Backreader)
   const sharedImages = useMemo(() => {
@@ -1535,7 +1537,7 @@ function Chat() {
       (m.type === 'image' || m.message_type === 'image') && 
       (m.imageUrl || m.image_url || m.file_url)
     );
-  }, [currentMessages]);
+  }, [currentMessages, isMessageDeletedForEveryone, isMessageDeletedForMe]);
 
   const sharedFiles = useMemo(() => {
     return (currentMessages || []).filter(m => 
@@ -1543,7 +1545,7 @@ function Chat() {
       (m.type === 'file' || m.message_type === 'file') && 
       (m.fileName || m.file_name || m.fileUrl || m.file_url)
     );
-  }, [currentMessages]);
+  }, [currentMessages, isMessageDeletedForEveryone, isMessageDeletedForMe]);
 
   const sharedVoiceNotes = useMemo(() => {
     return (currentMessages || []).filter(m => 
@@ -1551,7 +1553,7 @@ function Chat() {
       (m.type === 'voice' || m.message_type === 'voice') && 
       (m.audioUrl || m.audio_url)
     );
-  }, [currentMessages]);
+  }, [currentMessages, isMessageDeletedForEveryone, isMessageDeletedForMe]);
 
   const allSharedAttachments = useMemo(() => {
     return [
