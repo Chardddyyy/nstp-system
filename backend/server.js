@@ -1318,27 +1318,24 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                       We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:
                     </p>
 
-                    <!-- High-Contrast Clickable Copy Button for OTP -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; text-align: center;">
+                    <!-- Pure OTP Verification Box (No Hyperlink / Zero Unwanted Tabs) -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 22px 0; text-align: center;">
                       <tr>
                         <td align="center">
-                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 20px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12); max-width: 360px;">
+                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 16px; padding: 22px 24px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12); max-width: 380px;">
                             <tr>
                               <td align="center">
-                                <span style="display: block; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
+                                <span style="display: block; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 12px;">
                                   Your One-Time Password (OTP)
                                 </span>
                                 
-                                <!-- Standalone Styled OTP Code Box -->
-                                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 28px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669; margin-bottom: 14px; user-select: all; -webkit-user-select: all; cursor: pointer;">
+                                <!-- Standalone Styled OTP Code Box (1-Tap Select & Copy) -->
+                                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 30px; font-weight: 900; letter-spacing: 8px; padding: 12px 28px; border-radius: 12px; border: 2px dashed #059669; margin-bottom: 12px; user-select: all; -webkit-user-select: all; cursor: pointer;">
                                   ${otpCode}
                                 </div>
 
-                                <!-- Clickable Copy Button that opens site & copies to clipboard in the same tab -->
-                                <div>
-                                  <a href="${resetLink}" target="nstp_system_tab" style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-size: 13px; font-weight: 850; padding: 10px 24px; border-radius: 24px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.8px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); border: 1.5px solid #10b981;">
-                                    Copy Code &amp; Reset Password
-                                  </a>
+                                <div style="font-size: 12px; font-weight: 700; color: #065f46; line-height: 1.4;">
+                                  Copy and enter this 6-digit code into your active NSTP System tab.
                                 </div>
                               </td>
                             </tr>
