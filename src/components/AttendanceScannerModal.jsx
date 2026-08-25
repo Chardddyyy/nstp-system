@@ -160,14 +160,28 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       const html5QrCode = new Html5Qrcode('qr-reader-video-box');
       scannerRef.current = html5QrCode;
 
+      // Ultra-Fast instant scan configuration with native hardware acceleration
       const config = {
-        fps: 15,
-        qrbox: { width: 220, height: 220 },
+        fps: 25, // High frame rate for instant detection
+        qrbox: (viewfinderWidth, viewfinderHeight) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const edgeSize = Math.floor(minEdge * 0.72);
+          return {
+            width: Math.max(180, Math.min(edgeSize, 250)),
+            height: Math.max(180, Math.min(edgeSize, 250))
+          };
+        },
         aspectRatio: 1.0,
+        disableFlip: cameraFacing === 'environment',
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true // Native hardware-accelerated BarcodeDetector
+        }
       };
 
       await html5QrCode.start(
-        { facingMode: cameraFacing },
+        { 
+          facingMode: cameraFacing
+        },
         config,
         (decodedText) => {
           if (!isProcessingRef.current) {
@@ -498,10 +512,35 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
         {/* Scanner + Live Output Split */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100/50">
           
-          {/* Left Column: Live Camera Box */}
+          {/* Left Column: Live Camera Box with Centered Targeting Viewfinder */}
           <div className="flex flex-col items-center justify-start space-y-3">
-            <div className="w-full aspect-square max-w-[320px] bg-black rounded-3xl overflow-hidden relative shadow-lg border-2 border-emerald-600 flex items-center justify-center">
-              <div id="qr-reader-video-box" className="w-full h-full object-cover"></div>
+            <div className="w-full aspect-square max-w-[320px] bg-black rounded-3xl overflow-hidden relative shadow-2xl border-2 border-emerald-600 flex items-center justify-center group">
+              {/* Raw Video Box from html5-qrcode */}
+              <div id="qr-reader-video-box" className="w-full h-full object-cover [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
+
+              {/* Centered High-Tech Viewfinder Target Frame Overlay */}
+              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">
+                <div className="relative w-[190px] h-[190px] sm:w-[210px] sm:h-[210px] flex items-center justify-center">
+                  
+                  {/* Glowing 4-Corner Brackets */}
+                  <div className="absolute -top-1.5 -left-1.5 w-6 h-6 sm:w-7 sm:h-7 border-t-4 border-l-4 border-emerald-400 rounded-tl-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"></div>
+                  <div className="absolute -top-1.5 -right-1.5 w-6 h-6 sm:w-7 sm:h-7 border-t-4 border-r-4 border-emerald-400 rounded-tr-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"></div>
+                  <div className="absolute -bottom-1.5 -left-1.5 w-6 h-6 sm:w-7 sm:h-7 border-b-4 border-l-4 border-emerald-400 rounded-bl-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"></div>
+                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 sm:w-7 sm:h-7 border-b-4 border-r-4 border-emerald-400 rounded-br-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]"></div>
+                  
+                  {/* Inner Dashed Frame */}
+                  <div className="w-full h-full border border-dashed border-emerald-300/40 rounded-2xl bg-emerald-500/5"></div>
+
+                  {/* Animated Laser Scanning Line */}
+                  <div className="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-laser-scan drop-shadow-[0_0_8px_#34d399]"></div>
+                </div>
+
+                {/* Guidance Pill Badge */}
+                <div className="mt-3 px-3 py-1 rounded-full bg-black/75 backdrop-blur-xs border border-emerald-500/50 text-[10px] sm:text-[11px] font-black text-emerald-300 tracking-wide uppercase shadow-lg flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Fit QR inside box</span>
+                </div>
+              </div>
             </div>
 
             {/* Manual ID Input Fallback */}
