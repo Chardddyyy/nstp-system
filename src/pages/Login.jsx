@@ -2,7 +2,51 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check } from 'lucide-react';
+
+// Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
+function copyTextToClipboard(text) {
+  if (!text) return false;
+  const clean = String(text).trim();
+
+  // Strategy 1: navigator.clipboard API
+  if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    navigator.clipboard.writeText(clean).catch(() => {
+      fallbackExecCopy(clean);
+    });
+    return true;
+  }
+
+  // Strategy 2: Fallback textarea selection & execCommand('copy')
+  return fallbackExecCopy(clean);
+}
+
+function fallbackExecCopy(text) {
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    textarea.style.opacity = '0.001';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return successful;
+  } catch (_) {
+    return false;
+  }
+}
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -25,6 +69,7 @@ function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
+  const [copiedOtp, setCopiedOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -45,11 +90,13 @@ function Login() {
         channel = new BroadcastChannel('nstp_password_reset_sync');
         channel.onmessage = (event) => {
           if (event?.data?.otp) {
-            setForgotOtp(String(event.data.otp).trim());
+            const receivedOtp = String(event.data.otp).trim();
+            setForgotOtp(receivedOtp);
+            copyTextToClipboard(receivedOtp);
             if (event.data.email) setForgotEmail(String(event.data.email).trim().toLowerCase());
             setShowForgotPassword(true);
             setForgotStep(2);
-            setForgotSuccess('⚡ OTP automatically received from Gmail & entered in this tab!');
+            setForgotSuccess('⚡ OTP automatically copied to clipboard & entered in this tab!');
           }
         };
       }
@@ -61,11 +108,13 @@ function Login() {
         try {
           const payload = JSON.parse(e.newValue);
           if (payload?.otp) {
-            setForgotOtp(String(payload.otp).trim());
+            const receivedOtp = String(payload.otp).trim();
+            setForgotOtp(receivedOtp);
+            copyTextToClipboard(receivedOtp);
             if (payload.email) setForgotEmail(String(payload.email).trim().toLowerCase());
             setShowForgotPassword(true);
             setForgotStep(2);
-            setForgotSuccess('⚡ OTP automatically received from Gmail & entered in this tab!');
+            setForgotSuccess('⚡ OTP automatically copied to clipboard & entered in this tab!');
           }
         } catch (_) {}
       }
@@ -83,10 +132,8 @@ function Login() {
         const cleanOtp = String(urlOtp).trim();
         const cleanEmail = urlEmail ? String(urlEmail).trim().toLowerCase() : '';
 
-        // 1. Copy to clipboard
-        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(cleanOtp).catch(() => {});
-        }
+        // 1. Copy to clipboard immediately using universal helper
+        copyTextToClipboard(cleanOtp);
 
         // 2. Broadcast to other open NSTP System tabs so the original tab fills immediately
         if (channel) {
@@ -716,6 +763,31 @@ function Login() {
                         required
                         autoFocus
                       />
+                      {forgotOtp && forgotOtp.length >= 1 && (
+                        <div className="mt-2 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyTextToClipboard(forgotOtp);
+                              setCopiedOtp(true);
+                              setTimeout(() => setCopiedOtp(false), 2500);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 rounded-lg text-[11px] font-bold transition-all cursor-pointer active:scale-95 border border-emerald-300 shadow-2xs"
+                          >
+                            {copiedOtp ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Copied to Clipboard!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-emerald-700" />
+                                <span>Copy OTP to Clipboard</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                       <p className="text-[10px] text-gray-400 text-center mt-1.5">Check your inbox or Spam/Junk folder for the code.</p>
                     </div>
 
