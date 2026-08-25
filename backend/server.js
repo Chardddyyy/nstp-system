@@ -1273,7 +1273,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     headers: {
       'X-Entity-Ref-ID': `${Date.now()}-${otpCode}`
     },
-    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:\n\n${formattedOtp}\n\nAuto-Fill Link: https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
+    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -1314,26 +1314,24 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                       Hi <span style="color: #047857;">${deliveryEmail}</span>,
                     </p>
                     <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 14px 0;">
-                      We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please enter the One-Time Password (OTP) below into the system:
+                      We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:
                     </p>
 
-                    <!-- Compact 6-Digit OTP Code Box & 1-Click Action Button -->
+                    <!-- Compact 6-Digit OTP Code Copy Box (No redirect) -->
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 1.5px solid #059669; border-radius: 12px; margin: 16px 0; text-align: center;">
                       <tr>
-                        <td align="center" style="padding: 16px 12px;">
-                          <span style="display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #047857; margin-bottom: 6px;">
-                            One-Time Password (OTP)
+                        <td align="center" style="padding: 18px 14px;">
+                          <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #047857; margin-bottom: 8px;">
+                            Your One-Time Password (OTP)
                           </span>
-                          <!-- Compact code without brackets -->
-                          <div style="display: inline-block; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; font-size: 22px; font-weight: 900; letter-spacing: 6px; color: #064e3b; padding: 5px 14px; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 8px; margin-bottom: 12px; user-select: all; -webkit-user-select: all;">
-                            ${formattedOtp}
-                          </div>
                           
-                          <!-- 1-Click Auto-Fill & Continue Button -->
-                          <div>
-                            <a href="https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 800; padding: 10px 22px; border-radius: 8px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25); text-transform: uppercase; letter-spacing: 0.5px;">
-                              Auto-Fill Code & Reset Password
-                            </a>
+                          <!-- 6-digit Code (Auto-select on click/tap for easy copying) -->
+                          <div style="display: inline-block; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 24px; font-weight: 900; letter-spacing: 6px; color: #064e3b; padding: 8px 18px; background: #ffffff; border: 1.5px dashed #059669; border-radius: 10px; margin-bottom: 10px; user-select: all; -webkit-user-select: all; cursor: pointer;">
+                            ${otpCode}
+                          </div>
+
+                          <div style="font-size: 11.5px; font-weight: 700; color: #065f46; margin-top: 4px;">
+                            📋 Tap / Click the code above to select and copy
                           </div>
                         </td>
                       </tr>
