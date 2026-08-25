@@ -14,9 +14,8 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Bootstrap 5** (`bootstrap`) | UI Grid Utilities | `^5.3.3` | Karagdagang grid system, responsive tables, at fallback utilities para sa multi-device display consistency. |
 | **React Router DOM v7** (`react-router-dom`) | Client-Side Routing | `^7.2.0` | Namamahala sa declarative browser routing, deep linking, URL query parameter auto-fill (para sa 1-click password reset), at Role-Based Protected Routes (`Admin`, `Instructor`). |
 | **Socket.IO Client** (`socket.io-client`) | Real-Time WebSocket Client | `^4.8.3` | Nagbibigay ng zero-latency bi-directional WebSocket connection para sa live chat messaging, typing indicators, read receipts, online presence updates, at real-time reaction broadcasts. |
-| **WebRTC API** (`RTCPeerConnection`, `MediaStream`) | P2P Voice & Video Call Engine | *Native Browser API* | Peer-to-peer real-time high-definition voice at video calling sa pagitan ng mga guro at admin, kasama ang live audio/video track toggling at screen sharing (`getDisplayMedia`). |
-| **HTML5 MediaRecorder API** | Voice Notes Engine | *Native Browser API* | Nagre-record ng audio voice messages diretso mula sa mikropono ng user gamit ang client-side Opus/WebM encoding na may real-time animated waveform audio progress bar. |
-| **HTML5 Canvas & WebRTC Camera API** | Camera Engine | *Native Browser API* | Nagbibigay ng unmirrored (natural orientation) live camera capture para sa Certificate of Registration (COR) at 2x2 Formal Student ID photos nang may client-side image compression. |
+| **HTML5 MediaRecorder API** | Voice Audio Chat Engine | *Native Browser API* | Nagre-record ng audio voice notes diretso mula sa mikropono ng user gamit ang client-side Opus/WebM encoding na may real-time animated waveform audio progress bar. |
+| **HTML5 Canvas & Camera API** | Camera Engine | *Native Browser API* | Nagbibigay ng unmirrored (natural orientation) live camera capture para sa Certificate of Registration (COR) at 2x2 Formal Student ID photos nang may client-side image compression. |
 | **Lucide React** (`lucide-react`) | Iconography | `^1.16.0` | Modern, lightweight, at scalable SVG vector icons para sa action buttons, metrics cards, indicators, at intuitive navigation. |
 | **heic2any** (`heic2any`) | Client Image Converter | `^0.0.4` | Awtomatikong nagko-convert ng mga high-efficiency `.HEIC` at `.HEIF` photos mula sa iPhone/iPad camera papuntang standard compressed `.JPEG` sa browser bago i-upload. |
 | **qrcode** (`qrcode`) | QR Code Generator | `^1.5.4` | Lumilikha ng secure, high-density digital QR codes para sa student digital ID cards na naglalaman ng encrypted token para sa attendance. |
@@ -32,7 +31,7 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | :--- | :--- | :--- | :--- |
 | **Node.js** | Runtime Environment | `v20+ / v24` | High-performance, event-driven, non-blocking asynchronous JavaScript runtime na nagpapatakbo sa REST API backend server. |
 | **Express.js** (`express`) | Web Application Framework | `^4.21.2` | Minimalist at matatag na backend framework para sa API routing, middleware execution, multipart handling, at JSON response formatting. |
-| **Socket.IO Server** (`socket.io`) | WebSocket & Signaling Server | `^4.8.3` | Namamahala sa server-side WebSocket events, room subscriptions (group tracks & direct chats), live user connection tracking, at WebRTC SDP/ICE candidate call signaling. |
+| **Socket.IO Server** (`socket.io`) | WebSocket Server | `^4.8.3` | Namamahala sa server-side WebSocket events, room subscriptions (group tracks & direct chats), live user connection tracking, at instant notification broadcasts. |
 | **mysql2 / mysql2/promise** | Database Driver | `^3.12.0` | High-performance MySQL client na may full async/await support, Connection Pooling (max 10 connections), SSL encryption, at Parameterized Prepared Statements para sa proteksyon laban sa SQL Injection. |
 | **jsonwebtoken (JWT)** (`jsonwebtoken`) | Authentication & Security | `^9.0.2` | Stateless cryptographic token provider para sa secure authentication ng Admin at Instructors na may single-session token validation at automatic expiration. |
 | **bcryptjs** (`bcryptjs`) | Password Cryptography | `^3.0.2` | One-way cryptographic password hashing algorithm na may 10–12 salt rounds upang matiyak na protektado ang user passwords laban sa data exposure. |
@@ -47,15 +46,14 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 
 ---
 
-## 💬 3. Real-Time Messaging, Voice, and Video Call Architecture (Communication Stack)
+## 💬 3. Real-Time Messaging, Voice Chat, and Messenger-Style Media Backreader Architecture (Communication Stack)
 
 | Tampok / Feature | Ginamit na Teknolohiya | Detalye ng Implementasyon at Benepisyo |
 | :--- | :--- | :--- |
 | **Instant Text Messaging** | `Socket.IO` (WebSockets) | Real-time bi-directional message transfer na walang HTTP polling delays; awtomatikong lumalabas ang mensahe sa tatanggap sa loob ng <50 milliseconds. |
-| **Live P2P Video Calling** | `WebRTC API` (`RTCPeerConnection`) | Peer-to-peer encrypted high-definition video call sa pagitan ng mga guro at admin na may live camera toggle at floating control HUD. |
-| **Live P2P Voice Calling** | `WebRTC Audio Stream` + `getUserMedia` | Kristal-linaw na voice calls nang hindi gumagamit ng external third-party PBX services; may dynamic mute/unmute control. |
-| **Voice Audio Notes** | `MediaRecorder API` + Opus Codec | Direktang pagre-record ng boses gamit ang mikropono; may visual playing state, animated equalizer pulses, at scrubbable progress bar. |
-| **Multimedia & File Sharing** | `FileReader` + Base64 / Cloud Storage | Suporta sa pag-attach ng mga larawan (may full-screen lightbox preview), PDF memos, Word documents, at Excel matrices na may direct download triggers. |
+| **Voice Audio Chat (Voice Notes)** | `MediaRecorder API` + Opus Codec | Direktang pagre-record ng boses gamit ang mikropono; may visual playing state, animated equalizer pulses, at scrubbable progress bar. |
+| **Messenger-Style Shared Files & Media Backreader** | Memoized Query Engine + Modal Gallery | Nakalaang gallery hub (katulad ng sa Facebook Messenger) kung saan maaaring i-backread at i-filter ang lahat ng ipinadalang **Photos**, **Documents (PDF/Word/Excel)**, at **Voice Notes** sa bawat pag-uusap na may built-in 1-click direct download at name search. |
+| **Multimedia & File Sharing** | `FileReader` + Base64 / Cloud Storage | Suporta sa pag-attach ng mga larawan (may full-screen zoomable lightbox preview), PDF memos, Word documents, at Excel matrices na may direct download triggers. |
 | **Message Reactions** | Custom Emoji Engine + Socket Events | Mabilisang pag-react ng emojis (👍, ❤️, 😂, 😮, 😢, 🙏) na awtomatikong nagsasara ng reaction popover pagka-pindot. |
 | **Message Editing & Dual Deletion** | Optimistic UI + MySQL Soft/Hard Delete | Kakayahang mag-edit ng sariling mensahe, at pagpili sa pagitan ng `"Delete for me"` (itinatago lamang sa sarili) o `"Delete for everyone"` (tinatanggal sa buong channel). |
 | **Live Presence & Activity Engine** | Timestamp Tracker (`last_active_at`) | Granular na pagsubaybay sa online status ng mga guro: `Online now` (<4m), `Active X mins ago`, `Active today at...`, `Active yesterday at...`. |

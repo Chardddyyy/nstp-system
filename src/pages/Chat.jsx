@@ -7,11 +7,12 @@ import {
   Phone, Video, MoreVertical, Paperclip, Smile,
   Mic, Camera, Image, X, Download,
   Play, Menu, ArrowLeft, MicOff,
-  Volume2, VolumeX, MessageSquare, Plus
+  Volume2, VolumeX, MessageSquare, Plus,
+  FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 
 import { getAvatarSrc } from '../utils/avatars';
 
@@ -124,6 +125,45 @@ function Chat() {
   const [isPlaying, setIsPlaying] = useState(null); // message id being played
   const [voiceProgress, setVoiceProgress] = useState(0); // 0-100% real-time progress
   const audioPlayerRef = useRef(null);
+
+  // Shared Media, Files & Documents Backreader Gallery State (Messenger-style)
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [mediaGalleryTab, setMediaGalleryTab] = useState('all'); // 'all' | 'photos' | 'files' | 'voice'
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('');
+
+  // Reusable File Downloader helper
+  const handleDownloadFile = async (fileUrl, fileName = 'download') => {
+    if (!fileUrl) {
+      addNotification('File not available for download', 'error');
+      return;
+    }
+    try {
+      if (fileUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        addNotification('File downloaded successfully!', 'success');
+      } else {
+        const response = await fetch(fileUrl);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+        addNotification('File downloaded successfully!', 'success');
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+      addNotification('Failed to download file', 'error');
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -1457,6 +1497,39 @@ function Chat() {
   // Get messages for active conversation - MUST be declared AFTER activeConversation
   const currentMessages = activeConversation ? (messages[activeConversation.id] || []) : [];
 
+  // Extract all media, documents, and voice notes from the active conversation (Messenger-style Backreader)
+  const sharedImages = useMemo(() => {
+    return (currentMessages || []).filter(m => 
+      !isMessageDeletedForEveryone(m) && !isMessageDeletedForMe(m) &&
+      (m.type === 'image' || m.message_type === 'image') && 
+      (m.imageUrl || m.image_url || m.file_url)
+    );
+  }, [currentMessages]);
+
+  const sharedFiles = useMemo(() => {
+    return (currentMessages || []).filter(m => 
+      !isMessageDeletedForEveryone(m) && !isMessageDeletedForMe(m) &&
+      (m.type === 'file' || m.message_type === 'file') && 
+      (m.fileName || m.file_name || m.fileUrl || m.file_url)
+    );
+  }, [currentMessages]);
+
+  const sharedVoiceNotes = useMemo(() => {
+    return (currentMessages || []).filter(m => 
+      !isMessageDeletedForEveryone(m) && !isMessageDeletedForMe(m) &&
+      (m.type === 'voice' || m.message_type === 'voice') && 
+      (m.audioUrl || m.audio_url)
+    );
+  }, [currentMessages]);
+
+  const allSharedAttachments = useMemo(() => {
+    return [
+      ...sharedImages.map(m => ({ ...m, mediaCategory: 'photo' })),
+      ...sharedFiles.map(m => ({ ...m, mediaCategory: 'file' })),
+      ...sharedVoiceNotes.map(m => ({ ...m, mediaCategory: 'voice' }))
+    ].sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
+  }, [sharedImages, sharedFiles, sharedVoiceNotes]);
+
   // Scroll to bottom on initial load and when sending messages
   useEffect(() => {
     if (isNearBottom) {
@@ -1950,7 +2023,23 @@ function Chat() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-0.5 sm:space-x-1 flex-shrink-0">
+                <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
+                  {/* Shared Media, Files & Voice Notes Gallery Button (Messenger-style) */}
+                  <button
+                    type="button"
+                    onClick={() => { setShowMediaGallery(true); setShowChatMenu(false); }}
+                    className="p-1.5 sm:px-2.5 sm:py-1.5 text-emerald-800 hover:bg-emerald-100/70 active:scale-95 rounded-xl transition-all touch-manipulation cursor-pointer flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 shadow-2xs"
+                    title="View Shared Media, Files & Voice Notes"
+                  >
+                    <FolderOpen className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span className="hidden sm:inline text-xs font-bold text-emerald-900">Shared Files</span>
+                    {allSharedAttachments.length > 0 && (
+                      <span className="bg-emerald-700 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0">
+                        {allSharedAttachments.length}
+                      </span>
+                    )}
+                  </button>
+
                   {!isGroupConversation(activeConversation) && (
                     <div className="relative" ref={chatMenuRef}>
                       <button type="button"
@@ -1963,6 +2052,13 @@ function Chat() {
                       </button>
                       {showChatMenu && (
                         <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-2xl border border-gray-200/90 py-1.5 z-[999] min-w-[190px] font-bold text-xs sm:text-sm animate-fade-in">
+                          <button type="button"
+                            onClick={() => { setShowMediaGallery(true); setShowChatMenu(false); }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-gray-100 text-emerald-800 flex items-center gap-2 transition-colors cursor-pointer"
+                          >
+                            <FolderOpen className="w-4 h-4 text-emerald-700" />
+                            <span>Shared Files &amp; Media</span>
+                          </button>
                           <button type="button"
                             onClick={handleClearChat}
                             className="w-full text-left px-4 py-2.5 hover:bg-gray-100 text-gray-700 transition-colors cursor-pointer"
@@ -3042,6 +3138,345 @@ function Chat() {
                   <button type="button" onClick={handleDrawSend}
                     className="flex items-center gap-2 px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors text-sm">
                     <Send className="w-4 h-4" /> Send Drawing
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Shared Media, Files & Documents Backreader Modal (Messenger-style) */}
+          {showMediaGallery && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-2.5 sm:p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full max-h-[88vh] sm:max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+                {/* Modal Header */}
+                <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-teal-900 text-white p-3.5 sm:p-4 flex items-center justify-between gap-2 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-400 shrink-0">
+                      <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold truncate leading-tight">Shared Media &amp; Files</h3>
+                      <p className="text-[10px] sm:text-xs text-emerald-200 truncate">
+                        {activePartnerName} • {allSharedAttachments.length} total item{allSharedAttachments.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowMediaGallery(false); setMediaSearchQuery(''); }}
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Search Bar & Tabs */}
+                <div className="p-2.5 sm:p-3 bg-slate-50 border-b border-slate-200 space-y-2 shrink-0">
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={mediaSearchQuery}
+                      onChange={(e) => setMediaSearchQuery(e.target.value)}
+                      placeholder="Search files by name..."
+                      className="w-full pl-8 pr-7 py-1.5 bg-white rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    />
+                    {mediaSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setMediaSearchQuery('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5 text-xs">
+                    {[
+                      { id: 'all', label: `All (${allSharedAttachments.length})`, icon: FolderOpen },
+                      { id: 'photos', label: `Photos (${sharedImages.length})`, icon: Image },
+                      { id: 'files', label: `Documents (${sharedFiles.length})`, icon: FileText },
+                      { id: 'voice', label: `Voice Notes (${sharedVoiceNotes.length})`, icon: Mic },
+                    ].map((tab) => {
+                      const IconComp = tab.icon;
+                      const isActive = mediaGalleryTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setMediaGalleryTab(tab.id)}
+                          className={`px-2.5 py-1.5 rounded-lg sm:rounded-xl font-bold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer text-[11px] sm:text-xs ${
+                            isActive
+                              ? 'bg-emerald-800 text-white shadow-xs'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <IconComp className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-slate-500'}`} />
+                          <span>{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Items Content View */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-slate-100/60 min-h-[220px]">
+                  {(() => {
+                    const q = mediaSearchQuery.toLowerCase().trim();
+                    const filteredImages = sharedImages.filter(m => !q || (m.fileName || m.text || '').toLowerCase().includes(q));
+                    const filteredFiles = sharedFiles.filter(m => !q || (m.fileName || m.file_name || m.text || '').toLowerCase().includes(q));
+                    const filteredVoice = sharedVoiceNotes.filter(m => !q || (m.text || m.duration || 'voice').toLowerCase().includes(q));
+                    const filteredAll = allSharedAttachments.filter(m => !q || (m.fileName || m.file_name || m.text || '').toLowerCase().includes(q));
+
+                    if (
+                      (mediaGalleryTab === 'all' && filteredAll.length === 0) ||
+                      (mediaGalleryTab === 'photos' && filteredImages.length === 0) ||
+                      (mediaGalleryTab === 'files' && filteredFiles.length === 0) ||
+                      (mediaGalleryTab === 'voice' && filteredVoice.length === 0)
+                    ) {
+                      return (
+                        <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500">
+                          <FolderOpen className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                          <p className="font-bold text-xs sm:text-sm text-slate-700">No shared files or media found</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            {mediaSearchQuery ? `No results matching "${mediaSearchQuery}"` : 'Files, photos, and voice notes shared in this chat will appear here.'}
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    if (mediaGalleryTab === 'photos') {
+                      return (
+                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2.5">
+                          {filteredImages.map((imgMsg, idx) => {
+                            const url = imgMsg.imageUrl || imgMsg.image_url || imgMsg.file_url;
+                            const timeStr = imgMsg.created_at ? formatDate(imgMsg.created_at) : (imgMsg.timestamp ? formatDate(imgMsg.timestamp) : '');
+                            return (
+                              <div
+                                key={imgMsg.id || idx}
+                                className="group relative aspect-square bg-slate-900 rounded-xl overflow-hidden shadow-xs border border-slate-200 cursor-pointer"
+                                onClick={() => handleImageClick(url)}
+                              >
+                                <img src={url} alt="Shared" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadFile(url, `photo_${imgMsg.id || idx}.jpg`); }}
+                                    className="self-end p-1.5 bg-black/60 hover:bg-black/90 text-white rounded-lg transition-colors cursor-pointer"
+                                    title="Download image"
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </button>
+                                  <div>
+                                    <p className="text-[10px] font-bold text-white truncate">{imgMsg.senderName || (imgMsg.senderId === user?.id ? 'Me' : 'Partner')}</p>
+                                    <p className="text-[9px] text-slate-300 truncate">{timeStr}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    if (mediaGalleryTab === 'files') {
+                      return (
+                        <div className="space-y-2">
+                          {filteredFiles.map((fileMsg, idx) => {
+                            const url = fileMsg.fileUrl || fileMsg.file_url || fileMsg.image_url;
+                            const name = fileMsg.fileName || fileMsg.file_name || 'document';
+                            const timeStr = fileMsg.created_at ? formatDate(fileMsg.created_at) : (fileMsg.timestamp ? formatDate(fileMsg.timestamp) : '');
+                            const isPdf = name.toLowerCase().endsWith('.pdf');
+                            const isXlsx = name.toLowerCase().endsWith('.xlsx') || name.toLowerCase().endsWith('.xls');
+                            const isDoc = name.toLowerCase().endsWith('.docx') || name.toLowerCase().endsWith('.doc');
+
+                            return (
+                              <div
+                                key={fileMsg.id || idx}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 hover:border-emerald-300 transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
+                                    isPdf ? 'bg-red-50 text-red-700 border border-red-200' :
+                                    isXlsx ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                    isDoc ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                    'bg-slate-100 text-slate-700 border border-slate-200'
+                                  }`}>
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">{name}</h4>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                      Shared by <span className="font-semibold text-slate-700">{fileMsg.senderName || (fileMsg.senderId === user?.id ? 'Me' : 'Partner')}</span> • {timeStr}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadFile(url, name)}
+                                  className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95 transition-all"
+                                >
+                                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                                  <span className="hidden xs:inline">Download</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    if (mediaGalleryTab === 'voice') {
+                      return (
+                        <div className="space-y-2">
+                          {filteredVoice.map((voiceMsg, idx) => {
+                            const timeStr = voiceMsg.created_at ? formatDate(voiceMsg.created_at) : (voiceMsg.timestamp ? formatDate(voiceMsg.timestamp) : '');
+                            return (
+                              <div
+                                key={voiceMsg.id || idx}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center shrink-0">
+                                    <Mic className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">Voice Message ({voiceMsg.duration || 'Audio'})</h4>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                      Recorded by <span className="font-semibold text-slate-700">{voiceMsg.senderName || (voiceMsg.senderId === user?.id ? 'Me' : 'Partner')}</span> • {timeStr}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePlayVoice(voiceMsg)}
+                                  className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                                    isPlaying === voiceMsg.id
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                  }`}
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                  <span>{isPlaying === voiceMsg.id ? 'Playing...' : 'Play'}</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    // 'all' Tab - Unified Feed
+                    return (
+                      <div className="space-y-2">
+                        {filteredAll.map((item, idx) => {
+                          const timeStr = item.created_at ? formatDate(item.created_at) : (item.timestamp ? formatDate(item.timestamp) : '');
+                          const sender = item.senderName || (item.senderId === user?.id ? 'Me' : 'Partner');
+
+                          if (item.mediaCategory === 'photo') {
+                            const url = item.imageUrl || item.image_url || item.file_url;
+                            return (
+                              <div
+                                key={item.id || idx}
+                                className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 hover:border-emerald-300 transition-colors cursor-pointer"
+                                onClick={() => handleImageClick(url)}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <img src={url} alt="Thumbnail" className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">Photo Attachment</h4>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">Shared by <span className="font-semibold text-slate-700">{sender}</span> • {timeStr}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleDownloadFile(url, `photo_${item.id || idx}.jpg`); }}
+                                  className="p-2 bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 rounded-lg transition-colors shrink-0 cursor-pointer"
+                                  title="Download"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          if (item.mediaCategory === 'file') {
+                            const url = item.fileUrl || item.file_url || item.image_url;
+                            const name = item.fileName || item.file_name || 'document';
+                            return (
+                              <div
+                                key={item.id || idx}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 hover:border-emerald-300 transition-colors"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center shrink-0">
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">{name}</h4>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">Shared by <span className="font-semibold text-slate-700">{sender}</span> • {timeStr}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadFile(url, name)}
+                                  className="px-2.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer active:scale-95 transition-all"
+                                >
+                                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                                  <span className="hidden xs:inline">Download</span>
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          // Voice
+                          return (
+                            <div
+                              key={item.id || idx}
+                              className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center shrink-0">
+                                  <Mic className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">Voice Message ({item.duration || 'Audio'})</h4>
+                                  <p className="text-[10px] text-slate-500 mt-0.5 truncate">Recorded by <span className="font-semibold text-slate-700">{sender}</span> • {timeStr}</p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePlayVoice(item)}
+                                className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                                  isPlaying === item.id
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                }`}
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                <span>{isPlaying === item.id ? 'Playing...' : 'Play'}</span>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-3 bg-white border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+                  <span>Showing {allSharedAttachments.length} total shared item{allSharedAttachments.length !== 1 ? 's' : ''}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setShowMediaGallery(false); setMediaSearchQuery(''); }}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    Close
                   </button>
                 </div>
               </div>

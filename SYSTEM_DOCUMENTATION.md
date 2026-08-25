@@ -194,7 +194,7 @@ Sentralisadong submission at approval hub para sa mga accomplishment reports, le
 
 ---
 
-### 💬 Module 9: Real-time Communication, WebRTC Calling & Live Presence Hub (`Chat.jsx`)
+### 💬 Module 9: Real-time Communication, Voice Chat & Shared Media Backreader Hub (`Chat.jsx`)
 Built-in institutional communication platform para sa opisyal, ligtas, at real-time na koordinasyon sa pagitan ng NSTP Administrator at mga NSTP Instructors.
 
 * **9.1. Direct 1-on-1 & Official Track Group Channels:**
@@ -202,12 +202,13 @@ Built-in institutional communication platform para sa opisyal, ligtas, at real-t
   * Dedicated automatic group channels para sa bawat academic track: *ROTC Faculty Group*, *CWTS Faculty Group*, *LTS Faculty Group*, at *All Instructors Official Broadcast Room*.
 * **9.2. Real-Time WebSocket Engine (`Socket.IO`):**
   * Gumagamit ng full-duplex WebSocket connections para sa zero-latency message delivery (<50ms), typing indicators, real-time unread badges, at instant reaction broadcasts.
-* **9.3. Peer-to-Peer (P2P) Live Voice & Video Calling (`WebRTC API`):**
-  * Built-in direct voice at high-definition video calls sa pagitan ng mga guro at admin gamit ang native `RTCPeerConnection` at `MediaStream`.
-  * May live camera flipping/toggle, microphone mute/unmute, call duration timer, at screen sharing (`getDisplayMedia`).
-* **9.4. Voice Audio Notes Engine (`MediaRecorder API`):**
-  * One-tap voice message recording gamit ang device microphone at client-side Opus audio encoding.
-  * May kasamang real-time animated equalizer pulses at interactive waveform playback progress bar.
+* **9.3. Voice Audio Chat Engine (`MediaRecorder API`):**
+  * One-tap voice message recording gamit ang device microphone at client-side Opus audio encoding nang walang lag.
+  * May kasamang real-time recording HUD banner, animated equalizer pulses, at interactive waveform playback progress bar.
+* **9.4. Messenger-Style Shared Media, Documents & Voice Notes Backreader Hub:**
+  * Nakalaang gallery hub (katulad ng sa Facebook Messenger) kung saan maaaring buksan ng user ang lahat ng media na naibahagi sa pag-uusap.
+  * **Categorized Tabs:** `All`, `🖼️ Photos`, `📄 Documents (PDF, Word, Excel)`, at `🎙️ Voice Notes`.
+  * **Built-in Search & 1-Click Download:** Mabilisang paghahanap ng file gamit ang search bar at instant download trigger gamit ang binary blob caching.
 * **9.5. Dynamic Real-Time Presence & Activity Tracker:**
   * Awtomatikong nagtatala ng `last_active_at` timestamp sa bawat user heartbeat/request.
   * Nagpapakita ng eksaktong presence status:
