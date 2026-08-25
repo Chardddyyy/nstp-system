@@ -305,7 +305,24 @@ function AdminDashboard() {
   };
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
   const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
+  const [selectedProgramFocus, setSelectedProgramFocus] = useState(null);
+  const [enrollmentSortCol, setEnrollmentSortCol] = useState(null);
+  const [enrollmentSortDir, setEnrollmentSortDir] = useState('asc');
   const [analyticsViewMode, setAnalyticsViewMode] = useState('chart');
+
+  const handleSortEnrollment = (col) => {
+    if (enrollmentSortCol === col) {
+      if (enrollmentSortDir === 'asc') {
+        setEnrollmentSortDir('desc');
+      } else {
+        setEnrollmentSortCol(null);
+        setEnrollmentSortDir('asc');
+      }
+    } else {
+      setEnrollmentSortCol(col);
+      setEnrollmentSortDir('asc');
+    }
+  };
 
   const showNotif = (type, message) => {
     if (type === 'error') {
@@ -352,7 +369,7 @@ function AdminDashboard() {
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
-    return OFFICIAL_PROGRAMS.map(prog => {
+    const mapped = OFFICIAL_PROGRAMS.map(prog => {
       const list = source.filter(s => (s.program || '').trim().toLowerCase() === prog.toLowerCase());
       return {
         program: prog,
@@ -361,8 +378,21 @@ function AdminDashboard() {
         lts:  list.filter(s => s.department === 'LTS').length,
         rotc: list.filter(s => s.department === 'ROTC').length,
       };
-    }).filter(p => p.total > 0).sort((a, b) => b.total - a.total);
-  }, [students, viewingArchive, archiveViewData]);
+    }).filter(p => p.total > 0);
+
+    return mapped.sort((a, b) => {
+      // Put user-focused/selected program at the very top
+      if (selectedProgramFocus) {
+        if (a.program === selectedProgramFocus) return -1;
+        if (b.program === selectedProgramFocus) return 1;
+      }
+      // Sort by active component so highest count is at the very top
+      if (selectedComponentFilter === 'CWTS') return (b.cwts - a.cwts) || (b.total - a.total);
+      if (selectedComponentFilter === 'LTS')  return (b.lts - a.lts)   || (b.total - a.total);
+      if (selectedComponentFilter === 'ROTC') return (b.rotc - a.rotc) || (b.total - a.total);
+      return b.total - a.total;
+    });
+  }, [students, viewingArchive, archiveViewData, selectedComponentFilter, selectedProgramFocus]);
 
   // Show loading while user context resolves
   if (!user) {
@@ -1045,26 +1075,38 @@ function AdminDashboard() {
                   <span>Component Enrollment Ratio</span>
                   <span>Total Active: {displayStats.totalStudents}</span>
                 </div>
-                <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner">
+                <div className="h-3.5 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner">
                   {displayStats.totalStudents > 0 ? (
                     <>
                       <div
                         style={{ width: `${(displayStats.cwtsStudents / displayStats.totalStudents) * 100}%` }}
-                        className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
-                        title={`CWTS: ${displayStats.cwtsStudents} (${Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100)}%)`}
-                        onClick={() => setSelectedComponentFilter('CWTS')}
+                        className={`bg-emerald-500 hover:opacity-100 transition-all cursor-pointer ${
+                          selectedComponentFilter === 'CWTS'
+                            ? 'ring-2 ring-emerald-300 brightness-110 shadow-md scale-y-110'
+                            : selectedComponentFilter !== 'ALL' ? 'opacity-30 saturate-50' : 'hover:opacity-90'
+                        }`}
+                        title={`CWTS: ${displayStats.cwtsStudents} (${Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100)}%) - Click to isolate`}
+                        onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'CWTS' ? 'ALL' : 'CWTS')}
                       />
                       <div
                         style={{ width: `${(displayStats.ltsStudents / displayStats.totalStudents) * 100}%` }}
-                        className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
-                        title={`LTS: ${displayStats.ltsStudents} (${Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100)}%)`}
-                        onClick={() => setSelectedComponentFilter('LTS')}
+                        className={`bg-purple-500 hover:opacity-100 transition-all cursor-pointer ${
+                          selectedComponentFilter === 'LTS'
+                            ? 'ring-2 ring-purple-300 brightness-110 shadow-md scale-y-110'
+                            : selectedComponentFilter !== 'ALL' ? 'opacity-30 saturate-50' : 'hover:opacity-90'
+                        }`}
+                        title={`LTS: ${displayStats.ltsStudents} (${Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100)}%) - Click to isolate`}
+                        onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'LTS' ? 'ALL' : 'LTS')}
                       />
                       <div
                         style={{ width: `${(displayStats.rotcStudents / displayStats.totalStudents) * 100}%` }}
-                        className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
-                        title={`ROTC: ${displayStats.rotcStudents} (${Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100)}%)`}
-                        onClick={() => setSelectedComponentFilter('ROTC')}
+                        className={`bg-rose-500 hover:opacity-100 transition-all cursor-pointer ${
+                          selectedComponentFilter === 'ROTC'
+                            ? 'ring-2 ring-rose-300 brightness-110 shadow-md scale-y-110'
+                            : selectedComponentFilter !== 'ALL' ? 'opacity-30 saturate-50' : 'hover:opacity-90'
+                        }`}
+                        title={`ROTC: ${displayStats.rotcStudents} (${Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100)}%) - Click to isolate`}
+                        onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'ROTC' ? 'ALL' : 'ROTC')}
                       />
                     </>
                   ) : (
@@ -1082,6 +1124,7 @@ function AdminDashboard() {
               {analyticsViewMode === 'chart' ? (
                 <div className="space-y-3 animate-fade-in">
                   {programDeptStats.map(item => {
+                    const isFocused = selectedProgramFocus === item.program;
                     const displayedCount = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
                     const maxVal = Math.max(...programDeptStats.map(p => selectedComponentFilter === 'CWTS' ? p.cwts : selectedComponentFilter === 'LTS' ? p.lts : selectedComponentFilter === 'ROTC' ? p.rotc : p.total), 1);
                     const percent = Math.round((displayedCount / maxVal) * 100);
@@ -1090,19 +1133,42 @@ function AdminDashboard() {
                     return (
                       <div
                         key={item.program}
-                        className="bg-gray-50/80 hover:bg-emerald-50/40 border border-gray-200/70 hover:border-emerald-300 rounded-xl p-3.5 transition-all duration-200 group cursor-pointer"
-                        onClick={() => navigate('/students')}
+                        className={`rounded-xl p-3.5 transition-all duration-200 group cursor-pointer ${
+                          isFocused 
+                            ? 'bg-emerald-50/90 border-2 border-emerald-500 shadow-md ring-2 ring-emerald-400/50' 
+                            : 'bg-gray-50/80 hover:bg-emerald-50/40 border border-gray-200/70 hover:border-emerald-300'
+                        }`}
+                        onClick={() => setSelectedProgramFocus(prev => prev === item.program ? null : item.program)}
+                        title="Click to pin to top and highlight"
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-extrabold text-sm text-gray-900 group-hover:text-emerald-800 transition-colors">{item.program}</span>
+                            {isFocused && (
+                              <span className="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider animate-pulse">
+                                ★ Focused at Top
+                              </span>
+                            )}
                             <span className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-medium">
                               {sharePercent}% of total
                             </span>
                           </div>
-                          <span className="text-sm font-black text-emerald-800 bg-white px-2.5 py-0.5 rounded-md border border-emerald-100 shadow-2xs">
-                            {displayedCount} students
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-emerald-800 bg-white px-2.5 py-0.5 rounded-md border border-emerald-100 shadow-2xs">
+                              {displayedCount} students
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/students');
+                              }}
+                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/70 hover:bg-emerald-200 px-2 py-0.5 rounded-md transition-colors"
+                              title="View full student list"
+                            >
+                              View &rarr;
+                            </button>
+                          </div>
                         </div>
 
                         <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden flex shadow-inner mb-2">
@@ -1111,17 +1177,17 @@ function AdminDashboard() {
                               <>
                                 <div
                                   style={{ width: `${(item.cwts / item.total) * 100}%` }}
-                                  className="bg-emerald-500 hover:opacity-90 transition-all cursor-pointer"
+                                  className="bg-emerald-500 hover:opacity-90 transition-all"
                                   title={`CWTS: ${item.cwts}`}
                                 />
                                 <div
                                   style={{ width: `${(item.lts / item.total) * 100}%` }}
-                                  className="bg-purple-500 hover:opacity-90 transition-all cursor-pointer"
+                                  className="bg-purple-500 hover:opacity-90 transition-all"
                                   title={`LTS: ${item.lts}`}
                                 />
                                 <div
                                   style={{ width: `${(item.rotc / item.total) * 100}%` }}
-                                  className="bg-rose-500 hover:opacity-90 transition-all cursor-pointer"
+                                  className="bg-rose-500 hover:opacity-90 transition-all"
                                   title={`ROTC: ${item.rotc}`}
                                 />
                               </>
@@ -1131,9 +1197,9 @@ function AdminDashboard() {
                           ) : (
                             <div
                               className={`h-full rounded-full transition-all duration-500 ${
-                                selectedComponentFilter === 'CWTS' ? 'bg-emerald-600' :
-                                selectedComponentFilter === 'LTS'  ? 'bg-purple-600' :
-                                'bg-rose-600'
+                                selectedComponentFilter === 'CWTS' ? 'bg-emerald-600 shadow-sm' :
+                                selectedComponentFilter === 'LTS'  ? 'bg-purple-600 shadow-sm' :
+                                'bg-rose-600 shadow-sm'
                               }`}
                               style={{ width: `${percent}%` }}
                             ></div>
@@ -1155,14 +1221,22 @@ function AdminDashboard() {
                 /* MODE 2: INTERACTIVE GRID BADGE VIEW */
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 animate-fade-in">
                   {programDeptStats.map(item => {
+                    const isFocused = selectedProgramFocus === item.program;
                     const count = selectedComponentFilter === 'CWTS' ? item.cwts : selectedComponentFilter === 'LTS' ? item.lts : selectedComponentFilter === 'ROTC' ? item.rotc : item.total;
                     return (
                       <div
                         key={item.program}
-                        className="bg-gray-50 hover:bg-emerald-50/60 border border-gray-200/80 hover:border-emerald-300 rounded-xl p-3 flex items-center justify-between transition-all duration-150 group cursor-pointer"
-                        onClick={() => navigate('/students')}
+                        className={`rounded-xl p-3 flex items-center justify-between transition-all duration-150 group cursor-pointer ${
+                          isFocused
+                            ? 'bg-emerald-100/90 border-2 border-emerald-500 shadow-md ring-2 ring-emerald-400/50'
+                            : 'bg-gray-50 hover:bg-emerald-50/60 border border-gray-200/80 hover:border-emerald-300'
+                        }`}
+                        onClick={() => setSelectedProgramFocus(prev => prev === item.program ? null : item.program)}
+                        title="Click to pin to top and highlight"
                       >
-                        <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-900 truncate mr-2">{item.program}</span>
+                        <span className="text-xs font-semibold text-gray-700 group-hover:text-emerald-900 truncate mr-2">
+                          {isFocused ? `★ ${item.program}` : item.program}
+                        </span>
                         <span className="text-sm font-black text-gray-900 group-hover:text-emerald-700 bg-white group-hover:bg-emerald-100 px-2 py-0.5 rounded-lg shadow-2xs shrink-0 transition-colors">
                           {count}
                         </span>
@@ -1219,7 +1293,7 @@ function AdminDashboard() {
             </div>
             {pendingEnrollments.length > 0 ? (() => {
               const q = enrollmentSearch.trim().toLowerCase();
-              const filtered = q
+              const baseFiltered = q
                 ? pendingEnrollments.filter(e =>
                     (e.fullName || '').toLowerCase().includes(q)
                     || (e.studentId || '').toLowerCase().includes(q)
@@ -1228,6 +1302,30 @@ function AdminDashboard() {
                     || (e.program || '').toLowerCase().includes(q)
                   )
                 : pendingEnrollments;
+
+              const filtered = !enrollmentSortCol ? baseFiltered : [...baseFiltered].sort((a, b) => {
+                let valA = '';
+                let valB = '';
+                if (enrollmentSortCol === 'id') {
+                  valA = a.studentId || '';
+                  valB = b.studentId || '';
+                } else if (enrollmentSortCol === 'name') {
+                  valA = a.fullName || '';
+                  valB = b.fullName || '';
+                } else if (enrollmentSortCol === 'section') {
+                  valA = a.section || '';
+                  valB = b.section || '';
+                } else if (enrollmentSortCol === 'year') {
+                  valA = a.yearLevel || '';
+                  valB = b.yearLevel || '';
+                } else if (enrollmentSortCol === 'nstp') {
+                  valA = a.nstpComponent || '';
+                  valB = b.nstpComponent || '';
+                }
+                const cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+                return enrollmentSortDir === 'asc' ? cmp : -cmp;
+              });
+
               return filtered.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Search className="w-10 h-10 mx-auto mb-2 text-gray-300" />
@@ -1271,21 +1369,18 @@ function AdminDashboard() {
                         </div>
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
-                            
                             onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
                             className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <CheckCircle className="w-3.5 h-3.5" /> Approve
                           </button>
                           <button type="button"
-                            
                             onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
                             className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
                           >
                             <X className="w-3.5 h-3.5" /> Decline
                           </button>
                           <button type="button"
-                            
                             onClick={() => setSelectedEnrollment(enrollment)}
                             className="px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                           >
@@ -1302,11 +1397,86 @@ function AdminDashboard() {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name / Email</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NSTP</th>
+                        <th 
+                          onClick={() => handleSortEnrollment('id')}
+                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                            enrollmentSortCol === 'id' 
+                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title="Click to sort by Student ID"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Student ID</span>
+                            {enrollmentSortCol === 'id' && (
+                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSortEnrollment('name')}
+                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                            enrollmentSortCol === 'name' 
+                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title="Click to sort by Name"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Name / Email</span>
+                            {enrollmentSortCol === 'name' && (
+                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSortEnrollment('section')}
+                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                            enrollmentSortCol === 'section' 
+                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title="Click to sort by Section"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Section</span>
+                            {enrollmentSortCol === 'section' && (
+                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSortEnrollment('year')}
+                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                            enrollmentSortCol === 'year' 
+                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title="Click to sort by Year Level"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>Year</span>
+                            {enrollmentSortCol === 'year' && (
+                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSortEnrollment('nstp')}
+                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                            enrollmentSortCol === 'nstp' 
+                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                          }`}
+                          title="Click to sort by NSTP Component"
+                        >
+                          <div className="flex items-center gap-1">
+                            <span>NSTP</span>
+                            {enrollmentSortCol === 'nstp' && (
+                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                            )}
+                          </div>
+                        </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                       </tr>
                     </thead>

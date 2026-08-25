@@ -528,16 +528,59 @@ function StudentManagement() {
     });
   }, [sourceStudents, searchTerm, filterDept, filterCourse, isAdmin, user?.department]);
 
+  const [studentSortCol, setStudentSortCol] = useState(null);
+  const [studentSortDir, setStudentSortDir] = useState('asc');
+
+  const handleSortStudent = (col) => {
+    if (studentSortCol === col) {
+      if (studentSortDir === 'asc') {
+        setStudentSortDir('desc');
+      } else {
+        setStudentSortCol(null);
+        setStudentSortDir('asc');
+      }
+    } else {
+      setStudentSortCol(col);
+      setStudentSortDir('asc');
+    }
+  };
+
+  const sortedStudents = useMemo(() => {
+    if (!studentSortCol) return filteredStudents;
+    return [...filteredStudents].sort((a, b) => {
+      let valA = '';
+      let valB = '';
+      if (studentSortCol === 'id') {
+        valA = a.studentId || '';
+        valB = b.studentId || '';
+      } else if (studentSortCol === 'name') {
+        valA = a.name || '';
+        valB = b.name || '';
+      } else if (studentSortCol === 'section') {
+        valA = a.nstp_section || a.section || '';
+        valB = b.nstp_section || b.section || '';
+      } else if (studentSortCol === 'year') {
+        valA = a.year || '';
+        valB = b.year || '';
+      } else if (studentSortCol === 'program') {
+        valA = a.program || a.course || '';
+        valB = b.program || b.course || '';
+      }
+      const cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+      return studentSortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredStudents, studentSortCol, studentSortDir]);
+
   // Pagination logic
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
   const indexOfLastStudent = currentPage * itemsPerPage;
   const indexOfFirstStudent = indexOfLastStudent - itemsPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
+  const currentStudents = sortedStudents.slice(indexOfFirstStudent, indexOfLastStudent);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or sort change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDept, filterCourse]);
+  }, [searchTerm, filterDept, filterCourse, studentSortCol, studentSortDir]);
 
   const handleEditStudent = async () => {
     setIsEditingStudent(true);
@@ -987,11 +1030,86 @@ function StudentManagement() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name with Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
+                  <th 
+                    onClick={() => handleSortStudent('id')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                      studentSortCol === 'id' 
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="Click to sort by Student ID"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Student ID</span>
+                      {studentSortCol === 'id' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSortStudent('name')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                      studentSortCol === 'name' 
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="Click to sort by Name"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Name with Email</span>
+                      {studentSortCol === 'name' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSortStudent('section')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                      studentSortCol === 'section' 
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="Click to sort by Section"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Section</span>
+                      {studentSortCol === 'section' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSortStudent('year')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                      studentSortCol === 'year' 
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="Click to sort by Year Level"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Year</span>
+                      {studentSortCol === 'year' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSortStudent('program')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                      studentSortCol === 'program' 
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                    title="Click to sort by Program / Component"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Program</span>
+                      {studentSortCol === 'program' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
