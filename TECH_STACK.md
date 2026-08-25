@@ -94,8 +94,7 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Session Security & Concurrent Device Protection** | Socket Room Adapter Verification + JWT | Real-time validation ng live active socket bago mag-trigger ng concurrent session alert upang maiwasan ang false active session warnings. |
 | **SQL Injection Defense** | `mysql2` Prepared Statements | Lahat ng database queries ay gumagamit ng `?` parameterized placeholders; imposibleng makalusot ang SQL query injection. |
 | **Bot / Spam Defense** | Google reCAPTCHA v2 + Rate Limiters | Awtomatikong hinaharang ang automated scripts, bots, at rapid submission floods. |
-| **Forensic Accountability** | Audit Trail (`audit_logs`) | Detalyadong audit logs sa bawat login, student approval, grade update, at export kasama ang IP address at timestamp. |
-| **Password Reset Security** | Direct Copy 6-Digit OTP Box | Dynamic 10-minute expiration OTP na ipinapadala sa rehistradong email na may 1-tap select & copy box nang walang mapanganib na external redirection links. |
+| **Password Reset Security** | Automated 1-Click OTP Copy & Enter | Dynamic 10-minute expiration OTP na may automated 1-click button na awtomatikong nagkokopya ng 6-digit code sa clipboard, nagre-reuse ng active NSTP System tab nang walang panibagong tab, at nag-e-enter/fill ng OTP nang walang manual typing. |
 | **Communication Privacy** | Token-authenticated WebSockets & WebRTC | Tanging mga authenticated users na may valid JWT ang pinapayagang sumali sa mga conversation rooms at makipag-ugnayan sa P2P calls. |
 
 ---
