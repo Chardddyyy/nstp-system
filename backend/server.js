@@ -1317,22 +1317,30 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                       We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:
                     </p>
 
-                    <!-- Compact 6-Digit OTP Code Copy Box (No redirect) -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f0fdf4; border: 1.5px solid #059669; border-radius: 12px; margin: 16px 0; text-align: center;">
+                    <!-- High-Contrast Bulletproof Copy Button for OTP (Zero corrupted emojis) -->
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; text-align: center;">
                       <tr>
-                        <td align="center" style="padding: 18px 14px;">
-                          <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: #047857; margin-bottom: 8px;">
-                            Your One-Time Password (OTP)
-                          </span>
-                          
-                          <!-- 6-digit Code (Auto-select on click/tap for easy copying) -->
-                          <div style="display: inline-block; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 24px; font-weight: 900; letter-spacing: 6px; color: #064e3b; padding: 8px 18px; background: #ffffff; border: 1.5px dashed #059669; border-radius: 10px; margin-bottom: 10px; user-select: all; -webkit-user-select: all; cursor: pointer;">
-                            ${otpCode}
-                          </div>
+                        <td align="center">
+                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 24px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12);">
+                            <tr>
+                              <td align="center">
+                                <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
+                                  Your One-Time Password (OTP)
+                                </span>
+                                
+                                <!-- Standalone Styled OTP Code Button -->
+                                <div style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 28px; font-weight: 900; letter-spacing: 8px; padding: 12px 28px; border-radius: 10px; border: 2px solid #10b981; box-shadow: 0 4px 10px rgba(0,0,0,0.15); user-select: all; -webkit-user-select: all; cursor: pointer;">
+                                  ${otpCode}
+                                </div>
 
-                          <div style="font-size: 11.5px; font-weight: 700; color: #065f46; margin-top: 4px;">
-                            📋 Tap / Click the code above to select and copy
-                          </div>
+                                <div style="margin-top: 10px;">
+                                  <span style="display: inline-block; background-color: #047857; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Copy Code
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                     </table>
