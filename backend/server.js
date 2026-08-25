@@ -1265,6 +1265,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var deliveryEmail = targetEmail;
   var formattedOtp = otpCode.split('').join(' ');
   var timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  var resetLink = `https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}&autocopy=true`;
 
   var mailOptions = {
     from: `"NSTP System Administrator" <${emailUser}>`,
@@ -1273,7 +1274,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     headers: {
       'X-Entity-Ref-ID': `${Date.now()}-${otpCode}`
     },
-    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
+    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nReset & Copy Link: ${resetLink}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -1317,26 +1318,27 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                       We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:
                     </p>
 
-                    <!-- High-Contrast Bulletproof Copy Button for OTP (Zero corrupted emojis) -->
+                    <!-- High-Contrast Clickable Copy Button for OTP -->
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; text-align: center;">
                       <tr>
                         <td align="center">
-                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 24px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12);">
+                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 20px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12); max-width: 360px;">
                             <tr>
                               <td align="center">
-                                <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
+                                <span style="display: block; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
                                   Your One-Time Password (OTP)
                                 </span>
                                 
-                                <!-- Standalone Styled OTP Code Button -->
-                                <div style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 28px; font-weight: 900; letter-spacing: 8px; padding: 12px 28px; border-radius: 10px; border: 2px solid #10b981; box-shadow: 0 4px 10px rgba(0,0,0,0.15); user-select: all; -webkit-user-select: all; cursor: pointer;">
+                                <!-- Standalone Styled OTP Code Box -->
+                                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 28px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669; margin-bottom: 14px; user-select: all; -webkit-user-select: all; cursor: pointer;">
                                   ${otpCode}
                                 </div>
 
-                                <div style="margin-top: 10px;">
-                                  <span style="display: inline-block; background-color: #047857; color: #ffffff; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    Copy Code
-                                  </span>
+                                <!-- Clickable Copy Button that opens site & copies to clipboard -->
+                                <div>
+                                  <a href="${resetLink}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-size: 13px; font-weight: 850; padding: 10px 24px; border-radius: 24px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.8px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); border: 1.5px solid #10b981;">
+                                    Copy Code &amp; Reset Password
+                                  </a>
                                 </div>
                               </td>
                             </tr>

@@ -36,18 +36,26 @@ function Login() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // 1-Click Auto-Fill from Email Link
+  // 1-Click Auto-Fill from Email Link & Clipboard Copy
   useEffect(() => {
     try {
       const search = window.location.search || window.location.hash.split('?')[1] || '';
       const params = new URLSearchParams(search);
       const urlOtp = params.get('otp') || params.get('code');
-      const urlEmail = params.get('email');
+      const urlEmail = params.get('email') || params.get('reset_email');
+
+      if (urlOtp) {
+        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(urlOtp.trim()).catch(() => {});
+        }
+      }
+
       if (urlOtp && urlEmail) {
         setForgotEmail(urlEmail.trim().toLowerCase());
         setForgotOtp(urlOtp.trim());
         setShowForgotPassword(true);
         setForgotStep(2);
+        setForgotSuccess('OTP Code copied to clipboard & auto-filled!');
       }
     } catch (_) {}
   }, []);
