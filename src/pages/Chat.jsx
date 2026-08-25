@@ -193,13 +193,11 @@ function Chat() {
     // Use participantDetails if available from backend, otherwise fallback to allUsers lookup
     let participantUsers = [];
 
-    if (conversation.participantDetails && conversation.participantDetails.length > 0) {
-      // Use detailed participant info from backend
+    if (Array.isArray(conversation.participantDetails) && conversation.participantDetails.length > 0) {
       participantUsers = conversation.participantDetails.slice(0, 4);
-    } else if (conversation.participants && conversation.participants.length > 0) {
-      // Fallback: lookup from allUsers
+    } else if (Array.isArray(conversation.participants) && conversation.participants.length > 0) {
       participantUsers = conversation.participants
-        .map(id => allUsers.find(u => u.id === id))
+        .map(id => (allUsers || []).find(u => String(u.id) === String(id)))
         .filter(Boolean)
         .slice(0, 4);
     }
@@ -1474,20 +1472,53 @@ function Chat() {
       return conversation.groupName || conversation.group_name || conversation.name || 'All Instructors';
     }
 
-    // Find the other participant for private chat
-    const otherParticipantId = conversation.participants?.find(id => id !== user.id);
-    if (!otherParticipantId) return conversation.with || '';
-    // Look up the user's current name from allUsers
-    const otherUser = allUsers.find(u => u.id === otherParticipantId);
-    return otherUser?.name || conversation.with || '';
+    const partner = getConversationPartner(conversation);
+    return partner?.name || conversation.partnerName || conversation.with || 'Instructor';
   };
 
   // Get the user object for conversation partner
   const getConversationPartner = (conversation) => {
     if (!conversation || !user || isGroupConversation(conversation)) return null;
-    const otherParticipantId = conversation.participants?.find(id => id !== user.id);
-    if (!otherParticipantId) return null;
-    return allUsers.find(u => u.id === otherParticipantId);
+
+    // 1. Direct partner metadata attached from backend
+    if (conversation.partnerId || conversation.partnerName) {
+      const pId = String(conversation.partnerId);
+      const matchedUser = (allUsers || []).find(u => String(u.id) === pId);
+      if (matchedUser) return matchedUser;
+      return {
+        id: conversation.partnerId,
+        name: conversation.partnerName || conversation.with,
+        avatar: conversation.partnerAvatar || conversation.avatar,
+        profilePicture: conversation.partnerPicture || conversation.profilePicture,
+        role: conversation.partnerRole || 'instructor',
+        department: conversation.partnerDepartment || ''
+      };
+    }
+
+    // 2. Resolve from participants list
+    const currentUserId = String(user.id);
+    const otherParticipantId = Array.isArray(conversation.participants)
+      ? conversation.participants.find(id => String(id) !== currentUserId)
+      : (conversation.participant_1_id && String(conversation.participant_1_id) !== currentUserId ? conversation.participant_1_id : conversation.participant_2_id);
+
+    if (otherParticipantId) {
+      const matchedUser = (allUsers || []).find(u => String(u.id) === String(otherParticipantId));
+      if (matchedUser) return matchedUser;
+    }
+
+    // 3. Resolve from participantDetails if present
+    if (Array.isArray(conversation.participantDetails)) {
+      const detail = conversation.participantDetails.find(p => String(p.id) !== currentUserId);
+      if (detail) return detail;
+    }
+
+    return {
+      id: otherParticipantId || null,
+      name: conversation.with || conversation.name || 'Instructor',
+      avatar: conversation.avatar || null,
+      profilePicture: conversation.profilePicture || null,
+      department: conversation.department || ''
+    };
   };
 
   // Get the correct partner name for active conversation
@@ -1874,7 +1905,8 @@ function Chat() {
 
             {/* ── Contacts panel ── */}
             {showContacts && (() => {
-              const contacts = (allUsers || []).filter(u => u.id !== user?.id && (u.role === 'admin' || u.role === 'instructor'));
+              const currentUserId = String(user?.id);
+              const contacts = (allUsers || []).filter(u => String(u.id) !== currentUserId && (u.role === 'admin' || u.role === 'instructor'));
               if (contacts.length === 0) return (
                 <div className="text-center py-8 text-gray-500 px-4">
                   <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -1892,12 +1924,14 @@ function Chat() {
                       handleSetActiveConversation(conv.id);
                     }
                   }}
-                  className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100 transition-colors text-left"
+                  className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100 transition-colors text-left cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-green-800 font-bold text-sm flex-shrink-0">
-                    {contact.profilePicture
-                      ? <img src={contact.profilePicture} alt={contact.name} className="w-10 h-10 rounded-full object-cover" />
-                      : contact.name?.charAt(0)?.toUpperCase()}
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border border-emerald-600/30 shadow-xs">
+                    <img
+                      src={getAvatarSrc(contact.avatar, contact.profilePicture)}
+                      alt={contact.name || 'User'}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-800 truncate">{contact.name}</p>
@@ -2155,9 +2189,16 @@ function Chat() {
                               <img src={getAvatarSrc(user?.avatar, user?.profilePicture)} alt="Me" className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs" />
                             ) : (
                               (() => {
-                                const senderUser = allUsers.find(u => u.id === message.senderId) || allUsers.find(u => u.id === message.sender_id);
+                                const sId = String(message.senderId || message.sender_id || '');
+                                const senderUser = (allUsers || []).find(u => String(u.id) === sId) ||
+                                  (activeConversation?.participantDetails || []).find(p => String(p.id) === sId) ||
+                                  (String(getConversationPartner(activeConversation)?.id) === sId ? getConversationPartner(activeConversation) : null);
+                                const avatarSrc = getAvatarSrc(
+                                  senderUser?.avatar || message.sender_avatar,
+                                  senderUser?.profilePicture || message.sender_picture
+                                );
                                 return (
-                                  <img src={getAvatarSrc(senderUser?.avatar, senderUser?.profilePicture)} alt={senderUser?.name || 'User'} className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs" />
+                                  <img src={avatarSrc} alt={senderUser?.name || message.sender_name || 'User'} className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs" />
                                 );
                               })()
                             )}
@@ -2208,13 +2249,18 @@ function Chat() {
                             />
                           ) : (
                             (() => {
-                              const senderUser = allUsers.find(u => u.id === message.senderId) ||
-                                allUsers.find(u => u.id === message.sender_id) ||
-                                activeConversation?.participantDetails?.find(p => p.id === message.senderId || p.id === message.sender_id);
+                              const sId = String(message.senderId || message.sender_id || '');
+                              const senderUser = (allUsers || []).find(u => String(u.id) === sId) ||
+                                (activeConversation?.participantDetails || []).find(p => String(p.id) === sId) ||
+                                (String(getConversationPartner(activeConversation)?.id) === sId ? getConversationPartner(activeConversation) : null);
+                              const avatarSrc = getAvatarSrc(
+                                senderUser?.avatar || message.sender_avatar,
+                                senderUser?.profilePicture || message.sender_picture
+                              );
                               return (
                                 <img
-                                  src={getAvatarSrc(senderUser?.avatar, senderUser?.profilePicture)}
-                                  alt={senderUser?.name || 'User'}
+                                  src={avatarSrc}
+                                  alt={senderUser?.name || message.sender_name || 'User'}
                                   className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
                                 />
                               );

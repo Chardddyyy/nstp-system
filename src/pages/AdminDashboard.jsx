@@ -2357,13 +2357,12 @@ function AdminDashboard() {
                 allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').map((u) => (
                   <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                        u.role === 'admin' ? 'bg-gray-700' :
-                        u.department === 'CWTS' ? 'bg-green-600' :
-                        u.department === 'LTS'  ? 'bg-purple-600' :
-                        'bg-red-600'
-                      }`}>
-                        {(u.name || 'U').charAt(0).toUpperCase()}
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-emerald-600/30 shadow-xs shrink-0">
+                        <img
+                          src={getAvatarSrc(u.avatar, u.profilePicture)}
+                          alt={u.name || 'User'}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-800">{u.name}</p>

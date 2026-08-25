@@ -738,15 +738,11 @@ function Profile() {
                           className="flex items-center justify-between py-3 gap-3 hover:bg-gray-50 px-2 rounded-lg transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            {inst.profilePicture ? (
-                              <img src={inst.profilePicture} alt={inst.name} className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30" />
-                            ) : (
-                              <img
-                                src={getAvatarSrc(inst.avatar)}
-                                alt={inst.name}
-                                className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30 shadow-xs"
-                              />
-                            )}
+                            <img
+                              src={getAvatarSrc(inst.avatar, inst.profilePicture)}
+                              alt={inst.name || 'Instructor'}
+                              className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30 shadow-xs"
+                            />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
                               <p className="text-xs text-gray-400 truncate">{inst.email}</p>
@@ -999,15 +995,11 @@ function Profile() {
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3">
-                {editingInstructor?.profilePicture ? (
-                  <img src={editingInstructor.profilePicture} alt={editingInstructor.name} className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0" />
-                ) : (
-                  <img
-                    src={getAvatarSrc(editingInstructor?.avatar)}
-                    alt={editingInstructor?.name || 'Instructor'}
-                    className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0 shadow-xs"
-                  />
-                )}
+                <img
+                  src={getAvatarSrc(editingInstructor?.avatar, editingInstructor?.profilePicture)}
+                  alt={editingInstructor?.name || 'Instructor'}
+                  className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0 shadow-xs"
+                />
                 <div>
                   <h3 className="text-base sm:text-lg font-black tracking-tight">{editInstructorForm.name || 'Instructor Details'}</h3>
                   <p className="text-emerald-200 text-xs font-medium">View &amp; update account information</p>

@@ -2694,11 +2694,11 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
       await ensureAllInstructorsGroup();
     }
 
-    // Get one-on-one conversations
+    // Get one-on-one conversations with complete avatar & profile details
     const [directConversations] = await pool.execute(`
       SELECT c.*,
-        u1.name as participant_1_name, u1.profilePicture as participant_1_picture,
-        u2.name as participant_2_name, u2.profilePicture as participant_2_picture,
+        u1.name as participant_1_name, u1.profilePicture as participant_1_picture, u1.avatar as participant_1_avatar, u1.role as participant_1_role, u1.department as participant_1_department,
+        u2.name as participant_2_name, u2.profilePicture as participant_2_picture, u2.avatar as participant_2_avatar, u2.role as participant_2_role, u2.department as participant_2_department,
         ls.name as last_sender_name,
         FALSE as is_group
       FROM conversations c
@@ -2712,8 +2712,8 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
     // Get group conversations where user is a participant
     const [groupConversations] = await pool.execute(`
       SELECT c.*,
-        NULL as participant_1_name, NULL as participant_1_picture,
-        NULL as participant_2_name, NULL as participant_2_picture,
+        NULL as participant_1_name, NULL as participant_1_picture, NULL as participant_1_avatar,
+        NULL as participant_2_name, NULL as participant_2_picture, NULL as participant_2_avatar,
         ls.name as last_sender_name,
         c.is_group, c.group_name
       FROM conversations c
@@ -2728,16 +2728,32 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
     const formattedDirectConversations = [];
 
     for (const c of directConversations) {
-      const isUserParticipant1 = c.participant_1_id === req.user.id;
+      const isUserParticipant1 = Number(c.participant_1_id) === Number(req.user.id);
       const partnerId = isUserParticipant1 ? c.participant_2_id : c.participant_1_id;
       const otherParticipantName = isUserParticipant1 ? c.participant_2_name : c.participant_1_name;
+      const otherParticipantPicture = isUserParticipant1 ? c.participant_2_picture : c.participant_1_picture;
+      const otherParticipantAvatar = isUserParticipant1 ? c.participant_2_avatar : c.participant_1_avatar;
+      const otherParticipantRole = isUserParticipant1 ? c.participant_2_role : c.participant_1_role;
+      const otherParticipantDept = isUserParticipant1 ? c.participant_2_department : c.participant_1_department;
 
       if (!seenPartners.has(partnerId)) {
         seenPartners.add(partnerId);
         formattedDirectConversations.push({
           ...c,
           with: otherParticipantName,
+          partnerId: partnerId,
+          partnerName: otherParticipantName,
+          partnerPicture: otherParticipantPicture,
+          partnerAvatar: otherParticipantAvatar,
+          partnerRole: otherParticipantRole,
+          partnerDepartment: otherParticipantDept,
+          avatar: otherParticipantAvatar,
+          profilePicture: otherParticipantPicture,
           participants: [c.participant_1_id, c.participant_2_id],
+          participantDetails: [
+            { id: c.participant_1_id, name: c.participant_1_name, avatar: c.participant_1_avatar, profilePicture: c.participant_1_picture, role: c.participant_1_role, department: c.participant_1_department },
+            { id: c.participant_2_id, name: c.participant_2_name, avatar: c.participant_2_avatar, profilePicture: c.participant_2_picture, role: c.participant_2_role, department: c.participant_2_department }
+          ],
           isGroup: false
         });
       }
@@ -2745,9 +2761,9 @@ app.get('/api/conversations', authenticateToken, async (req, res) => {
 
     // Format group conversations
     const formattedGroupConversations = await Promise.all(groupConversations.map(async c => {
-      // Get all participants for this group
+      // Get all participants for this group with full profile info
       const [participants] = await pool.execute(`
-        SELECT u.id, u.name, u.profilePicture, u.role
+        SELECT u.id, u.name, u.profilePicture, u.avatar, u.role, u.department
         FROM conversation_participants cp
         JOIN users u ON cp.user_id = u.id
         WHERE cp.conversation_id = ?
@@ -2973,7 +2989,7 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
     const placeholders = targetConvIds.map(() => '?').join(',');
     const [messages] = await pool.execute(`
       SELECT * FROM (
-        SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
+        SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture, u.avatar as sender_avatar, u.role as sender_role, u.department as sender_department
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id IN (${placeholders})
@@ -3216,7 +3232,7 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
     }
     
     const [messages] = await pool.execute(`
-      SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture
+      SELECT m.*, u.name as sender_name, u.profilePicture as sender_picture, u.avatar as sender_avatar, u.role as sender_role, u.department as sender_department
       FROM messages m
       JOIN users u ON m.sender_id = u.id
       WHERE m.id = ?
