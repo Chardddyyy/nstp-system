@@ -385,7 +385,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                 name="matrixSearch"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cadet..."
+                placeholder="Search student..."
                 className="w-full pl-8 pr-2.5 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
               />
             </div>
@@ -616,7 +616,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
                     <Edit3 className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-black text-sm text-slate-900 leading-tight">Edit Cadet Attendance</h4>
+                    <h4 className="font-black text-sm text-slate-900 leading-tight">Edit Student Attendance</h4>
                     <p className="text-[11px] text-emerald-700 font-bold">{editingCell.dayStr} • {editingCell.student.department}</p>
                   </div>
                 </div>
