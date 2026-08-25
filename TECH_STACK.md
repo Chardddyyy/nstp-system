@@ -97,3 +97,16 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Forensic Accountability** | Audit Trail (`audit_logs`) | Detalyadong audit logs sa bawat login, student approval, grade update, at export kasama ang IP address at timestamp. |
 | **Password Reset Security** | Direct Copy 6-Digit OTP Box | Dynamic 10-minute expiration OTP na ipinapadala sa rehistradong email na may 1-tap select & copy box nang walang mapanganib na external redirection links. |
 | **Communication Privacy** | Token-authenticated WebSockets & WebRTC | Tanging mga authenticated users na may valid JWT ang pinapayagang sumali sa mga conversation rooms at makipag-ugnayan sa P2P calls. |
+
+---
+
+## ⚡ 7. High-Concurrency & Peak Enrollment Load Handling Architecture (1,000+ Simultaneous Students)
+
+| Layer / Antas | Mekanismo at Teknolohiya | Paano Nito Pinipigilan ang System Crash o Down Time |
+| :--- | :--- | :--- |
+| **Static Delivery Layer (Frontend CDN)** | GitHub Pages Global Edge Anycast CDN (Fastly / Cloudflare) | Ang 1,000+ sabay-sabay na pagbukas ng landing page at enrollment form ay **100% offloaded sa Global CDN Edge Servers**. Walang CPU o RAM na nagagamit sa backend API server para sa pag-load ng webpage files. |
+| **Payload Compression Layer** | HTML5 Canvas Client-Side Image Pre-Compression | Bago i-upload ang registration photo mula sa cellphone ng estudyante, kino-compress ito mula 5MB–10MB pababa sa **<150KB**. Dahil dito, ang papasok na data para sa 1,000 submissions ay naging **~100MB na lamang sa halip na 10GB**, na madaling kayanin ng server nang walang network congestion. |
+| **Asynchronous Non-Blocking I/O** | Node.js Single-Threaded Event Loop | Kayang tumanggap at humawak ng libu-libong sabay-sabay na HTTP requests nang hindi nauubos ang server memory (hindi tulad ng tradisyunal na multi-threaded servers kung saan 1 connection = 1 heavy thread). |
+| **Database Protection & Queueing** | `mysql2/promise` Connection Pool (`queueLimit: 1000`, `waitForConnections: true`) | Inilalagay ang sabay-sabay na enrollment insert queries sa isang **FIFO (First-In, First-Out) micro-queue**. Pinoproseso ang bawat request sa loob ng ilang milliseconds nang sunod-sunod upang protektahan ang database mula sa connection spikes o pool exhaustion. |
+| **Instant UI Feedback** | Optimistic State Transitions & Registration Receipts | Pagkapindot ng estudyante ng "Submit", hindi ito nagha-hang sa blank screen; may visual feedback at progress indicator habang ligtas na naitatala ang kanilang enrollment reference code. |
+| **Off-Site Redundancy** | Google Apps Script Cloud Webhooks & Google Drive Auto-Save | Awtomatikong nagba-backup ng student enrollment records at database snapshots sa Google Drive, kaya 100% protektado ang datos laban sa anumang server interruptions. |
