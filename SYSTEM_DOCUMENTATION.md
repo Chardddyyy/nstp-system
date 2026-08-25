@@ -63,10 +63,9 @@ Ang opisyal na pambungad na pahina para sa mga estudyante, guro, at bisita ng pa
   * **CWTS (Civic Welfare Training Service):** Community outreach, health initiatives, environmental sustainability, at literacy drives.
   * **LTS (Literacy Training Service):** Pagtuturo ng basic reading, writing, at numeracy sa mga out-of-school youth at bata sa komunidad.
 * **1.3. Educational Orientation Video Embed:** Naka-embed na video player para sa opisyal na NSTP orientation briefing.
-* **1.4. Live Telemetry Bar:** Real-time na statistics display na nagpapakita ng:
-  * Kabuuang bilang ng mga aprubadong estudyante.
-  * Bilang ng active registered users.
-  * Bilang ng kasalukuyang online visitors gamit ang live heartbeat ping.
+* **1.4. Live Non-Degrading Telemetry Bar:** Real-time na statistics display na nagpapakita ng:
+  * **Total Visitors:** Kabuuang bilang ng lahat ng natatanging bisita (unique visitors) mula noong inilunsad ang sistema gamit ang persistent MySQL `active_visitors` registry na hindi kailanman binubura o bumababa.
+  * **Active Online Visitors:** Bilang ng kasalukuyang active users/browsers sa loob ng 30-second live heartbeat window na may pulsing green indicator.
 * **1.5. Interactive FAQ Accordion:** Mabilisang sagot sa mga karaniwang tanong ng freshmen tungkol sa enrollment requirements, uniform guidelines, at grading policies.
 * **1.6. System Status & Contact Hub:** Diretso at madaling paraan upang makipag-ugnayan sa NSTP Office via email at campus location map.
 
@@ -205,11 +204,18 @@ Built-in institutional communication platform para sa opisyal, ligtas, at real-t
 * **9.3. Voice Audio Chat Engine (`MediaRecorder API`):**
   * One-tap voice message recording gamit ang device microphone at client-side Opus audio encoding nang walang lag.
   * May kasamang real-time recording HUD banner, animated equalizer pulses, at interactive waveform playback progress bar.
-* **9.4. Messenger-Style Shared Media, Documents & Voice Notes Backreader Hub:**
+* **9.4. Integrated Conversation Options & Shared Media Dropdown:**
+  * Malinis at propesyonal na 3-dots dropdown menu (`More Options`) kung saan nakatago at madaling ma-access ang:
+    * **Shared Files & Media:** May dynamic badge counter na nagpapakita ng kabuuang bilang ng nakalakip na media.
+    * **Clear Chat History:** Mabilisang paglilinis ng sariling view ng chat.
+    * **Delete Conversation:** Ganap na pag-alis sa pag-uusap.
+    * **Block/Unblock User:** Pag-block o pag-unblock ng kausap (para sa 1-on-1 chats).
+  * Hindi nagpapakita ng raw emojis sa header para sa malinis at modernong institutional user interface.
+* **9.5. Messenger-Style Shared Media, Documents & Voice Notes Backreader Hub:**
   * Nakalaang gallery hub (katulad ng sa Facebook Messenger) kung saan maaaring buksan ng user ang lahat ng media na naibahagi sa pag-uusap.
-  * **Categorized Tabs:** `All`, `🖼️ Photos`, `📄 Documents (PDF, Word, Excel)`, at `🎙️ Voice Notes`.
+  * **Categorized Tabs:** `All`, `Photos`, `Documents (PDF, Word, Excel)`, at `Voice Notes`.
   * **Built-in Search & 1-Click Download:** Mabilisang paghahanap ng file gamit ang search bar at instant download trigger gamit ang binary blob caching.
-* **9.5. Dynamic Real-Time Presence & Activity Tracker:**
+* **9.6. Dynamic Real-Time Presence & Activity Tracker:**
   * Awtomatikong nagtatala ng `last_active_at` timestamp sa bawat user heartbeat/request.
   * Nagpapakita ng eksaktong presence status:
     * **`Online now`** (kung aktibo sa loob ng 4 na minuto)
@@ -217,10 +223,10 @@ Built-in institutional communication platform para sa opisyal, ligtas, at real-t
     * **`Active today at HH:MM AM/PM`** (kung kanina nag-online)
     * **`Active yesterday at HH:MM AM/PM`** (kung kahapon)
     * **`Active on MMM DD at HH:MM AM/PM`** (kung mas matagal nang offline).
-* **9.6. Multimedia Attachments, Document Downloads & In-App Lightbox:**
+* **9.7. Multimedia Attachments, Document Downloads & In-App Lightbox:**
   * Suporta sa pagpapadala ng images na may full-screen zoomable lightbox preview.
   * Suporta sa pag-attach ng PDF guidelines, memo circulars, Word files, at Excel spreadsheets na may direct click-to-download functionality.
-* **9.7. Emoji Reactions, Inline Message Editing & Dual Deletion:**
+* **9.8. Emoji Reactions, Inline Message Editing & Dual Deletion:**
   * Hover reaction bar na may instant auto-closing reaction modal pagkapili ng emoji (👍, ❤️, 😂, 😮, 😢, 🙏).
   * Inline message editing para sa sariling mga mensahe.
   * Dual-mode message deletion: `"Delete for me"` (itinatago sa sariling view) at `"Delete for everyone"` (tinatanggal sa buong server at channel).

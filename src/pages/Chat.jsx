@@ -2024,63 +2024,65 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
-                  {/* Shared Media, Files & Voice Notes Gallery Button (Messenger-style) */}
-                  <button
-                    type="button"
-                    onClick={() => { setShowMediaGallery(true); setShowChatMenu(false); }}
-                    className="p-1.5 sm:px-2.5 sm:py-1.5 text-emerald-800 hover:bg-emerald-100/70 active:scale-95 rounded-xl transition-all touch-manipulation cursor-pointer flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/80 shadow-2xs"
-                    title="View Shared Media, Files & Voice Notes"
-                  >
-                    <FolderOpen className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span className="hidden sm:inline text-xs font-bold text-emerald-900">Shared Files</span>
-                    {allSharedAttachments.length > 0 && (
-                      <span className="bg-emerald-700 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none shrink-0">
-                        {allSharedAttachments.length}
-                      </span>
-                    )}
-                  </button>
-
-                  {!isGroupConversation(activeConversation) && (
-                    <div className="relative" ref={chatMenuRef}>
-                      <button type="button"
-                        onClick={() => setShowChatMenu(!showChatMenu)}
-                        className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer"
-                        title="More Options"
-                        aria-label="More options"
-                      >
-                        <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      {showChatMenu && (
-                        <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-2xl border border-gray-200/90 py-1.5 z-[999] min-w-[190px] font-bold text-xs sm:text-sm animate-fade-in">
+                  {/* More Options Dropdown (Shared Files & Media, Clear Chat, Delete, Block) */}
+                  <div className="relative" ref={chatMenuRef}>
+                    <button type="button"
+                      onClick={() => setShowChatMenu(!showChatMenu)}
+                      className="p-1.5 sm:p-2 text-gray-700 hover:bg-gray-100 active:scale-95 rounded-full transition-all touch-manipulation cursor-pointer border border-transparent hover:border-gray-200"
+                      title="Conversation Options"
+                      aria-label="Conversation options"
+                    >
+                      <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    {showChatMenu && (
+                      <div className="absolute right-0 top-11 bg-white rounded-2xl shadow-2xl border border-gray-200/90 py-2 z-[999] min-w-[210px] animate-fade-in divide-y divide-gray-100">
+                        <div className="pb-1.5">
                           <button type="button"
                             onClick={() => { setShowMediaGallery(true); setShowChatMenu(false); }}
-                            className="w-full text-left px-4 py-2.5 hover:bg-gray-100 text-emerald-800 flex items-center gap-2 transition-colors cursor-pointer"
+                            className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50/80 text-emerald-900 flex items-center justify-between transition-colors cursor-pointer group rounded-lg mx-auto"
                           >
-                            <FolderOpen className="w-4 h-4 text-emerald-700" />
-                            <span>Shared Files &amp; Media</span>
-                          </button>
-                          <button type="button"
-                            onClick={handleClearChat}
-                            className="w-full text-left px-4 py-2.5 hover:bg-gray-100 text-gray-700 transition-colors cursor-pointer"
-                          >
-                            Clear Chat
-                          </button>
-                          <button type="button"
-                            onClick={handleDeleteConversation}
-                            className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-rose-600 transition-colors cursor-pointer"
-                          >
-                            Delete Conversation
-                          </button>
-                          <button type="button"
-                            onClick={handleBlockUser}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer ${isBlocked ? 'text-emerald-700 font-extrabold' : 'text-rose-600'}`}
-                          >
-                            {isBlocked ? 'Unblock User' : 'Block User'}
+                            <div className="flex items-center gap-2.5">
+                              <FolderOpen className="w-4 h-4 text-emerald-700 shrink-0 group-hover:scale-110 transition-transform" />
+                              <span className="font-bold text-xs sm:text-sm">Shared Files &amp; Media</span>
+                            </div>
+                            {allSharedAttachments.length > 0 && (
+                              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded-full shrink-0">
+                                {allSharedAttachments.length}
+                              </span>
+                            )}
                           </button>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        
+                        <div className="py-1.5 space-y-0.5">
+                          <button type="button"
+                            onClick={() => { handleClearChat(); setShowChatMenu(false); }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-gray-100 text-gray-700 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
+                          >
+                            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+                            <span>Clear Chat History</span>
+                          </button>
+                          
+                          <button type="button"
+                            onClick={() => { handleDeleteConversation(); setShowChatMenu(false); }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
+                          >
+                            <X className="w-4 h-4 text-rose-500 shrink-0" />
+                            <span>Delete Conversation</span>
+                          </button>
+
+                          {!isGroupConversation(activeConversation) && (
+                            <button type="button"
+                              onClick={() => { handleBlockUser(); setShowChatMenu(false); }}
+                              className={`w-full text-left px-3.5 py-2 hover:bg-gray-100 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold ${isBlocked ? 'text-emerald-700 font-bold' : 'text-rose-600'}`}
+                            >
+                              <Filter className="w-4 h-4 shrink-0" />
+                              <span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

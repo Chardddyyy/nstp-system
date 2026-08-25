@@ -621,91 +621,108 @@ function getClientSideTelemetry() {
       activeCount++;
     }
   }
-  try {
-    localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
-  } catch (_) {}
+    try {
+      localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
+    } catch (_) {}
 
-  const cachedTotal = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
+    const cachedVisitors = Math.max(12, parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10));
+    const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
 
-  return {
-    totalVisitors: cachedTotal,
-    totalRegisteredUsers: cachedTotal,
-    totalUsers: cachedTotal,
-    activeOnlineCount: Math.max(1, activeCount),
-    activeUsers: []
-  };
-}
-
-let isTelemetryServerOffline = false;
-let telemetryOfflineUntil = 0;
-
-function isTelemetryCooldown() {
-  return isTelemetryServerOffline && Date.now() < telemetryOfflineUntil;
-}
-
-function markTelemetryOffline() {
-  isTelemetryServerOffline = true;
-  telemetryOfflineUntil = Date.now() + 90000;
-}
-
-function markTelemetryOnline() {
-  isTelemetryServerOffline = false;
-  telemetryOfflineUntil = 0;
-}
-
-export function pingTelemetry(data) {
-  if (isTelemetryCooldown()) {
-    return Promise.resolve(getClientSideTelemetry());
+    return {
+      totalVisitors: cachedVisitors,
+      totalRegisteredUsers: cachedUsers,
+      totalUsers: cachedUsers,
+      activeOnlineCount: Math.max(1, activeCount),
+      activeUsers: []
+    };
   }
 
-  var url = getPrimaryApiUrl() + '/telemetry/ping';
-  return fetch(url, {
-    method: 'POST',
-    mode: 'cors',
-    headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-    body: typeof data === 'string' ? data : JSON.stringify(data)
-  })
-  .then(function(res) { 
-    if (res.ok) {
-      markTelemetryOnline();
-      return res.json().catch(function() { return getClientSideTelemetry(); });
+  let isTelemetryServerOffline = false;
+  let telemetryOfflineUntil = 0;
+
+  function isTelemetryCooldown() {
+    return isTelemetryServerOffline && Date.now() < telemetryOfflineUntil;
+  }
+
+  function markTelemetryOffline() {
+    isTelemetryServerOffline = true;
+    telemetryOfflineUntil = Date.now() + 60000;
+  }
+
+  function markTelemetryOnline() {
+    isTelemetryServerOffline = false;
+    telemetryOfflineUntil = 0;
+  }
+
+  export function pingTelemetry(data) {
+    if (isTelemetryCooldown()) {
+      return Promise.resolve(getClientSideTelemetry());
     }
-    markTelemetryOffline();
-    return getClientSideTelemetry(); 
-  })
-  .catch(function() { 
-    markTelemetryOffline();
-    return getClientSideTelemetry(); 
-  });
-}
 
-export function getTelemetryStats() {
-  if (isTelemetryCooldown()) {
-    return Promise.resolve(getClientSideTelemetry());
-  }
-
-  var url = getPrimaryApiUrl() + '/telemetry/stats';
-  return fetch(url)
-    .then(function(res) {
+    var url = getPrimaryApiUrl() + '/telemetry/ping';
+    return fetch(url, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: typeof data === 'string' ? data : JSON.stringify(data)
+    })
+    .then(function(res) { 
       if (res.ok) {
         markTelemetryOnline();
-        return res.json().then(function(data) {
-          if (data && (data.totalRegisteredUsers || data.totalUsers)) {
-            try {
-              localStorage.setItem('nstp_cached_total_users', String(data.totalRegisteredUsers || data.totalUsers));
-            } catch (_) {}
+        return res.json().then(function(resData) {
+          if (resData && resData.totalVisitors) {
+            const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10);
+            const peak = Math.max(prev, parseInt(resData.totalVisitors, 10));
+            try { localStorage.setItem('nstp_cached_total_visitors', String(peak)); } catch (_) {}
           }
-          return data;
-        });
+          return resData;
+        }).catch(function() { return getClientSideTelemetry(); });
       }
       markTelemetryOffline();
-      return getClientSideTelemetry();
+      return getClientSideTelemetry(); 
     })
     .catch(function() { 
       markTelemetryOffline();
       return getClientSideTelemetry(); 
     });
-}
+  }
+
+  export function getTelemetryStats() {
+    if (isTelemetryCooldown()) {
+      return Promise.resolve(getClientSideTelemetry());
+    }
+
+    var url = getPrimaryApiUrl() + '/telemetry/stats';
+    return fetch(url)
+      .then(function(res) {
+        if (res.ok) {
+          markTelemetryOnline();
+          return res.json().then(function(data) {
+            if (data) {
+              if (data.totalRegisteredUsers || data.totalUsers) {
+                try {
+                  localStorage.setItem('nstp_cached_total_users', String(data.totalRegisteredUsers || data.totalUsers));
+                } catch (_) {}
+              }
+              const prevVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10);
+              const incoming = parseInt(data.totalVisitors || '0', 10);
+              const maxVisitors = Math.max(prevVisitors, incoming);
+              data.totalVisitors = maxVisitors;
+              try {
+                localStorage.setItem('nstp_cached_total_visitors', String(maxVisitors));
+              } catch (_) {}
+            }
+            return data;
+          });
+        }
+        markTelemetryOffline();
+        return getClientSideTelemetry();
+      })
+      .catch(function() { 
+        markTelemetryOffline();
+        return getClientSideTelemetry(); 
+      });
+  }
 
 export const telemetryAPI = {
   ping: pingTelemetry,

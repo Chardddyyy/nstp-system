@@ -22,12 +22,10 @@ function initCronScheduler() {
     timezone: 'Asia/Manila'
   });
 
-  // 2. Active Session Cleanup every 5 minutes
+  // 2. System Keepalive & Health check every 5 minutes (Non-destructive)
   cron.schedule('*/5 * * * *', async () => {
     try {
-      await pool.execute(
-        'DELETE FROM active_visitors WHERE last_seen < NOW() - INTERVAL 1 HOUR'
-      ).catch(() => {});
+      await pool.execute('SELECT 1').catch(() => {});
     } catch (_) {}
   });
 

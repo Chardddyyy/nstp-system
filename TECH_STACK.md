@@ -52,6 +52,7 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | :--- | :--- | :--- |
 | **Instant Text Messaging** | `Socket.IO` (WebSockets) | Real-time bi-directional message transfer na walang HTTP polling delays; awtomatikong lumalabas ang mensahe sa tatanggap sa loob ng <50 milliseconds. |
 | **Voice Audio Chat (Voice Notes)** | `MediaRecorder API` + Opus Codec | Direktang pagre-record ng boses gamit ang mikropono; may visual playing state, animated equalizer pulses, at scrubbable progress bar. |
+| **Integrated Conversation Options & Shared Media Dropdown** | Lucide Icons + Modal Gallery | Malinis at propesyonal na 3-dots dropdown menu (`More Options`) kung saan nakatago at madaling ma-access ang **Shared Files & Media** (na may live counter badge), **Clear Chat History**, **Delete Conversation**, at **Block/Unblock User** nang walang kalat o raw emojis sa header. |
 | **Messenger-Style Shared Files & Media Backreader** | Memoized Query Engine + Modal Gallery | Nakalaang gallery hub (katulad ng sa Facebook Messenger) kung saan maaaring i-backread at i-filter ang lahat ng ipinadalang **Photos**, **Documents (PDF/Word/Excel)**, at **Voice Notes** sa bawat pag-uusap na may built-in 1-click direct download at name search. |
 | **Multimedia & File Sharing** | `FileReader` + Base64 / Cloud Storage | Suporta sa pag-attach ng mga larawan (may full-screen zoomable lightbox preview), PDF memos, Word documents, at Excel matrices na may direct download triggers. |
 | **Message Reactions** | Custom Emoji Engine + Socket Events | Mabilisang pag-react ng emojis (👍, ❤️, 😂, 😮, 😢, 🙏) na awtomatikong nagsasara ng reaction popover pagka-pindot. |
@@ -61,11 +62,21 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 
 ---
 
-## 🗄️ 4. Database, Storage, at Cloud Infrastructure
+## 📊 4. Non-Degrading Telemetry & Visitor Tracking Architecture
+
+| Tampok / Komponent | Teknolohiyang Ginamit | Mekanismo at Technical Rationale |
+| :--- | :--- | :--- |
+| **Persistent Unique Visitor Registry** | MySQL `active_visitors` + In-Memory `Set` + JSON Backup | Bawat bisita ay binibigyan ng permanenteng client UUID (`visitor_id`) sa `localStorage`. Hindi ito binubura ng cron job upang ang Total Visitors count ay patuloy na tumataas at hindi kailanman bababa o mag-fluctuate. |
+| **Real-Time Active Online Window** | SQL Interval Filtering (`last_seen >= NOW() - INTERVAL 30 SECOND`) | Tumpak na kinakalkula ang bilang ng mga kasalukuyang active users/visitors sa loob ng 30 seconds nang hindi sinisira ang all-time total visitor log. |
+| **Monotonic Client-Side Cache** | `localStorage` Monotonic Peak Tracking (`Math.max`) | Sinisiguro na sa page reload o temporary network reconnect, ang nakadisplay na visitor telemetry count ay nananatiling matatag at accurate. |
+
+---
+
+## 🗄️ 5. Database, Storage, at Cloud Infrastructure
 
 | Komponent / Serbisyo | Kategorya | Detalye at Gamit (Details & Functions) |
 | :--- | :--- | :--- |
-| **Aiven Cloud MySQL 8.0** | Relational Database (RDBMS) | Managed Cloud MySQL 8.0 na may SSL TLS 1.3 encryption, automatic backups, at 15 normalized relational tables (`users`, `students`, `enrollments`, `attendance_records`, `password_resets`, `reports`, `conversations`, `messages`, `conversation_participants`, `audit_logs`, atbp.). |
+| **Aiven Cloud MySQL 8.0** | Relational Database (RDBMS) | Managed Cloud MySQL 8.0 na may SSL TLS 1.3 encryption, automatic backups, at 15 normalized relational tables (`users`, `students`, `enrollments`, `attendance_records`, `password_resets`, `reports`, `conversations`, `messages`, `conversation_participants`, `active_visitors`, `audit_logs`, atbp.). |
 | **TCP Keepalive Mechanism** | Connection Continuity Engine | Awtomatikong nagpapadala ng heartbeat query (`SELECT 1`) bawat 45 segundo upang mapanatiling gising ang cloud database pool at maiwasan ang idle connection timeouts. |
 | **Self-Healing Schema Auto-Provisioner** | Migration Engine | Sinusuri at awtomatikong lumilikha ng mga kulang na tables, columns, at default admin accounts sa bawat pag-start ng server. |
 | **Google Drive & Google Sheets** | Off-site Redundancy Storage | Awtomatikong cloud backup para sa student enrollment records at database snapshots gamit ang Google Apps Script Webhooks. |
@@ -74,15 +85,15 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 
 ---
 
-## 🔒 5. Security & Compliance Matrix (RA 10173 Compliant)
+## 🔒 6. Security & Compliance Matrix (RA 10173 Compliant)
 
 | Security Domain | Teknolohiyang Ginamit | Mekanismo ng Proteksyon |
 | :--- | :--- | :--- |
 | **Data Privacy Act (RA 10173)** | Privacy Consent & RBAC | Explicit student consent form bago mag-enroll; role-based access control kung saan tanging authorized staff lamang ang makakakita ng personal records. |
 | **Password Storage** | BcryptJS (12 Salt Rounds) | One-way irreversible hashing; walang plaintext passwords na nakatago sa database. |
-| **Session Security** | JWT (Bearer Tokens) | Digitally signed tokens na may automatic expiration at single-session device tracking. |
+| **Session Security & Concurrent Device Protection** | Socket Room Adapter Verification + JWT | Real-time validation ng live active socket bago mag-trigger ng concurrent session alert upang maiwasan ang false active session warnings. |
 | **SQL Injection Defense** | `mysql2` Prepared Statements | Lahat ng database queries ay gumagamit ng `?` parameterized placeholders; imposibleng makalusot ang SQL query injection. |
 | **Bot / Spam Defense** | Google reCAPTCHA v2 + Rate Limiters | Awtomatikong hinaharang ang automated scripts, bots, at rapid submission floods. |
 | **Forensic Accountability** | Audit Trail (`audit_logs`) | Detalyadong audit logs sa bawat login, student approval, grade update, at export kasama ang IP address at timestamp. |
-| **Password Reset Security** | Non-Bypassable 6-Digit OTP | Dynamic 10-minute expiration OTP na ipinapadala lamang sa opisyal na rehistradong email ng guro o admin nang walang anumang master code bypass. |
+| **Password Reset Security** | Direct Copy 6-Digit OTP Box | Dynamic 10-minute expiration OTP na ipinapadala sa rehistradong email na may 1-tap select & copy box nang walang mapanganib na external redirection links. |
 | **Communication Privacy** | Token-authenticated WebSockets & WebRTC | Tanging mga authenticated users na may valid JWT ang pinapayagang sumali sa mga conversation rooms at makipag-ugnayan sa P2P calls. |
