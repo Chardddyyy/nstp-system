@@ -1334,9 +1334,9 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                                   ${otpCode}
                                 </div>
 
-                                <!-- Clickable Copy Button that opens site & copies to clipboard -->
+                                <!-- Clickable Copy Button that opens site & copies to clipboard in the same tab -->
                                 <div>
-                                  <a href="${resetLink}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-size: 13px; font-weight: 850; padding: 10px 24px; border-radius: 24px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.8px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); border: 1.5px solid #10b981;">
+                                  <a href="${resetLink}" target="nstp_system_tab" style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-size: 13px; font-weight: 850; padding: 10px 24px; border-radius: 24px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.8px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); border: 1.5px solid #10b981;">
                                     Copy Code &amp; Reset Password
                                   </a>
                                 </div>
