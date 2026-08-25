@@ -1124,9 +1124,20 @@ app.post('/api/auth/login', async function(req, res) {
     var forceLogin = req.body && (req.body.forceLogin === true || req.body.forceLogin === 'true');
     var isDeviceActivelyInUse = false;
 
+    // Check if there is an actual live socket connection for this user
+    var hasLiveSocket = false;
+    if (typeof io !== 'undefined' && io && io.sockets && io.sockets.adapter && io.sockets.adapter.rooms) {
+      var userRoom = io.sockets.adapter.rooms.get('user_' + user.id);
+      if (userRoom && userRoom.size > 0) {
+        hasLiveSocket = true;
+      }
+    }
+
     if (!forceLogin && user.current_session_id && String(user.current_session_id).trim() !== '') {
       var secondsSinceActive = user.seconds_since_active;
+      // Only treat as actively in use if there is an actual LIVE connected socket AND recent activity
       if (
+        hasLiveSocket &&
         secondsSinceActive !== null &&
         secondsSinceActive !== undefined &&
         !isNaN(Number(secondsSinceActive)) &&

@@ -625,18 +625,18 @@ function AdminDashboard() {
         )}
 
         {/* Hero Header - Responsive Clean Layout */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3.5 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-2.5 sm:gap-4 relative z-10 w-full">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3.5 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-2 sm:gap-4 relative z-10 w-full">
             <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
               
-              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
               <div className="min-w-0 flex-1">
@@ -651,17 +651,17 @@ function AdminDashboard() {
               </div>
             </div>
             
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               {/* Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
                 <button type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0"
+                  className="relative p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0 active:scale-95 shadow-xs"
                   title="Notifications"
                 >
-                  <Bell className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[8px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[8.5px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
                       {unreadCount}
                     </span>
                   )}
@@ -782,15 +782,15 @@ function AdminDashboard() {
               {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0 active:scale-95"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0 hidden md:flex flex-col justify-center">
-                  <p className="font-extrabold text-xs text-white leading-tight truncate max-w-[120px]">{user?.name || 'Admin'}</p>
-                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'Admin'}</p>
+                <div className="text-left min-w-0 flex flex-col justify-center">
+                  <p className="font-extrabold text-[10.5px] sm:text-xs text-white leading-tight truncate max-w-[70px] xs:max-w-[105px] sm:max-w-[140px]">{user?.name || 'Admin'}</p>
+                  <p className="text-[8.5px] sm:text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
                 </div>
               </button>
             </div>
@@ -954,12 +954,8 @@ function AdminDashboard() {
                   📊
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-gray-900">CvSU Naic Analytics &amp; Program Distribution</h3>
-                <span className="relative flex h-2.5 w-2.5 ml-1">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
                 <span className="bg-emerald-700 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-2xs ml-auto sm:ml-2">
-                  Total Active Students: {displayStats.totalStudents}
+                  Total Students: {displayStats.totalStudents}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">Interactive student enrollment metrics across degree programs and NSTP components</p>

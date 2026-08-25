@@ -279,6 +279,7 @@ function Landing() {
   }, []);
 
   const totalStudentsCount = telemetry.totalStudents ?? (telemetry.totalRegisteredUsers || 5);
+  const totalVisitorsCount = telemetry.totalVisitors ?? (telemetry.totalUniqueVisitors || totalStudentsCount || 1);
   const activeOnlineCount = telemetry.activeOnlineCount || 1;
 
   const startTimer = useCallback(() => {
@@ -772,11 +773,11 @@ function Landing() {
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2.5 max-w-full overflow-hidden">
-                      <p className="text-amber-200 text-[9.5px] xs:text-[11px] sm:text-xs md:text-sm font-semibold bg-emerald-950/80 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 leading-snug inline-flex items-center gap-1.5 sm:gap-2 shadow-xs max-w-full text-left whitespace-nowrap overflow-hidden text-ellipsis">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                        <span className="truncate">{enrollmentStatus.customNotice}</span>
-                      </p>
+                    <div className="mt-2.5 max-w-full">
+                      <div className="text-amber-200 text-xs sm:text-sm font-semibold bg-emerald-950/90 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl border border-amber-400/30 leading-snug flex items-start gap-2 shadow-xs max-w-full text-left">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0 mt-1"></span>
+                        <span className="break-words leading-relaxed">{enrollmentStatus.customNotice}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1150,13 +1151,13 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {/* Enrolled Students */}
+              {/* Total Visitors */}
               <div className="flex items-center gap-1.5 sm:gap-2 bg-emerald-900/80 border border-emerald-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl shadow-xs">
-                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+                <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
                 <div>
-                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Enrolled Students</p>
+                  <p className="text-[7.5px] sm:text-[8.5px] uppercase font-extrabold text-emerald-300 tracking-wider leading-none">Total Visitors</p>
                   <p className="text-[11px] sm:text-sm font-black text-amber-400 leading-tight mt-0.5">
-                    {totalStudentsCount.toLocaleString()}
+                    {totalVisitorsCount.toLocaleString()}
                   </p>
                 </div>
               </div>
