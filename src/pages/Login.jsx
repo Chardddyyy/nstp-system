@@ -36,8 +36,42 @@ function Login() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // 1-Click Auto-Fill from Email Link & Clipboard Copy
+  // Cross-Tab Instant Sync & 1-Click Auto-Fill from Email Link
   useEffect(() => {
+    let channel;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('nstp_password_reset_sync');
+        channel.onmessage = (event) => {
+          if (event?.data?.otp) {
+            setForgotOtp(String(event.data.otp).trim());
+            if (event.data.email) setForgotEmail(String(event.data.email).trim().toLowerCase());
+            setShowForgotPassword(true);
+            setForgotStep(2);
+            setForgotSuccess('⚡ OTP automatically received from Gmail & entered in this tab!');
+          }
+        };
+      }
+    } catch (_) {}
+
+    // Universal cross-tab storage event listener
+    const handleStorage = (e) => {
+      if (e.key === 'nstp_broadcast_otp' && e.newValue) {
+        try {
+          const payload = JSON.parse(e.newValue);
+          if (payload?.otp) {
+            setForgotOtp(String(payload.otp).trim());
+            if (payload.email) setForgotEmail(String(payload.email).trim().toLowerCase());
+            setShowForgotPassword(true);
+            setForgotStep(2);
+            setForgotSuccess('⚡ OTP automatically received from Gmail & entered in this tab!');
+          }
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // Check if THIS tab was opened with an OTP from Gmail link
     try {
       const search = window.location.search || window.location.hash.split('?')[1] || '';
       const params = new URLSearchParams(search);
@@ -45,19 +79,44 @@ function Login() {
       const urlEmail = params.get('email') || params.get('reset_email');
 
       if (urlOtp) {
-        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(urlOtp.trim()).catch(() => {});
-        }
-      }
+        const cleanOtp = String(urlOtp).trim();
+        const cleanEmail = urlEmail ? String(urlEmail).trim().toLowerCase() : '';
 
-      if (urlOtp && urlEmail) {
-        setForgotEmail(urlEmail.trim().toLowerCase());
-        setForgotOtp(urlOtp.trim());
+        // 1. Copy to clipboard
+        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(cleanOtp).catch(() => {});
+        }
+
+        // 2. Broadcast to other open NSTP System tabs so the original tab fills immediately
+        if (channel) {
+          channel.postMessage({ otp: cleanOtp, email: cleanEmail });
+        }
+        try {
+          localStorage.setItem('nstp_broadcast_otp', JSON.stringify({ otp: cleanOtp, email: cleanEmail, ts: Date.now() }));
+        } catch (_) {}
+
+        // 3. Populate current tab as fallback
+        if (cleanEmail) setForgotEmail(cleanEmail);
+        setForgotOtp(cleanOtp);
         setShowForgotPassword(true);
         setForgotStep(2);
-        setForgotSuccess('OTP Code copied to clipboard & auto-filled!');
+        setForgotSuccess('⚡ OTP code copied to clipboard & auto-filled!');
+
+        // 4. If opened as a secondary tab from email, attempt auto-close
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch (_) {}
+        }, 1000);
       }
     } catch (_) {}
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (channel) {
+        try { channel.close(); } catch (_) {}
+      }
+    };
   }, []);
 
   const navigate = useNavigate();
