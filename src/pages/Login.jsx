@@ -364,8 +364,8 @@ function Login() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Header - Edge-to-Edge Desktop & Compact Mobile Match */}
-      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10">
-        <div className="w-full px-3 sm:px-8 py-2 sm:py-3 flex justify-between items-center gap-2">
+      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full">
+        <div className="w-full px-4 sm:px-8 lg:px-12 py-2 sm:py-3 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -964,7 +964,7 @@ function Login() {
       )}
 
       {/* Footer Bar - Matching Landing Page Edge-to-Edge Footer Bar */}
-      <footer className="bg-emerald-950/90 border-t border-emerald-900 py-2 px-3 sm:px-8 text-center shrink-0 z-10">
+      <footer className="bg-emerald-950/90 border-t border-emerald-900 py-2.5 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-medium">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
           <p className="text-emerald-300/70">Authorized Faculty &amp; Admin Personnel Access Only</p>

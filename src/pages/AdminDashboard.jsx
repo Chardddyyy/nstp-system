@@ -269,6 +269,10 @@ function AdminDashboard() {
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [designatedSection, setDesignatedSection] = useState('A');
+  const [newBatchName, setNewBatchName] = useState('');
+  const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
+  const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');
   const [photoViewer, setPhotoViewer] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
@@ -483,10 +487,25 @@ function AdminDashboard() {
   };
 
   
-  // Archive current year and start new batch
+  // Archive current year and start new batch with semester support
   const handleNewBatch = () => {
     setShowNewBatchConfirm(true);
     setConfirmText('');
+    const curStr = String(currentBatch || '');
+    if (curStr.includes('1st Sem')) {
+      setNewBatchSem('2nd Semester');
+      setNewBatchYearInput(curStr.replace(/1st\s*Sem(ester)?/i, '').trim() || '2025-2026');
+      setNewBatchName(`${curStr.replace(/1st\s*Sem(ester)?/i, '').trim()} 2nd Semester`.trim());
+    } else if (curStr.includes('2nd Sem')) {
+      const nextYr = '2026-2027';
+      setNewBatchSem('1st Semester');
+      setNewBatchYearInput(nextYr);
+      setNewBatchName(`${nextYr} 1st Semester`);
+    } else {
+      setNewBatchSem('2nd Semester');
+      setNewBatchYearInput('2025-2026');
+      setNewBatchName('2025-2026 2nd Semester');
+    }
   };
   
   const confirmNewBatch = async () => {
@@ -495,9 +514,12 @@ function AdminDashboard() {
       return;
     }
 
+    const targetNewBatch = (newBatchName || `${newBatchYearInput} ${newBatchSem}`).trim() || `Batch ${new Date().getFullYear()} 1st Sem`;
+
     try {
       await archivesAPI.create({
-        year: parseInt(currentBatch),
+        year: String(currentBatch || 'Previous Batch'),
+        next_batch: targetNewBatch,
         data: {
           cwts: stats.cwtsStudents,
           lts: stats.ltsStudents,
@@ -506,12 +528,15 @@ function AdminDashboard() {
       });
 
       await clearBatchData();
+      try {
+        await archivesAPI.updateBatch(targetNewBatch);
+      } catch (_) {}
       await refreshData();
 
       setShowNewBatchConfirm(false);
       setConfirmText('');
 
-      showNotif('success', `Batch ${currentBatch} archived successfully. New batch started with cleared records.`);
+      showNotif('success', `Batch "${currentBatch}" archived successfully. New batch "${targetNewBatch}" is now active.`);
     } catch (error) {
       console.error('Archive batch error:', error);
       showNotif('error', 'Failed to archive batch. Please try again.');
@@ -1777,63 +1802,115 @@ function AdminDashboard() {
 
         {/* New Batch Confirmation Modal */}
         {showNewBatchConfirm && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-3 sm:p-6">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowNewBatchConfirm(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-5 sm:p-6 border border-emerald-100 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                  <Archive className="w-6 h-6 mr-2 text-red-600" />
-                  Start New Batch
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0">
+                    <Archive className="w-4 h-4 text-emerald-800" />
+                  </div>
+                  <span>Start New Semester Batch</span>
                 </h3>
-                <button type="button"
-                  
+                <button
+                  type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="mb-6">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <p className="text-yellow-800 font-medium mb-2">⚠️ Warning: This action cannot be undone</p>
-                  <p className="text-sm text-yellow-700">
-                    You are about to archive batch <strong>{currentBatch}</strong> and start a new batch. 
-                    All current student records ({students.length}) and reports ({reports.length}) will be 
-                    moved to the archive and cleared from the system.
+              <div className="space-y-4 mb-5">
+                <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 text-xs">
+                  <p className="text-amber-900 font-bold mb-1">📦 Current Batch Archiving Notice</p>
+                  <p className="text-amber-800 font-medium">
+                    Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
                   </p>
                 </div>
+
+                {/* New Batch Configuration */}
+                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">New Batch Details</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Academic Year</label>
+                      <input
+                        type="text"
+                        value={newBatchYearInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewBatchYearInput(val);
+                          setNewBatchName(`${val} ${newBatchSem}`.trim());
+                        }}
+                        placeholder="e.g. 2025-2026"
+                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Semester</label>
+                      <select
+                        value={newBatchSem}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNewBatchSem(val);
+                          setNewBatchName(`${newBatchYearInput} ${val}`.trim());
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      >
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer Term">Summer Term</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Full Batch Label Name</label>
+                    <input
+                      type="text"
+                      value={newBatchName}
+                      onChange={(e) => setNewBatchName(e.target.value)}
+                      placeholder="e.g. Batch 2020 1st Sem or 2025-2026 2nd Semester"
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-lg font-black text-emerald-950 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    />
+                  </div>
+                </div>
                 
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type "confirm" to proceed:
-                </label>
-                <input
-                  type="text"
-                  id="confirm-batch"
-                  name="confirmBatch"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="Type confirm here..."
-                  autoComplete="off"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmNewBatch(); } }}
-                />
+                <div>
+                  <label htmlFor="confirm-batch" className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Type <span className="text-red-600 font-black">"confirm"</span> to create new batch:
+                  </label>
+                  <input
+                    type="text"
+                    id="confirm-batch"
+                    name="confirmBatch"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder='Type "confirm" here...'
+                    autoComplete="off"
+                    className="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-bold"
+                    onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmNewBatch(); } }}
+                  />
+                </div>
               </div>
               
-              <div className="flex space-x-3">
-                <button type="button"
-                  
+              <div className="flex space-x-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors"
                 >
                   Cancel
                 </button>
-                <button type="button"
-                  
+                <button
+                  type="button"
                   onClick={confirmNewBatch}
                   disabled={confirmText.toLowerCase() !== 'confirm'}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white rounded-lg font-medium transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 text-white rounded-xl font-black text-xs transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
                 >
-                  Start New Batch
+                  Confirm &amp; Start Batch
                 </button>
               </div>
             </div>
@@ -2037,6 +2114,52 @@ function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Admin Section Designation */}
+                  <div className="bg-emerald-50/90 border-2 border-emerald-500/40 rounded-2xl p-3.5 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 rounded-md bg-emerald-700 text-white flex items-center justify-center font-black text-xs">
+                          §
+                        </div>
+                        <p className="text-xs font-black text-emerald-950 uppercase tracking-wide">Designate NSTP Section</p>
+                      </div>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900">
+                        Admin Choice
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 font-medium mb-2.5">
+                      Assign the official section for this student upon enrollment approval:
+                    </p>
+
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {['A', 'B', 'C', 'D'].map(sec => (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => setDesignatedSection(sec)}
+                          className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
+                            (designatedSection || selectedEnrollment.section || 'A') === sec
+                              ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs ring-2 ring-emerald-500/30'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'
+                          }`}
+                        >
+                          Sec {sec}
+                        </button>
+                      ))}
+                      <input
+                        type="text"
+                        placeholder="Custom..."
+                        value={!['A', 'B', 'C', 'D'].includes(designatedSection) ? designatedSection : ''}
+                        onChange={(e) => setDesignatedSection(e.target.value)}
+                        className={`px-2 py-1 text-xs font-bold rounded-xl border bg-white outline-none text-center focus:ring-2 focus:ring-emerald-500/30 ${
+                          !['A', 'B', 'C', 'D'].includes(designatedSection) && designatedSection
+                            ? 'border-emerald-600 ring-2 ring-emerald-500/30 text-emerald-950 font-black'
+                            : 'border-gray-200 text-gray-700'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
                   {/* Submission Status & Timestamp */}
                   <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
                     <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-black uppercase text-[10px] tracking-wider">
@@ -2052,23 +2175,30 @@ function AdminDashboard() {
               {/* Sticky action buttons */}
               <div className="flex-shrink-0 border-t bg-white p-3 grid grid-cols-3 gap-2">
                 <button type="button"
-                  
-                  onClick={() => showConfirm(`Approve enrollment for ${selectedEnrollment.fullName}?`, async () => { try { await approveEnrollment(selectedEnrollment.id); setSelectedEnrollment(null); } catch {} })}
-                  className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
+                  onClick={() => showConfirm(`Approve enrollment for ${selectedEnrollment.fullName} and designate to Section ${designatedSection || selectedEnrollment.section || 'A'}?`, async () => { 
+                    try { 
+                      await approveEnrollment(selectedEnrollment.id, designatedSection || selectedEnrollment.section || 'A'); 
+                      setSelectedEnrollment(null); 
+                    } catch {} 
+                  })}
+                  className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <CheckCircle className="w-4 h-4" /> Approve
                 </button>
                 <button type="button"
-                  
-                  onClick={() => showConfirm(`Decline enrollment for ${selectedEnrollment.fullName}?`, async () => { try { await declineEnrollment(selectedEnrollment.id); setSelectedEnrollment(null); } catch {} })}
-                  className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1"
+                  onClick={() => showConfirm(`Decline enrollment for ${selectedEnrollment.fullName}?`, async () => { 
+                    try { 
+                      await declineEnrollment(selectedEnrollment.id); 
+                      setSelectedEnrollment(null); 
+                    } catch {} 
+                  })}
+                  className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <X className="w-4 h-4" /> Decline
                 </button>
                 <button type="button"
-                  
                   onClick={() => setSelectedEnrollment(null)}
-                  className="col-span-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                  className="col-span-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                 >
                   Close
                 </button>

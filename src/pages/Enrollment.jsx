@@ -709,8 +709,8 @@ function Enrollment() {
   if (!enrollmentStatus.isOpen) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans flex flex-col justify-between">
-        <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
+        <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full">
+          <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -804,8 +804,8 @@ function Enrollment() {
     <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
 
       {/* Sticky Glassmorphic Header - Scaled Miniature Match */}
-      <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
+      <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full">
+        <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -889,7 +889,6 @@ function Enrollment() {
             )}
 
             <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-8">
-              
               {/* Step 1: Personal Information */}
               <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
@@ -897,11 +896,12 @@ function Enrollment() {
                     <User className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-emerald-950">1. Personal Information</h3>
-                    <p className="text-xs text-gray-500 font-medium">Enter your full legal name, student number, and complete address</p>
+                    <h3 className="text-base font-black text-emerald-950">1. Personal &amp; Demographic Information</h3>
+                    <p className="text-xs text-gray-500 font-medium">Enter your full legal name, student number, birthdate, personal statistics, and complete address</p>
                   </div>
                 </div>
 
+                {/* Name fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <label htmlFor="lastName" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
@@ -982,6 +982,7 @@ function Enrollment() {
                   </div>
                 </div>
 
+                {/* Student ID and Email */}
                 <div className="grid md:grid-cols-2 gap-4 mt-4">
                   <div>
                     <label htmlFor="studentId" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student No. (9 digits) *</label>
@@ -1004,248 +1005,28 @@ function Enrollment() {
                   </div>
 
                   <div>
-                    <label htmlFor="street" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
                     <input
-                      ref={el => fieldRefs.current.street = el}
-                      type="text"
-                      name="street"
-                      id="street"
+                      ref={el => fieldRefs.current.email = el}
+                      type="email"
+                      name="email"
+                      id="email"
                       required
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck="false"
                       data-lpignore="true"
-                      placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
-                      value={formData.street}
+                      placeholder="student@gmail.com or student@cvsu.edu.ph"
+                      value={formData.email}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.street ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.email ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     />
-                    {errors.street && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.street}</p>}
+                    {errors.email && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.email}</p>}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label htmlFor="municipality" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
-                    <input
-                      ref={el => fieldRefs.current.municipality = el}
-                      type="text"
-                      name="municipality"
-                      id="municipality"
-                      required
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck="false"
-                      data-lpignore="true"
-                      placeholder="Naic"
-                      value={formData.municipality}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.municipality ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    />
-                    {errors.municipality && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.municipality}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="province" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
-                    <input
-                      ref={el => fieldRefs.current.province = el}
-                      type="text"
-                      name="province"
-                      id="province"
-                      required
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck="false"
-                      data-lpignore="true"
-                      placeholder="Cavite"
-                      value={formData.province}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.province ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    />
-                    {errors.province && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.province}</p>}
-                  </div>
-                </div>
-
+                {/* Birthdate and Age */}
                 <div className="mt-4">
-                  <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Email Address *</label>
-                  <input
-                    ref={el => fieldRefs.current.email = el}
-                    type="email"
-                    name="email"
-                    id="email"
-                    required
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                    placeholder="student@gmail.com or student@cvsu.edu.ph"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.email ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                  />
-                  {errors.email && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.email}</p>}
-                </div>
-              </div>
-
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
-                    <GraduationCap className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-emerald-950">2. Academic Information</h3>
-                    <p className="text-xs text-gray-500 font-medium">Select your degree program, section, and year level</p>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="program" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
-                    <select
-                      ref={el => fieldRefs.current.program = el}
-                      name="program"
-                      id="program"
-                      required
-                      value={formData.program}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.program ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    >
-                      <option value="">Select Program</option>
-                      <option value="BSIT">BSIT</option>
-                      <option value="BSCS">BSCS</option>
-                      <option value="BSFAS">BSFAS</option>
-                      <option value="BSHM">BSHM</option>
-                      <option value="BSBA">BSBA</option>
-                      <option value="BEED Science">BEED Science</option>
-                      <option value="BSED">BSED</option>
-                    </select>
-                    {errors.program && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.program}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="section" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
-                    <select
-                      ref={el => fieldRefs.current.section = el}
-                      name="section"
-                      id="section"
-                      required
-                      value={formData.section}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.section ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    >
-                      <option value="">Select Section</option>
-                      <option value="A">A</option>
-                      <option value="B">B</option>
-                      <option value="C">C</option>
-                      <option value="D">D</option>
-                    </select>
-                    {errors.section && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.section}</p>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="yearLevel" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
-                    <select
-                      ref={el => fieldRefs.current.yearLevel = el}
-                      name="yearLevel"
-                      id="yearLevel"
-                      required
-                      value={formData.yearLevel}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.yearLevel ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    >
-                      <option value="">Select Year</option>
-                      <option value="1st Year">1st Year</option>
-                      <option value="2nd Year">2nd Year</option>
-                      <option value="3rd Year">3rd Year</option>
-                      <option value="4th Year">4th Year</option>
-                    </select>
-                    {errors.yearLevel && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.yearLevel}</p>}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
-                    <Award className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-emerald-950">3. Select NSTP Component Track *</h3>
-                    <p className="text-xs text-gray-500 font-medium">Choose your preferred National Service Training Program track</p>
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-4">
-                  {[
-                    {
-                      id: 'CWTS',
-                      title: 'CWTS',
-                      subtitle: 'Civic Welfare Training Service',
-                      desc: 'Community development, environmental health, and civic welfare initiatives.',
-                      badge: 'Civic & Community'
-                    },
-                    {
-                      id: 'LTS',
-                      title: 'LTS',
-                      subtitle: 'Literacy Training Service',
-                      desc: 'Teaching literacy and math skills to children and out-of-school youth.',
-                      badge: 'Education & Literacy'
-                    },
-                    {
-                      id: 'ROTC',
-                      title: 'ROTC',
-                      subtitle: "Reserve Officers' Training Corps",
-                      desc: 'Military defense training, leadership development, and physical discipline.',
-                      badge: 'Military & Defense'
-                    }
-                  ].map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        if (formData.nstpComponent !== item.id) {
-                          setPendingTrack(item);
-                        }
-                      }}
-                      className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${
-                        formData.nstpComponent === item.id 
-                          ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20' 
-                          : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-2.5">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                            formData.nstpComponent === item.id ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {item.badge}
-                          </span>
-                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                            formData.nstpComponent === item.id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300'
-                          }`}>
-                            {formData.nstpComponent === item.id && <Check className="w-3.5 h-3.5" />}
-                          </div>
-                        </div>
-                        <h4 className="text-xl font-black text-emerald-950">{item.title}</h4>
-                        <p className="text-xs font-extrabold text-emerald-800 mb-2">{item.subtitle}</p>
-                        <p className="text-[11px] text-gray-600 leading-relaxed font-medium">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
-                    <Heart className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-black text-emerald-950">4. Demographic &amp; Emergency Info</h3>
-                    <p className="text-xs text-gray-500 font-medium">Enter birthdate, personal statistics, and emergency contact</p>
-                  </div>
-                </div>
-
-                <div>
                   <label htmlFor="birthDate" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birthdate *</label>
                   <input
                     ref={el => fieldRefs.current.birthMonth = el}
@@ -1307,6 +1088,7 @@ function Enrollment() {
                   )}
                 </div>
 
+                {/* Age, Civil Status, Sex, Registered Voter */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                   <div>
                     <label htmlFor="age" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
@@ -1380,7 +1162,72 @@ function Enrollment() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-4 gap-4 mt-4">
+                {/* Contact Number & Facebook */}
+                <div className="grid md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label htmlFor="contactNumber" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                    <input
+                      ref={el => fieldRefs.current.contactNumber = el}
+                      type="text"
+                      name="contactNumber"
+                      id="contactNumber"
+                      required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      placeholder="09123456789"
+                      value={formData.contactNumber || '09'}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (!val || val === '0') {
+                          val = '09';
+                        } else if (!val.startsWith('09')) {
+                          if (val.startsWith('9')) {
+                            val = '0' + val;
+                          } else {
+                            val = '09' + val;
+                          }
+                        }
+                        val = val.slice(0, 11);
+                        const upd = { ...formData, contactNumber: val };
+                        setFormData(upd);
+                        if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }));
+                      }}
+                      onFocus={(e) => {
+                        if (!e.target.value) {
+                          const upd = { ...formData, contactNumber: '09' };
+                          setFormData(upd);
+                        }
+                      }}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.contactNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    />
+                    {errors.contactNumber && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.contactNumber}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="facebookAccount" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
+                    <input
+                      ref={el => fieldRefs.current.facebookAccount = el}
+                      type="text"
+                      name="facebookAccount"
+                      id="facebookAccount"
+                      required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      placeholder="https://facebook.com/username"
+                      value={formData.facebookAccount || ''}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.facebookAccount ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    />
+                    {errors.facebookAccount && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.facebookAccount}</p>}
+                  </div>
+                </div>
+
+                {/* Height, Weight, Blood Type */}
+                <div className="grid md:grid-cols-3 gap-4 mt-4">
                   <div>
                     <label htmlFor="heightInput" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                       <span>Height *</span>
@@ -1501,70 +1348,234 @@ function Enrollment() {
                     </select>
                     {errors.bloodType && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.bloodType}</p>}
                   </div>
+                </div>
 
+                {/* Complete Address */}
+                <div className="grid md:grid-cols-3 gap-4 mt-4">
                   <div>
-                    <label htmlFor="contactNumber" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Contact No. (11 digits) *</label>
+                    <label htmlFor="street" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
                     <input
-                      ref={el => fieldRefs.current.contactNumber = el}
+                      ref={el => fieldRefs.current.street = el}
                       type="text"
-                      name="contactNumber"
-                      id="contactNumber"
+                      name="street"
+                      id="street"
                       required
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck="false"
                       data-lpignore="true"
-                      placeholder="09123456789"
-                      value={formData.contactNumber || '09'}
-                      onChange={(e) => {
-                        let val = e.target.value.replace(/\D/g, '');
-                        if (!val || val === '0') {
-                          val = '09';
-                        } else if (!val.startsWith('09')) {
-                          if (val.startsWith('9')) {
-                            val = '0' + val;
-                          } else {
-                            val = '09' + val;
-                          }
-                        }
-                        val = val.slice(0, 11);
-                        const upd = { ...formData, contactNumber: val };
-                        setFormData(upd);
-                        if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: '' }));
-                      }}
-                      onFocus={(e) => {
-                        if (!e.target.value) {
-                          const upd = { ...formData, contactNumber: '09' };
-                          setFormData(upd);
-                        }
-                      }}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.contactNumber ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                      placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
+                      value={formData.street}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.street ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     />
-                    {errors.contactNumber && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.contactNumber}</p>}
+                    {errors.street && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.street}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="municipality" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                    <input
+                      ref={el => fieldRefs.current.municipality = el}
+                      type="text"
+                      name="municipality"
+                      id="municipality"
+                      required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      placeholder="Naic"
+                      value={formData.municipality}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.municipality ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    />
+                    {errors.municipality && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.municipality}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="province" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                    <input
+                      ref={el => fieldRefs.current.province = el}
+                      type="text"
+                      name="province"
+                      id="province"
+                      required
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      placeholder="Cavite"
+                      value={formData.province}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.province ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    />
+                    {errors.province && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.province}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 2: Academic Information */}
+              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-emerald-950">2. Academic Information</h3>
+                    <p className="text-xs text-gray-500 font-medium">Select your degree program, section, and year level</p>
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4 mt-4">
+                <div className="grid md:grid-cols-3 gap-4">
                   <div>
-                    <label htmlFor="facebookAccount" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Facebook Account / Profile Link *</label>
-                    <input
-                      ref={el => fieldRefs.current.facebookAccount = el}
-                      type="text"
-                      name="facebookAccount"
-                      id="facebookAccount"
+                    <label htmlFor="program" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                    <select
+                      ref={el => fieldRefs.current.program = el}
+                      name="program"
+                      id="program"
                       required
-                      autoComplete="off"
-                      autoCorrect="off"
-                      spellCheck="false"
-                      data-lpignore="true"
-                      placeholder="https://facebook.com/username"
-                      value={formData.facebookAccount || ''}
+                      value={formData.program}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.facebookAccount ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
-                    />
-                    {errors.facebookAccount && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.facebookAccount}</p>}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.program ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    >
+                      <option value="">Select Program</option>
+                      <option value="BSIT">BSIT</option>
+                      <option value="BSCS">BSCS</option>
+                      <option value="BSFAS">BSFAS</option>
+                      <option value="BSHM">BSHM</option>
+                      <option value="BSBA">BSBA</option>
+                      <option value="BEED Science">BEED Science</option>
+                      <option value="BSED">BSED</option>
+                    </select>
+                    {errors.program && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.program}</p>}
                   </div>
 
+                  <div>
+                    <label htmlFor="section" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
+                    <select
+                      ref={el => fieldRefs.current.section = el}
+                      name="section"
+                      id="section"
+                      required
+                      value={formData.section}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.section ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    >
+                      <option value="">Select Section</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                    </select>
+                    {errors.section && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.section}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="yearLevel" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                    <select
+                      ref={el => fieldRefs.current.yearLevel = el}
+                      name="yearLevel"
+                      id="yearLevel"
+                      required
+                      value={formData.yearLevel}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.yearLevel ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
+                    >
+                      <option value="">Select Year</option>
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                    </select>
+                    {errors.yearLevel && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.yearLevel}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Select NSTP Component Track */}
+              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-emerald-950">3. Select NSTP Component Track *</h3>
+                    <p className="text-xs text-gray-500 font-medium">Choose your preferred National Service Training Program track</p>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {[
+                    {
+                      id: 'CWTS',
+                      title: 'CWTS',
+                      subtitle: 'Civic Welfare Training Service',
+                      desc: 'Community development, environmental health, and civic welfare initiatives.',
+                      badge: 'Civic & Community'
+                    },
+                    {
+                      id: 'LTS',
+                      title: 'LTS',
+                      subtitle: 'Literacy Training Service',
+                      desc: 'Teaching literacy and math skills to children and out-of-school youth.',
+                      badge: 'Education & Literacy'
+                    },
+                    {
+                      id: 'ROTC',
+                      title: 'ROTC',
+                      subtitle: "Reserve Officers' Training Corps",
+                      desc: 'Military defense training, leadership development, and physical discipline.',
+                      badge: 'Military & Defense'
+                    }
+                  ].map(item => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        if (formData.nstpComponent !== item.id) {
+                          setPendingTrack(item);
+                        }
+                      }}
+                      className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${
+                        formData.nstpComponent === item.id 
+                          ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20' 
+                          : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex justify-between items-start mb-2.5">
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                            formData.nstpComponent === item.id ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {item.badge}
+                          </span>
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                            formData.nstpComponent === item.id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300'
+                          }`}>
+                            {formData.nstpComponent === item.id && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+                        <h4 className="text-xl font-black text-emerald-950">{item.title}</h4>
+                        <p className="text-xs font-extrabold text-emerald-800 mb-2">{item.subtitle}</p>
+                        <p className="text-[11px] text-gray-600 leading-relaxed font-medium">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 4: Emergency Contact Information (Kept strictly to Emergency Contact Person & Number) */}
+              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+                  <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
+                    <Heart className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-emerald-950">4. Emergency Contact Info</h3>
+                    <p className="text-xs text-gray-500 font-medium">Provide emergency contact details for student safety and emergency response</p>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="emergencyContact" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                     <input
@@ -2276,8 +2287,8 @@ function Enrollment() {
       )}
 
       {/* Footer Bar matching Landing Page footer */}
-      <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 shrink-0 mt-12">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-400 font-medium">
+      <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 sm:px-8 lg:px-12 shrink-0 mt-12 w-full">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-400 font-medium">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
           <p className="text-emerald-300/70">Official National Service Training Program Portal</p>
         </div>

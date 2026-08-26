@@ -339,8 +339,8 @@ function Landing() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white relative antialiased">
 
       {/* ── Executive Glassmorphic Header with Dropdown Navigation ──────── */}
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex justify-between items-center gap-2 sm:gap-3">
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all w-full">
+        <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-3 sm:gap-4">
           
           {/* University Identity */}
           <Link to="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 group">
@@ -1052,8 +1052,8 @@ function Landing() {
       </section>
 
       {/* ── Modern Executive Footer ───────────────────────────────────── */}
-      <footer id="contact" className="bg-emerald-950 text-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-12 relative z-10">
+      <footer id="contact" className="bg-emerald-950 text-white relative overflow-hidden w-full">
+        <div className="w-full px-4 sm:px-8 lg:px-12 py-6 sm:py-12 relative z-10">
           <div className="grid grid-cols-2 gap-3 sm:gap-8 items-start">
             
             {/* About (Left Side) */}
@@ -1139,8 +1139,8 @@ function Landing() {
         </div>
 
         {/* Live Telemetry Bar */}
-        <div className="border-t border-emerald-900/80 bg-emerald-900/50 py-2.5 sm:py-3.5 px-3 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex flex-row items-center justify-between gap-2">
+        <div className="border-t border-emerald-900/80 bg-emerald-900/50 py-2.5 sm:py-3.5 px-4 sm:px-8 lg:px-12 w-full">
+          <div className="w-full flex flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-800/80 border border-emerald-700/80 flex items-center justify-center text-amber-400 shadow-xs shrink-0">
                 <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse" />
@@ -1181,9 +1181,10 @@ function Landing() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-emerald-900 py-3.5 sm:py-4 px-4">
-          <div className="max-w-7xl mx-auto flex justify-center items-center text-[10px] sm:text-xs text-emerald-400 font-medium text-center">
+        <div className="border-t border-emerald-900 py-3.5 sm:py-4 px-4 sm:px-8 lg:px-12 w-full">
+          <div className="w-full flex justify-between items-center text-[10px] sm:text-xs text-emerald-400 font-medium">
             <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
+            <p className="text-emerald-300/70 hidden sm:block">National Service Training Program</p>
           </div>
         </div>
       </footer>

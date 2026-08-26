@@ -338,17 +338,19 @@ function StudentManagement() {
   const [exportSem, setExportSem] = useState('1st Semester');
   const [exportAcadYear, setExportAcadYear] = useState('2025-2026');
 
-  const downloadChed = async () => {
+  const downloadChed = async (overrideArchiveYear) => {
     try {
       const dept = isAdmin ? exportDept : (user?.department || 'CWTS');
       const token = localStorage.getItem('nstp_token');
       const API_URL = getPrimaryApiUrl();
+      const targetArchive = overrideArchiveYear || (viewingArchive ? archiveViewData?.year : null);
       const params = new URLSearchParams({
         department: dept,
         sem: exportSem,
         year: exportAcadYear,
         program: exportCourse,
-        token: token || ''
+        token: token || '',
+        ...(targetArchive ? { archive_year: targetArchive } : {})
       });
       const res = await fetch(`${API_URL}/students/ched-export?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -358,7 +360,8 @@ function StudentManagement() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `CHED_NSTP_EnrollmentList_${dept}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      const safeLabel = targetArchive ? String(targetArchive).replace(/[^a-zA-Z0-9_-]/g, '_') : dept;
+      a.download = `CHED_NSTP_EnrollmentList_${safeLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       setShowExportModal(false);
@@ -810,21 +813,35 @@ function StudentManagement() {
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Archive Banner */}
         {viewingArchive && archiveViewData && (
-          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md flex items-center justify-between">
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center space-x-3">
-              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-900 flex items-center justify-center font-black shrink-0">
+                <Archive className="w-5 h-5 text-amber-800" />
+              </div>
               <div>
-                <h2 className="text-base font-black text-amber-900">Previous Report — Batch {archiveViewData.year}</h2>
-                <p className="text-xs text-amber-700 font-medium">Viewing archived batch data. Editing is disabled.</p>
+                <h2 className="text-base font-black text-amber-950">Archived Batch: {archiveViewData.year}</h2>
+                <p className="text-xs text-amber-800 font-medium">Viewing historical student records ({sourceStudents.length} students). You can export the official CHED Masterlist below.</p>
               </div>
             </div>
-            <button type="button"
-              onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
-              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Back to Current</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => downloadChed(archiveViewData.year)}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-sm flex items-center space-x-1.5 shrink-0 active:scale-95 cursor-pointer"
+                title="Download CHED Masterlist Excel for this archived batch"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export CHED Masterlist</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}
+                className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-sm flex items-center space-x-1.5 shrink-0 active:scale-95 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Back to Current</span>
+              </button>
+            </div>
           </div>
         )}
 

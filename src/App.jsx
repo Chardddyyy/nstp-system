@@ -826,8 +826,8 @@ function App() {
     return newEnrollment;
   }
 
-  async function approveEnrollmentFunc(id) {
-    const updated = await enrollmentsAPI.update(id, 'Approved');
+  async function approveEnrollmentFunc(id, designatedSection) {
+    const updated = await enrollmentsAPI.update(id, 'Approved', designatedSection);
     setPendingEnrollments(prev => prev.filter(e => e.id !== id));
     const studentsData = await studentsAPI.getAll();
     setStudents(studentsData);

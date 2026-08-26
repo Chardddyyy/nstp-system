@@ -397,10 +397,11 @@ export function submitEnrollment(data) {
   });
 }
 
-export function updateEnrollment(id, status) {
+export function updateEnrollment(id, status, section) {
+  const payload = typeof status === 'object' && status !== null ? status : { status, ...(section ? { section } : {}) };
   return apiCall('/enrollments/' + id, {
     method: 'PUT',
-    body: JSON.stringify({ status: status })
+    body: JSON.stringify(payload)
   });
 }
 
@@ -410,7 +411,7 @@ export function getArchives() {
 }
 
 export function getArchiveByYear(year) {
-  return apiCall('/archives/' + year);
+  return apiCall('/archives/' + encodeURIComponent(year));
 }
 
 export function createArchive(data) {
@@ -421,13 +422,20 @@ export function createArchive(data) {
 }
 
 export function deleteArchive(year) {
-  return apiCall('/archives/' + year, {
+  return apiCall('/archives/' + encodeURIComponent(year), {
     method: 'DELETE'
   });
 }
 
 export function getCurrentBatch() {
   return apiCall('/current-batch');
+}
+
+export function updateCurrentBatch(year) {
+  return apiCall('/current-batch', {
+    method: 'PUT',
+    body: JSON.stringify({ year: year })
+  });
 }
 
 export function clearBatch() {
@@ -594,7 +602,8 @@ export const archivesAPI = {
   getByYear: getArchiveByYear,
   create: createArchive,
   delete: deleteArchive,
-  getCurrentBatch: getCurrentBatch
+  getCurrentBatch: getCurrentBatch,
+  updateBatch: updateCurrentBatch
 };
 
 function getClientSideTelemetry() {
