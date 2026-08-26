@@ -944,15 +944,24 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Semester Grades & OSDS Form 2-A Button */}
+              {/* Form A: Grades & OSDS-NSTP Form 2-A Masterlist */}
               <button type="button"
                 onClick={() => setShowGradesModal(true)}
-                title={isAdmin ? "Review student semester ratings and download official OSDS-NSTP Form 2-A" : "Encode and submit student semester grades and print official grade sheet"}
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
+                title={isAdmin ? "Form A: Review student ratings and download official OSDS-NSTP Form 2-A (Grades Masterlist)" : "Form A: Encode student semester grades and print official rating sheet"}
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap"
               >
-                <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                <span className="hidden xs:inline">{isAdmin ? 'OSDS Form 2-A / Grades' : 'Encode Grades'}</span>
-                <span className="xs:hidden">{isAdmin ? 'OSDS Form' : 'Grades'}</span>
+                <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                <span>Form A</span>
+              </button>
+
+              {/* Form B: CHED Masterlist / Enrollment List */}
+              <button type="button"
+                onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
+                title={isAdmin ? 'Form B: Download CHED Masterlist Enrollment Excel' : `Form B: Download ${user?.department} students as CHED Masterlist`}
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                <span>Form B</span>
               </button>
 
               {/* View Attendance & Absences Matrix Button (Instructors Only) */}
@@ -967,16 +976,6 @@ function StudentManagement() {
                   <span className="xs:hidden">Attendance</span>
                 </button>
               )}
-
-              <button type="button"
-                onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
-                title={isAdmin ? 'Download students as CHED Excel file' : `Download ${user?.department} students as CHED Excel`}
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer whitespace-nowrap"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                <span className="hidden xs:inline">Export CHED Excel</span>
-                <span className="xs:hidden">CHED Excel</span>
-              </button>
 
               {isAdmin && (
                 <button type="button"
