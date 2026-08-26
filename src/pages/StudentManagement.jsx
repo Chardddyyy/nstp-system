@@ -432,7 +432,7 @@ function StudentManagement() {
     return data;
   };
 
-  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form 2-A Statistical Report of Enrollees & Completers / Graduates) ──
+  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form: SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP) ──
   const handleDirectDownloadFormA = async () => {
     try {
       setIsDownloadingFormA(true);
@@ -472,172 +472,128 @@ function StudentManagement() {
         return nameA.localeCompare(nameB);
       });
 
-      const stats = calculateDemographicsAndGraduates(targetStudents, gradesMap);
+      // Calculate 4-tier matrix: 1st Sem, 2nd Sem, Summer, Graduates (Passed BOTH 1st & 2nd Sem)
+      const statsMatrix = {
+        sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+        sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+        summer: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+        graduates: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } }
+      };
 
-      const headers = [
-        'No.',
-        'Student No.',
-        'Surname',
-        'First Name',
-        'Middle Name',
-        'Course',
-        'Sex',
-        'Birthdate',
-        'Street / Barangay',
-        'Municipality / City',
-        'Province',
-        'Contact Number',
-        'E-mail Address',
-        'NSTP Section',
-        '1st Sem Grade',
-        '2nd Sem Grade',
-        'Final Rating',
-        'Graduation Status'
-      ];
+      targetStudents.forEach((st) => {
+        const deptRaw = (st.department || '').toUpperCase().trim();
+        const sexRaw = (st.sex || st.gender || '').toLowerCase().trim();
+        const isFemale = sexRaw.startsWith('f') || sexRaw === 'female';
+        const genKey = isFemale ? 'f' : 'm';
 
-      const dataRows = targetStudents.map((st, idx) => {
+        let targetDept = null;
+        if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
+        else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
+        else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+
+        if (!targetDept) return;
+
+        // 1st Sem Enrollee
+        statsMatrix.sem1[targetDept][genKey] += 1;
+        // 2nd Sem Enrollee
+        statsMatrix.sem2[targetDept][genKey] += 1;
+
+        // Check if student passed BOTH 1st and 2nd Semester -> Graduates
         const sid = st.studentId || st.id;
         const semGrades = gradesMap[sid] || {};
-        const g1 = semGrades['1st Semester']?.final_grade || '';
-        const g2 = semGrades['2nd Semester']?.final_grade || '';
+        const g1Str = semGrades['1st Semester']?.final_grade || '';
+        const g2Str = semGrades['2nd Semester']?.final_grade || '';
 
-        const num1 = parseFloat(g1);
-        const num2 = parseFloat(g2);
-        let finalRating = '-';
-        let gradStatus = 'Pending';
+        const num1 = parseFloat(g1Str);
+        const num2 = parseFloat(g2Str);
 
-        const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1.toLowerCase() === 'passed';
-        const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2.toLowerCase() === 'passed';
+        const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
+        const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p';
 
-        if (!isNaN(num1) && !isNaN(num2)) {
-          const avg = ((num1 + num2) / 2).toFixed(2);
-          finalRating = avg;
-          if (passed1 && passed2) {
-            gradStatus = 'Graduated (Passed)';
-          } else if (parseFloat(avg) === 4.0) {
-            gradStatus = 'Conditional';
-          } else {
-            gradStatus = 'Failed';
-          }
-        } else if (g1 && g2) {
-          if (g1 === 'DRP' || g2 === 'DRP') { finalRating = 'DRP'; gradStatus = 'Dropped'; }
-          else if (g1 === 'INC' || g2 === 'INC') { finalRating = 'INC'; gradStatus = 'Incomplete'; }
-          else if (passed1 && passed2) { finalRating = 'Passed'; gradStatus = 'Graduated (Passed)'; }
-          else { finalRating = 'Failed'; gradStatus = 'Failed'; }
-        } else if (g1 && !g2) {
-          finalRating = g1;
-          gradStatus = passed1 ? 'Completed 1st Sem (Pending 2nd Sem)' : 'Failed 1st Sem';
-        } else if (!g1 && g2) {
-          finalRating = g2;
-          gradStatus = passed2 ? 'Completed 2nd Sem (Missing 1st Sem)' : 'Failed 2nd Sem';
+        if (passed1 && passed2) {
+          statsMatrix.graduates[targetDept][genKey] += 1;
         }
-
-        let surname = st.lastName || '';
-        let firstName = st.firstName || '';
-        let middleName = st.middleName || '';
-        if (!surname && st.name && st.name.includes(',')) {
-          const parts = st.name.split(',');
-          surname = parts[0].trim();
-          const rest = (parts[1] || '').trim().split(/\s+/);
-          firstName = rest[0] || '';
-          middleName = rest.slice(1).join(' ') || '';
-        } else if (!surname && st.name) {
-          const parts = st.name.trim().split(/\s+/);
-          surname = parts[parts.length - 1] || '';
-          firstName = parts.slice(0, -1).join(' ') || '';
-        }
-
-        let street = st.street || '';
-        let municipality = st.municipality || '';
-        let province = st.province || '';
-        if (!street && !municipality && (st.address || st.homeAddress)) {
-          const addr = st.address || st.homeAddress || '';
-          const parts = addr.split(',').map((p) => p.trim());
-          if (parts.length >= 3) {
-            street = parts[0];
-            municipality = parts[1];
-            province = parts.slice(2).join(', ');
-          } else if (parts.length === 2) {
-            street = parts[0];
-            municipality = parts[1];
-          } else {
-            street = addr;
-          }
-        }
-
-        let birthdate = '';
-        if (st.birthDate) {
-          const d = new Date(st.birthDate);
-          if (!isNaN(d.getTime())) {
-            birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-          }
-        } else if (st.birthMonth && st.birthDay && st.birthYear) {
-          birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
-        }
-
-        return [
-          idx + 1,
-          st.studentId || '',
-          surname,
-          firstName,
-          middleName,
-          st.program || st.course || '',
-          st.sex || st.gender || 'Male',
-          birthdate,
-          street,
-          municipality,
-          province,
-          st.contactNumber || '',
-          st.email || '',
-          st.nstp_section || st.section || '',
-          g1 || '',
-          g2 || '',
-          finalRating !== '-' ? finalRating : '',
-          gradStatus
-        ];
       });
 
-      // Calculate completion rates
-      const cwtsRate = stats.enrolled.CWTS.total > 0 ? ((stats.graduated.CWTS.total / stats.enrolled.CWTS.total) * 100).toFixed(1) : '0.0';
-      const ltsRate = stats.enrolled.LTS.total > 0 ? ((stats.graduated.LTS.total / stats.enrolled.LTS.total) * 100).toFixed(1) : '0.0';
-      const rotcRate = stats.enrolled.ROTC.total > 0 ? ((stats.graduated.ROTC.total / stats.enrolled.ROTC.total) * 100).toFixed(1) : '0.0';
-      const totalRate = stats.enrolled.overall.total > 0 ? ((stats.graduated.overall.total / stats.enrolled.overall.total) * 100).toFixed(1) : '0.0';
-
-      const aoa = [
+      // Build Form A AOA matching exact CHED template
+      const aoaA = [
         ['Republic of the Philippines'],
         ['Office of the President'],
-        ['COMMISSION ON HIGHER EDUCATION'],
-        ['Office of Student Development and Services (OSDS)'],
-        ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-        ['OSDS-NSTP Form 2-A: Annual Statistical Report of Enrollees, Completers and Graduates'],
-        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC CAMPUS', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
-        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
-        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', 'Annual Masterlist (1st & 2nd Semesters Combined)'],
-        headers,
-        ...dataRows,
+        ['Commission on Higher Education'],
         [],
-        ['PART I: SUMMARY OF TOTAL ENROLLEES BY COMPONENT AND SEX'],
-        ['Component / Track', 'Male Enrollees', 'Female Enrollees', 'Total Enrolled Students'],
-        ['Civic Welfare Training Service (CWTS)', stats.enrolled.CWTS.male, stats.enrolled.CWTS.female, stats.enrolled.CWTS.total],
-        ['Literacy Training Service (LTS)', stats.enrolled.LTS.male, stats.enrolled.LTS.female, stats.enrolled.LTS.total],
-        ['Reserve Officers Training Corps (ROTC)', stats.enrolled.ROTC.male, stats.enrolled.ROTC.female, stats.enrolled.ROTC.total],
-        ['TOTAL ENROLLEES', stats.enrolled.overall.male, stats.enrolled.overall.female, stats.enrolled.overall.total],
+        ['SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP'],
+        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
         [],
-        ['PART II: SUMMARY OF COMPLETERS & GRADUATES BY COMPONENT AND SEX (PASSED BOTH 1ST & 2ND SEMESTER)'],
-        ['Component / Track', 'Male Graduates', 'Female Graduates', 'Total Graduates', 'Completion Rate (%)'],
-        ['Civic Welfare Training Service (CWTS)', stats.graduated.CWTS.male, stats.graduated.CWTS.female, stats.graduated.CWTS.total, `${cwtsRate}%`],
-        ['Literacy Training Service (LTS)', stats.graduated.LTS.male, stats.graduated.LTS.female, stats.graduated.LTS.total, `${ltsRate}%`],
-        ['Reserve Officers Training Corps (ROTC)', stats.graduated.ROTC.male, stats.graduated.ROTC.female, stats.graduated.ROTC.total, `${rotcRate}%`],
-        ['TOTAL GRADUATES / COMPLETERS', stats.graduated.overall.male, stats.graduated.overall.female, stats.graduated.overall.total, `${totalRate}%`],
+        // Row 8 (Index 7) - Header Row 1
+        ['NAME OF HEI/CAMPUS', 'Classification (Private/Public)', 'ENROLLMENT', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'GRADUATES', '', '', '', '', ''],
+        // Row 9 (Index 8) - Header Row 2
+        ['', '', '1st Sem.', '', '', '', '', '', '2nd Sem.', '', '', '', '', '', 'Summer', '', '', '', '', '', '', '', '', '', '', ''],
+        // Row 10 (Index 9) - Header Row 3
+        ['', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', ''],
+        // Row 11 (Index 10) - Header Row 4 (M/F)
+        ['', '', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F'],
+        // Row 12 (Index 11) - Data Row
+        [
+          'CVSU NAIC',
+          'PUBLIC',
+          statsMatrix.sem1.ROTC.m, statsMatrix.sem1.ROTC.f,
+          statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
+          statsMatrix.sem1.LTS.m, statsMatrix.sem1.LTS.f,
+          statsMatrix.sem2.ROTC.m, statsMatrix.sem2.ROTC.f,
+          statsMatrix.sem2.CWTS.m, statsMatrix.sem2.CWTS.f,
+          statsMatrix.sem2.LTS.m, statsMatrix.sem2.LTS.f,
+          statsMatrix.summer.ROTC.m, statsMatrix.summer.ROTC.f,
+          statsMatrix.summer.CWTS.m, statsMatrix.summer.CWTS.f,
+          statsMatrix.summer.LTS.m, statsMatrix.summer.LTS.f,
+          statsMatrix.graduates.ROTC.m, statsMatrix.graduates.ROTC.f,
+          statsMatrix.graduates.CWTS.m, statsMatrix.graduates.CWTS.f,
+          statsMatrix.graduates.LTS.m, statsMatrix.graduates.LTS.f
+        ],
         [],
-        ['Prepared by: NSTP Department Coordinator', '', '', '', 'Verified by: Campus NSTP Director', '', '', '', 'Approved by: Campus Administrator']
+        [],
+        ['Prepared by: NSTP Department Coordinator', '', '', '', '', '', '', '', 'Verified by: Campus NSTP Director', '', '', '', '', '', '', '', 'Approved by: Campus Administrator']
       ];
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'OSDS-NSTP Form 2-A');
+      const wsA = XLSX.utils.aoa_to_sheet(aoaA);
 
-      const filename = `OSDS-NSTP-Form-2-A_Annual_Report_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      // Apply Excel Cell Merges for Form A
+      wsA['!merges'] = [
+        // Title merge
+        { s: { r: 4, c: 0 }, e: { r: 4, c: 25 } },
+        // HEI and Classification rowSpan 4
+        { s: { r: 7, c: 0 }, e: { r: 10, c: 0 } },
+        { s: { r: 7, c: 1 }, e: { r: 10, c: 1 } },
+        // ENROLLMENT colSpan 18
+        { s: { r: 7, c: 2 }, e: { r: 7, c: 19 } },
+        // GRADUATES colSpan 6
+        { s: { r: 7, c: 20 }, e: { r: 7, c: 25 } },
+        // 1st Sem colSpan 6
+        { s: { r: 8, c: 2 }, e: { r: 8, c: 7 } },
+        // 2nd Sem colSpan 6
+        { s: { r: 8, c: 8 }, e: { r: 8, c: 13 } },
+        // Summer colSpan 6
+        { s: { r: 8, c: 14 }, e: { r: 8, c: 19 } },
+        // Under Graduates in Row 2 colSpan 6
+        { s: { r: 8, c: 20 }, e: { r: 8, c: 25 } },
+        // Component spans in Row 3 (2 cols each: ROTC, CWTS, LTS)
+        { s: { r: 9, c: 2 }, e: { r: 9, c: 3 } },
+        { s: { r: 9, c: 4 }, e: { r: 9, c: 5 } },
+        { s: { r: 9, c: 6 }, e: { r: 9, c: 7 } },
+        { s: { r: 9, c: 8 }, e: { r: 9, c: 9 } },
+        { s: { r: 9, c: 10 }, e: { r: 9, c: 11 } },
+        { s: { r: 9, c: 12 }, e: { r: 9, c: 13 } },
+        { s: { r: 9, c: 14 }, e: { r: 9, c: 15 } },
+        { s: { r: 9, c: 16 }, e: { r: 9, c: 17 } },
+        { s: { r: 9, c: 18 }, e: { r: 9, c: 19 } },
+        { s: { r: 9, c: 20 }, e: { r: 9, c: 21 } },
+        { s: { r: 9, c: 22 }, e: { r: 9, c: 23 } },
+        { s: { r: 9, c: 24 }, e: { r: 9, c: 25 } }
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, wsA, 'OSDS-NSTP Form 2-A');
+
+      const filename = `OSDS-NSTP-Form-2-A_Summary_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Direct download Form A error:', err);
@@ -647,7 +603,7 @@ function StudentManagement() {
     }
   };
 
-  // ── 1-Click Instant Download for Form B (CHED NSTP Form B: Official Student Directory & Enrollment Masterlist) ──
+  // ── 1-Click Instant Download for Form B (OSDS-NSTP Form 2-B / CHED NSTP Form B: NSTP 1 Enrollment List) ──
   const handleDirectDownloadFormB = async () => {
     try {
       setIsDownloadingFormB(true);
@@ -664,28 +620,6 @@ function StudentManagement() {
         return nameA.localeCompare(nameB);
       });
 
-      const stats = calculateDemographicsAndGraduates(targetStudents, {});
-
-      const headers = [
-        'No.',
-        'Student No.',
-        'Surname',
-        'First Name',
-        'Middle Name',
-        'Degree Program / Course',
-        'Year Level',
-        'Sex',
-        'Birthdate',
-        'Street / Barangay',
-        'Municipality / City',
-        'Province',
-        'Contact Number',
-        'E-mail Address',
-        'School Section',
-        'NSTP Section',
-        'NSTP Component'
-      ];
-
       const dataRows = targetStudents.map((st, idx) => {
         let surname = st.lastName || '';
         let firstName = st.firstName || '';
@@ -725,10 +659,14 @@ function StudentManagement() {
           const d = new Date(st.birthDate);
           if (!isNaN(d.getTime())) {
             birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+          } else {
+            birthdate = st.birthDate;
           }
         } else if (st.birthMonth && st.birthDay && st.birthYear) {
           birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
         }
+
+        const sexVal = (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M';
 
         return [
           idx + 1,
@@ -736,48 +674,69 @@ function StudentManagement() {
           surname,
           firstName,
           middleName,
-          st.program || st.course || '',
-          st.year || st.yearLevel || '1st Year',
-          st.sex || st.gender || 'Male',
+          st.program || st.course || 'BSIT',
+          sexVal,
           birthdate,
           street,
           municipality,
           province,
           st.contactNumber || '',
-          st.email || '',
-          st.section || 'None',
-          st.nstp_section || 'Unassigned',
-          st.department || ''
+          st.email || ''
         ];
       });
 
-      const aoa = [
+      const aoaB = [
         ['Republic of the Philippines'],
         ['Office of the President'],
-        ['COMMISSION ON HIGHER EDUCATION'],
-        ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-        ['CHED NSTP Form B: Official Student Directory & Enrollment Masterlist'],
-        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC CAMPUS', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
-        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
-        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', `Semester: ${sem}`],
-        headers,
-        ...dataRows,
+        ['Commission on Higher Education'],
         [],
-        ['SUMMARY OF ENROLLED STUDENTS BY COMPONENT AND SEX'],
-        ['Component / Track', 'Male Enrollees', 'Female Enrollees', 'Total Enrolled Students'],
-        ['Civic Welfare Training Service (CWTS)', stats.enrolled.CWTS.male, stats.enrolled.CWTS.female, stats.enrolled.CWTS.total],
-        ['Literacy Training Service (LTS)', stats.enrolled.LTS.male, stats.enrolled.LTS.female, stats.enrolled.LTS.total],
-        ['Reserve Officers Training Corps (ROTC)', stats.enrolled.ROTC.male, stats.enrolled.ROTC.female, stats.enrolled.ROTC.total],
-        ['GRAND TOTAL', stats.enrolled.overall.male, stats.enrolled.overall.female, stats.enrolled.overall.total],
+        ['NSTP 1 Enrollment List'],
+        [`${sem}, Academic Year: ${activeBatchYear}`],
+        [],
+        ['Name of HEI: Cavite State University - Naic Campus', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        ['Address: Bucana, Naic, Cavite', '', '', '', '', '', '', 'NSTP Components: CWTS / ROTC / LTS'],
+        [],
+        // Row 11 (Index 10) - Main Column Headers
+        ['No.', 'Student No.', 'Student Name', '', '', 'Program', 'Sex', 'Birthdate', 'Address', '', '', 'Contact Number', 'Email Address'],
+        // Row 12 (Index 11) - Sub-Column Headers
+        ['', '', 'Surname', 'First Name', 'Middle Name', '', '', '', 'Street/Barangay', 'Municipality/City', 'Province', '', ''],
+        // Data Rows (Index 12 onwards)
+        ...dataRows,
         [],
         ['Prepared by: NSTP Department Coordinator', '', '', '', 'Certified Correct by: Campus NSTP Director', '', '', '', 'Approved by: Campus Administrator']
       ];
 
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'CHED NSTP Form B');
+      const wsB = XLSX.utils.aoa_to_sheet(aoaB);
 
-      const filename = `CHED_NSTP_Form_B_Enrollment_Masterlist_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      // Apply Excel Cell Merges for Form B
+      wsB['!merges'] = [
+        // Title merge
+        { s: { r: 4, c: 0 }, e: { r: 4, c: 12 } },
+        { s: { r: 5, c: 0 }, e: { r: 5, c: 12 } },
+        // No. rowSpan 2
+        { s: { r: 10, c: 0 }, e: { r: 11, c: 0 } },
+        // Student No. rowSpan 2
+        { s: { r: 10, c: 1 }, e: { r: 11, c: 1 } },
+        // Student Name colSpan 3
+        { s: { r: 10, c: 2 }, e: { r: 10, c: 4 } },
+        // Program rowSpan 2
+        { s: { r: 10, c: 5 }, e: { r: 11, c: 5 } },
+        // Sex rowSpan 2
+        { s: { r: 10, c: 6 }, e: { r: 11, c: 6 } },
+        // Birthdate rowSpan 2
+        { s: { r: 10, c: 7 }, e: { r: 11, c: 7 } },
+        // Address colSpan 3
+        { s: { r: 10, c: 8 }, e: { r: 10, c: 10 } },
+        // Contact Number rowSpan 2
+        { s: { r: 10, c: 11 }, e: { r: 11, c: 11 } },
+        // Email Address rowSpan 2
+        { s: { r: 10, c: 12 }, e: { r: 11, c: 12 } }
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, wsB, 'CHED NSTP Form B');
+
+      const filename = `CHED_NSTP_Form_B_Enrollment_List_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Direct download Form B error:', err);
