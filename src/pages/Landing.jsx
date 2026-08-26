@@ -246,11 +246,11 @@ function Landing() {
 
   // Real-time Telemetry & Active Online Users state
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 12;
-    let cachedUsers = 5;
+    let cachedVisitors = 0;
+    let cachedUsers = 0;
     try {
-      cachedVisitors = Math.max(12, parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10));
-      cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '5', 10);
+      cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+      cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
     } catch (_) {}
     return {
       totalVisitors: cachedVisitors,
@@ -280,7 +280,7 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = telemetry.totalVisitors ?? 12;
+  const totalVisitorsCount = telemetry.totalVisitors ?? 0;
   const activeOnlineCount = telemetry.activeOnlineCount || 1;
 
   const startTimer = useCallback(() => {

@@ -263,6 +263,47 @@ export function deleteStudent(id) {
   });
 }
 
+export function batchAssignNstpSection(studentIds, nstpSection) {
+  return apiCall('/students/batch-assign-section', {
+    method: 'POST',
+    body: JSON.stringify({ studentIds, nstp_section: nstpSection })
+  });
+}
+
+// Grades API
+export function getGrades(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.semester) qs.set('semester', params.semester);
+  if (params.schoolYear || params.school_year) qs.set('schoolYear', params.schoolYear || params.school_year);
+  if (params.department) qs.set('department', params.department);
+  if (params.nstpSection || params.nstp_section) qs.set('nstpSection', params.nstpSection || params.nstp_section);
+  const queryStr = qs.toString() ? '?' + qs.toString() : '';
+  return apiCall('/grades' + queryStr)
+    .then(res => {
+      try { localStorage.setItem('nstp_cached_grades', JSON.stringify(res)); } catch (_) {}
+      return res;
+    })
+    .catch(() => {
+      try {
+        return JSON.parse(localStorage.getItem('nstp_cached_grades') || '[]');
+      } catch (_) {
+        return [];
+      }
+    });
+}
+
+export function saveBatchGrades(grades) {
+  return apiCall('/grades/batch', {
+    method: 'POST',
+    body: JSON.stringify({ grades })
+  });
+}
+
+export function getStudentGrades(studentId) {
+  return apiCall('/grades/student/' + encodeURIComponent(studentId))
+    .catch(() => []);
+}
+
 // Reports
 export function getReports() {
   return apiCall('/reports');
@@ -565,7 +606,14 @@ export const studentsAPI = {
   getAll: getStudents,
   add: addStudent,
   update: updateStudent,
-  delete: deleteStudent
+  delete: deleteStudent,
+  batchAssignSection: batchAssignNstpSection
+};
+
+export const gradesAPI = {
+  getAll: getGrades,
+  saveBatch: saveBatchGrades,
+  getByStudent: getStudentGrades
 };
 
 export const reportsAPI = {
@@ -634,7 +682,7 @@ function getClientSideTelemetry() {
       localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
     } catch (_) {}
 
-    const cachedVisitors = Math.max(12, parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10));
+    const cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
     const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
 
     return {
@@ -679,10 +727,8 @@ function getClientSideTelemetry() {
       if (res.ok) {
         markTelemetryOnline();
         return res.json().then(function(resData) {
-          if (resData && resData.totalVisitors) {
-            const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10);
-            const peak = Math.max(prev, parseInt(resData.totalVisitors, 10));
-            try { localStorage.setItem('nstp_cached_total_visitors', String(peak)); } catch (_) {}
+          if (resData && typeof resData.totalVisitors === 'number') {
+            try { localStorage.setItem('nstp_cached_total_visitors', String(resData.totalVisitors)); } catch (_) {}
           }
           return resData;
         }).catch(function() { return getClientSideTelemetry(); });
@@ -713,13 +759,11 @@ function getClientSideTelemetry() {
                   localStorage.setItem('nstp_cached_total_users', String(data.totalRegisteredUsers || data.totalUsers));
                 } catch (_) {}
               }
-              const prevVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '12', 10);
-              const incoming = parseInt(data.totalVisitors || '0', 10);
-              const maxVisitors = Math.max(prevVisitors, incoming);
-              data.totalVisitors = maxVisitors;
-              try {
-                localStorage.setItem('nstp_cached_total_visitors', String(maxVisitors));
-              } catch (_) {}
+              if (typeof data.totalVisitors === 'number') {
+                try {
+                  localStorage.setItem('nstp_cached_total_visitors', String(data.totalVisitors));
+                } catch (_) {}
+              }
             }
             return data;
           });

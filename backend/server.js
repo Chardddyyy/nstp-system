@@ -519,6 +519,29 @@ async function ensureAllCoreTables() {
       INDEX idx_attendance_date (scanned_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+    `CREATE TABLE IF NOT EXISTS student_grades (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      student_id INT NOT NULL,
+      studentId VARCHAR(50) NOT NULL,
+      student_name VARCHAR(255) NULL,
+      department VARCHAR(50) NOT NULL,
+      semester VARCHAR(50) NOT NULL DEFAULT '1st Semester',
+      school_year VARCHAR(50) NOT NULL DEFAULT '2025-2026',
+      nstp_section VARCHAR(50) NULL,
+      midterm_grade VARCHAR(20) NULL,
+      final_grade VARCHAR(20) NULL,
+      remarks VARCHAR(50) NULL,
+      instructor_id INT NULL,
+      instructor_name VARCHAR(255) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_student_sem_sy (studentId, semester, school_year),
+      INDEX idx_grades_dept (department),
+      INDEX idx_grades_sem (semester),
+      INDEX idx_grades_sy (school_year),
+      INDEX idx_grades_section (nstp_section)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     `CREATE TABLE IF NOT EXISTS system_settings (
       setting_key VARCHAR(100) PRIMARY KEY,
       setting_value LONGTEXT,
@@ -2565,18 +2588,19 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const finalIdPhoto = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
     const finalRegPhoto = n(registrationPhoto) || n(registration_photo) || finalIdPhoto;
     const resolved2x2 = finalIdPhoto || finalRegPhoto;
+    const finalNstpSection = n(req.body.nstp_section) || n(req.body.nstpSection) || null;
 
     const [result] = await pool.execute(
       `INSERT INTO students (
-        studentId, name, email, department, section, semester, schoolYear, program, year,
+        studentId, name, email, department, section, nstp_section, semester, schoolYear, program, year,
         contactNumber, address, gender, birthDate, birthMonth, birthDay, birthYear,
         age, civilStatus, bloodType, height, weight, facebookAccount,
         emergencyContact, emergencyNumber,
         firstName, lastName, middleName, suffix, registeredVoter,
         street, municipality, province, registrationPhoto, registration_photo, photo, id_photo_2x2
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        studentId, finalName, n(email), department, n(section), n(semester), n(schoolYear), n(program), finalYear,
+        studentId, finalName, n(email), department, n(section), finalNstpSection, n(semester), n(schoolYear), n(program), finalYear,
         n(contactNumber), n(address), finalGender, safeBirthDate, n(birthMonth), n(birthDay), n(birthYear),
         n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount),
         finalEmergency, n(emergencyNumber),
@@ -2702,10 +2726,11 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
     // Registration Form (COR/COE): STRICTLY IMMUTABLE - Always preserved from student's original enrollment proof
     const finalRegPhoto = fallbackReg || current.registrationPhoto || current.registration_photo || current.reg_form || null;
+    const finalNstpSection = n(req.body.nstp_section, n(req.body.nstpSection, current.nstp_section));
 
     await pool.execute(
       `UPDATE students SET
-         studentId = ?, name = ?, email = ?, department = ?, section = ?, semester = ?, schoolYear = ?,
+         studentId = ?, name = ?, email = ?, department = ?, section = ?, nstp_section = ?, semester = ?, schoolYear = ?,
          program = ?, year = ?, contactNumber = ?, address = ?, gender = ?, birthDate = ?,
          birthMonth = ?, birthDay = ?, birthYear = ?, age = ?, civilStatus = ?, bloodType = ?,
          height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
@@ -2714,7 +2739,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          photo = ?, id_photo_2x2 = ?
        WHERE id = ? OR studentId = ?`,
       [
-        finalStudentId, finalName, finalEmail, finalDept, finalSection, finalSemester, finalSchoolYear,
+        finalStudentId, finalName, finalEmail, finalDept, finalSection, finalNstpSection, finalSemester, finalSchoolYear,
         finalProgram, finalYear, finalContact, finalAddress, finalGender, safeBirthDate,
         bm, bd, by, finalAge, finalCivilStatus, finalBloodType,
         finalHeight, finalWeight, finalFacebook, finalEmergency, finalEmergencyNumber,
@@ -2780,6 +2805,179 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Delete student error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Batch Assign NSTP Section (Admin Only or Instructor for their track) ─────
+app.post('/api/students/batch-assign-section', authenticateToken, async (req, res) => {
+  try {
+    const { studentIds, nstp_section } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ message: 'studentIds must be a non-empty array' });
+    }
+    const cleanSection = (nstp_section || '').trim();
+    if (!cleanSection) {
+      return res.status(400).json({ message: 'NSTP section is required' });
+    }
+
+    let query = 'UPDATE students SET nstp_section = ? WHERE id IN (?)';
+    let params = [cleanSection, studentIds];
+
+    if (req.user.role !== 'admin') {
+      query += ' AND department = ?';
+      params.push(req.user.department);
+    }
+
+    const [result] = await pool.query(query, params);
+    
+    try {
+      await pool.query(
+        'UPDATE enrollments e JOIN students s ON (e.studentId = s.studentId OR (e.student_name = s.name AND e.department = s.department)) SET e.nstp_section = ? WHERE s.id IN (?)',
+        [cleanSection, studentIds]
+      );
+    } catch (_) {}
+
+    autoSaveToGDrive(`Batch_Assign_Section_${cleanSection}`);
+    res.json({ success: true, count: result.affectedRows, nstp_section: cleanSection });
+  } catch (error) {
+    console.error('Batch assign NSTP section error:', error);
+    res.status(500).json({ message: 'Failed to batch assign NSTP section' });
+  }
+});
+
+// ── Student Grades Management Endpoints ─────────────────────────────────────
+
+// GET /api/grades — Retrieve student grades with optional filters
+app.get('/api/grades', authenticateToken, async (req, res) => {
+  try {
+    const { semester, schoolYear, school_year, department, nstpSection, nstp_section } = req.query;
+    const sy = schoolYear || school_year;
+    const sec = nstpSection || nstp_section;
+
+    let query = `
+      SELECT g.*, s.name AS student_name, s.firstName, s.lastName, s.middleName, s.program, s.year, s.section AS school_section, s.department AS student_dept
+      FROM student_grades g
+      JOIN students s ON (g.studentId = s.studentId OR g.student_id = s.id)
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (req.user.role !== 'admin') {
+      query += ' AND (g.department = ? OR s.department = ?)';
+      params.push(req.user.department, req.user.department);
+    } else if (department && department !== 'All') {
+      query += ' AND (g.department = ? OR s.department = ?)';
+      params.push(department, department);
+    }
+
+    if (semester && semester !== 'All') {
+      query += ' AND g.semester = ?';
+      params.push(semester);
+    }
+
+    if (sy && sy !== 'All') {
+      query += ' AND g.school_year = ?';
+      params.push(sy);
+    }
+
+    if (sec && sec !== 'All') {
+      query += ' AND (g.nstp_section = ? OR s.nstp_section = ?)';
+      params.push(sec, sec);
+    }
+
+    query += ' ORDER BY s.lastName ASC, s.firstName ASC';
+
+    const [rows] = await pool.execute(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Get grades error:', error);
+    res.status(500).json({ message: 'Failed to retrieve grades' });
+  }
+});
+
+// POST /api/grades/batch — Batch save or update student semester grades
+app.post('/api/grades/batch', authenticateToken, async (req, res) => {
+  try {
+    const { grades } = req.body;
+    if (!Array.isArray(grades) || grades.length === 0) {
+      return res.status(400).json({ message: 'grades array is required' });
+    }
+
+    const instructorId = req.user.id;
+    const instructorName = req.user.name || 'Instructor';
+
+    let savedCount = 0;
+    for (const g of grades) {
+      const studentId = g.studentId || g.student_id_val;
+      const dbStudentId = g.student_id || g.id || 0;
+      const dept = g.department || (req.user.role !== 'admin' ? req.user.department : 'CWTS');
+      const semester = g.semester || '1st Semester';
+      const schoolYear = g.school_year || g.schoolYear || '2025-2026';
+      const nstpSection = g.nstp_section || g.nstpSection || null;
+      const midtermGrade = g.midterm_grade !== undefined ? (g.midterm_grade ? String(g.midterm_grade).trim() : null) : null;
+      const finalGrade = g.final_grade !== undefined ? (g.final_grade ? String(g.final_grade).trim() : null) : null;
+      const remarks = g.remarks || (finalGrade ? (['1.00','1.25','1.50','1.75','2.00','2.25','2.50','2.75','3.00','Passed'].includes(finalGrade) ? 'Passed' : finalGrade === 'INC' ? 'Incomplete' : finalGrade === 'DRP' ? 'Dropped' : 'Failed') : null);
+      const studentName = g.student_name || g.name || null;
+
+      if (!studentId) continue;
+
+      if (req.user.role !== 'admin' && dept !== req.user.department) {
+        continue;
+      }
+
+      await pool.execute(
+        `INSERT INTO student_grades (
+           student_id, studentId, student_name, department, semester, school_year,
+           nstp_section, midterm_grade, final_grade, remarks, instructor_id, instructor_name
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           student_name = COALESCE(VALUES(student_name), student_name),
+           department = VALUES(department),
+           nstp_section = COALESCE(VALUES(nstp_section), nstp_section),
+           midterm_grade = VALUES(midterm_grade),
+           final_grade = VALUES(final_grade),
+           remarks = VALUES(remarks),
+           instructor_id = VALUES(instructor_id),
+           instructor_name = VALUES(instructor_name),
+           updated_at = NOW()`,
+        [
+          dbStudentId,
+          String(studentId),
+          studentName,
+          dept,
+          semester,
+          schoolYear,
+          nstpSection,
+          midtermGrade,
+          finalGrade,
+          remarks,
+          instructorId,
+          instructorName
+        ]
+      );
+      savedCount++;
+    }
+
+    autoSaveToGDrive('Save_Batch_Grades_' + (grades[0]?.semester || 'Sem') + '_' + savedCount);
+    res.json({ success: true, savedCount, message: `Successfully saved ${savedCount} grades.` });
+  } catch (error) {
+    console.error('Save batch grades error:', error);
+    res.status(500).json({ message: 'Failed to save student grades: ' + error.message });
+  }
+});
+
+// GET /api/grades/student/:studentId — Get all semester grades for a student
+app.get('/api/grades/student/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT * FROM student_grades WHERE studentId = ? OR student_id = ? ORDER BY school_year DESC, semester ASC',
+      [studentId, studentId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Get student grades error:', error);
+    res.status(500).json({ message: 'Failed to retrieve student grades' });
   }
 });
 
@@ -5401,7 +5599,12 @@ async function initTelemetry() {
       var rawData = fs.readFileSync(visitorLogFile, 'utf8');
       var parsed = JSON.parse(rawData);
       if (Array.isArray(parsed.visitors)) {
-        parsed.visitors.forEach(function(id) { totalUniqueVisitors.add(String(id)); });
+        parsed.visitors.forEach(function(id) {
+          var strId = String(id);
+          if (strId && !strId.startsWith('historical_unique_v_') && !strId.startsWith('vis_test_')) {
+            totalUniqueVisitors.add(strId);
+          }
+        });
       }
     }
   } catch (e) {
@@ -5412,17 +5615,15 @@ async function initTelemetry() {
     var [rows] = await pool.query('SELECT DISTINCT visitor_id FROM active_visitors');
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
-        if (r.visitor_id) totalUniqueVisitors.add(String(r.visitor_id));
+        if (r.visitor_id) {
+          var strId = String(r.visitor_id);
+          if (strId && !strId.startsWith('historical_unique_v_') && !strId.startsWith('vis_test_')) {
+            totalUniqueVisitors.add(strId);
+          }
+        }
       });
     }
   } catch (_) {}
-
-  // Ensure historical count baseline is preserved (so visitor count never regresses)
-  if (totalUniqueVisitors.size < 12) {
-    for (var i = 1; i <= 12; i++) {
-      totalUniqueVisitors.add('historical_unique_v_' + i);
-    }
-  }
 
   saveTelemetry();
   console.log(`[Telemetry] Initialized with ${totalUniqueVisitors.size} persistent unique visitors.`);
@@ -5787,6 +5988,7 @@ async function startServer() {
       ensureWebRTCColumns(),
       ensureUserColumns(),
       ensureStudentColumns(),
+      ensureStudentGradesTable(),
       ensureEnrollmentColumns(),
       ensureReportsDeptColumn(),
       ensureReportsBatchYear(),

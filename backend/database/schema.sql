@@ -273,6 +273,29 @@ CREATE TABLE IF NOT EXISTS active_visitors (
   INDEX idx_active_visitors_last_seen (last_seen)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS student_grades (
+  id              INT PRIMARY KEY AUTO_INCREMENT,
+  student_id      INT NOT NULL,
+  studentId       VARCHAR(50) NOT NULL,
+  student_name    VARCHAR(255) NULL,
+  department      VARCHAR(50) NOT NULL,
+  semester        VARCHAR(50) NOT NULL DEFAULT '1st Semester',
+  school_year     VARCHAR(50) NOT NULL DEFAULT '2025-2026',
+  nstp_section    VARCHAR(50) NULL,
+  midterm_grade   VARCHAR(20) NULL,
+  final_grade     VARCHAR(20) NULL,
+  remarks         VARCHAR(50) NULL,
+  instructor_id   INT NULL,
+  instructor_name VARCHAR(255) NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_student_sem_sy (studentId, semester, school_year),
+  INDEX idx_grades_dept (department),
+  INDEX idx_grades_sem (semester),
+  INDEX idx_grades_sy (school_year),
+  INDEX idx_grades_section (nstp_section)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SEED DATA
 -- Passwords are bcrypt-hashed (cost 12):
@@ -289,10 +312,3 @@ ON DUPLICATE KEY UPDATE id = id;
 INSERT INTO current_batch (id, year) VALUES (1, 2025)
 ON DUPLICATE KEY UPDATE id = id;
 
-INSERT INTO students (id, studentId, name, firstName, lastName, middleName, email, department, status, semester, schoolYear, course, program, year, section, contactNumber, street, municipality, province, emergencyContact, emergencyNumber) VALUES
-(1, '202410001', 'Juan Dela Cruz', 'Juan', 'Dela Cruz', 'Santos', 'juan.delacruz@cvsu.edu.ph', 'CWTS', 'Active', '1st Semester', '2025-2026', 'BS Information Technology', 'BSIT', '1st Year', '1A', '09171234567', 'Brgy. Bucana', 'Naic', 'Cavite', 'Maria Dela Cruz', '09181234567'),
-(2, '202410002', 'Maria Clara Santos', 'Maria Clara', 'Santos', 'Reyes', 'maria.santos@cvsu.edu.ph', 'ROTC', 'Active', '1st Semester', '2025-2026', 'BS Computer Science', 'BSCS', '1st Year', '1B', '09172345678', 'Brgy. Mabolo', 'Naic', 'Cavite', 'Pedro Santos', '09182345678'),
-(3, '202410003', 'Jose Rizal Mercado', 'Jose', 'Mercado', 'Rizal', 'jose.mercado@cvsu.edu.ph', 'LTS', 'Active', '1st Semester', '2025-2026', 'Bachelor of Secondary Education', 'BSED', '1st Year', '1A', '09173456789', 'Brgy. Labac', 'Naic', 'Cavite', 'Teodora Mercado', '09183456789'),
-(4, '202410004', 'Andres Bonifacio', 'Andres', 'Bonifacio', 'Castro', 'andres.bonifacio@cvsu.edu.ph', 'ROTC', 'Active', '1st Semester', '2025-2026', 'BS Business Administration', 'BSBA', '2nd Year', '2A', '09174567890', 'Brgy. Halang', 'Naic', 'Cavite', 'Gregoria De Jesus', '09184567890'),
-(5, '202410005', 'Apolinario Mabini', 'Apolinario', 'Mabini', 'Maranan', 'apolinario.mabini@cvsu.edu.ph', 'CWTS', 'Active', '1st Semester', '2025-2026', 'BS Hospitality Management', 'BSHM', '1st Year', '1C', '09175678901', 'Brgy. Timalan', 'Naic', 'Cavite', 'Inocencio Mabini', '09185678901')
-ON DUPLICATE KEY UPDATE id = id;

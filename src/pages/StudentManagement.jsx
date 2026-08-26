@@ -1,13 +1,14 @@
 import { useAuth } from '../context/AuthContext';
-import { getPrimaryApiUrl } from '../services/api';
+import { getPrimaryApiUrl, studentsAPI } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
+import StudentGradesModal from '../components/StudentGradesModal';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -45,13 +46,14 @@ const compressPhoto = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.8) 
 };
 
 function StudentManagement() {
-  const { user, logout, students, addStudent, updateStudent, deleteStudent, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, students, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDept, setFilterDept] = useState('All');
   const [filterCourse, setFilterCourse] = useState('All');
+  const [filterNstpSection, setFilterNstpSection] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -60,7 +62,14 @@ function StudentManagement() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showBatchIdModal, setShowBatchIdModal] = useState(false);
   const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
+  const [showGradesModal, setShowGradesModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Batch section assignment state
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
+  const [batchNstpSection, setBatchNstpSection] = useState('CWTS 1-1');
+  const [isBatchAssigning, setIsBatchAssigning] = useState(false);
+  const [batchAssignFeedback, setBatchAssignFeedback] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +93,7 @@ function StudentManagement() {
     yearLevel: '',
     program: '',
     section: '',
+    nstp_section: '',
     contactNumber: '',
     birthMonth: '',
     birthDay: '',
@@ -338,6 +348,47 @@ function StudentManagement() {
   const [exportSem, setExportSem] = useState('1st Semester');
   const [exportAcadYear, setExportAcadYear] = useState('2025-2026');
 
+  const handleToggleSelectStudent = (id) => {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    if (selectedStudentIds.size === currentStudents.length && currentStudents.length > 0) {
+      setSelectedStudentIds(new Set());
+    } else {
+      const next = new Set(currentStudents.map((s) => s.id));
+      setSelectedStudentIds(next);
+    }
+  };
+
+  const handleBatchAssignSection = async () => {
+    if (selectedStudentIds.size === 0) return;
+    try {
+      setIsBatchAssigning(true);
+      const ids = Array.from(selectedStudentIds);
+      await studentsAPI.batchAssignSection(ids, batchNstpSection);
+      if (typeof refreshData === 'function') {
+        await refreshData();
+      }
+      setBatchAssignFeedback(`Successfully assigned ${ids.length} student(s) to ${batchNstpSection}!`);
+      setSelectedStudentIds(new Set());
+      setTimeout(() => setBatchAssignFeedback(''), 4500);
+    } catch (err) {
+      console.error('Batch section assignment error:', err);
+      alert('Failed to batch assign NSTP section. Please try again.');
+    } finally {
+      setIsBatchAssigning(false);
+    }
+  };
+
   const downloadChed = async (overrideArchiveYear) => {
     try {
       const dept = isAdmin ? exportDept : (user?.department || 'CWTS');
@@ -522,14 +573,17 @@ function StudentManagement() {
         return p.includes(f);
       })();
 
+      // NSTP Section filter
+      const matchesNstpSec = filterNstpSection === 'All' || (student.nstp_section && student.nstp_section.trim() === filterNstpSection);
+
       // Instructors only see their department students
       if (!isAdmin && user?.department) {
-        return matchesSearch && student.department === user.department && matchesCourse;
+        return matchesSearch && student.department === user.department && matchesCourse && matchesNstpSec;
       }
 
-      return matchesSearch && matchesDept && matchesCourse;
+      return matchesSearch && matchesDept && matchesCourse && matchesNstpSec;
     });
-  }, [sourceStudents, searchTerm, filterDept, filterCourse, isAdmin, user?.department]);
+  }, [sourceStudents, searchTerm, filterDept, filterCourse, filterNstpSection, isAdmin, user?.department]);
 
   const [studentSortCol, setStudentSortCol] = useState(null);
   const [studentSortDir, setStudentSortDir] = useState('asc');
@@ -747,6 +801,7 @@ function StudentManagement() {
       yearLevel: String(student.yearLevel || student.year || '1st Year'),
       program: String(student.program || ''),
       section: String(student.section || ''),
+      nstp_section: String(student.nstp_section || ''),
       sex: String(student.sex || student.gender || ''),
       gender: String(student.gender || student.sex || ''),
       birthMonth: birthMonth,
@@ -889,18 +944,16 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Batch NSTP IDs Download & Print Button (Admin Only) */}
-              {isAdmin && (
-                <button type="button"
-                  onClick={() => setShowBatchIdModal(true)}
-                  title="Download or print standard student ID cards with Select All and filtering"
-                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
-                >
-                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                  <span className="hidden xs:inline">Download Student IDs</span>
-                  <span className="xs:hidden">Student IDs</span>
-                </button>
-              )}
+              {/* Semester Grades Encoding & Grading Sheet Button (All Users: Admin & Instructors) */}
+              <button type="button"
+                onClick={() => setShowGradesModal(true)}
+                title="Encode and submit student semester grades and download official grade sheet"
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
+              >
+                <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+                <span className="hidden xs:inline">Encode Grades</span>
+                <span className="xs:hidden">Grades</span>
+              </button>
 
               {/* View Attendance & Absences Matrix Button (Instructors Only) */}
               {!isAdmin && (
@@ -974,6 +1027,24 @@ function StudentManagement() {
                 </select>
               )}
               <select
+                id="filter-nstp-section"
+                name="filterNstpSection"
+                value={filterNstpSection}
+                onChange={(e) => setFilterNstpSection(e.target.value)}
+                className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+              >
+                <option value="All">All NSTP Sec</option>
+                <option value="CWTS 1-1">CWTS 1-1</option>
+                <option value="CWTS 1-2">CWTS 1-2</option>
+                <option value="CWTS 1-3">CWTS 1-3</option>
+                <option value="LTS 1-1">LTS 1-1</option>
+                <option value="LTS 1-2">LTS 1-2</option>
+                <option value="LTS 1-3">LTS 1-3</option>
+                <option value="ROTC 1-1">ROTC 1-1</option>
+                <option value="ROTC 1-2">ROTC 1-2</option>
+                <option value="ROTC 1-3">ROTC 1-3</option>
+              </select>
+              <select
                 id="filter-course"
                 name="filterCourse"
                 value={filterCourse}
@@ -993,53 +1064,134 @@ function StudentManagement() {
           </div>
         </div>
 
-                  {/* Students List — Responsive: Mobile Card Stack & Desktop Table */}
+        {/* Admin Batch NSTP Section Assignment Toolbar */}
+        {isAdmin && selectedStudentIds.size > 0 && (
+          <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-700/60 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center font-black text-sm">
+                {selectedStudentIds.size}
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-black text-white leading-tight">
+                  {selectedStudentIds.size} Student{selectedStudentIds.size > 1 ? 's' : ''} Selected
+                </p>
+                <p className="text-[10px] sm:text-[11px] text-emerald-300/90 font-medium">
+                  Separate or assign students into an NSTP Section (CWTS/LTS/ROTC 1-3)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-emerald-200">Assign Section:</span>
+              <select
+                value={batchNstpSection}
+                onChange={(e) => setBatchNstpSection(e.target.value)}
+                className="px-3 py-1.5 text-xs font-black rounded-xl bg-white text-emerald-950 border border-emerald-300 outline-none cursor-pointer"
+              >
+                <option value="CWTS 1-1">CWTS 1-1</option>
+                <option value="CWTS 1-2">CWTS 1-2</option>
+                <option value="CWTS 1-3">CWTS 1-3</option>
+                <option value="LTS 1-1">LTS 1-1</option>
+                <option value="LTS 1-2">LTS 1-2</option>
+                <option value="LTS 1-3">LTS 1-3</option>
+                <option value="ROTC 1-1">ROTC 1-1</option>
+                <option value="ROTC 1-2">ROTC 1-2</option>
+                <option value="ROTC 1-3">ROTC 1-3</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={handleBatchAssignSection}
+                disabled={isBatchAssigning}
+                className="px-4 py-1.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {isBatchAssigning ? 'Assigning...' : 'Apply Section'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedStudentIds(new Set())}
+                className="px-3 py-1.5 text-xs font-bold text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-xl transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
+        {batchAssignFeedback && (
+          <div className="mb-4 p-3 bg-emerald-100/90 text-emerald-900 text-xs font-black rounded-2xl border border-emerald-300 flex items-center gap-2 animate-pulse">
+            <CheckCircle className="w-4 h-4 text-emerald-700" />
+            <span>{batchAssignFeedback}</span>
+          </div>
+        )}
+
+        {/* Students List — Responsive: Mobile Card Stack & Desktop Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Mobile Cards (No Horizontal Scroll Needed) */}
           <div className="sm:hidden divide-y divide-gray-100">
-            {currentStudents.map((student, index) => (
-              <div
-                key={student.id || student.studentId || `student-m-${index}`}
-                className="p-3.5 hover:bg-emerald-50/40 cursor-pointer transition-colors"
-                onClick={() => handleViewStudent(student)}
-              >
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-black text-gray-900 truncate">{student.name}</p>
-                    <p className="text-[11px] text-gray-500 font-mono mt-0.5">{student.studentId} • Sec {student.nstp_section || student.section || '-'}</p>
-                    <p className="text-[10.5px] text-gray-400 truncate">{student.email}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${getDepartmentColor(student.department)}`}>
-                    {student.department}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px] text-gray-500">
-                  <span>{student.program || 'No Program'} · {student.year || '1st Year'}</span>
-                  {isAdmin && (
-                    <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => !viewingArchive && openEditModal(student)}
-                        disabled={viewingArchive}
-                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
-                        title="Edit"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
-                        disabled={viewingArchive}
-                        className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+            {currentStudents.map((student, index) => {
+              const isSelected = selectedStudentIds.has(student.id);
+              return (
+                <div
+                  key={student.id || student.studentId || `student-m-${index}`}
+                  className={`p-3.5 hover:bg-emerald-50/40 cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : ''}`}
+                  onClick={() => handleViewStudent(student)}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      {isAdmin && (
+                        <div
+                          className="pt-0.5 shrink-0"
+                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-emerald-700" />
+                          ) : (
+                            <Square className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-gray-900 truncate">{student.name}</p>
+                        <p className="text-[11px] text-gray-500 font-mono mt-0.5">
+                          {student.studentId} • <span className="font-bold text-gray-700">School: {student.section || '-'}</span> | <span className="font-black text-emerald-800">NSTP: {student.nstp_section || '-'}</span>
+                        </p>
+                        <p className="text-[10.5px] text-gray-400 truncate">{student.email}</p>
+                      </div>
                     </div>
-                  )}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${getDepartmentColor(student.department)}`}>
+                      {student.department}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px] text-gray-500">
+                    <span>{student.program || 'No Program'} · {student.year || '1st Year'}</span>
+                    {isAdmin && (
+                      <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => !viewingArchive && openEditModal(student)}
+                          disabled={viewingArchive}
+                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
+                          title="Edit"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
+                          disabled={viewingArchive}
+                          className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Desktop Table View */}
@@ -1047,6 +1199,21 @@ function StudentManagement() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  {isAdmin && (
+                    <th className="px-4 py-3 text-center w-10">
+                      <div
+                        className="cursor-pointer inline-flex items-center justify-center"
+                        onClick={handleSelectAllVisible}
+                        title="Select All Displayed Students"
+                      >
+                        {selectedStudentIds.size > 0 && selectedStudentIds.size === currentStudents.length ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-700" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-400" />
+                        )}
+                      </div>
+                    </th>
+                  )}
                   <th 
                     onClick={() => handleSortStudent('id')}
                     className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
@@ -1081,23 +1248,31 @@ function StudentManagement() {
                   </th>
                   <th 
                     onClick={() => handleSortStudent('section')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
                       studentSortCol === 'section' 
                         ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
                         : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                     }`}
-                    title="Click to sort by Section"
+                    title="Original School / Class Section from Enrollment"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>Section</span>
+                      <span>School Sec</span>
                       {studentSortCol === 'section' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
                   </th>
                   <th 
+                    className="px-4 py-3 text-left text-xs uppercase tracking-wider font-extrabold text-emerald-800 bg-emerald-50/50"
+                    title="NSTP Section Assigned by Admin"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>NSTP Sec</span>
+                    </div>
+                  </th>
+                  <th 
                     onClick={() => handleSortStudent('year')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
+                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
                       studentSortCol === 'year' 
                         ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
                         : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
@@ -1131,54 +1306,78 @@ function StudentManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {currentStudents.map((student, index) => (
-                  <tr 
-                    key={student.id || student.studentId || `student-${index}`} 
-                    className="hover:bg-green-50 cursor-pointer transition-colors duration-150"
-                    onClick={() => handleViewStudent(student)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                        <p className="text-xs text-gray-500">{student.email}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono font-bold">
-                      {student.nstp_section || student.section || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.year}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(student.department)}`}>
-                        {student.department}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
-                          <button type="button"
-                            onClick={() => !viewingArchive && openEditModal(student)}
-                            disabled={viewingArchive}
-                            title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
-                            className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-blue-300 border-gray-100 cursor-not-allowed' : 'text-blue-600 bg-blue-50/80 border-blue-200/80 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-2xs hover:shadow-xs'}`}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button type="button"
-                            onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
-                            disabled={viewingArchive}
-                            title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
-                            className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-rose-300 border-gray-100 cursor-not-allowed' : 'text-rose-600 bg-rose-50/80 border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 shadow-2xs hover:shadow-xs'}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                {currentStudents.map((student, index) => {
+                  const isSelected = selectedStudentIds.has(student.id);
+                  return (
+                    <tr 
+                      key={student.id || student.studentId || `student-${index}`} 
+                      className={`hover:bg-green-50 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-emerald-50/80 font-semibold' : ''}`}
+                      onClick={() => handleViewStudent(student)}
+                    >
+                      {isAdmin && (
+                        <td 
+                          className="px-4 py-4 whitespace-nowrap text-center"
+                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
+                        >
+                          <div className="inline-flex items-center justify-center">
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-emerald-700" />
+                            ) : (
+                              <Square className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                          <p className="text-xs text-gray-500">{student.email}</p>
                         </div>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      {/* Original School Section */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700 font-mono font-medium">
+                        {student.section || '-'}
+                      </td>
+                      {/* Assigned NSTP Section */}
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        <span className="inline-block px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-black text-xs border border-emerald-300/70">
+                          {student.nstp_section || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {student.year}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(student.department)}`}>
+                          {student.department}
+                        </span>
+                      </td>
+                      {isAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button type="button"
+                              onClick={() => !viewingArchive && openEditModal(student)}
+                              disabled={viewingArchive}
+                              title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
+                              className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-blue-300 border-gray-100 cursor-not-allowed' : 'text-blue-600 bg-blue-50/80 border-blue-200/80 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-2xs hover:shadow-xs'}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button type="button"
+                              onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
+                              disabled={viewingArchive}
+                              title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
+                              className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-rose-300 border-gray-100 cursor-not-allowed' : 'text-rose-600 bg-rose-50/80 border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 shadow-2xs hover:shadow-xs'}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1614,7 +1813,7 @@ function StudentManagement() {
                     2. Academic Information
                   </h4>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     <div>
                       <label htmlFor="add-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
@@ -1636,20 +1835,37 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
-                      <select
+                      <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
+                      <input
+                        type="text"
                         id="add-section"
                         name="section"
+                        placeholder="e.g. 1-A, 1-1, 1-B"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs uppercase"
                         required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
+                      <select
+                        id="add-nstp-section"
+                        name="nstp_section"
+                        value={formData.nstp_section || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
                       >
-                        <option value="">Select Section</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="">Unassigned</option>
+                        <option value="CWTS 1-1">CWTS 1-1</option>
+                        <option value="CWTS 1-2">CWTS 1-2</option>
+                        <option value="CWTS 1-3">CWTS 1-3</option>
+                        <option value="LTS 1-1">LTS 1-1</option>
+                        <option value="LTS 1-2">LTS 1-2</option>
+                        <option value="LTS 1-3">LTS 1-3</option>
+                        <option value="ROTC 1-1">ROTC 1-1</option>
+                        <option value="ROTC 1-2">ROTC 1-2</option>
+                        <option value="ROTC 1-3">ROTC 1-3</option>
                       </select>
                     </div>
                     <div>
@@ -1670,7 +1886,7 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track *</label>
                       <select
                         id="add-department"
                         name="department"
@@ -2191,21 +2407,25 @@ function StudentManagement() {
                     <GraduationCap className="w-4 h-4 text-emerald-600" />
                     Academic Information &amp; NSTP Track
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.program || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Section</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.nstp_section || currentViewStudent.section || '-'}</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">School Section</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-800 font-mono mt-0.5 block">{currentViewStudent.section || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-300/80 bg-emerald-50/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">NSTP Section</span>
+                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.nstp_section || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.yearLevel || currentViewStudent.year || '-'}</span>
                     </div>
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Department</span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Component</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{currentViewStudent.department || '-'}</span>
                     </div>
                   </div>
@@ -2691,7 +2911,7 @@ function StudentManagement() {
                     2. Academic Details &amp; Section
                   </h4>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                     <div>
                       <label htmlFor="edit-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
@@ -2713,20 +2933,37 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Section *</label>
-                      <select
+                      <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
+                      <input
+                        type="text"
                         id="edit-section"
                         name="section"
+                        placeholder="e.g. 1-A, 1-1, 1-B"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs uppercase"
                         required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
+                      <select
+                        id="edit-nstp-section"
+                        name="nstp_section"
+                        value={formData.nstp_section || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
                       >
-                        <option value="">Select Section</option>
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="">Unassigned</option>
+                        <option value="CWTS 1-1">CWTS 1-1</option>
+                        <option value="CWTS 1-2">CWTS 1-2</option>
+                        <option value="CWTS 1-3">CWTS 1-3</option>
+                        <option value="LTS 1-1">LTS 1-1</option>
+                        <option value="LTS 1-2">LTS 1-2</option>
+                        <option value="LTS 1-3">LTS 1-3</option>
+                        <option value="ROTC 1-1">ROTC 1-1</option>
+                        <option value="ROTC 1-2">ROTC 1-2</option>
+                        <option value="ROTC 1-3">ROTC 1-3</option>
                       </select>
                     </div>
                     <div>
@@ -2746,7 +2983,7 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department / Track *</label>
+                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track *</label>
                       <select
                         id="edit-department"
                         name="department"
@@ -3347,6 +3584,14 @@ function StudentManagement() {
         <StudentAttendanceMatrixModal
           isOpen={showAttendanceMatrix}
           onClose={() => setShowAttendanceMatrix(false)}
+          students={students}
+          currentUser={user}
+        />
+
+        {/* Student Semester Grades Encoding & Grading Sheet Modal */}
+        <StudentGradesModal
+          isOpen={showGradesModal}
+          onClose={() => setShowGradesModal(false)}
           students={students}
           currentUser={user}
         />
