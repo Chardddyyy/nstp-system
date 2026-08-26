@@ -67,7 +67,7 @@ function StudentManagement() {
 
   // Batch section assignment state
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
-  const [batchNstpSection, setBatchNstpSection] = useState('CWTS 1-1');
+  const [batchNstpSection, setBatchNstpSection] = useState('CWTS 1');
   const [isBatchAssigning, setIsBatchAssigning] = useState(false);
   const [batchAssignFeedback, setBatchAssignFeedback] = useState('');
   
@@ -944,15 +944,15 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Semester Grades Encoding & Grading Sheet Button (All Users: Admin & Instructors) */}
+              {/* Semester Grades & OSDS Form 2-A Button */}
               <button type="button"
                 onClick={() => setShowGradesModal(true)}
-                title="Encode and submit student semester grades and download official grade sheet"
+                title={isAdmin ? "Review student semester ratings and download official OSDS-NSTP Form 2-A" : "Encode and submit student semester grades and print official grade sheet"}
                 className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
               >
                 <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                <span className="hidden xs:inline">Encode Grades</span>
-                <span className="xs:hidden">Grades</span>
+                <span className="hidden xs:inline">{isAdmin ? 'OSDS Form 2-A / Grades' : 'Encode Grades'}</span>
+                <span className="xs:hidden">{isAdmin ? 'OSDS Form' : 'Grades'}</span>
               </button>
 
               {/* View Attendance & Absences Matrix Button (Instructors Only) */}
@@ -1033,16 +1033,16 @@ function StudentManagement() {
                 onChange={(e) => setFilterNstpSection(e.target.value)}
                 className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
               >
-                <option value="All">All NSTP Sec</option>
-                <option value="CWTS 1-1">CWTS 1-1</option>
-                <option value="CWTS 1-2">CWTS 1-2</option>
-                <option value="CWTS 1-3">CWTS 1-3</option>
-                <option value="LTS 1-1">LTS 1-1</option>
-                <option value="LTS 1-2">LTS 1-2</option>
-                <option value="LTS 1-3">LTS 1-3</option>
-                <option value="ROTC 1-1">ROTC 1-1</option>
-                <option value="ROTC 1-2">ROTC 1-2</option>
-                <option value="ROTC 1-3">ROTC 1-3</option>
+                <option value="All">All Sections</option>
+                <option value="CWTS 1">CWTS 1</option>
+                <option value="CWTS 2">CWTS 2</option>
+                <option value="CWTS 3">CWTS 3</option>
+                <option value="LTS 1">LTS 1</option>
+                <option value="LTS 2">LTS 2</option>
+                <option value="LTS 3">LTS 3</option>
+                <option value="ROTC 1">ROTC 1</option>
+                <option value="ROTC 2">ROTC 2</option>
+                <option value="ROTC 3">ROTC 3</option>
               </select>
               <select
                 id="filter-course"
@@ -1076,7 +1076,7 @@ function StudentManagement() {
                   {selectedStudentIds.size} Student{selectedStudentIds.size > 1 ? 's' : ''} Selected
                 </p>
                 <p className="text-[10px] sm:text-[11px] text-emerald-300/90 font-medium">
-                  Separate or assign students into an NSTP Section (CWTS/LTS/ROTC 1-3)
+                  Separate or assign students into an NSTP Section (CWTS 1-3, LTS 1-3, ROTC 1-3)
                 </p>
               </div>
             </div>
@@ -1088,15 +1088,15 @@ function StudentManagement() {
                 onChange={(e) => setBatchNstpSection(e.target.value)}
                 className="px-3 py-1.5 text-xs font-black rounded-xl bg-white text-emerald-950 border border-emerald-300 outline-none cursor-pointer"
               >
-                <option value="CWTS 1-1">CWTS 1-1</option>
-                <option value="CWTS 1-2">CWTS 1-2</option>
-                <option value="CWTS 1-3">CWTS 1-3</option>
-                <option value="LTS 1-1">LTS 1-1</option>
-                <option value="LTS 1-2">LTS 1-2</option>
-                <option value="LTS 1-3">LTS 1-3</option>
-                <option value="ROTC 1-1">ROTC 1-1</option>
-                <option value="ROTC 1-2">ROTC 1-2</option>
-                <option value="ROTC 1-3">ROTC 1-3</option>
+                <option value="CWTS 1">CWTS 1</option>
+                <option value="CWTS 2">CWTS 2</option>
+                <option value="CWTS 3">CWTS 3</option>
+                <option value="LTS 1">LTS 1</option>
+                <option value="LTS 2">LTS 2</option>
+                <option value="LTS 3">LTS 3</option>
+                <option value="ROTC 1">ROTC 1</option>
+                <option value="ROTC 2">ROTC 2</option>
+                <option value="ROTC 3">ROTC 3</option>
               </select>
 
               <button
@@ -1857,15 +1857,15 @@ function StudentManagement() {
                         className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
                       >
                         <option value="">Unassigned</option>
-                        <option value="CWTS 1-1">CWTS 1-1</option>
-                        <option value="CWTS 1-2">CWTS 1-2</option>
-                        <option value="CWTS 1-3">CWTS 1-3</option>
-                        <option value="LTS 1-1">LTS 1-1</option>
-                        <option value="LTS 1-2">LTS 1-2</option>
-                        <option value="LTS 1-3">LTS 1-3</option>
-                        <option value="ROTC 1-1">ROTC 1-1</option>
-                        <option value="ROTC 1-2">ROTC 1-2</option>
-                        <option value="ROTC 1-3">ROTC 1-3</option>
+                        <option value="CWTS 1">CWTS 1</option>
+                        <option value="CWTS 2">CWTS 2</option>
+                        <option value="CWTS 3">CWTS 3</option>
+                        <option value="LTS 1">LTS 1</option>
+                        <option value="LTS 2">LTS 2</option>
+                        <option value="LTS 3">LTS 3</option>
+                        <option value="ROTC 1">ROTC 1</option>
+                        <option value="ROTC 2">ROTC 2</option>
+                        <option value="ROTC 3">ROTC 3</option>
                       </select>
                     </div>
                     <div>
@@ -2955,15 +2955,15 @@ function StudentManagement() {
                         className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
                       >
                         <option value="">Unassigned</option>
-                        <option value="CWTS 1-1">CWTS 1-1</option>
-                        <option value="CWTS 1-2">CWTS 1-2</option>
-                        <option value="CWTS 1-3">CWTS 1-3</option>
-                        <option value="LTS 1-1">LTS 1-1</option>
-                        <option value="LTS 1-2">LTS 1-2</option>
-                        <option value="LTS 1-3">LTS 1-3</option>
-                        <option value="ROTC 1-1">ROTC 1-1</option>
-                        <option value="ROTC 1-2">ROTC 1-2</option>
-                        <option value="ROTC 1-3">ROTC 1-3</option>
+                        <option value="CWTS 1">CWTS 1</option>
+                        <option value="CWTS 2">CWTS 2</option>
+                        <option value="CWTS 3">CWTS 3</option>
+                        <option value="LTS 1">LTS 1</option>
+                        <option value="LTS 2">LTS 2</option>
+                        <option value="LTS 3">LTS 3</option>
+                        <option value="ROTC 1">ROTC 1</option>
+                        <option value="ROTC 2">ROTC 2</option>
+                        <option value="ROTC 3">ROTC 3</option>
                       </select>
                     </div>
                     <div>

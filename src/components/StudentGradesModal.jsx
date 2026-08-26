@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import {
   X, Search, FileSpreadsheet, CheckCircle, Clock, AlertTriangle,
-  Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles
+  Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
 
@@ -14,8 +14,15 @@ const GRADE_OPTIONS = [
   'INC', 'DRP'
 ];
 
+const NSTP_SECTIONS = [
+  'CWTS 1', 'CWTS 2', 'CWTS 3',
+  'LTS 1', 'LTS 2', 'LTS 3',
+  'ROTC 1', 'ROTC 2', 'ROTC 3'
+];
+
 export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser }) {
   const isAdmin = currentUser?.role === 'admin';
+  const canEditGrades = !isAdmin; // Only instructors encode grades
   const defaultDept = isAdmin ? 'All' : (currentUser?.department || 'CWTS');
 
   const [selectedDept, setSelectedDept] = useState(defaultDept);
@@ -24,7 +31,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const [selectedNstpSection, setSelectedNstpSection] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [gradesMap, setGradesMap] = useState({}); // key: studentId -> { midterm_grade, final_grade, remarks, isDirty, isSaved }
+  const [gradesMap, setGradesMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -88,6 +95,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   };
 
   const handleGradeChange = (studentId, field, value) => {
+    if (!canEditGrades) return;
     setGradesMap((prev) => {
       const current = prev[studentId] || { midterm_grade: '', final_grade: '', remarks: '' };
       const updated = { ...current, [field]: value, isDirty: true, isSaved: false };
@@ -106,29 +114,24 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
   };
 
-  // Filter students based on active selections
   const filteredStudents = useMemo(() => {
     return (students || []).filter((st) => {
-      // Status filter: ignore Inactive/Archived if needed, show Active
-      if (st.status === 'Archived') return false;
-
-      // Department filter
       if (selectedDept !== 'All' && st.department !== selectedDept) return false;
+      if (!isAdmin && currentUser?.department && st.department !== currentUser.department) return false;
 
-      // NSTP Section filter
       if (selectedNstpSection !== 'All') {
-        const studentNstpSec = (st.nstp_section || '').trim();
-        if (studentNstpSec !== selectedNstpSection) return false;
+        const sec = (st.nstp_section || '').trim().toUpperCase();
+        const target = selectedNstpSection.trim().toUpperCase();
+        if (sec !== target) return false;
       }
 
-      // Search query
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const nameMatch = (st.name || `${st.lastName || ''} ${st.firstName || ''}`).toLowerCase().includes(q);
-        const idMatch = (st.studentId || '').toLowerCase().includes(q);
-        const schoolSecMatch = (st.section || '').toLowerCase().includes(q);
-        const nstpSecMatch = (st.nstp_section || '').toLowerCase().includes(q);
-        if (!nameMatch && !idMatch && !schoolSecMatch && !nstpSecMatch) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const name = (st.name || `${st.lastName || ''} ${st.firstName || ''}`).toLowerCase();
+        const sid = (st.studentId || '').toLowerCase();
+        const sec = (st.nstp_section || st.section || '').toLowerCase();
+        const prog = (st.program || '').toLowerCase();
+        return name.includes(q) || sid.includes(q) || sec.includes(q) || prog.includes(q);
       }
 
       return true;
@@ -137,14 +140,15 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       const nameB = (b.lastName || b.name || '').toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [students, selectedDept, selectedNstpSection, searchQuery]);
+  }, [students, selectedDept, selectedNstpSection, searchQuery, isAdmin, currentUser?.department]);
 
-  // Save all modified / displayed grades
   const handleSaveAll = async () => {
+    if (!canEditGrades) {
+      alert('Only Instructors are authorized to encode and save student grades.');
+      return;
+    }
     try {
       setSaving(true);
-      setSaveSuccessMsg('');
-
       const gradesToSave = filteredStudents.map((st) => {
         const sid = st.studentId || st.id;
         const entry = gradesMap[sid] || {};
@@ -164,7 +168,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
       await gradesAPI.saveBatch(gradesToSave);
 
-      // Update dirty flags
       setGradesMap((prev) => {
         const next = { ...prev };
         filteredStudents.forEach((st) => {
@@ -176,20 +179,20 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
         return next;
       });
 
-      setSaveSuccessMsg(`Grades successfully saved for ${gradesToSave.length} students!`);
+      setSaveSuccessMsg(`Grades saved successfully for ${gradesToSave.length} students!`);
       setTimeout(() => setSaveSuccessMsg(''), 4000);
     } catch (err) {
       console.error('Failed to save grades:', err);
-      alert('Failed to save grades. Please verify your connection and try again.');
+      alert('Failed to save grades. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Quick batch fill for empty final grades
   const handleBatchFillUnfilled = () => {
+    if (!canEditGrades) return;
     if (!batchFillGrade) return;
-    if (!window.confirm(`Fill all empty grades with "${batchFillGrade}" for displayed students?`)) return;
+    if (!window.confirm(`Fill all unfilled final grades with "${batchFillGrade}" for displayed students?`)) return;
 
     setGradesMap((prev) => {
       const next = { ...prev };
@@ -211,7 +214,122 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
   };
 
-  // Export to Excel
+  // ── Official OSDS-NSTP Form 2-A Excel Generator (Parsed at row 10 / range 9) ──
+  const handleDownloadOSDSForm2A = () => {
+    const headers = [
+      'No.',
+      'Student No.',
+      'Surname',
+      'First Name',
+      'Middle Name',
+      'Course',
+      'Sex',
+      'Birthdate',
+      'Street / Barangay',
+      'Municipality / City',
+      'Province',
+      'Contact Number',
+      'E-mail Address',
+      'NSTP Section',
+      'Midterm Grade',
+      'Final Grade',
+      'Remarks'
+    ];
+
+    const dataRows = filteredStudents.map((st, idx) => {
+      const sid = st.studentId || st.id;
+      const g = gradesMap[sid] || {};
+
+      let surname = st.lastName || '';
+      let firstName = st.firstName || '';
+      let middleName = st.middleName || '';
+      if (!surname && st.name && st.name.includes(',')) {
+        const parts = st.name.split(',');
+        surname = parts[0].trim();
+        const rest = (parts[1] || '').trim().split(/\s+/);
+        firstName = rest[0] || '';
+        middleName = rest.slice(1).join(' ') || '';
+      } else if (!surname && st.name) {
+        const parts = st.name.trim().split(/\s+/);
+        surname = parts[parts.length - 1] || '';
+        firstName = parts.slice(0, -1).join(' ') || '';
+      }
+
+      let street = st.street || '';
+      let municipality = st.municipality || '';
+      let province = st.province || '';
+      if (!street && !municipality && (st.address || st.homeAddress)) {
+        const addr = st.address || st.homeAddress || '';
+        const parts = addr.split(',').map((p) => p.trim());
+        if (parts.length >= 3) {
+          street = parts[0];
+          municipality = parts[1];
+          province = parts.slice(2).join(', ');
+        } else if (parts.length === 2) {
+          street = parts[0];
+          municipality = parts[1];
+        } else {
+          street = addr;
+        }
+      }
+
+      let birthdate = '';
+      if (st.birthDate) {
+        const d = new Date(st.birthDate);
+        if (!isNaN(d.getTime())) {
+          birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+        }
+      } else if (st.birthMonth && st.birthDay && st.birthYear) {
+        birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
+      }
+
+      const finalGrade = g.final_grade || '';
+      const remarks = g.remarks || calculateRemarks(finalGrade) || '';
+
+      return [
+        idx + 1,
+        st.studentId || '',
+        surname,
+        firstName,
+        middleName,
+        st.program || st.course || '',
+        st.sex || st.gender || '',
+        birthdate,
+        street,
+        municipality,
+        province,
+        st.contactNumber || '',
+        st.email || '',
+        st.nstp_section || st.section || '',
+        g.midterm_grade || '',
+        finalGrade,
+        remarks
+      ];
+    });
+
+    const aoa = [
+      ['Republic of the Philippines'],
+      ['Office of the President'],
+      ['COMMISSION ON HIGHER EDUCATION'],
+      ['Office of Student Development and Services (OSDS)'],
+      ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
+      ['OSDS-NSTP Form 2-A (Graduating / Enrolled Masterlist with Grades)'],
+      ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+      ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${selectedDept !== 'All' ? selectedDept : 'CWTS / LTS / ROTC'}`],
+      [`Academic Year: ${selectedSchoolYear}`, '', '', '', '', '', '', '', `Semester: ${selectedSemester}`],
+      headers,
+      ...dataRows
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'OSDS-NSTP Form 2-A');
+
+    const deptTag = selectedDept !== 'All' ? selectedDept : 'ALL';
+    const filename = `OSDS-NSTP-Form-2-A_${deptTag}_${selectedSchoolYear}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
   const handleExportExcel = () => {
     const rows = filteredStudents.map((st, idx) => {
       const sid = st.studentId || st.id;
@@ -222,11 +340,10 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
         'Student Name': st.name || `${st.lastName || ''}, ${st.firstName || ''} ${st.middleName || ''}`.trim(),
         'Department': st.department,
         'Program': st.program || '',
-        'Year': st.year || '1st Year',
-        'Original School Section': st.section || '',
-        'Assigned NSTP Section': st.nstp_section || '',
+        'School Section': st.section || '',
+        'NSTP Section': st.nstp_section || '',
         'Semester': selectedSemester,
-        'School Year': selectedSchoolYear,
+        'Academic Year': selectedSchoolYear,
         'Midterm Grade': g.midterm_grade || '',
         'Final Grade': g.final_grade || '',
         'Remarks': g.remarks || calculateRemarks(g.final_grade) || ''
@@ -241,7 +358,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     XLSX.writeFile(workbook, filename);
   };
 
-  // Print Official Grade Sheet
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -303,14 +419,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
         <table>
           <thead>
             <tr>
-              <th>#</th>
+              <th style="width: 30px;">#</th>
               <th>Student ID</th>
-              <th>Student Full Name</th>
-              <th>Program</th>
+              <th>Student Name</th>
+              <th>Course</th>
               <th>School Sec</th>
               <th>NSTP Sec</th>
               <th>Midterm</th>
-              <th>Final Grade</th>
+              <th>Final</th>
               <th>Remarks</th>
             </tr>
           </thead>
@@ -357,10 +473,12 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             </div>
             <div>
               <h3 className="text-base sm:text-xl font-black text-white leading-tight">
-                Semester Grade Encoding &amp; Grading Sheet
+                {isAdmin ? 'NSTP Grade Masterlist & OSDS Form 2-A' : 'Semester Grade Encoding & Grading Sheet'}
               </h3>
               <p className="text-[11px] sm:text-xs text-emerald-300/90 font-medium">
-                Encode, save, and submit official student grades every semester
+                {isAdmin 
+                  ? 'Review instructor ratings and download official OSDS-NSTP Form 2-A spreadsheet' 
+                  : 'Encode, save, and submit official student grades for your assigned track'}
               </p>
             </div>
           </div>
@@ -372,6 +490,16 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
+
+        {/* Admin View Notice Banner */}
+        {isAdmin && (
+          <div className="bg-amber-500/15 border-b border-amber-200/80 px-4 py-2.5 text-xs font-bold text-amber-950 flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Admin Review Mode:</strong> Student grades are encoded and submitted by Instructors. As Admin, you have full review access and can download the completed <strong>OSDS-NSTP Form 2-A (.xlsx)</strong>.
+            </span>
+          </div>
+        )}
 
         {/* Filter Controls Bar */}
         <div className="bg-emerald-50/70 border-b border-emerald-100 p-3 sm:p-4 shrink-0">
@@ -430,23 +558,19 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             {/* NSTP Section */}
             <div>
               <label className="block text-[10px] font-black uppercase text-emerald-900 tracking-wider mb-1">
-                NSTP Section (Assigned)
+                NSTP Section
               </label>
               <select
                 value={selectedNstpSection}
                 onChange={(e) => setSelectedNstpSection(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-xs font-bold rounded-xl border border-emerald-200 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
               >
-                <option value="All">All NSTP Sections</option>
-                <option value="CWTS 1-1">CWTS 1-1</option>
-                <option value="CWTS 1-2">CWTS 1-2</option>
-                <option value="CWTS 1-3">CWTS 1-3</option>
-                <option value="LTS 1-1">LTS 1-1</option>
-                <option value="LTS 1-2">LTS 1-2</option>
-                <option value="LTS 1-3">LTS 1-3</option>
-                <option value="ROTC 1-1">ROTC 1-1</option>
-                <option value="ROTC 1-2">ROTC 1-2</option>
-                <option value="ROTC 1-3">ROTC 1-3</option>
+                <option value="All">All Sections</option>
+                {NSTP_SECTIONS.map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -481,42 +605,55 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              {/* Batch Fill helper */}
-              <div className="flex items-center gap-1 bg-white border border-emerald-200 rounded-xl px-2 py-1">
-                <span className="text-[10.5px] font-bold text-gray-600">Quick Fill:</span>
-                <select
-                  value={batchFillGrade}
-                  onChange={(e) => setBatchFillGrade(e.target.value)}
-                  className="text-xs font-black text-emerald-900 bg-transparent outline-none cursor-pointer"
-                >
-                  <option value="1.00">1.00</option>
-                  <option value="1.25">1.25</option>
-                  <option value="1.50">1.50</option>
-                  <option value="1.75">1.75</option>
-                  <option value="2.00">2.00</option>
-                  <option value="2.25">2.25</option>
-                  <option value="2.50">2.50</option>
-                  <option value="3.00">3.00</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleBatchFillUnfilled}
-                  title="Fill all empty student grades with this value"
-                  className="text-[10px] font-black bg-emerald-100 hover:bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded-md cursor-pointer ml-0.5"
-                >
-                  Apply
-                </button>
-              </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              {/* Batch Fill helper (Instructors Only) */}
+              {canEditGrades && (
+                <div className="flex items-center gap-1 bg-white border border-emerald-200 rounded-xl px-2 py-1">
+                  <span className="text-[10.5px] font-bold text-gray-600">Quick Fill:</span>
+                  <select
+                    value={batchFillGrade}
+                    onChange={(e) => setBatchFillGrade(e.target.value)}
+                    className="text-xs font-black text-emerald-900 bg-transparent outline-none cursor-pointer"
+                  >
+                    <option value="1.00">1.00</option>
+                    <option value="1.25">1.25</option>
+                    <option value="1.50">1.50</option>
+                    <option value="1.75">1.75</option>
+                    <option value="2.00">2.00</option>
+                    <option value="2.25">2.25</option>
+                    <option value="2.50">2.50</option>
+                    <option value="3.00">3.00</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleBatchFillUnfilled}
+                    title="Fill all empty student grades with this value"
+                    className="text-[10px] font-black bg-emerald-100 hover:bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded-md cursor-pointer ml-0.5"
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
 
-              {/* Export Excel */}
+              {/* Download OSDS-NSTP Form 2-A (.xlsx) Button */}
+              <button
+                type="button"
+                onClick={handleDownloadOSDSForm2A}
+                title="Download official OSDS-NSTP Form 2-A spreadsheet (Parsed at row 10 / range 9)"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-xl shadow-xs hover:shadow-md cursor-pointer active:scale-95 border border-amber-500/60"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-950" />
+                <span>OSDS-NSTP Form 2-A</span>
+              </button>
+
+              {/* Export Standard Excel */}
               <button
                 type="button"
                 onClick={handleExportExcel}
                 className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-50 border border-emerald-300 rounded-xl shadow-xs cursor-pointer active:scale-95"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden xs:inline">Excel</span>
+                <span className="hidden xs:inline">Grades Excel</span>
               </button>
 
               {/* Print Grade Sheet */}
@@ -529,25 +666,27 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 <span className="hidden xs:inline">Print Sheet</span>
               </button>
 
-              {/* Save All Button */}
-              <button
-                type="button"
-                onClick={handleSaveAll}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-black text-white bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Save Grades</span>
-                  </>
-                )}
-              </button>
+              {/* Save All Button (Instructors Only) */}
+              {canEditGrades && (
+                <button
+                  type="button"
+                  onClick={handleSaveAll}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-black text-white bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Save Grades</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -626,34 +765,46 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                           </span>
                         </td>
 
-                        {/* Midterm Grade Input */}
+                        {/* Midterm Grade Input / Badge */}
                         <td className="p-2.5 sm:p-3 text-center">
-                          <select
-                            value={g.midterm_grade || ''}
-                            onChange={(e) => handleGradeChange(sid, 'midterm_grade', e.target.value)}
-                            className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer"
-                          >
-                            {GRADE_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt || '-- Select --'}
-                              </option>
-                            ))}
-                          </select>
+                          {canEditGrades ? (
+                            <select
+                              value={g.midterm_grade || ''}
+                              onChange={(e) => handleGradeChange(sid, 'midterm_grade', e.target.value)}
+                              className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer"
+                            >
+                              {GRADE_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt || '-- Select --'}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="px-2 py-1 text-xs font-black text-center text-emerald-950 bg-emerald-50/80 rounded-xl border border-emerald-200">
+                              {g.midterm_grade || '-'}
+                            </div>
+                          )}
                         </td>
 
-                        {/* Final Grade Input */}
+                        {/* Final Grade Input / Badge */}
                         <td className="p-2.5 sm:p-3 text-center">
-                          <select
-                            value={g.final_grade || ''}
-                            onChange={(e) => handleGradeChange(sid, 'final_grade', e.target.value)}
-                            className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer text-emerald-950"
-                          >
-                            {GRADE_OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt || '-- Select --'}
-                              </option>
-                            ))}
-                          </select>
+                          {canEditGrades ? (
+                            <select
+                              value={g.final_grade || ''}
+                              onChange={(e) => handleGradeChange(sid, 'final_grade', e.target.value)}
+                              className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer text-emerald-950"
+                            >
+                              {GRADE_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt || '-- Select --'}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="px-2 py-1 text-xs font-black text-center text-emerald-950 bg-emerald-50/80 rounded-xl border border-emerald-200">
+                              {g.final_grade || '-'}
+                            </div>
+                          )}
                         </td>
 
                         {/* Remarks */}
@@ -715,24 +866,26 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             >
               Close
             </button>
-            <button
-              type="button"
-              onClick={handleSaveAll}
-              disabled={saving}
-              className="flex items-center gap-1.5 px-5 py-2 text-xs font-black text-white bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save All Changes</span>
-                </>
-              )}
-            </button>
+            {canEditGrades && (
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-5 py-2 text-xs font-black text-white bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save All Changes</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
