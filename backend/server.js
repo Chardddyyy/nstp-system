@@ -2809,7 +2809,7 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
 });
 
 // ── Batch Assign NSTP Section (Admin Only or Instructor for their track) ─────
-app.post('/api/students/batch-assign-section', authenticateToken, async (req, res) => {
+const handleBatchAssignSection = async (req, res) => {
   try {
     const { studentIds, nstp_section } = req.body;
     if (!Array.isArray(studentIds) || studentIds.length === 0) {
@@ -2843,12 +2843,14 @@ app.post('/api/students/batch-assign-section', authenticateToken, async (req, re
     console.error('Batch assign NSTP section error:', error);
     res.status(500).json({ message: 'Failed to batch assign NSTP section' });
   }
-});
+};
+app.post('/api/students/batch-assign-section', authenticateToken, handleBatchAssignSection);
+app.post('/students/batch-assign-section', authenticateToken, handleBatchAssignSection);
 
 // ── Student Grades Management Endpoints ─────────────────────────────────────
 
-// GET /api/grades — Retrieve student grades with optional filters
-app.get('/api/grades', authenticateToken, async (req, res) => {
+// GET /api/grades & /grades — Retrieve student grades with optional filters
+const handleGetGrades = async (req, res) => {
   try {
     const { semester, schoolYear, school_year, department, nstpSection, nstp_section } = req.query;
     const sy = schoolYear || school_year;
@@ -2893,10 +2895,12 @@ app.get('/api/grades', authenticateToken, async (req, res) => {
     console.error('Get grades error:', error);
     res.status(500).json({ message: 'Failed to retrieve grades' });
   }
-});
+};
+app.get('/api/grades', authenticateToken, handleGetGrades);
+app.get('/grades', authenticateToken, handleGetGrades);
 
-// POST /api/grades/batch — Batch save or update student semester grades
-app.post('/api/grades/batch', authenticateToken, async (req, res) => {
+// POST /api/grades/batch & /grades/batch — Batch save or update student semester grades
+const handleBatchSaveGrades = async (req, res) => {
   try {
     const { grades } = req.body;
     if (!Array.isArray(grades) || grades.length === 0) {
@@ -2964,10 +2968,12 @@ app.post('/api/grades/batch', authenticateToken, async (req, res) => {
     console.error('Save batch grades error:', error);
     res.status(500).json({ message: 'Failed to save student grades: ' + error.message });
   }
-});
+};
+app.post('/api/grades/batch', authenticateToken, handleBatchSaveGrades);
+app.post('/grades/batch', authenticateToken, handleBatchSaveGrades);
 
 // GET /api/grades/student/:studentId — Get all semester grades for a student
-app.get('/api/grades/student/:studentId', authenticateToken, async (req, res) => {
+const handleGetStudentGrades = async (req, res) => {
   try {
     const { studentId } = req.params;
     const [rows] = await pool.execute(
@@ -2979,7 +2985,9 @@ app.get('/api/grades/student/:studentId', authenticateToken, async (req, res) =>
     console.error('Get student grades error:', error);
     res.status(500).json({ message: 'Failed to retrieve student grades' });
   }
-});
+};
+app.get('/api/grades/student/:studentId', authenticateToken, handleGetStudentGrades);
+app.get('/grades/student/:studentId', authenticateToken, handleGetStudentGrades);
 
 // ===== REPORT ROUTES =====
 

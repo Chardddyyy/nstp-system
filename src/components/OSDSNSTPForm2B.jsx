@@ -3,9 +3,9 @@ import React from 'react';
 const OSDSNSTPForm2B = ({
   academicYear = '2025-2026',
   semester = '1st Semester',
-  heiName = 'Cavite State University - Naic Campus',
-  address = 'Bucana, Naic, Cavite',
-  region = 'IV (CALABARZON)',
+  heiName = 'Cavite State University - Naic',
+  address = 'Bucana Malaki, Naic, Cavite',
+  region = '4A - CALABARZON',
   nstpComponents = 'CWTS / ROTC / LTS',
   students = []
 }) => {
@@ -37,8 +37,8 @@ const OSDSNSTPForm2B = ({
           <img src="/ched-logo.png" alt="CHED Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
         </div>
         
-        {/* Header Text */}
-        <div className="text-center leading-snug px-2">
+        {/* Header Text (Centered) */}
+        <div className="text-center leading-snug px-2 flex-1">
           <p className="uppercase text-xs sm:text-sm tracking-wider">Republic of the Philippines</p>
           <p className="uppercase font-semibold text-xs sm:text-sm">Office of the President</p>
           <p className="uppercase font-bold text-sm sm:text-lg text-emerald-950">Commission on Higher Education</p>
@@ -50,7 +50,7 @@ const OSDSNSTPForm2B = ({
         </div>
       </div>
 
-      {/* FORM TITLE & SEMESTER/YEAR */}
+      {/* FORM TITLE & SEMESTER/YEAR (Centered) */}
       <div className="text-center mb-6">
         <h1 className="font-bold text-base sm:text-lg text-emerald-950 uppercase tracking-tight">NSTP 1 Enrollment List</h1>
         <p className="font-semibold text-xs sm:text-base mt-2">
@@ -62,7 +62,7 @@ const OSDSNSTPForm2B = ({
       <div className="mb-6 px-2 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
         <div className="space-y-2">
           <p className="font-semibold">
-            Name of HEI: <span className="border-b border-black min-w-72 inline-block px-2 font-normal">{heiName}</span>
+            Name of HEI: <span className="border-b border-black min-w-72 inline-block px-2 font-bold">{heiName}</span>
           </p>
           <p className="font-semibold">
             Address: <span className="border-b border-black min-w-72 inline-block px-2 font-normal">{address}</span>
@@ -70,10 +70,10 @@ const OSDSNSTPForm2B = ({
         </div>
         <div className="space-y-2 md:text-right">
           <p className="font-semibold">
-            Region: <span className="border-b border-black min-w-64 inline-block px-2 font-normal text-left">{region}</span>
+            Region: <span className="border-b border-black min-w-64 inline-block px-2 font-bold text-left">{region}</span>
           </p>
           <p className="font-semibold">
-            NSTP Components: <span className="border-b border-black min-w-64 inline-block px-2 font-normal text-left">{nstpComponents}</span>
+            NSTP Components: <span className="border-b border-black min-w-64 inline-block px-2 font-bold text-left">{nstpComponents}</span>
           </p>
         </div>
       </div>

@@ -5,11 +5,13 @@ import ScrollToTopButton from '../components/ScrollToTopButton';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
+import OSDSNSTPForm from '../components/OSDSNSTPForm';
+import OSDSNSTPForm2B from '../components/OSDSNSTPForm2B';
 import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye,
-  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square
+  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -65,6 +67,14 @@ function StudentManagement() {
   const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
   const [showGradesModal, setShowGradesModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Form A & Form B Export and Preview Modals state
+  const [showFormAModal, setShowFormAModal] = useState(false);
+  const [showFormAPreview, setShowFormAPreview] = useState(false);
+  const [showFormBModal, setShowFormBModal] = useState(false);
+  const [formBDept, setFormBDept] = useState('All');
+  const [formBSem, setFormBSem] = useState('1st Semester');
+  const [showFormBPreview, setShowFormBPreview] = useState(false);
 
   // Batch section assignment state
   const [isSectioningMode, setIsSectioningMode] = useState(false);
@@ -522,7 +532,7 @@ function StudentManagement() {
         ['Commission on Higher Education'],
         [],
         ['SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP'],
-        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Region: 4A - CALABARZON'],
         [],
         // Row 8 (Index 7) - Header Row 1
         ['NAME OF HEI/CAMPUS', 'Classification (Private/Public)', 'ENROLLMENT', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'GRADUATES', '', '', '', '', ''],
@@ -534,7 +544,7 @@ function StudentManagement() {
         ['', '', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F'],
         // Row 12 (Index 11) - Data Row
         [
-          'CVSU NAIC',
+          'Cavite State University - Naic',
           'PUBLIC',
           statsMatrix.sem1.ROTC.m, statsMatrix.sem1.ROTC.f,
           statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
@@ -603,16 +613,16 @@ function StudentManagement() {
     }
   };
 
-  // ── 1-Click Instant Download for Form B (OSDS-NSTP Form 2-B / CHED NSTP Form B: NSTP 1 Enrollment List) ──
-  const handleDirectDownloadFormB = async () => {
+  // ── Instant Download for Form B (OSDS-NSTP Form 2-B / CHED NSTP Form B: NSTP 1 Enrollment List) ──
+  const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem) => {
     try {
       setIsDownloadingFormB(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
-      const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
-      const sem = exportSem || '1st Semester';
+      const deptFilter = targetDept || 'All';
+      const sem = targetSem || '1st Semester';
 
       const targetStudents = (students || []).filter((st) => {
-        if (dept !== 'All' && st.department !== dept) return false;
+        if (deptFilter !== 'All' && st.department !== deptFilter) return false;
         return true;
       }).sort((a, b) => {
         const nameA = (a.lastName || a.name || '').toLowerCase();
@@ -685,6 +695,8 @@ function StudentManagement() {
         ];
       });
 
+      const nstpComponentLabel = deptFilter === 'All' ? 'CWTS / ROTC / LTS' : deptFilter;
+
       const aoaB = [
         ['Republic of the Philippines'],
         ['Office of the President'],
@@ -693,8 +705,8 @@ function StudentManagement() {
         ['NSTP 1 Enrollment List'],
         [`${sem}, Academic Year: ${activeBatchYear}`],
         [],
-        ['Name of HEI: Cavite State University - Naic Campus', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
-        ['Address: Bucana, Naic, Cavite', '', '', '', '', '', '', 'NSTP Components: CWTS / ROTC / LTS'],
+        ['Name of HEI: Cavite State University - Naic', '', '', '', '', '', '', 'Region: 4A - CALABARZON'],
+        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', `NSTP Components: ${nstpComponentLabel}`],
         [],
         // Row 11 (Index 10) - Main Column Headers
         ['No.', 'Student No.', 'Student Name', '', '', 'Program', 'Sex', 'Birthdate', 'Address', '', '', 'Contact Number', 'Email Address'],
@@ -736,7 +748,7 @@ function StudentManagement() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsB, 'CHED NSTP Form B');
 
-      const filename = `CHED_NSTP_Form_B_Enrollment_List_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      const filename = `CHED_NSTP_Form_B_${deptFilter !== 'All' ? deptFilter : 'ALL'}_${activeBatchYear}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Direct download Form B error:', err);
@@ -1342,11 +1354,11 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Form A: Instant 1-Click Download OSDS-NSTP Form 2-A */}
+              {/* Form A: Modal & 1-Click Download OSDS-NSTP Form A */}
               <button type="button"
-                onClick={handleDirectDownloadFormA}
+                onClick={() => setShowFormAModal(true)}
                 disabled={isDownloadingFormA}
-                title="1-Click Download: Official OSDS-NSTP Form 2-A (Annual Batch Masterlist with 1st & 2nd Sem Grades & Demographics)"
+                title="Download or Preview: Official OSDS-NSTP Form A (Annual Summary of Enrollment & Graduates)"
                 className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
               >
                 {isDownloadingFormA ? (
@@ -1357,11 +1369,11 @@ function StudentManagement() {
                 <span>{isDownloadingFormA ? 'Downloading...' : 'Form A'}</span>
               </button>
 
-              {/* Form B: Instant 1-Click Download CHED Enrollment Masterlist */}
+              {/* Form B: Modal & Download CHED Enrollment Masterlist */}
               <button type="button"
-                onClick={handleDirectDownloadFormB}
+                onClick={() => setShowFormBModal(true)}
                 disabled={isDownloadingFormB}
-                title="1-Click Download: Official CHED Form B (Enrollment Masterlist with Demographic Breakdown)"
+                title="Download or Preview: Official CHED Form B (Select All or specific department: CWTS, LTS, ROTC)"
                 className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
               >
                 {isDownloadingFormB ? (
@@ -4072,6 +4084,336 @@ function StudentManagement() {
           students={students}
           currentUser={user}
         />
+
+        {/* ── FORM B EXPORT & CONFIGURATION MODAL ───────────────────────── */}
+        {showFormBModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-emerald-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800/60 shadow-md">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400/20 rounded-2xl p-2 flex items-center justify-center border border-amber-400/40">
+                    <FileSpreadsheet className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                      Export CHED NSTP Form B
+                    </h3>
+                    <p className="text-[11px] text-emerald-300 font-medium">
+                      Official Student Directory &amp; Enrollment List
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFormBModal(false)}
+                  className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                {/* NSTP Component Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    NSTP Components / Department
+                  </label>
+                  <select
+                    value={formBDept}
+                    onChange={(e) => setFormBDept(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Departments (CWTS, LTS, ROTC)</option>
+                    <option value="CWTS">CWTS Only (Civic Welfare Training Service)</option>
+                    <option value="LTS">LTS Only (Literacy Training Service)</option>
+                    <option value="ROTC">ROTC Only (Reserve Officers Training Corps)</option>
+                  </select>
+                </div>
+
+                {/* Semester Selector */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Semester
+                    </label>
+                    <select
+                      value={formBSem}
+                      onChange={(e) => setFormBSem(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none cursor-pointer"
+                    >
+                      <option value="1st Semester">1st Semester</option>
+                      <option value="2nd Semester">2nd Semester</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      Academic Year
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear}
+                      className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-gray-700 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Institutional Details Preview */}
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] sm:text-xs text-emerald-950 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Name of HEI:</span>
+                    <span className="font-extrabold text-emerald-900">Cavite State University - Naic</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Region:</span>
+                    <span className="font-extrabold text-emerald-900">4A - CALABARZON</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Address:</span>
+                    <span className="font-medium text-emerald-900">Bucana Malaki, Naic, Cavite</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Component:</span>
+                    <span className="font-black text-amber-800">{formBDept === 'All' ? 'CWTS / ROTC / LTS' : formBDept}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFormBModal(false);
+                    setShowFormBPreview(true);
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Preview / Print</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormBModal(false)}
+                    className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDirectDownloadFormB(formBDept, formBSem);
+                      setShowFormBModal(false);
+                    }}
+                    className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Download Excel</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FORM A EXPORT & CONFIGURATION MODAL ───────────────────────── */}
+        {showFormAModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-emerald-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800/60 shadow-md">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400/20 rounded-2xl p-2 flex items-center justify-center border border-amber-400/40">
+                    <Award className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                      Export OSDS-NSTP Form A
+                    </h3>
+                    <p className="text-[11px] text-emerald-300 font-medium">
+                      Summary Number of Enrollment and Graduates of NSTP
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFormAModal(false)}
+                  className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                  Generates the official 4-tier demographic matrix combining 1st Semester enrollees, 2nd Semester enrollees, and official Graduates who passed their semester grades.
+                </p>
+
+                {/* Institutional Details Preview */}
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] sm:text-xs text-emerald-950 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Name of HEI:</span>
+                    <span className="font-extrabold text-emerald-900">Cavite State University - Naic</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Classification:</span>
+                    <span className="font-extrabold text-emerald-900">PUBLIC</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Region:</span>
+                    <span className="font-extrabold text-emerald-900">4A - CALABARZON</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Academic Year:</span>
+                    <span className="font-black text-amber-800">
+                      {viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFormAModal(false);
+                    setShowFormAPreview(true);
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Preview / Print</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormAModal(false)}
+                    className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDirectDownloadFormA();
+                      setShowFormAModal(false);
+                    }}
+                    className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Download Excel</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FULL SCREEN PRINTABLE PREVIEW: FORM B ───────────────────────── */}
+        {showFormBPreview && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/90 backdrop-blur-md flex flex-col p-2 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full mx-auto my-auto overflow-hidden flex flex-col max-h-[92vh]">
+              <div className="bg-emerald-950 text-white px-5 py-3.5 flex items-center justify-between shrink-0 border-b border-emerald-800">
+                <div className="flex items-center space-x-2">
+                  <FileSpreadsheet className="w-5 h-5 text-amber-400" />
+                  <span className="font-bold text-sm">CHED NSTP Form B Preview — {formBDept === 'All' ? 'All Departments' : formBDept}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDirectDownloadFormB(formBDept, formBSem)}
+                    className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Excel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormBPreview(false)}
+                    className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer ml-2"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white">
+                <OSDSNSTPForm2B
+                  academicYear={viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear}
+                  semester={formBSem}
+                  heiName="Cavite State University - Naic"
+                  address="Bucana Malaki, Naic, Cavite"
+                  region="4A - CALABARZON"
+                  nstpComponents={formBDept === 'All' ? 'CWTS / ROTC / LTS' : formBDept}
+                  students={(students || []).filter((s) => formBDept === 'All' || s.department === formBDept)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FULL SCREEN PRINTABLE PREVIEW: FORM A ───────────────────────── */}
+        {showFormAPreview && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/90 backdrop-blur-md flex flex-col p-2 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full mx-auto my-auto overflow-hidden flex flex-col max-h-[92vh]">
+              <div className="bg-emerald-950 text-white px-5 py-3.5 flex items-center justify-between shrink-0 border-b border-emerald-800">
+                <div className="flex items-center space-x-2">
+                  <Award className="w-5 h-5 text-amber-400" />
+                  <span className="font-bold text-sm">OSDS-NSTP Form A Preview — Summary of Enrollment &amp; Graduates</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDirectDownloadFormA}
+                    className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Excel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormAPreview(false)}
+                    className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer ml-2"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white">
+                <OSDSNSTPForm
+                  academicYear={viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear}
+                  campusName="Cavite State University - Naic"
+                  classification="PUBLIC"
+                  region="4A - CALABARZON"
+                  address="Bucana Malaki, Naic, Cavite"
+                  students={students}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
       </main>
       <ScrollToTopButton />

@@ -2,9 +2,10 @@ import React from 'react';
 
 const OSDSNSTPForm = ({
   academicYear = '2025-2026',
-  campusName = 'CVSU NAIC',
+  campusName = 'Cavite State University - Naic',
   classification = 'PUBLIC',
-  region = 'IV (CALABARZON)',
+  region = '4A - CALABARZON',
+  address = 'Bucana Malaki, Naic, Cavite',
   students = [],
   gradesMap = {},
   statsData = null
