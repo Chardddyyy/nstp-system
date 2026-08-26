@@ -1,5 +1,6 @@
 import { useAuth } from '../context/AuthContext';
-import { getPrimaryApiUrl, studentsAPI } from '../services/api';
+import { getPrimaryApiUrl, studentsAPI, gradesAPI } from '../services/api';
+import * as XLSX from 'xlsx';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
@@ -347,6 +348,370 @@ function StudentManagement() {
   const [exportCourse, setExportCourse] = useState('All');
   const [exportSem, setExportSem] = useState('1st Semester');
   const [exportAcadYear, setExportAcadYear] = useState('2025-2026');
+  const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
+  const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
+
+  // Helper to count real students: Male & Female per track (CWTS, LTS, ROTC)
+  const calculateDemographics = (studentList) => {
+    const counts = {
+      CWTS: { male: 0, female: 0, total: 0 },
+      LTS: { male: 0, female: 0, total: 0 },
+      ROTC: { male: 0, female: 0, total: 0 },
+      overall: { male: 0, female: 0, total: 0 }
+    };
+
+    (studentList || []).forEach((st) => {
+      const deptRaw = (st.department || '').toUpperCase().trim();
+      const sexRaw = (st.sex || st.gender || '').toLowerCase().trim();
+      const isFemale = sexRaw.startsWith('f') || sexRaw === 'female' || sexRaw === 'babae';
+
+      let targetDept = null;
+      if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
+      else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+      else if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
+
+      if (targetDept) {
+        if (isFemale) {
+          counts[targetDept].female += 1;
+          counts.overall.female += 1;
+        } else {
+          counts[targetDept].male += 1;
+          counts.overall.male += 1;
+        }
+        counts[targetDept].total += 1;
+        counts.overall.total += 1;
+      } else {
+        if (isFemale) counts.overall.female += 1;
+        else counts.overall.male += 1;
+        counts.overall.total += 1;
+      }
+    });
+
+    return counts;
+  };
+
+  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form 2-A Annual Masterlist with 1st & 2nd Sem Grades) ──
+  const handleDirectDownloadFormA = async () => {
+    try {
+      setIsDownloadingFormA(true);
+      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
+      const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
+
+      // Fetch official grades for this school year from backend
+      let allGrades = [];
+      try {
+        allGrades = await gradesAPI.getAll({
+          schoolYear: activeBatchYear,
+          department: dept !== 'All' ? dept : undefined
+        });
+      } catch (e) {
+        console.warn('Backend grades fetch warning:', e);
+      }
+
+      const gradesMap = {};
+      if (Array.isArray(allGrades)) {
+        allGrades.forEach((r) => {
+          const sid = r.studentId || r.student_id;
+          const sem = r.semester || '1st Semester';
+          if (sid) {
+            if (!gradesMap[sid]) gradesMap[sid] = {};
+            gradesMap[sid][sem] = r;
+          }
+        });
+      }
+
+      // Filter target students
+      const targetStudents = (students || []).filter((st) => {
+        if (dept !== 'All' && st.department !== dept) return false;
+        return true;
+      }).sort((a, b) => {
+        const nameA = (a.lastName || a.name || '').toLowerCase();
+        const nameB = (b.lastName || b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+      const demo = calculateDemographics(targetStudents);
+
+      const headers = [
+        'No.',
+        'Student No.',
+        'Surname',
+        'First Name',
+        'Middle Name',
+        'Course',
+        'Sex',
+        'Birthdate',
+        'Street / Barangay',
+        'Municipality / City',
+        'Province',
+        'Contact Number',
+        'E-mail Address',
+        'NSTP Section',
+        '1st Sem Grade',
+        '2nd Sem Grade',
+        'Final Rating',
+        'Remarks'
+      ];
+
+      const dataRows = targetStudents.map((st, idx) => {
+        const sid = st.studentId || st.id;
+        const semGrades = gradesMap[sid] || {};
+        const g1 = semGrades['1st Semester']?.final_grade || '';
+        const g2 = semGrades['2nd Semester']?.final_grade || '';
+
+        const num1 = parseFloat(g1);
+        const num2 = parseFloat(g2);
+        let finalRating = '-';
+        let remarks = 'Pending';
+
+        if (!isNaN(num1) && !isNaN(num2)) {
+          const avg = ((num1 + num2) / 2).toFixed(2);
+          finalRating = avg;
+          remarks = parseFloat(avg) <= 3.0 ? 'Passed' : parseFloat(avg) === 4.0 ? 'Conditional' : 'Failed';
+        } else if (g1 && g2) {
+          if (g1 === 'DRP' || g2 === 'DRP') { finalRating = 'DRP'; remarks = 'Dropped'; }
+          else if (g1 === 'INC' || g2 === 'INC') { finalRating = 'INC'; remarks = 'Incomplete'; }
+          else if (g1 === '5.00' || g2 === '5.00' || g1 === 'Failed' || g2 === 'Failed') { finalRating = '5.00'; remarks = 'Failed'; }
+          else { finalRating = 'Passed'; remarks = 'Passed'; }
+        } else if (g1 && !g2) {
+          finalRating = g1;
+          remarks = '1st Sem Complete';
+        } else if (!g1 && g2) {
+          finalRating = g2;
+          remarks = '2nd Sem Complete';
+        }
+
+        let surname = st.lastName || '';
+        let firstName = st.firstName || '';
+        let middleName = st.middleName || '';
+        if (!surname && st.name && st.name.includes(',')) {
+          const parts = st.name.split(',');
+          surname = parts[0].trim();
+          const rest = (parts[1] || '').trim().split(/\s+/);
+          firstName = rest[0] || '';
+          middleName = rest.slice(1).join(' ') || '';
+        } else if (!surname && st.name) {
+          const parts = st.name.trim().split(/\s+/);
+          surname = parts[parts.length - 1] || '';
+          firstName = parts.slice(0, -1).join(' ') || '';
+        }
+
+        let street = st.street || '';
+        let municipality = st.municipality || '';
+        let province = st.province || '';
+        if (!street && !municipality && (st.address || st.homeAddress)) {
+          const addr = st.address || st.homeAddress || '';
+          const parts = addr.split(',').map((p) => p.trim());
+          if (parts.length >= 3) {
+            street = parts[0];
+            municipality = parts[1];
+            province = parts.slice(2).join(', ');
+          } else if (parts.length === 2) {
+            street = parts[0];
+            municipality = parts[1];
+          } else {
+            street = addr;
+          }
+        }
+
+        let birthdate = '';
+        if (st.birthDate) {
+          const d = new Date(st.birthDate);
+          if (!isNaN(d.getTime())) {
+            birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+          }
+        } else if (st.birthMonth && st.birthDay && st.birthYear) {
+          birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
+        }
+
+        return [
+          idx + 1,
+          st.studentId || '',
+          surname,
+          firstName,
+          middleName,
+          st.program || st.course || '',
+          st.sex || st.gender || 'Male',
+          birthdate,
+          street,
+          municipality,
+          province,
+          st.contactNumber || '',
+          st.email || '',
+          st.nstp_section || st.section || '',
+          g1 || '',
+          g2 || '',
+          finalRating !== '-' ? finalRating : '',
+          remarks
+        ];
+      });
+
+      const aoa = [
+        ['Republic of the Philippines'],
+        ['Office of the President'],
+        ['COMMISSION ON HIGHER EDUCATION'],
+        ['Office of Student Development and Services (OSDS)'],
+        ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
+        ['OSDS-NSTP Form 2-A (Graduating / Enrolled Masterlist with Complete Annual Grades)'],
+        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
+        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', 'Annual Masterlist (1st & 2nd Semesters Combined)'],
+        headers,
+        ...dataRows,
+        [],
+        ['SUMMARY OF ENROLLMENT & COMPLETION BY COMPONENT AND SEX'],
+        ['Component / Track', 'Male (Lalaki)', 'Female (Babae)', 'Total Students'],
+        ['Civic Welfare Training Service (CWTS)', demo.CWTS.male, demo.CWTS.female, demo.CWTS.total],
+        ['Literacy Training Service (LTS)', demo.LTS.male, demo.LTS.female, demo.LTS.total],
+        ['Reserve Officers Training Corps (ROTC)', demo.ROTC.male, demo.ROTC.female, demo.ROTC.total],
+        ['GRAND TOTAL', demo.overall.male, demo.overall.female, demo.overall.total]
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'OSDS-NSTP Form 2-A');
+
+      const filename = `OSDS-NSTP-Form-2-A_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error('Direct download Form A error:', err);
+      alert('Failed to download Form A. Please try again.');
+    } finally {
+      setIsDownloadingFormA(false);
+    }
+  };
+
+  // ── 1-Click Instant Download for Form B (CHED NSTP Form B Enrollment Masterlist) ──
+  const handleDirectDownloadFormB = async () => {
+    try {
+      setIsDownloadingFormB(true);
+      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
+      const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
+      const sem = exportSem || '1st Semester';
+
+      const targetStudents = (students || []).filter((st) => {
+        if (dept !== 'All' && st.department !== dept) return false;
+        return true;
+      }).sort((a, b) => {
+        const nameA = (a.lastName || a.name || '').toLowerCase();
+        const nameB = (b.lastName || b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
+
+      const demo = calculateDemographics(targetStudents);
+
+      const headers = [
+        'No.',
+        'Student No.',
+        'Surname',
+        'First Name',
+        'Middle Name',
+        'Course',
+        'Sex',
+        'Birthdate',
+        'Street / Barangay',
+        'Municipality / City',
+        'Province',
+        'Contact Number',
+        'E-mail Address',
+        'NSTP Section'
+      ];
+
+      const dataRows = targetStudents.map((st, idx) => {
+        let surname = st.lastName || '';
+        let firstName = st.firstName || '';
+        let middleName = st.middleName || '';
+        if (!surname && st.name && st.name.includes(',')) {
+          const parts = st.name.split(',');
+          surname = parts[0].trim();
+          const rest = (parts[1] || '').trim().split(/\s+/);
+          firstName = rest[0] || '';
+          middleName = rest.slice(1).join(' ') || '';
+        } else if (!surname && st.name) {
+          const parts = st.name.trim().split(/\s+/);
+          surname = parts[parts.length - 1] || '';
+          firstName = parts.slice(0, -1).join(' ') || '';
+        }
+
+        let street = st.street || '';
+        let municipality = st.municipality || '';
+        let province = st.province || '';
+        if (!street && !municipality && (st.address || st.homeAddress)) {
+          const addr = st.address || st.homeAddress || '';
+          const parts = addr.split(',').map((p) => p.trim());
+          if (parts.length >= 3) {
+            street = parts[0];
+            municipality = parts[1];
+            province = parts.slice(2).join(', ');
+          } else if (parts.length === 2) {
+            street = parts[0];
+            municipality = parts[1];
+          } else {
+            street = addr;
+          }
+        }
+
+        let birthdate = '';
+        if (st.birthDate) {
+          const d = new Date(st.birthDate);
+          if (!isNaN(d.getTime())) {
+            birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+          }
+        } else if (st.birthMonth && st.birthDay && st.birthYear) {
+          birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
+        }
+
+        return [
+          idx + 1,
+          st.studentId || '',
+          surname,
+          firstName,
+          middleName,
+          st.program || st.course || '',
+          st.sex || st.gender || 'Male',
+          birthdate,
+          street,
+          municipality,
+          province,
+          st.contactNumber || '',
+          st.email || '',
+          st.nstp_section || st.section || ''
+        ];
+      });
+
+      const aoa = [
+        ['Republic of the Philippines'],
+        ['Office of the President'],
+        ['COMMISSION ON HIGHER EDUCATION'],
+        ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
+        ['CHED NSTP Form B (Official Enrollment Masterlist)'],
+        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
+        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', `Semester: ${sem}`],
+        headers,
+        ...dataRows,
+        [],
+        ['SUMMARY OF ENROLLMENT BY TRACK AND SEX'],
+        ['Component / Track', 'Male (Lalaki)', 'Female (Babae)', 'Total Students'],
+        ['Civic Welfare Training Service (CWTS)', demo.CWTS.male, demo.CWTS.female, demo.CWTS.total],
+        ['Literacy Training Service (LTS)', demo.LTS.male, demo.LTS.female, demo.LTS.total],
+        ['Reserve Officers Training Corps (ROTC)', demo.ROTC.male, demo.ROTC.female, demo.ROTC.total],
+        ['GRAND TOTAL', demo.overall.male, demo.overall.female, demo.overall.total]
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CHED Form B');
+
+      const filename = `CHED_NSTP_Form_B_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error('Direct download Form B error:', err);
+      alert('Failed to download Form B. Please try again.');
+    } finally {
+      setIsDownloadingFormB(false);
+    }
+  };
 
   const handleToggleSelectStudent = (id) => {
     setSelectedStudentIds((prev) => {
@@ -944,25 +1309,48 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Form A: Grades & OSDS-NSTP Form 2-A Masterlist */}
+              {/* Form A: Instant 1-Click Download OSDS-NSTP Form 2-A */}
               <button type="button"
-                onClick={() => setShowGradesModal(true)}
-                title={isAdmin ? "Form A: Review student ratings and download official OSDS-NSTP Form 2-A (Grades Masterlist)" : "Form A: Encode student semester grades and print official rating sheet"}
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap"
+                onClick={handleDirectDownloadFormA}
+                disabled={isDownloadingFormA}
+                title="1-Click Download: Official OSDS-NSTP Form 2-A (Annual Batch Masterlist with 1st & 2nd Sem Grades & Demographics)"
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
               >
-                <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                <span>Form A</span>
+                {isDownloadingFormA ? (
+                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
+                ) : (
+                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                )}
+                <span>{isDownloadingFormA ? 'Downloading...' : 'Form A'}</span>
               </button>
 
-              {/* Form B: CHED Masterlist / Enrollment List */}
+              {/* Form B: Instant 1-Click Download CHED Enrollment Masterlist */}
               <button type="button"
-                onClick={() => { setExportDept(isAdmin ? 'All' : (user?.department || 'CWTS')); setExportCourse('All'); setShowExportModal(true); }}
-                title={isAdmin ? 'Form B: Download CHED Masterlist Enrollment Excel' : `Form B: Download ${user?.department} students as CHED Masterlist`}
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap"
+                onClick={handleDirectDownloadFormB}
+                disabled={isDownloadingFormB}
+                title="1-Click Download: Official CHED Form B (Enrollment Masterlist with Demographic Breakdown)"
+                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                <span>Form B</span>
+                {isDownloadingFormB ? (
+                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                )}
+                <span>{isDownloadingFormB ? 'Downloading...' : 'Form B'}</span>
               </button>
+
+              {/* Encode Grades Button (Instructors Only) */}
+              {!isAdmin && (
+                <button type="button"
+                  onClick={() => setShowGradesModal(true)}
+                  title="Encode and submit student semester grades and print official grade sheet"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
+                >
+                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+                  <span className="hidden xs:inline">Encode Grades</span>
+                  <span className="xs:hidden">Grades</span>
+                </button>
+              )}
 
               {/* View Attendance & Absences Matrix Button (Instructors Only) */}
               {!isAdmin && (
