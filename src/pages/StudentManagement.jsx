@@ -67,6 +67,7 @@ function StudentManagement() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Batch section assignment state
+  const [isSectioningMode, setIsSectioningMode] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
   const [batchNstpSection, setBatchNstpSection] = useState('CWTS 1');
   const [isBatchAssigning, setIsBatchAssigning] = useState(false);
@@ -1339,6 +1340,29 @@ function StudentManagement() {
                 <span>{isDownloadingFormB ? 'Downloading...' : 'Form B'}</span>
               </button>
 
+              {/* Separate Student Section Button (Admin Only) */}
+              {isAdmin && (
+                <button type="button"
+                  onClick={() => {
+                    setIsSectioningMode((prev) => {
+                      const next = !prev;
+                      if (!next) setSelectedStudentIds(new Set());
+                      return next;
+                    });
+                  }}
+                  title="Toggle Sectioning Mode: Check students individually or select all to assign NSTP sections"
+                  className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer whitespace-nowrap border ${
+                    isSectioningMode
+                      ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 text-white border-emerald-300 ring-2 ring-emerald-400/60 shadow-md animate-pulse'
+                      : 'bg-gradient-to-r from-teal-900 via-emerald-900 to-teal-950 text-emerald-100 hover:text-white hover:from-teal-800 hover:to-emerald-800 border-emerald-700/60'
+                  }`}
+                >
+                  <Layers className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isSectioningMode ? 'text-amber-300' : 'text-emerald-300'}`} />
+                  <span className="hidden xs:inline">{isSectioningMode ? 'Done Sectioning' : 'Separate Student Section'}</span>
+                  <span className="xs:hidden">{isSectioningMode ? 'Done' : 'Separate Section'}</span>
+                </button>
+              )}
+
               {/* Encode Grades Button (Instructors Only) */}
               {!isAdmin && (
                 <button type="button"
@@ -1452,55 +1476,86 @@ function StudentManagement() {
         </div>
 
         {/* Admin Batch NSTP Section Assignment Toolbar */}
-        {isAdmin && selectedStudentIds.size > 0 && (
-          <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-3 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-700/60 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+        {isAdmin && (isSectioningMode || selectedStudentIds.size > 0) && (
+          <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-600/60 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center justify-center font-black text-sm">
+              <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/50 flex items-center justify-center font-black text-sm shadow-inner shrink-0">
                 {selectedStudentIds.size}
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-black text-white leading-tight">
-                  {selectedStudentIds.size} Student{selectedStudentIds.size > 1 ? 's' : ''} Selected
+                <p className="text-xs sm:text-sm font-black text-white leading-tight flex items-center gap-2">
+                  <span>{selectedStudentIds.size} of {currentStudents.length} Student{selectedStudentIds.size !== 1 ? 's' : ''} Selected</span>
+                  {selectedStudentIds.size === currentStudents.length && currentStudents.length > 0 && (
+                    <span className="text-[10px] font-black bg-amber-400/30 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/40">
+                      All Selected (Lahat)
+                    </span>
+                  )}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-emerald-300/90 font-medium">
-                  Separate or assign students into an NSTP Section (CWTS 1-3, LTS 1-3, ROTC 1-3)
+                <p className="text-[10.5px] sm:text-[11px] text-emerald-300/90 font-medium">
+                  Separate Section: Check students individually or click Select All, then assign to an NSTP Section (CWTS 1-3, LTS 1-3, ROTC 1-3)
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-emerald-200">Assign Section:</span>
-              <select
-                value={batchNstpSection}
-                onChange={(e) => setBatchNstpSection(e.target.value)}
-                className="px-3 py-1.5 text-xs font-black rounded-xl bg-white text-emerald-950 border border-emerald-300 outline-none cursor-pointer"
+              {/* Quick Select All / Clear Buttons */}
+              <button
+                type="button"
+                onClick={handleSelectAllVisible}
+                className="px-2.5 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-emerald-100 rounded-xl border border-white/10 transition-colors cursor-pointer"
               >
-                <option value="CWTS 1">CWTS 1</option>
-                <option value="CWTS 2">CWTS 2</option>
-                <option value="CWTS 3">CWTS 3</option>
-                <option value="LTS 1">LTS 1</option>
-                <option value="LTS 2">LTS 2</option>
-                <option value="LTS 3">LTS 3</option>
-                <option value="ROTC 1">ROTC 1</option>
-                <option value="ROTC 2">ROTC 2</option>
-                <option value="ROTC 3">ROTC 3</option>
-              </select>
+                {selectedStudentIds.size === currentStudents.length && currentStudents.length > 0 ? 'Deselect All' : 'Select All (Lahat)'}
+              </button>
+
+              {selectedStudentIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudentIds(new Set())}
+                  className="px-2.5 py-1.5 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  Clear ({selectedStudentIds.size})
+                </button>
+              )}
+
+              <div className="h-5 w-[1px] bg-emerald-700/60 hidden sm:block"></div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-200 hidden xs:inline">Assign Section:</span>
+                <select
+                  value={batchNstpSection}
+                  onChange={(e) => setBatchNstpSection(e.target.value)}
+                  className="px-3 py-1.5 text-xs font-black rounded-xl bg-white text-emerald-950 border border-emerald-300 outline-none cursor-pointer shadow-xs"
+                >
+                  <option value="CWTS 1">CWTS 1</option>
+                  <option value="CWTS 2">CWTS 2</option>
+                  <option value="CWTS 3">CWTS 3</option>
+                  <option value="LTS 1">LTS 1</option>
+                  <option value="LTS 2">LTS 2</option>
+                  <option value="LTS 3">LTS 3</option>
+                  <option value="ROTC 1">ROTC 1</option>
+                  <option value="ROTC 2">ROTC 2</option>
+                  <option value="ROTC 3">ROTC 3</option>
+                </select>
+              </div>
 
               <button
                 type="button"
                 onClick={handleBatchAssignSection}
-                disabled={isBatchAssigning}
-                className="px-4 py-1.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-50"
+                disabled={isBatchAssigning || selectedStudentIds.size === 0}
+                className="px-4 py-1.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-500/60"
               >
-                {isBatchAssigning ? 'Assigning...' : 'Apply Section'}
+                {isBatchAssigning ? 'Assigning...' : `Apply ${batchNstpSection}`}
               </button>
 
               <button
                 type="button"
-                onClick={() => setSelectedStudentIds(new Set())}
-                className="px-3 py-1.5 text-xs font-bold text-emerald-200 hover:text-white hover:bg-emerald-800 rounded-xl transition-colors cursor-pointer"
+                onClick={() => {
+                  setIsSectioningMode(false);
+                  setSelectedStudentIds(new Set());
+                }}
+                className="px-3 py-1.5 text-xs font-bold text-rose-300 hover:text-white hover:bg-rose-900/60 rounded-xl transition-colors cursor-pointer border border-rose-700/50"
               >
-                Clear
+                Exit
               </button>
             </div>
           </div>
@@ -1519,6 +1574,7 @@ function StudentManagement() {
           <div className="sm:hidden divide-y divide-gray-100">
             {currentStudents.map((student, index) => {
               const isSelected = selectedStudentIds.has(student.id);
+              const showCheck = isAdmin && (isSectioningMode || selectedStudentIds.size > 0);
               return (
                 <div
                   key={student.id || student.studentId || `student-m-${index}`}
@@ -1526,16 +1582,16 @@ function StudentManagement() {
                   onClick={() => handleViewStudent(student)}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-start gap-2 min-w-0">
-                      {isAdmin && (
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      {showCheck && (
                         <div
-                          className="pt-0.5 shrink-0"
+                          className="pt-0.5 shrink-0 cursor-pointer"
                           onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-emerald-700" />
+                            <CheckSquare className="w-5 h-5 text-emerald-700" />
                           ) : (
-                            <Square className="w-4 h-4 text-gray-400" />
+                            <Square className="w-5 h-5 text-gray-400 hover:text-gray-600" />
                           )}
                         </div>
                       )}
@@ -1586,18 +1642,19 @@ function StudentManagement() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  {isAdmin && (
-                    <th className="px-4 py-3 text-center w-10">
+                  {isAdmin && (isSectioningMode || selectedStudentIds.size > 0) && (
+                    <th className="px-4 py-3 text-center w-12 bg-emerald-100/70 border-r border-emerald-200">
                       <div
-                        className="cursor-pointer inline-flex items-center justify-center"
+                        className="cursor-pointer inline-flex flex-col items-center justify-center gap-0.5"
                         onClick={handleSelectAllVisible}
-                        title="Select All Displayed Students"
+                        title="Select All / Lahatan (Click to select all students on page)"
                       >
                         {selectedStudentIds.size > 0 && selectedStudentIds.size === currentStudents.length ? (
-                          <CheckSquare className="w-4 h-4 text-emerald-700" />
+                          <CheckSquare className="w-5 h-5 text-emerald-700" />
                         ) : (
-                          <Square className="w-4 h-4 text-gray-400" />
+                          <Square className="w-5 h-5 text-gray-400 hover:text-emerald-600" />
                         )}
+                        <span className="text-[9px] font-black uppercase text-emerald-900 leading-none">Lahat</span>
                       </div>
                     </th>
                   )}
@@ -1695,22 +1752,23 @@ function StudentManagement() {
               <tbody className="divide-y divide-gray-200">
                 {currentStudents.map((student, index) => {
                   const isSelected = selectedStudentIds.has(student.id);
+                  const showCheck = isAdmin && (isSectioningMode || selectedStudentIds.size > 0);
                   return (
                     <tr 
                       key={student.id || student.studentId || `student-${index}`} 
                       className={`hover:bg-green-50 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-emerald-50/80 font-semibold' : ''}`}
                       onClick={() => handleViewStudent(student)}
                     >
-                      {isAdmin && (
+                      {showCheck && (
                         <td 
-                          className="px-4 py-4 whitespace-nowrap text-center"
+                          className="px-4 py-4 whitespace-nowrap text-center bg-emerald-50/40 border-r border-emerald-100"
                           onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
                         >
-                          <div className="inline-flex items-center justify-center">
+                          <div className="inline-flex items-center justify-center cursor-pointer p-1 rounded hover:bg-emerald-100/80 transition-colors">
                             {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-emerald-700" />
+                              <CheckSquare className="w-5 h-5 text-emerald-700" />
                             ) : (
-                              <Square className="w-4 h-4 text-gray-400" />
+                              <Square className="w-5 h-5 text-gray-400 hover:text-gray-600" />
                             )}
                           </div>
                         </td>
