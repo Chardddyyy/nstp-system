@@ -352,46 +352,87 @@ function StudentManagement() {
   const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 
-  // Helper to count real students: Male & Female per track (CWTS, LTS, ROTC)
-  const calculateDemographics = (studentList) => {
-    const counts = {
-      CWTS: { male: 0, female: 0, total: 0 },
-      LTS: { male: 0, female: 0, total: 0 },
-      ROTC: { male: 0, female: 0, total: 0 },
-      overall: { male: 0, female: 0, total: 0 }
+  // Comprehensive Demographic & Graduate Counter (Male & Female per Track for Enrollees & Graduates)
+  const calculateDemographicsAndGraduates = (studentList, gradesMap) => {
+    const data = {
+      enrolled: {
+        CWTS: { male: 0, female: 0, total: 0 },
+        LTS: { male: 0, female: 0, total: 0 },
+        ROTC: { male: 0, female: 0, total: 0 },
+        overall: { male: 0, female: 0, total: 0 }
+      },
+      graduated: {
+        CWTS: { male: 0, female: 0, total: 0 },
+        LTS: { male: 0, female: 0, total: 0 },
+        ROTC: { male: 0, female: 0, total: 0 },
+        overall: { male: 0, female: 0, total: 0 }
+      }
     };
 
     (studentList || []).forEach((st) => {
       const deptRaw = (st.department || '').toUpperCase().trim();
       const sexRaw = (st.sex || st.gender || '').toLowerCase().trim();
-      const isFemale = sexRaw.startsWith('f') || sexRaw === 'female' || sexRaw === 'babae';
+      const isFemale = sexRaw.startsWith('f') || sexRaw === 'female';
 
       let targetDept = null;
       if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
       else if (deptRaw.includes('LTS')) targetDept = 'LTS';
       else if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
 
+      // 1. Enrolled counts
       if (targetDept) {
         if (isFemale) {
-          counts[targetDept].female += 1;
-          counts.overall.female += 1;
+          data.enrolled[targetDept].female += 1;
+          data.enrolled.overall.female += 1;
         } else {
-          counts[targetDept].male += 1;
-          counts.overall.male += 1;
+          data.enrolled[targetDept].male += 1;
+          data.enrolled.overall.male += 1;
         }
-        counts[targetDept].total += 1;
-        counts.overall.total += 1;
+        data.enrolled[targetDept].total += 1;
+        data.enrolled.overall.total += 1;
       } else {
-        if (isFemale) counts.overall.female += 1;
-        else counts.overall.male += 1;
-        counts.overall.total += 1;
+        if (isFemale) data.enrolled.overall.female += 1;
+        else data.enrolled.overall.male += 1;
+        data.enrolled.overall.total += 1;
+      }
+
+      // 2. Graduate calculation: Passed BOTH 1st Semester AND 2nd Semester
+      const sid = st.studentId || st.id;
+      const semGrades = gradesMap[sid] || {};
+      const g1Str = semGrades['1st Semester']?.final_grade || '';
+      const g2Str = semGrades['2nd Semester']?.final_grade || '';
+
+      const num1 = parseFloat(g1Str);
+      const num2 = parseFloat(g2Str);
+
+      const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
+      const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p';
+
+      const isGraduated = passed1 && passed2;
+
+      if (isGraduated) {
+        if (targetDept) {
+          if (isFemale) {
+            data.graduated[targetDept].female += 1;
+            data.graduated.overall.female += 1;
+          } else {
+            data.graduated[targetDept].male += 1;
+            data.graduated.overall.male += 1;
+          }
+          data.graduated[targetDept].total += 1;
+          data.graduated.overall.total += 1;
+        } else {
+          if (isFemale) data.graduated.overall.female += 1;
+          else data.graduated.overall.male += 1;
+          data.graduated.overall.total += 1;
+        }
       }
     });
 
-    return counts;
+    return data;
   };
 
-  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form 2-A Annual Masterlist with 1st & 2nd Sem Grades) ──
+  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form 2-A Statistical Report of Enrollees & Completers / Graduates) ──
   const handleDirectDownloadFormA = async () => {
     try {
       setIsDownloadingFormA(true);
@@ -431,7 +472,7 @@ function StudentManagement() {
         return nameA.localeCompare(nameB);
       });
 
-      const demo = calculateDemographics(targetStudents);
+      const stats = calculateDemographicsAndGraduates(targetStudents, gradesMap);
 
       const headers = [
         'No.',
@@ -451,7 +492,7 @@ function StudentManagement() {
         '1st Sem Grade',
         '2nd Sem Grade',
         'Final Rating',
-        'Remarks'
+        'Graduation Status'
       ];
 
       const dataRows = targetStudents.map((st, idx) => {
@@ -463,23 +504,32 @@ function StudentManagement() {
         const num1 = parseFloat(g1);
         const num2 = parseFloat(g2);
         let finalRating = '-';
-        let remarks = 'Pending';
+        let gradStatus = 'Pending';
+
+        const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1.toLowerCase() === 'passed';
+        const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2.toLowerCase() === 'passed';
 
         if (!isNaN(num1) && !isNaN(num2)) {
           const avg = ((num1 + num2) / 2).toFixed(2);
           finalRating = avg;
-          remarks = parseFloat(avg) <= 3.0 ? 'Passed' : parseFloat(avg) === 4.0 ? 'Conditional' : 'Failed';
+          if (passed1 && passed2) {
+            gradStatus = 'Graduated (Passed)';
+          } else if (parseFloat(avg) === 4.0) {
+            gradStatus = 'Conditional';
+          } else {
+            gradStatus = 'Failed';
+          }
         } else if (g1 && g2) {
-          if (g1 === 'DRP' || g2 === 'DRP') { finalRating = 'DRP'; remarks = 'Dropped'; }
-          else if (g1 === 'INC' || g2 === 'INC') { finalRating = 'INC'; remarks = 'Incomplete'; }
-          else if (g1 === '5.00' || g2 === '5.00' || g1 === 'Failed' || g2 === 'Failed') { finalRating = '5.00'; remarks = 'Failed'; }
-          else { finalRating = 'Passed'; remarks = 'Passed'; }
+          if (g1 === 'DRP' || g2 === 'DRP') { finalRating = 'DRP'; gradStatus = 'Dropped'; }
+          else if (g1 === 'INC' || g2 === 'INC') { finalRating = 'INC'; gradStatus = 'Incomplete'; }
+          else if (passed1 && passed2) { finalRating = 'Passed'; gradStatus = 'Graduated (Passed)'; }
+          else { finalRating = 'Failed'; gradStatus = 'Failed'; }
         } else if (g1 && !g2) {
           finalRating = g1;
-          remarks = '1st Sem Complete';
+          gradStatus = passed1 ? 'Completed 1st Sem (Pending 2nd Sem)' : 'Failed 1st Sem';
         } else if (!g1 && g2) {
           finalRating = g2;
-          remarks = '2nd Sem Complete';
+          gradStatus = passed2 ? 'Completed 2nd Sem (Missing 1st Sem)' : 'Failed 2nd Sem';
         }
 
         let surname = st.lastName || '';
@@ -543,9 +593,15 @@ function StudentManagement() {
           g1 || '',
           g2 || '',
           finalRating !== '-' ? finalRating : '',
-          remarks
+          gradStatus
         ];
       });
+
+      // Calculate completion rates
+      const cwtsRate = stats.enrolled.CWTS.total > 0 ? ((stats.graduated.CWTS.total / stats.enrolled.CWTS.total) * 100).toFixed(1) : '0.0';
+      const ltsRate = stats.enrolled.LTS.total > 0 ? ((stats.graduated.LTS.total / stats.enrolled.LTS.total) * 100).toFixed(1) : '0.0';
+      const rotcRate = stats.enrolled.ROTC.total > 0 ? ((stats.graduated.ROTC.total / stats.enrolled.ROTC.total) * 100).toFixed(1) : '0.0';
+      const totalRate = stats.enrolled.overall.total > 0 ? ((stats.graduated.overall.total / stats.enrolled.overall.total) * 100).toFixed(1) : '0.0';
 
       const aoa = [
         ['Republic of the Philippines'],
@@ -553,26 +609,35 @@ function StudentManagement() {
         ['COMMISSION ON HIGHER EDUCATION'],
         ['Office of Student Development and Services (OSDS)'],
         ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-        ['OSDS-NSTP Form 2-A (Graduating / Enrolled Masterlist with Complete Annual Grades)'],
-        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        ['OSDS-NSTP Form 2-A: Annual Statistical Report of Enrollees, Completers and Graduates'],
+        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC CAMPUS', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
         ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
         [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', 'Annual Masterlist (1st & 2nd Semesters Combined)'],
         headers,
         ...dataRows,
         [],
-        ['SUMMARY OF ENROLLMENT & COMPLETION BY COMPONENT AND SEX'],
-        ['Component / Track', 'Male (Lalaki)', 'Female (Babae)', 'Total Students'],
-        ['Civic Welfare Training Service (CWTS)', demo.CWTS.male, demo.CWTS.female, demo.CWTS.total],
-        ['Literacy Training Service (LTS)', demo.LTS.male, demo.LTS.female, demo.LTS.total],
-        ['Reserve Officers Training Corps (ROTC)', demo.ROTC.male, demo.ROTC.female, demo.ROTC.total],
-        ['GRAND TOTAL', demo.overall.male, demo.overall.female, demo.overall.total]
+        ['PART I: SUMMARY OF TOTAL ENROLLEES BY COMPONENT AND SEX'],
+        ['Component / Track', 'Male Enrollees', 'Female Enrollees', 'Total Enrolled Students'],
+        ['Civic Welfare Training Service (CWTS)', stats.enrolled.CWTS.male, stats.enrolled.CWTS.female, stats.enrolled.CWTS.total],
+        ['Literacy Training Service (LTS)', stats.enrolled.LTS.male, stats.enrolled.LTS.female, stats.enrolled.LTS.total],
+        ['Reserve Officers Training Corps (ROTC)', stats.enrolled.ROTC.male, stats.enrolled.ROTC.female, stats.enrolled.ROTC.total],
+        ['TOTAL ENROLLEES', stats.enrolled.overall.male, stats.enrolled.overall.female, stats.enrolled.overall.total],
+        [],
+        ['PART II: SUMMARY OF COMPLETERS & GRADUATES BY COMPONENT AND SEX (PASSED BOTH 1ST & 2ND SEMESTER)'],
+        ['Component / Track', 'Male Graduates', 'Female Graduates', 'Total Graduates', 'Completion Rate (%)'],
+        ['Civic Welfare Training Service (CWTS)', stats.graduated.CWTS.male, stats.graduated.CWTS.female, stats.graduated.CWTS.total, `${cwtsRate}%`],
+        ['Literacy Training Service (LTS)', stats.graduated.LTS.male, stats.graduated.LTS.female, stats.graduated.LTS.total, `${ltsRate}%`],
+        ['Reserve Officers Training Corps (ROTC)', stats.graduated.ROTC.male, stats.graduated.ROTC.female, stats.graduated.ROTC.total, `${rotcRate}%`],
+        ['TOTAL GRADUATES / COMPLETERS', stats.graduated.overall.male, stats.graduated.overall.female, stats.graduated.overall.total, `${totalRate}%`],
+        [],
+        ['Prepared by: NSTP Department Coordinator', '', '', '', 'Verified by: Campus NSTP Director', '', '', '', 'Approved by: Campus Administrator']
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'OSDS-NSTP Form 2-A');
 
-      const filename = `OSDS-NSTP-Form-2-A_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      const filename = `OSDS-NSTP-Form-2-A_Annual_Report_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Direct download Form A error:', err);
@@ -582,7 +647,7 @@ function StudentManagement() {
     }
   };
 
-  // ── 1-Click Instant Download for Form B (CHED NSTP Form B Enrollment Masterlist) ──
+  // ── 1-Click Instant Download for Form B (CHED NSTP Form B: Official Student Directory & Enrollment Masterlist) ──
   const handleDirectDownloadFormB = async () => {
     try {
       setIsDownloadingFormB(true);
@@ -599,7 +664,7 @@ function StudentManagement() {
         return nameA.localeCompare(nameB);
       });
 
-      const demo = calculateDemographics(targetStudents);
+      const stats = calculateDemographicsAndGraduates(targetStudents, {});
 
       const headers = [
         'No.',
@@ -607,7 +672,8 @@ function StudentManagement() {
         'Surname',
         'First Name',
         'Middle Name',
-        'Course',
+        'Degree Program / Course',
+        'Year Level',
         'Sex',
         'Birthdate',
         'Street / Barangay',
@@ -615,7 +681,9 @@ function StudentManagement() {
         'Province',
         'Contact Number',
         'E-mail Address',
-        'NSTP Section'
+        'School Section',
+        'NSTP Section',
+        'NSTP Component'
       ];
 
       const dataRows = targetStudents.map((st, idx) => {
@@ -669,6 +737,7 @@ function StudentManagement() {
           firstName,
           middleName,
           st.program || st.course || '',
+          st.year || st.yearLevel || '1st Year',
           st.sex || st.gender || 'Male',
           birthdate,
           street,
@@ -676,7 +745,9 @@ function StudentManagement() {
           province,
           st.contactNumber || '',
           st.email || '',
-          st.nstp_section || st.section || ''
+          st.section || 'None',
+          st.nstp_section || 'Unassigned',
+          st.department || ''
         ];
       });
 
@@ -685,26 +756,28 @@ function StudentManagement() {
         ['Office of the President'],
         ['COMMISSION ON HIGHER EDUCATION'],
         ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-        ['CHED NSTP Form B (Official Enrollment Masterlist)'],
-        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
+        ['CHED NSTP Form B: Official Student Directory & Enrollment Masterlist'],
+        ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC CAMPUS', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
         ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${dept !== 'All' ? dept : 'CWTS / LTS / ROTC'}`],
         [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', `Semester: ${sem}`],
         headers,
         ...dataRows,
         [],
-        ['SUMMARY OF ENROLLMENT BY TRACK AND SEX'],
-        ['Component / Track', 'Male (Lalaki)', 'Female (Babae)', 'Total Students'],
-        ['Civic Welfare Training Service (CWTS)', demo.CWTS.male, demo.CWTS.female, demo.CWTS.total],
-        ['Literacy Training Service (LTS)', demo.LTS.male, demo.LTS.female, demo.LTS.total],
-        ['Reserve Officers Training Corps (ROTC)', demo.ROTC.male, demo.ROTC.female, demo.ROTC.total],
-        ['GRAND TOTAL', demo.overall.male, demo.overall.female, demo.overall.total]
+        ['SUMMARY OF ENROLLED STUDENTS BY COMPONENT AND SEX'],
+        ['Component / Track', 'Male Enrollees', 'Female Enrollees', 'Total Enrolled Students'],
+        ['Civic Welfare Training Service (CWTS)', stats.enrolled.CWTS.male, stats.enrolled.CWTS.female, stats.enrolled.CWTS.total],
+        ['Literacy Training Service (LTS)', stats.enrolled.LTS.male, stats.enrolled.LTS.female, stats.enrolled.LTS.total],
+        ['Reserve Officers Training Corps (ROTC)', stats.enrolled.ROTC.male, stats.enrolled.ROTC.female, stats.enrolled.ROTC.total],
+        ['GRAND TOTAL', stats.enrolled.overall.male, stats.enrolled.overall.female, stats.enrolled.overall.total],
+        [],
+        ['Prepared by: NSTP Department Coordinator', '', '', '', 'Certified Correct by: Campus NSTP Director', '', '', '', 'Approved by: Campus Administrator']
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'CHED Form B');
+      XLSX.utils.book_append_sheet(wb, ws, 'CHED NSTP Form B');
 
-      const filename = `CHED_NSTP_Form_B_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
+      const filename = `CHED_NSTP_Form_B_Enrollment_Masterlist_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error('Direct download Form B error:', err);
@@ -1487,7 +1560,7 @@ function StudentManagement() {
                   <span>{selectedStudentIds.size} of {currentStudents.length} Student{selectedStudentIds.size !== 1 ? 's' : ''} Selected</span>
                   {selectedStudentIds.size === currentStudents.length && currentStudents.length > 0 && (
                     <span className="text-[10px] font-black bg-amber-400/30 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/40">
-                      All Selected (Lahat)
+                      All Selected
                     </span>
                   )}
                 </p>
@@ -1504,7 +1577,7 @@ function StudentManagement() {
                 onClick={handleSelectAllVisible}
                 className="px-2.5 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-emerald-100 rounded-xl border border-white/10 transition-colors cursor-pointer"
               >
-                {selectedStudentIds.size === currentStudents.length && currentStudents.length > 0 ? 'Deselect All' : 'Select All (Lahat)'}
+                {selectedStudentIds.size === currentStudents.length && currentStudents.length > 0 ? 'Deselect All' : 'Select All'}
               </button>
 
               {selectedStudentIds.size > 0 && (
@@ -1647,14 +1720,14 @@ function StudentManagement() {
                       <div
                         className="cursor-pointer inline-flex flex-col items-center justify-center gap-0.5"
                         onClick={handleSelectAllVisible}
-                        title="Select All / Lahatan (Click to select all students on page)"
+                        title="Select All (Click to select all students on page)"
                       >
                         {selectedStudentIds.size > 0 && selectedStudentIds.size === currentStudents.length ? (
                           <CheckSquare className="w-5 h-5 text-emerald-700" />
                         ) : (
                           <Square className="w-5 h-5 text-gray-400 hover:text-emerald-600" />
                         )}
-                        <span className="text-[9px] font-black uppercase text-emerald-900 leading-none">Lahat</span>
+                        <span className="text-[9px] font-black uppercase text-emerald-900 leading-none">All</span>
                       </div>
                     </th>
                   )}
