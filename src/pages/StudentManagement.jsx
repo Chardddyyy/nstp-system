@@ -1715,49 +1715,55 @@ function StudentManagement() {
                     </th>
                   )}
                   <th 
-                    onClick={() => handleSortStudent('id')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                      studentSortCol === 'id' 
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    onClick={() => !isSectioningMode && handleSortStudent('id')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'id'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                     }`}
-                    title="Click to sort by Student ID"
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Student ID'}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Student ID</span>
-                      {studentSortCol === 'id' && (
+                      {!isSectioningMode && studentSortCol === 'id' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
                   </th>
                   <th 
-                    onClick={() => handleSortStudent('name')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                      studentSortCol === 'name' 
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    onClick={() => !isSectioningMode && handleSortStudent('name')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'name'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                     }`}
-                    title="Click to sort by Name"
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Name'}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Name with Email</span>
-                      {studentSortCol === 'name' && (
+                      {!isSectioningMode && studentSortCol === 'name' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
                   </th>
                   <th 
-                    onClick={() => handleSortStudent('section')}
-                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                      studentSortCol === 'section' 
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    onClick={() => !isSectioningMode && handleSortStudent('section')}
+                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'section'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                     }`}
-                    title="Original School / Class Section from Enrollment"
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Original School / Class Section from Enrollment'}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>School Sec</span>
-                      {studentSortCol === 'section' && (
+                      {!isSectioningMode && studentSortCol === 'section' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
@@ -1771,33 +1777,37 @@ function StudentManagement() {
                     </div>
                   </th>
                   <th 
-                    onClick={() => handleSortStudent('year')}
-                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                      studentSortCol === 'year' 
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    onClick={() => !isSectioningMode && handleSortStudent('year')}
+                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'year'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                     }`}
-                    title="Click to sort by Year Level"
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Year Level'}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Year</span>
-                      {studentSortCol === 'year' && (
+                      {!isSectioningMode && studentSortCol === 'year' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
                   </th>
                   <th 
-                    onClick={() => handleSortStudent('program')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                      studentSortCol === 'program' 
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    onClick={() => !isSectioningMode && handleSortStudent('program')}
+                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'program'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
                     }`}
-                    title="Click to sort by Program / Component"
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Program / Component'}
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Program</span>
-                      {studentSortCol === 'program' && (
+                      {!isSectioningMode && studentSortCol === 'program' && (
                         <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
                       )}
                     </div>
