@@ -1091,6 +1091,7 @@ export async function sendStudentDigitalId(studentOrId) {
   const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
 
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
+  const directIdViewerUrl = `https://chardddyyy.github.io/nstp-system/#/digital-id?id=${encodeURIComponent(studentId)}&name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}&contact=${encodeURIComponent(emergencyContact)}&phone=${encodeURIComponent(emergencyNumber)}&qr=${encodeURIComponent(qrToken)}`;
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -1111,10 +1112,10 @@ export async function sendStudentDigitalId(studentOrId) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Top Action Button -->
+    <!-- Top Action Button: Links Directly to Dedicated Printable ID Card / PDF Viewer -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <a href="https://chardddyyy.github.io/nstp-system/#/student-management" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 10px 24px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+        <a href="${directIdViewerUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 11px 26px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
           Download &amp; Print Official ID Card
         </a>
       </td>
@@ -1157,7 +1158,6 @@ export async function sendStudentDigitalId(studentOrId) {
                 <table role="presentation" width="100%" height="88" cellspacing="0" cellpadding="0">
                   <tr>
                     <td align="center" valign="middle" style="color: #064e3b; font-size: 8.5px; font-weight: 900; font-family: monospace;">
-                      <div style="font-size: 22px; margin-bottom: 2px;">👤</div>
                       2x2 PHOTO
                     </td>
                   </tr>
@@ -1206,12 +1206,12 @@ export async function sendStudentDigitalId(studentOrId) {
               <span style="font-weight: 800; color: #0f172a;">Emergency Contact:</span> ${emergencyContact} (${emergencyNumber})
             </div>
 
-            <!-- Coordinator Signature Area with Fake E-Signature -->
+            <!-- Coordinator Signature Area with PNG Signature -->
             <div style="margin-top: 6px; padding-top: 2px;">
-              <div style="height: 32px; margin-bottom: -10px; text-align: center;">
-                <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 70' width='140' height='40'%3E%3Cpath d='M15 48 C 25 15, 32 10, 42 22 C 50 32, 45 52, 60 40 C 72 30, 85 18, 98 32 C 105 39, 112 28, 122 36 C 132 44, 140 22, 155 35 C 168 45, 180 30, 195 38 C 205 42, 218 36, 230 42 M 30 54 Q 110 46 220 50' fill='none' stroke='%231e3a8a' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt="Coordinator E-Signature" width="115" height="32" style="display: inline-block; pointer-events: none;" />
+              <div style="height: 34px; margin-bottom: -8px; text-align: center;">
+                <img src="https://chardddyyy.github.io/nstp-system/signature.png" alt="Coordinator E-Signature" width="120" height="34" style="display: inline-block; max-height: 34px; width: auto;" />
               </div>
-              <div style="width: 140px; border-top: 1px solid #475569; margin: 4px auto 2px auto;"></div>
+              <div style="width: 140px; border-top: 1px solid #475569; margin: 2px auto 2px auto;"></div>
               <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">FN MI. LN</div>
               <div style="font-size: 6.5px; font-weight: 800; color: #047857; text-transform: uppercase;">NSTP CAMPUS COORDINATOR</div>
               <div style="font-size: 6px; color: #64748b;">Cavite State University - Naic</div>
@@ -1237,12 +1237,12 @@ export async function sendStudentDigitalId(studentOrId) {
       </td>
     </tr>
 
-    <!-- Official ID & Attendance Guidelines in English -->
+    <!-- Official ID & Attendance Guidelines in English (Clean ASCII/HTML without emojis) -->
     <tr class="no-print">
       <td style="padding-top: 20px; text-align: center;">
         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 18px; font-size: 12px; color: #334155; line-height: 1.6; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
           <div style="font-size: 12px; font-weight: 900; color: #064e3b; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
-            📌 Official ID &amp; Attendance Guidelines:
+            Official ID &amp; Attendance Guidelines:
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 11.5px; line-height: 1.55; color: #475569;">
             <tr>

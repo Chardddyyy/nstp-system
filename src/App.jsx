@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
 import LetterFormats from './pages/LetterFormats';
+import DigitalIdViewer from './pages/DigitalIdViewer';
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname;
@@ -1082,6 +1083,8 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/enrollment" element={<Enrollment />} />
+            <Route path="/digital-id" element={<DigitalIdViewer />} />
+            <Route path="/id-card" element={<DigitalIdViewer />} />
             <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
             <Route path="/instructor/dashboard" element={<ProtectedRoute allowedRoles={['instructor']}><InstructorDashboard /></ProtectedRoute>} />
             <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><StudentManagement /></ProtectedRoute>} />
