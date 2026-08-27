@@ -41,6 +41,8 @@ function Calendar() {
           setCurrentDate(new Date(2025, 3, 15)); // Apr 2025
         }
       }
+    } else if (!viewingArchive) {
+      setCurrentDate(new Date());
     }
   }, [viewingArchive, archiveViewData]);
   

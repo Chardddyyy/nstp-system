@@ -585,35 +585,35 @@ const DEFAULT_ARCHIVE_LETTERS = [
     title: 'Barangay Immersion & Community Service Request Letter',
     department: 'CWTS',
     description: 'Official formal institutional endorsement requesting barangay clearance and partner community facilitation for NSTP-CWTS immersion projects.',
-    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.pdf', size: '142.5 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' }
+    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.doc', size: '142.5 KB', type: 'application/msword' }
   },
   {
     id: 'letter-2',
     title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement',
     department: 'LTS',
     description: 'Formal request to elementary school principals for student-led reading tutorials and literacy clinic sessions.',
-    file: { name: 'CvSU_LTS_School_Outreach_Permission.pdf', size: '128.0 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' }
+    file: { name: 'CvSU_LTS_School_Outreach_Permission.doc', size: '128.0 KB', type: 'application/msword' }
   },
   {
     id: 'letter-3',
     title: 'ROTC Field Training Exercise & Range Facility Request',
     department: 'ROTC',
     description: 'Endorsement to Armed Forces / Naval training Command for weekend field tactics and firearm handling exercises.',
-    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.pdf', size: '165.2 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' }
+    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.doc', size: '165.2 KB', type: 'application/msword' }
   },
   {
     id: 'letter-4',
     title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form',
     department: 'All',
     description: 'Standard institutional waiver and health declaration required for all off-campus community and training engagements.',
-    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.pdf', size: '98.4 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' }
+    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.doc', size: '98.4 KB', type: 'application/msword' }
   },
   {
     id: 'letter-5',
     title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement',
     department: 'All',
     description: 'Official CHED submission document certifying graduates and requesting assigned national serial numbers.',
-    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.pdf', size: '184.8 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' }
+    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.doc', size: '184.8 KB', type: 'application/msword' }
   }
 ];
 

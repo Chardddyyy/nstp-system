@@ -1,8 +1,5 @@
-import { useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import Sidebar from '../components/layout/Sidebar';
 import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
+import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
 
 const DEFAULT_TEMPLATES = [
   {
@@ -10,7 +7,7 @@ const DEFAULT_TEMPLATES = [
     title: 'Barangay Immersion & Community Service Request Letter',
     department: 'CWTS',
     description: 'Official formal institutional endorsement requesting barangay clearance and partner community facilitation for NSTP-CWTS immersion projects.',
-    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.pdf', size: '142.5 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.doc', size: '142.5 KB', type: 'application/msword' },
     createdBy: 'CWTS Department Coordinator',
     createdAt: '2024-09-01T08:00:00Z'
   },
@@ -19,7 +16,7 @@ const DEFAULT_TEMPLATES = [
     title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement',
     department: 'LTS',
     description: 'Formal request to elementary school principals for student-led reading tutorials and literacy clinic sessions.',
-    file: { name: 'CvSU_LTS_School_Outreach_Permission.pdf', size: '128.0 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    file: { name: 'CvSU_LTS_School_Outreach_Permission.doc', size: '128.0 KB', type: 'application/msword' },
     createdBy: 'LTS Department Coordinator',
     createdAt: '2024-09-01T08:00:00Z'
   },
@@ -28,7 +25,7 @@ const DEFAULT_TEMPLATES = [
     title: 'ROTC Field Training Exercise & Range Facility Request',
     department: 'ROTC',
     description: 'Endorsement to Armed Forces / Naval training Command for weekend field tactics and firearm handling exercises.',
-    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.pdf', size: '165.2 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.doc', size: '165.2 KB', type: 'application/msword' },
     createdBy: 'ROTC Commandant',
     createdAt: '2024-09-01T08:00:00Z'
   },
@@ -37,7 +34,7 @@ const DEFAULT_TEMPLATES = [
     title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form',
     department: 'All',
     description: 'Standard institutional waiver and health declaration required for all off-campus community and training engagements.',
-    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.pdf', size: '98.4 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.doc', size: '98.4 KB', type: 'application/msword' },
     createdBy: 'NSTP Office',
     createdAt: '2024-09-01T08:00:00Z'
   },
@@ -46,7 +43,7 @@ const DEFAULT_TEMPLATES = [
     title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement',
     department: 'All',
     description: 'Official CHED submission document certifying graduates and requesting assigned national serial numbers.',
-    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.pdf', size: '184.8 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.doc', size: '184.8 KB', type: 'application/msword' },
     createdBy: 'NSTP Director',
     createdAt: '2024-09-01T08:00:00Z'
   }
@@ -160,15 +157,17 @@ export default function LetterFormats() {
   };
 
   const handleDownloadAttachment = (t) => {
-    if (!t.file?.data) {
-      return;
+    if (t.file?.data && t.file.data.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = t.file.data;
+      a.download = t.file.name || `${t.title.replace(/\s+/g, '_')}_Attachment`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const batchYear = viewingArchive && archiveViewData?.year ? archiveViewData.year : '2024-2025';
+      downloadOfficialLetter(t, batchYear);
     }
-    const a = document.createElement('a');
-    a.href = t.file.data;
-    a.download = t.file.name || `${t.title.replace(/\s+/g, '_')}_Attachment`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   };
 
   const handleLogout = async () => {
@@ -372,7 +371,7 @@ export default function LetterFormats() {
                       <div className="flex items-center gap-2 shrink-0 mt-2 sm:mt-0">
                         <button
                           type="button"
-                          onClick={() => setViewingFile(item.file)}
+                          onClick={() => setViewingFile({ ...item.file, rawTemplate: item, batchYear: viewingArchive && archiveViewData?.year ? archiveViewData.year : '2024-2025' })}
                           className="px-3 py-1.5 text-xs font-bold bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                           title="View File"
                         >
@@ -567,21 +566,45 @@ export default function LetterFormats() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-gray-100">
-                {viewingFile.type?.startsWith('image/') ? (
+              <div className="p-4 sm:p-6 flex-1 overflow-auto flex flex-col items-center justify-center bg-gray-100">
+                {viewingFile.type?.startsWith('image/') && viewingFile.data ? (
                   <img src={viewingFile.data} alt={viewingFile.name} className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
+                ) : viewingFile.rawTemplate ? (
+                  <div className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-left overflow-y-auto max-h-[60vh]">
+                    <div dangerouslySetInnerHTML={{ __html: generateOfficialLetterHTML(viewingFile.rawTemplate, viewingFile.batchYear || '2024-2025') }} />
+                    <div className="mt-6 pt-4 border-t flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => downloadOfficialLetter(viewingFile.rawTemplate, viewingFile.batchYear || '2024-2025')}
+                        className="inline-flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" /> Download Official Document (.doc)
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-center p-8 bg-white rounded-2xl border border-gray-200 max-w-md">
+                  <div className="text-center p-8 bg-white rounded-2xl border border-gray-200 max-w-md w-full shadow-md">
                     <File className="w-16 h-16 text-emerald-700 mx-auto mb-3" />
                     <p className="font-bold text-sm text-gray-900 mb-1">{viewingFile.name}</p>
                     <p className="text-xs text-gray-500 mb-4">{viewingFile.size}</p>
-                    <a
-                      href={viewingFile.data}
-                      download={viewingFile.name}
-                      className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-md transition-all"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (viewingFile.data && viewingFile.data.startsWith('data:')) {
+                          const a = document.createElement('a');
+                          a.href = viewingFile.data;
+                          a.download = viewingFile.name;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        } else if (viewingFile.rawTemplate) {
+                          downloadOfficialLetter(viewingFile.rawTemplate, viewingFile.batchYear || '2024-2025');
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all cursor-pointer"
                     >
                       <Download className="w-4 h-4" /> Download File
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

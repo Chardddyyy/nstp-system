@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
+import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -655,21 +656,82 @@ function AdminDashboard() {
       <main className={`min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 transition-all duration-300 ease-in-out p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
-          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Archive className="w-6 h-6 text-amber-600" />
-                <div>
-                  <h2 className="text-lg font-black text-amber-900">Previous Report - Batch {archiveViewData.year}</h2>
-                  <p className="text-xs text-amber-700 font-medium">Viewing archived batch data. Editing is read-only.</p>
+          <div className="bg-amber-500/10 border border-amber-400/40 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md shadow-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 border border-amber-400/50">
+                  <Archive className="w-5 h-5 text-amber-800" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-black text-amber-950 truncate">Viewing Archive: Batch {archiveViewData.year}</h2>
+                  <p className="text-xs text-amber-800/80 font-medium">Historical records preserved for this academic batch. Click below to inspect modules:</p>
                 </div>
               </div>
-              <button type="button"
-                onClick={handleBackToCurrent}
-                className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 active:scale-95"
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveDetails(true)}
+                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Batch Summary</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackToCurrent}
+                  className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Back to Current</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Portal Navigation Links */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5 pt-3.5 border-t border-amber-300/40">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/students')}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span>Back to Current</span>
+                <span className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
+                  <span>Students ({archiveViewData.students || archiveViewData.studentData?.length || 0})</span>
+                </span>
+                <span className="text-amber-700 font-black">&rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/reports')}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
+                  <span>Reports ({archiveViewData.reports || archiveViewData.reportData?.length || 0})</span>
+                </span>
+                <span className="text-amber-700 font-black">&rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/calendar')}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
+                  <span>Calendar Schedule</span>
+                </span>
+                <span className="text-amber-700 font-black">&rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/letter-formats')}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
+              >
+                <span className="flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
+                  <span>Letter Formats ({archiveViewData.letterData?.length || 5})</span>
+                </span>
+                <span className="text-amber-700 font-black">&rarr;</span>
               </button>
             </div>
           </div>
@@ -2391,29 +2453,127 @@ function AdminDashboard() {
                   )}
                 </div>
 
+                {/* Calendar & Activities Schedule Section */}
+                <div>
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Academic &amp; Training Calendar Schedule
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowArchiveDetails(false);
+                        navigate('/calendar');
+                      }}
+                      className="text-xs text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Open Calendar Page &rarr;</span>
+                    </button>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {(() => {
+                      const yr = String(archiveViewData?.year || '');
+                      const events = yr.includes('2023-2024')
+                        ? (yr.includes('1st Semester')
+                            ? [
+                                { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
+                                { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
+                                { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
+                                { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
+                                { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
+                                { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
+                              ]
+                            : [
+                                { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
+                                { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
+                                { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
+                                { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
+                                { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
+                                { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
+                              ])
+                        : (yr.includes('1st Semester')
+                            ? [
+                                { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
+                                { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
+                                { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
+                                { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
+                                { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
+                                { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
+                              ]
+                            : [
+                                { date: '2025-02-08', title: 'NSTP 2 Project Launch & Field Immersion', desc: 'Mobilization of students for second semester projects in Naic.', dept: 'All' },
+                                { date: '2025-03-08', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', desc: 'Workshop on community organic composting and eco-crafts.', dept: 'CWTS' },
+                                { date: '2025-03-22', title: 'LTS Mini-Library Handover & Literacy Graduation', desc: 'Turnover of 300 children storybooks and graduation.', dept: 'LTS' },
+                                { date: '2025-04-05', title: 'ROTC Annual Tactical Inspection & Drill Review', desc: 'Annual tactical evaluation by Naval Reserve Command.', dept: 'ROTC' },
+                                { date: '2025-04-12', title: 'NSTP Final Culminating Defense & Document Audit', desc: 'Final requirements audit for CHED serial numbers.', dept: 'All' },
+                                { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Pass-in-Review', desc: 'Formal graduation pass-in-review and certificate awarding ceremony.', dept: 'All' },
+                              ]);
+                      return events.map((ev, i) => (
+                        <div key={i} className="bg-gray-50 rounded-xl p-3 border border-gray-200 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="text-xs font-black text-emerald-950">{ev.title}</span>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                ev.dept === 'CWTS' ? 'bg-green-100 text-green-800' :
+                                ev.dept === 'LTS' ? 'bg-purple-100 text-purple-800' :
+                                ev.dept === 'ROTC' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>{ev.dept}</span>
+                            </div>
+                            <p className="text-[11px] text-gray-600 mb-1.5">{ev.desc}</p>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md inline-block w-fit">
+                            📅 {ev.date}
+                          </span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
                 {/* Letter Formats Section */}
                 <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center">
-                    <FileCheck className="w-5 h-5 mr-2" />
-                    Official Letter Formats &amp; Attachments
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <FileCheck className="w-5 h-5 mr-2" />
+                      Official Letter Formats &amp; Attachments
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowArchiveDetails(false);
+                        navigate('/letter-formats');
+                      }}
+                      className="text-xs text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Open Letter Formats Page &rarr;</span>
+                    </button>
                   </h4>
                   {archiveViewData.letterData && archiveViewData.letterData.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {archiveViewData.letterData.map((letter, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200">
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                              {letter.department || 'All'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 line-clamp-2 mb-2">{letter.description}</p>
-                          {letter.file && (
-                            <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100">
-                              <span className="truncate max-w-[160px] font-medium text-gray-700">{letter.file.name}</span>
-                              <span className="text-gray-400">{letter.file.size}</span>
+                        <div key={idx} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                                {letter.department || 'All'}
+                              </span>
                             </div>
-                          )}
+                            <p className="text-xs text-gray-600 line-clamp-2 mb-2">{letter.description}</p>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100 mt-1">
+                            <span className="truncate max-w-[140px] font-medium text-gray-700">{letter.file?.name || `${letter.title}.doc`}</span>
+                            <button
+                              type="button"
+                              onClick={() => downloadOfficialLetter(letter, archiveViewData.year)}
+                              className="px-2.5 py-1 text-[11px] font-black bg-emerald-800 hover:bg-emerald-700 text-amber-300 rounded-lg transition-all shadow-2xs cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
+                            >
+                              <Download className="w-3 h-3 text-amber-300" />
+                              <span>Download</span>
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2434,25 +2594,70 @@ function AdminDashboard() {
               </div>
 
               {/* Action Buttons */}
-              <div className="sticky bottom-0 bg-white p-4 border-t flex space-x-3">
-                <button type="button"
-                  
-                  onClick={() => setShowArchiveDetails(false)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg font-medium transition-colors"
-                >
-                  Close
-                </button>
-                <button type="button"
-                  
-                  onClick={() => {
-                    setShowArchiveDetails(false);
-                    handleBackToCurrent();
-                  }}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
-                >
-                  <RotateCcw className="w-5 h-5 mr-2" />
-                  Back to Current
-                </button>
+              <div className="sticky bottom-0 bg-white p-4 border-t flex flex-wrap gap-2 justify-between items-center">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchiveDetails(false);
+                      navigate('/admin/students');
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    👥 Students
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchiveDetails(false);
+                      navigate('/reports');
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    📑 Reports
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchiveDetails(false);
+                      navigate('/calendar');
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    📅 Calendar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchiveDetails(false);
+                      navigate('/letter-formats');
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    ✉️ Letter Formats
+                  </button>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowArchiveDetails(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowArchiveDetails(false);
+                      handleBackToCurrent();
+                    }}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-emerald-950 text-xs font-black rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Back to Current</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
