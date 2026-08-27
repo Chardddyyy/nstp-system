@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
+import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -676,6 +677,15 @@ function AdminDashboard() {
               <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
                   type="button"
+                  onClick={() => downloadChedFormat(archiveViewData)}
+                  className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  title="Download CHED Form B Enrollment List Excel"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-950" />
+                  <span>Download CHED Format (.xlsx)</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setShowArchiveDetails(true)}
                   className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
@@ -685,9 +695,9 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={handleBackToCurrent}
-                  className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
                   <span>Back to Current</span>
                 </button>
               </div>
@@ -1801,6 +1811,16 @@ function AdminDashboard() {
                         <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                           <button
                             type="button"
+                            onClick={() => downloadChedFormat(year)}
+                            className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold px-3 py-2 rounded-xl text-xs shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                            title="Download CHED Form B Enrollment List Excel"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>CHED Format</span>
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => handleViewBatch(year)}
                             className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
                           >
@@ -2293,18 +2313,37 @@ function AdminDashboard() {
         {showArchiveDetails && archiveViewData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveDetails(false)}>
             <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl">
-                <h3 className="text-lg font-bold flex items-center">
-                  <Archive className="w-5 h-5 mr-2" />
+              <div className="sticky top-0 bg-emerald-900 text-white p-4 flex flex-wrap items-center justify-between gap-3 rounded-t-xl z-20 shadow-md">
+                <h3 className="text-base sm:text-lg font-bold flex items-center">
+                  <Archive className="w-5 h-5 mr-2 text-amber-300" />
                   Batch {archiveViewData.year} Archive Details
                 </h3>
-                <button type="button"
-                  
-                  onClick={() => setShowArchiveDetails(false)}
-                  className="p-1 hover:bg-green-700 rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormat(archiveViewData)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    title="Download Official CHED Form B Masterlist Excel"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Download CHED Format (.xlsx)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormA(archiveViewData)}
+                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 border border-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    title="Download CHED Form 2-A Summary Matrix Excel"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Form 2-A (.xlsx)</span>
+                  </button>
+                  <button type="button"
+                    onClick={() => setShowArchiveDetails(false)}
+                    className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white ml-1"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
               
               <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
