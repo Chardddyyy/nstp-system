@@ -1902,7 +1902,7 @@ async function sendEnrollmentApprovalEmail(studentData) {
   return { sent: false, error: 'Email service credentials not configured' };
 }
 
-// Helper to send Digital ID card to student
+// Helper to send Official Printable Digital ID card to student
 async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const deliveryEmail = (overrideEmail || studentData.email || '').trim();
   const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
@@ -1914,19 +1914,26 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     return { sent: false, error: 'Invalid email address' };
   }
 
-  const studentName = studentData.fullName || studentData.name || `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student';
-  const studentId = studentData.studentId || '202610001';
+  const studentName = (studentData.fullName || studentData.name || `${studentData.firstName || ''} ${studentData.lastName || ''}`).trim().toUpperCase() || 'STUDENT NAME';
+  const studentId = String(studentData.studentId || studentData.student_id || studentData.studentNumber || studentData.id || '202610001').trim();
   const nstpDept = (studentData.department || 'CWTS').toUpperCase();
   const section = studentData.nstp_section || studentData.section || `${nstpDept} 1`;
   const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
   const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
-  const program = studentData.program || 'Undergraduate Degree (BSIT)';
   const schoolYear = studentData.schoolYear || studentData.year || '2026-2027';
-  const semester = studentData.semester || '1st Semester';
-  const emergencyContact = studentData.emergencyContact || studentData.emergencyName || 'Parent / Guardian';
+  const emergencyContact = studentData.emergencyContact || studentData.emergencyName || 'Emergency Contact';
+  const emergencyNumber = studentData.emergencyNumber || studentData.contactNumber || '09000000000';
+  const bloodType = studentData.bloodType || 'O+';
+  const photoSrc = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.profilePicture || null;
 
-  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=220&dark=064e3b&ecLevel=H`;
-  const portalLink = 'https://chardddyyy.github.io/nstp-system/#/login';
+  const trackLabels = {
+    CWTS: 'CIVIC WELFARE TRAINING SERVICE',
+    ROTC: "RESERVE OFFICERS' TRAINING CORPS",
+    LTS: 'LITERACY TRAINING SERVICE'
+  };
+  const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
+
+  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -1935,131 +1942,155 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CvSU NSTP Official Digital ID Card</title>
+  <style>
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; }
+      .no-print { display: none !important; }
+      .id-card-wrapper { box-shadow: none !important; margin: 0 auto !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 20px; background-color: #f0fdf4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #dcfce7;">
+<body style="margin: 0; padding: 24px 12px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a;">
+  
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Institutional Header -->
-    <tr>
-      <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 26px 20px; text-align: center; color: #ffffff;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-          <tr>
-            <td align="center">
-              <div style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #fde047; font-weight: 800; margin-bottom: 3px;">Republic of the Philippines</div>
-              <div style="font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff; margin-bottom: 2px;">CAVITE STATE UNIVERSITY</div>
-              <div style="font-size: 12px; font-weight: 700; color: #d1fae5; margin-bottom: 8px;">CCAT - Naic Campus</div>
-              <div style="display: inline-block; background: rgba(253, 224, 71, 0.2); border: 1px solid rgba(253, 224, 71, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 10.5px; font-weight: 800; color: #fef08a; text-transform: uppercase; letter-spacing: 1px;">
-                National Service Training Program (NSTP)
-              </div>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- Salutation & Notice -->
-    <tr>
-      <td style="padding: 22px 24px 12px 24px;">
-        <h2 style="font-size: 17px; font-weight: 800; color: #064e3b; margin: 0 0 6px 0;">Official Digital NSTP ID Card (A.Y. ${schoolYear})</h2>
-        <p style="font-size: 13px; line-height: 1.5; color: #475569; margin: 0 0 14px 0;">
-          Dear <strong>${studentName}</strong>,<br>
-          Your official National Service Training Program (NSTP) Digital Identification Card for <strong>Academic Year ${schoolYear} (${semester})</strong> is verified and active. You may present this digital card or scan the embedded QR code during attendance checks, field community immersions, and official campus activities.
-        </p>
-      </td>
-    </tr>
-
-    <!-- DIGITAL ID CARD EMBED -->
-    <tr>
-      <td style="padding: 0 20px 20px 20px;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 16px; border: 2px solid #047857; overflow: hidden; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.12);">
-          
-          <!-- Card Header Bar -->
-          <tr>
-            <td style="background: #064e3b; padding: 10px 14px; text-align: center;">
-              <div style="font-size: 11.5px; font-weight: 900; color: #fef08a; letter-spacing: 1px; text-transform: uppercase;">OFFICIAL NSTP STUDENT ID</div>
-              <div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0;">CvSU-Naic Campus • ${schoolYear}</div>
-            </td>
-          </tr>
-
-          <!-- Card Content Body -->
-          <tr>
-            <td style="padding: 16px 14px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <!-- Left: QR Code -->
-                  <td width="120" valign="top" align="center" style="padding-right: 14px; border-right: 1px dashed #cbd5e1;">
-                    <div style="background: #f8fafc; padding: 6px; border: 1px solid #e2e8f0; border-radius: 10px; display: inline-block;">
-                      <img src="${qrUrl}" alt="NSTP QR Code" width="108" height="108" style="display: block; border-radius: 6px;" />
-                    </div>
-                    <div style="font-size: 8.5px; font-weight: 800; color: #047857; margin-top: 5px; font-family: monospace;">SCAN ATTENDANCE</div>
-                  </td>
-
-                  <!-- Right: Student Details -->
-                  <td valign="top" style="padding-left: 14px;">
-                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">${studentName}</div>
-                    <div style="font-size: 10.5px; font-weight: 700; color: #047857; margin-bottom: 8px; text-transform: uppercase;">${nstpDept} (${section})</div>
-                    
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 10.5px; line-height: 1.45;">
-                      <tr>
-                        <td style="color: #64748b; font-weight: 700; width: 70px;">Student No:</td>
-                        <td style="color: #0f172a; font-weight: 800; font-family: monospace;">${studentId}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 700;">Serial No:</td>
-                        <td style="color: #047857; font-weight: 800; font-family: monospace;">${serialNo}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 700;">Section:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${section}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 700;">Program:</td>
-                        <td style="color: #0f172a; font-weight: 700;">${program}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #64748b; font-weight: 700;">Validity:</td>
-                        <td style="color: #b45309; font-weight: 800;">A.Y. ${schoolYear}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Action Button Inside Email -->
-          <tr>
-            <td style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 14px; text-align: center;">
-              <a href="${portalLink}" target="_blank" style="display: inline-block; background: #047857; color: #ffffff; text-decoration: none; font-size: 11.5px; font-weight: 800; padding: 8px 20px; border-radius: 20px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(4,120,87,0.25);">
-                Open Portal
-              </a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-
-    <!-- Instructions / Tips -->
-    <tr>
-      <td style="padding: 0 24px 20px 24px;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px;">
-          <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 3px;">📌 Attendance Reminders:</div>
-          <ul style="font-size: 10.5px; color: #475569; margin: 0; padding-left: 16px; line-height: 1.5;">
-            <li>Present this QR Code to your NSTP Instructor / QR Scanner during Sunday sessions.</li>
-            <li>Emergency Contact: <strong>${emergencyContact}</strong>.</li>
-          </ul>
+    <!-- Printable Notice Banner -->
+    <tr class="no-print">
+      <td style="padding-bottom: 16px; text-align: center;">
+        <div style="display: inline-block; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 12px; padding: 8px 18px; font-size: 11.5px; font-weight: 800; color: #065f46; box-shadow: 0 2px 8px rgba(16,185,129,0.15);">
+          🖨️ Official Printable NSTP ID Card (A.Y. ${schoolYear})
         </div>
       </td>
     </tr>
 
-    <!-- Footer -->
+    <!-- THE OFFICIAL PORTRAIT ID CARD -->
     <tr>
-      <td style="background: #f1f5f9; padding: 16px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 10.5px; color: #64748b;">
-        This is an official transmission from the <strong>Cavite State University - Naic NSTP Online Portal</strong>.<br>
-        For inquiries, email <code>cwts@cvsu.edu.ph</code> or <code>admin@cvsu.edu.ph</code>.
+      <td align="center">
+        <div class="id-card-wrapper" style="width: 320px; background: #ffffff; border-radius: 18px; border: 2.5px solid #064e3b; overflow: hidden; box-shadow: 0 12px 30px rgba(6, 78, 59, 0.18); text-align: center; box-sizing: border-box;">
+          
+          <!-- Top Header Bar with Lanyard Slot & CvSU Seal -->
+          <div style="background: #064e3b; padding: 8px 12px; border-bottom: 2px solid #fbbf24; position: relative;">
+            <!-- Lanyard Slot Cutout -->
+            <div style="width: 44px; height: 5px; background: #022c22; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); margin: 0 auto 6px auto;"></div>
+            
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="32" valign="middle">
+                  <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="30" height="30" style="display: block; border-radius: 50%; background: #ffffff; padding: 1.5px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);" />
+                </td>
+                <td valign="middle" align="left" style="padding-left: 8px;">
+                  <div style="font-size: 8.5px; font-weight: 900; color: #ffffff; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.1;">CAVITE STATE UNIVERSITY</div>
+                  <div style="font-size: 7.5px; font-weight: 800; color: #fde047; letter-spacing: 0.8px; line-height: 1.1; margin-top: 1.5px;">NAIC CAMPUS • NSTP</div>
+                </td>
+                <td width="48" valign="middle" align="right">
+                  <span style="display: inline-block; background: rgba(0,0,0,0.4); color: #fde047; border: 1px solid #fde047; font-size: 8px; font-weight: 900; padding: 2.5px 7px; border-radius: 5px; text-transform: uppercase;">
+                    ${nstpDept}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Card Body Content -->
+          <div style="padding: 14px 14px 8px 14px; background: #ffffff;">
+            
+            <!-- 2x2 Photo Box with Emerald & Gold Ring -->
+            <div style="width: 84px; height: 88px; margin: 0 auto 8px auto; background: #f8fafc; border-radius: 10px; border: 2px solid #064e3b; box-shadow: 0 0 0 1.5px #fbbf24; overflow: hidden;">
+              ${photoSrc ? `<img src="${photoSrc}" alt="2x2 Photo" width="84" height="88" style="width: 84px; height: 88px; object-fit: cover; display: block;" />` : `
+                <table role="presentation" width="100%" height="88" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="center" valign="middle" style="color: #064e3b; font-size: 8.5px; font-weight: 900; font-family: monospace;">
+                      <div style="font-size: 22px; margin-bottom: 2px;">👤</div>
+                      2x2 PHOTO
+                    </td>
+                  </tr>
+                </table>
+              `}
+            </div>
+
+            <!-- Student Name -->
+            <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1.2; margin-bottom: 1px;">
+              ${studentName}
+            </div>
+            <div style="font-size: 7.5px; font-weight: 900; color: #047857; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+              STUDENT
+            </div>
+
+            <!-- Key Info Box (Student No. & Section) -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f1f5f9; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 6px; padding: 6px 8px;">
+              <tr>
+                <td width="50%" align="left" style="padding: 2px 4px;">
+                  <span style="display: block; font-size: 6.5px; font-weight: 800; color: #64748b; text-transform: uppercase;">STUDENT NO.</span>
+                  <span style="display: block; font-size: 10.5px; font-weight: 900; color: #0f172a; font-family: monospace;">${studentId}</span>
+                </td>
+                <td width="50%" align="left" style="padding: 2px 4px; border-left: 1px dashed #cbd5e1;">
+                  <span style="display: block; font-size: 6.5px; font-weight: 800; color: #64748b; text-transform: uppercase;">SECTION</span>
+                  <span style="display: block; font-size: 10.5px; font-weight: 900; color: #047857; font-family: monospace;">${section}</span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Matriculation Number Bar -->
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 6px; margin-bottom: 8px;">
+              <span style="display: block; font-size: 6.5px; font-weight: 900; color: #065f46; text-transform: uppercase; letter-spacing: 0.8px;">MATRICULATION NO.</span>
+              <span style="display: block; font-size: 9.5px; font-weight: 900; color: #064e3b; font-family: monospace; letter-spacing: 0.5px;">${serialNo}</span>
+            </div>
+
+            <!-- Official Attendance QR Code -->
+            <div style="margin: 0 auto 4px auto; width: 106px; padding: 4px; background: #ffffff; border: 1.5px solid #064e3b; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+              <img src="${qrUrl}" alt="Attendance QR Code" width="98" height="98" style="display: block; margin: 0 auto;" />
+            </div>
+            <div style="font-size: 7px; font-weight: 800; color: #64748b; font-family: monospace; margin-bottom: 8px;">
+              ${serialNo}
+            </div>
+
+            <!-- Emergency Contact Strip -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; font-size: 7.5px; color: #334155; text-align: left; margin-bottom: 8px;">
+              <span style="font-weight: 800; color: #0f172a;">Emergency:</span> ${emergencyContact} (${emergencyNumber}) &bull; <span style="font-weight: 800; color: #b91c1c;">Type: ${bloodType}</span>
+            </div>
+
+            <!-- Coordinator Signature Area -->
+            <div style="margin-top: 6px; padding-top: 4px;">
+              <div style="width: 140px; border-top: 1px solid #64748b; margin: 8px auto 2px auto;"></div>
+              <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">FN MI. LN</div>
+              <div style="font-size: 6.5px; font-weight: 800; color: #64748b; text-transform: uppercase;">NSTP COORDINATOR</div>
+              <div style="font-size: 6px; color: #94a3b8;">Cavite State University - Naic</div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Footer Ribbon -->
+          <div style="background: #022c22; color: #fde047; padding: 5px 10px; font-size: 7.5px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1.5px solid #fbbf24;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="left" style="color: #fde047; font-size: 7px; font-weight: 800;">
+                  ${deptFull}
+                </td>
+                <td align="right" style="color: #fef08a; font-size: 7px; font-weight: 900; font-family: monospace;">
+                  AY ${schoolYear}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+        </div>
       </td>
     </tr>
+
+    <!-- Print & Lamination Instructions -->
+    <tr class="no-print">
+      <td style="padding-top: 16px; text-align: center;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; font-size: 11px; color: #475569; line-height: 1.5; text-align: left;">
+          <strong style="color: #065f46;">📌 Paalala sa Pag-print at Pagdala ng ID:</strong><br>
+          1. <strong>Print:</strong> I-print ang opisyal na ID Card na ito sa full color (Standard ID o PVC/Photo Paper size).<br>
+          2. <strong>Laminate:</strong> Ipa-laminate at lagyan ng ID clip/lanyard para maprotektahan sa buong semestre.<br>
+          3. <strong>Sunday Attendance:</strong> Ipakita at ipa-scan ang QR Code na ito sa iyong NSTP Instructor tuwing Sunday training sessions.
+        </div>
+      </td>
+    </tr>
+
   </table>
+
 </body>
 </html>
   `;
@@ -5231,14 +5262,15 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               [matriculationNumber, token, id]
             ).catch(() => {});
 
-            // Asynchronously dispatch Congratulatory Email with Digital ID & QR Code
-            sendEnrollmentApprovalEmail({
+            // Asynchronously dispatch Official Printable Digital ID & QR Code to student's email
+            sendDigitalIdEmail({
               ...enrollment,
+              studentId: studentIdVal,
               section: finalSection,
               nstp_serial_id: matriculationNumber,
               qr_token: token
             }).catch(emailErr => {
-              console.warn('[ENROLLMENT EMAIL] Non-fatal delivery notice:', emailErr.message);
+              console.warn('[DIGITAL ID EMAIL] Non-fatal delivery notice:', emailErr.message);
             });
           }
         } catch (insertError) {
