@@ -11,7 +11,7 @@ import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye,
-  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer
+  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer, CreditCard
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -1161,6 +1161,29 @@ function StudentManagement() {
     }
   };
 
+  const [sendingIdFor, setSendingIdFor] = useState(null);
+
+  const handleSendDigitalId = async (student) => {
+    if (!student) return;
+    const sKey = student.id || student.studentId;
+    const studentEmail = (student.email || '').trim();
+    if (!studentEmail || !studentEmail.includes('@')) {
+      alert(`Cannot send Digital ID: ${student.name || 'Student'} does not have a valid email address on file.`);
+      return;
+    }
+
+    try {
+      setSendingIdFor(sKey);
+      await studentsAPI.sendDigitalId(student);
+      alert(`✅ Official Digital ID successfully sent to ${studentEmail}!`);
+    } catch (err) {
+      console.error('Failed to send digital ID:', err);
+      alert(`Failed to send Digital ID: ${err.message || 'Network error'}`);
+    } finally {
+      setSendingIdFor(null);
+    }
+  };
+
   const handleDeleteStudent = (id) => {
     setConfirmDialog({
       confirmText: 'Delete',
@@ -1716,6 +1739,20 @@ function StudentManagement() {
                       <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
+                          onClick={() => handleSendDigitalId(student)}
+                          disabled={sendingIdFor === (student.id || student.studentId)}
+                          className={`p-1.5 px-2 rounded-lg border font-bold text-[10.5px] flex items-center gap-1 transition-all ${
+                            sendingIdFor === (student.id || student.studentId)
+                              ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-700 hover:text-white'
+                          }`}
+                          title={`Send / Resend Digital ID to ${student.email || student.name}`}
+                        >
+                          <CreditCard className="w-3 h-3" />
+                          <span>{sendingIdFor === (student.id || student.studentId) ? 'Sending...' : 'Send ID'}</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => !viewingArchive && openEditModal(student)}
                           disabled={viewingArchive}
                           className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
@@ -1921,6 +1958,20 @@ function StudentManagement() {
                       {isAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleSendDigitalId(student)}
+                              disabled={sendingIdFor === (student.id || student.studentId)}
+                              title={`Send / Resend Digital ID to ${student.email || student.name}`}
+                              className={`p-1.5 px-2.5 rounded-xl border transition-all active:scale-90 flex items-center gap-1 font-bold text-xs shadow-2xs hover:shadow-xs cursor-pointer ${
+                                sendingIdFor === (student.id || student.studentId)
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
+                                  : 'text-emerald-800 bg-emerald-50/90 border-emerald-300 hover:bg-emerald-700 hover:text-white hover:border-emerald-700'
+                              }`}
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>{sendingIdFor === (student.id || student.studentId) ? 'Sending...' : 'Send ID'}</span>
+                            </button>
                             <button type="button"
                               onClick={() => !viewingArchive && openEditModal(student)}
                               disabled={viewingArchive}
@@ -3271,7 +3322,21 @@ function StudentManagement() {
               </div>
 
               {/* Sticky Footer */}
-              <div className="sticky bottom-0 bg-white p-4 border-t flex justify-end gap-2.5">
+              <div className="sticky bottom-0 bg-white p-4 border-t flex flex-wrap justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleSendDigitalId(currentViewStudent)}
+                  disabled={sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)}
+                  className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 border ${
+                    sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)
+                      ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                  }`}
+                  title={`Send Official Digital ID to ${currentViewStudent.email || currentViewStudent.name}`}
+                >
+                  <CreditCard className="w-4 h-4 text-emerald-700" />
+                  <span>{sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId) ? 'Sending ID...' : 'Send Digital ID to Email'}</span>
+                </button>
                 <button type="button"
                   onClick={() => {
                     const st = currentViewStudent;

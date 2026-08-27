@@ -1043,12 +1043,155 @@ export const usersAPI = {
   delete: deleteUser
 };
 
+export async function sendStudentDigitalId(studentOrId) {
+  let studentObj = typeof studentOrId === 'object' ? studentOrId : null;
+  const studentId = typeof studentOrId === 'object' ? (studentOrId.id || studentOrId.studentId) : studentOrId;
+
+  // Try backend first
+  try {
+    const res = await apiCall(`/students/${studentId}/send-digital-id`, {
+      method: 'POST',
+      body: JSON.stringify({ student: studentObj, email: studentObj?.email })
+    });
+    if (res && res.success) {
+      return res;
+    }
+  } catch (backendErr) {
+    console.warn('[API] Backend send-digital-id fallback to direct dispatcher:', backendErr.message);
+  }
+
+  // Direct client dispatcher fallback via Google Apps Script Webhook
+  const deliveryEmail = (studentObj?.email || '').trim();
+  if (!deliveryEmail || !deliveryEmail.includes('@')) {
+    throw new Error('Student does not have a valid email address on file.');
+  }
+
+  const studentName = studentObj?.name || studentObj?.fullName || 'Student';
+  const nstpDept = (studentObj?.department || 'CWTS').toUpperCase();
+  const serialNo = studentObj?.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
+  const qrToken = studentObj?.qr_token || `NSTP-${studentId}-${serialNo}`;
+  const section = studentObj?.nstp_section || studentObj?.section || `${nstpDept} 1`;
+  const schoolYear = studentObj?.schoolYear || '2026-2027';
+  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=220&dark=064e3b&ecLevel=H`;
+  const portalLink = 'https://chardddyyy.github.io/nstp-system/#/login';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CvSU NSTP Official Digital ID Card</title>
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f0fdf4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #dcfce7;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 26px 20px; text-align: center; color: #ffffff;">
+        <div style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #fde047; font-weight: 800; margin-bottom: 3px;">Republic of the Philippines</div>
+        <div style="font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff; margin-bottom: 2px;">CAVITE STATE UNIVERSITY</div>
+        <div style="font-size: 12px; font-weight: 700; color: #d1fae5; margin-bottom: 8px;">CCAT - Naic Campus</div>
+        <div style="display: inline-block; background: rgba(253, 224, 71, 0.2); border: 1px solid rgba(253, 224, 71, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 10.5px; font-weight: 800; color: #fef08a; text-transform: uppercase; letter-spacing: 1px;">
+          National Service Training Program (NSTP)
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 22px 24px 12px 24px;">
+        <h2 style="font-size: 17px; font-weight: 800; color: #064e3b; margin: 0 0 6px 0;">Official Digital NSTP ID Card (A.Y. ${schoolYear})</h2>
+        <p style="font-size: 13px; line-height: 1.5; color: #475569; margin: 0 0 14px 0;">
+          Dear <strong>${studentName}</strong>,<br>
+          Your official National Service Training Program (NSTP) Digital Identification Card for <strong>Academic Year ${schoolYear} (1st Semester)</strong> is active and verified. You may present this digital card or scan the embedded QR code during attendance checks, field immersions, and campus activities.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 0 20px 20px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 16px; border: 2px solid #047857; overflow: hidden; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.12);">
+          <tr>
+            <td style="background: #064e3b; padding: 10px 14px; text-align: center;">
+              <div style="font-size: 11.5px; font-weight: 900; color: #fef08a; letter-spacing: 1px; text-transform: uppercase;">OFFICIAL NSTP STUDENT ID</div>
+              <div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0;">CvSU-Naic Campus • ${schoolYear}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td width="120" valign="top" align="center" style="padding-right: 14px; border-right: 1px dashed #cbd5e1;">
+                    <div style="background: #f8fafc; padding: 6px; border: 1px solid #e2e8f0; border-radius: 10px; display: inline-block;">
+                      <img src="${qrUrl}" alt="NSTP QR Code" width="108" height="108" style="display: block; border-radius: 6px;" />
+                    </div>
+                    <div style="font-size: 8.5px; font-weight: 800; color: #047857; margin-top: 5px; font-family: monospace;">SCAN ATTENDANCE</div>
+                  </td>
+                  <td valign="top" style="padding-left: 14px;">
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">${studentName}</div>
+                    <div style="font-size: 10.5px; font-weight: 700; color: #047857; margin-bottom: 8px; text-transform: uppercase;">${nstpDept} (${section})</div>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 10.5px; line-height: 1.45;">
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700; width: 70px;">Student No:</td>
+                        <td style="color: #0f172a; font-weight: 800; font-family: monospace;">${studentId}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Serial No:</td>
+                        <td style="color: #047857; font-weight: 800; font-family: monospace;">${serialNo}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Section:</td>
+                        <td style="color: #0f172a; font-weight: 700;">${section}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Validity:</td>
+                        <td style="color: #b45309; font-weight: 800;">A.Y. ${schoolYear}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 14px; text-align: center;">
+              <a href="${portalLink}" target="_blank" style="display: inline-block; background: #047857; color: #ffffff; text-decoration: none; font-size: 11.5px; font-weight: 800; padding: 8px 20px; border-radius: 20px; letter-spacing: 0.5px;">
+                Open Portal
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="background: #f1f5f9; padding: 16px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 10.5px; color: #64748b;">
+        This is an official transmission from the <strong>Cavite State University - Naic NSTP Online Portal</strong>.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
+  await fetch(defaultWebhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      to: deliveryEmail,
+      subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
+      text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
+      html: htmlContent
+    }),
+    redirect: 'follow'
+  });
+
+  return { success: true, message: `Digital ID sent successfully to ${deliveryEmail}` };
+}
+
 export const studentsAPI = {
   getAll: getStudents,
   add: addStudent,
   update: updateStudent,
   delete: deleteStudent,
-  batchAssignSection: batchAssignNstpSection
+  batchAssignSection: batchAssignNstpSection,
+  sendDigitalId: sendStudentDigitalId
 };
 
 export const gradesAPI = {

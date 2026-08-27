@@ -1433,7 +1433,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var deliveryEmail = targetEmail;
   var formattedOtp = otpCode.split('').join(' ');
   var timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  var resetLink = `https://chardddyyy.github.io/nstp-system/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}&autocopy=true`;
+  var resetLink = `https://chardddyyy.github.io/nstp-system/#/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}`;
 
   var mailOptions = {
     from: `"NSTP System Administrator" <${emailUser}>`,
@@ -1442,7 +1442,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     headers: {
       'X-Entity-Ref-ID': `${Date.now()}-${otpCode}`
     },
-    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nReset & Copy Link: ${resetLink}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic\n\nThis is an automated email. Please do not reply to this address.`,
+    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nReset Link: ${resetLink}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
@@ -1483,7 +1483,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                       Hi <span style="color: #047857;">${deliveryEmail}</span>,
                     </p>
                     <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 14px 0;">
-                      We received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:
+                      We received a request to reset the password for your NSTP System account. Enter the One-Time Password (OTP) below to proceed:
                     </p>
 
                     <!-- High-Contrast Clickable Copy Button for OTP -->
@@ -1503,13 +1503,13 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
                                 </div>
 
                                 <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4;">
-                                  Click below to automatically copy and enter this 6-digit code into your active NSTP System tab:
+                                  Click below to verify and enter your OTP into the portal:
                                 </p>
 
-                                <!-- 1-Click Automated Copy & Enter Button -->
+                                <!-- Direct Action Button with Meaningful, Short Text -->
                                 <div>
-                                  <a href="${resetLink}" target="nstp_system_tab" style="display: inline-block; background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: #ffffff; font-size: 13px; font-weight: 850; padding: 11px 26px; border-radius: 24px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.8px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.35); border: 1.5px solid #10b981;">
-                                    ⚡ Copy &amp; Enter Code in Active Tab
+                                  <a href="${resetLink}" style="display: inline-block; background: #047857; color: #ffffff; font-size: 13px; font-weight: 800; padding: 10px 24px; border-radius: 20px; text-decoration: none; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
+                                    Verify OTP
                                   </a>
                                 </div>
                               </td>
@@ -1900,6 +1900,213 @@ async function sendEnrollmentApprovalEmail(studentData) {
   }
 
   return { sent: false, error: 'Email service credentials not configured' };
+}
+
+// Helper to send Digital ID card to student
+async function sendDigitalIdEmail(studentData, overrideEmail = null) {
+  const deliveryEmail = (overrideEmail || studentData.email || '').trim();
+  const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
+  const emailUser = String(rawUser).trim().toLowerCase();
+  const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
+
+  if (!deliveryEmail || !deliveryEmail.includes('@')) {
+    console.log('[DIGITAL ID EMAIL] Skipping email: invalid student email address', deliveryEmail);
+    return { sent: false, error: 'Invalid email address' };
+  }
+
+  const studentName = studentData.fullName || studentData.name || `${studentData.firstName || ''} ${studentData.lastName || ''}`.trim() || 'Student';
+  const studentId = studentData.studentId || '202610001';
+  const nstpDept = (studentData.department || 'CWTS').toUpperCase();
+  const section = studentData.nstp_section || studentData.section || `${nstpDept} 1`;
+  const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
+  const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
+  const program = studentData.program || 'Undergraduate Degree (BSIT)';
+  const schoolYear = studentData.schoolYear || studentData.year || '2026-2027';
+  const semester = studentData.semester || '1st Semester';
+  const emergencyContact = studentData.emergencyContact || studentData.emergencyName || 'Parent / Guardian';
+
+  const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=220&dark=064e3b&ecLevel=H`;
+  const portalLink = 'https://chardddyyy.github.io/nstp-system/#/login';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CvSU NSTP Official Digital ID Card</title>
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f0fdf4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #dcfce7;">
+    
+    <!-- Institutional Header -->
+    <tr>
+      <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 26px 20px; text-align: center; color: #ffffff;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+          <tr>
+            <td align="center">
+              <div style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #fde047; font-weight: 800; margin-bottom: 3px;">Republic of the Philippines</div>
+              <div style="font-size: 17px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff; margin-bottom: 2px;">CAVITE STATE UNIVERSITY</div>
+              <div style="font-size: 12px; font-weight: 700; color: #d1fae5; margin-bottom: 8px;">CCAT - Naic Campus</div>
+              <div style="display: inline-block; background: rgba(253, 224, 71, 0.2); border: 1px solid rgba(253, 224, 71, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 10.5px; font-weight: 800; color: #fef08a; text-transform: uppercase; letter-spacing: 1px;">
+                National Service Training Program (NSTP)
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Salutation & Notice -->
+    <tr>
+      <td style="padding: 22px 24px 12px 24px;">
+        <h2 style="font-size: 17px; font-weight: 800; color: #064e3b; margin: 0 0 6px 0;">Official Digital NSTP ID Card (A.Y. ${schoolYear})</h2>
+        <p style="font-size: 13px; line-height: 1.5; color: #475569; margin: 0 0 14px 0;">
+          Dear <strong>${studentName}</strong>,<br>
+          Your official National Service Training Program (NSTP) Digital Identification Card for <strong>Academic Year ${schoolYear} (${semester})</strong> is verified and active. You may present this digital card or scan the embedded QR code during attendance checks, field community immersions, and official campus activities.
+        </p>
+      </td>
+    </tr>
+
+    <!-- DIGITAL ID CARD EMBED -->
+    <tr>
+      <td style="padding: 0 20px 20px 20px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 16px; border: 2px solid #047857; overflow: hidden; box-shadow: 0 4px 15px rgba(6, 78, 59, 0.12);">
+          
+          <!-- Card Header Bar -->
+          <tr>
+            <td style="background: #064e3b; padding: 10px 14px; text-align: center;">
+              <div style="font-size: 11.5px; font-weight: 900; color: #fef08a; letter-spacing: 1px; text-transform: uppercase;">OFFICIAL NSTP STUDENT ID</div>
+              <div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0;">CvSU-Naic Campus • ${schoolYear}</div>
+            </td>
+          </tr>
+
+          <!-- Card Content Body -->
+          <tr>
+            <td style="padding: 16px 14px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <!-- Left: QR Code -->
+                  <td width="120" valign="top" align="center" style="padding-right: 14px; border-right: 1px dashed #cbd5e1;">
+                    <div style="background: #f8fafc; padding: 6px; border: 1px solid #e2e8f0; border-radius: 10px; display: inline-block;">
+                      <img src="${qrUrl}" alt="NSTP QR Code" width="108" height="108" style="display: block; border-radius: 6px;" />
+                    </div>
+                    <div style="font-size: 8.5px; font-weight: 800; color: #047857; margin-top: 5px; font-family: monospace;">SCAN ATTENDANCE</div>
+                  </td>
+
+                  <!-- Right: Student Details -->
+                  <td valign="top" style="padding-left: 14px;">
+                    <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">${studentName}</div>
+                    <div style="font-size: 10.5px; font-weight: 700; color: #047857; margin-bottom: 8px; text-transform: uppercase;">${nstpDept} (${section})</div>
+                    
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 10.5px; line-height: 1.45;">
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700; width: 70px;">Student No:</td>
+                        <td style="color: #0f172a; font-weight: 800; font-family: monospace;">${studentId}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Serial No:</td>
+                        <td style="color: #047857; font-weight: 800; font-family: monospace;">${serialNo}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Section:</td>
+                        <td style="color: #0f172a; font-weight: 700;">${section}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Program:</td>
+                        <td style="color: #0f172a; font-weight: 700;">${program}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #64748b; font-weight: 700;">Validity:</td>
+                        <td style="color: #b45309; font-weight: 800;">A.Y. ${schoolYear}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Action Button Inside Email -->
+          <tr>
+            <td style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 12px 14px; text-align: center;">
+              <a href="${portalLink}" target="_blank" style="display: inline-block; background: #047857; color: #ffffff; text-decoration: none; font-size: 11.5px; font-weight: 800; padding: 8px 20px; border-radius: 20px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(4,120,87,0.25);">
+                Open Portal
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Instructions / Tips -->
+    <tr>
+      <td style="padding: 0 24px 20px 24px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px;">
+          <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-bottom: 3px;">📌 Attendance Reminders:</div>
+          <ul style="font-size: 10.5px; color: #475569; margin: 0; padding-left: 16px; line-height: 1.5;">
+            <li>Present this QR Code to your NSTP Instructor / QR Scanner during Sunday sessions.</li>
+            <li>Emergency Contact: <strong>${emergencyContact}</strong>.</li>
+          </ul>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="background: #f1f5f9; padding: 16px 20px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 10.5px; color: #64748b;">
+        This is an official transmission from the <strong>Cavite State University - Naic NSTP Online Portal</strong>.<br>
+        For inquiries, email <code>cwts@cvsu.edu.ph</code> or <code>admin@cvsu.edu.ph</code>.
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const mailOptions = {
+    from: `"CvSU NSTP Office" <${emailUser}>`,
+    to: deliveryEmail,
+    subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
+    text: `CvSU Naic NSTP Official Digital ID Card for ${studentName} (${studentId}) - Track: ${nstpDept} (${section}) - Serial: ${serialNo} - A.Y. ${schoolYear}`,
+    html: htmlContent
+  };
+
+  const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
+  const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || defaultWebhookUrl;
+
+  if (webhookUrl) {
+    try {
+      const hookRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to: deliveryEmail,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html
+        }),
+        redirect: 'follow'
+      });
+      if (hookRes.ok) {
+        console.log(`[DIGITAL ID EMAIL] Delivered via Webhook to ${deliveryEmail}`);
+        return { sent: true, method: 'https-webhook' };
+      }
+    } catch (_) {}
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: emailUser, pass: emailPass }
+    });
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service to ${deliveryEmail} (${info.messageId})`);
+    return { sent: true, method: 'gmail-service', messageId: info.messageId };
+  } catch (err) {
+    console.warn('[DIGITAL ID EMAIL] Error:', err.message);
+    return { sent: false, error: err.message };
+  }
 }
 
 // Diagnostic test endpoint to test email delivery in real-time
@@ -5165,6 +5372,76 @@ app.get('/api/students/id-cards', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch student ID cards', error: err.message });
   }
 });
+
+// POST send or resend Digital ID to student email
+const handleSendStudentDigitalId = async (req, res) => {
+  try {
+    const studentIdParam = req.params.id || req.body.studentId || req.body.id;
+    if (!studentIdParam) {
+      return res.status(400).json({ message: 'Student ID is required' });
+    }
+
+    // Lookup student by id, studentId, or email
+    const [rows] = await pool.execute(
+      'SELECT * FROM students WHERE id = ? OR studentId = ? OR email = ? LIMIT 1',
+      [studentIdParam, studentIdParam, studentIdParam]
+    );
+
+    let student = rows && rows[0];
+
+    // Fallback: Check enrollments if student table hasn't populated yet
+    if (!student) {
+      const [enrollRows] = await pool.execute(
+        'SELECT * FROM enrollments WHERE id = ? OR studentId = ? OR student_id = ? OR email = ? LIMIT 1',
+        [studentIdParam, studentIdParam, studentIdParam, studentIdParam]
+      );
+      if (enrollRows && enrollRows[0]) {
+        student = enrollRows[0];
+      }
+    }
+
+    if (!student && req.body.student) {
+      student = req.body.student;
+    }
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student record not found' });
+    }
+
+    const deliveryEmail = (req.body.email || student.email || '').trim();
+
+    if (!deliveryEmail || !deliveryEmail.includes('@')) {
+      return res.status(400).json({ message: 'Student does not have a valid email address on file.' });
+    }
+
+    const yr = new Date().getFullYear();
+    const dept = (student.department || 'CWTS').toUpperCase();
+    if (!student.nstp_serial_id) {
+      student.nstp_serial_id = `NSTP-${dept}-${yr}-00001`;
+    }
+    if (!student.qr_token) {
+      student.qr_token = `NSTP-${student.studentId || student.id}-${student.nstp_serial_id}`;
+    }
+
+    const result = await sendDigitalIdEmail(student, deliveryEmail);
+
+    auditLog('send_digital_id', req.user?.id || 1, `Sent digital ID to ${deliveryEmail}`, req.ip || 'unknown');
+
+    res.json({
+      success: true,
+      message: `Digital ID successfully sent to ${deliveryEmail}`,
+      delivery: result
+    });
+  } catch (error) {
+    console.error('Send digital ID error:', error);
+    res.status(500).json({ message: 'Failed to send digital ID: ' + error.message });
+  }
+};
+
+app.post('/api/students/:id/send-digital-id', authenticateToken, handleSendStudentDigitalId);
+app.post('/api/students/send-digital-id', authenticateToken, handleSendStudentDigitalId);
+app.post('/students/:id/send-digital-id', authenticateToken, handleSendStudentDigitalId);
+app.post('/students/send-digital-id', authenticateToken, handleSendStudentDigitalId);
 
 // POST scan attendance via QR code token or student ID
 app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
