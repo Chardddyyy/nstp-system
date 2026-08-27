@@ -696,19 +696,66 @@ async function seedPastBatches() {
             emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
             semester: b.sem,
             schoolYear: b.sy,
-            status: 'active'
+            status: b.sem === '2nd Semester' ? 'graduated' : 'active',
+            midterm_grade: ['1.25', '1.50', '1.75', '1.00', '1.50'][idx % 5],
+            final_grade: ['1.25', '1.25', '1.50', '1.00', '1.50'][idx % 5],
+            remarks: 'Passed'
           };
         });
 
         const reportData = [
-          { id: 1, title: `Final NSTP Community Service Report (${b.year})`, department: 'CWTS', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-15` },
-          { id: 2, title: `Literacy Tutorial Outreach Documentation (${b.year})`, department: 'LTS', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-16` },
-          { id: 3, title: `Annual ROTC Tactical Briefing & Muster (${b.year})`, department: 'ROTC', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-17` }
+          { 
+            id: 1, 
+            title: `NSTP ${b.sem === '1st Semester' ? '1 Community Orientation & Needs Assessment' : '2 Culminating Community Engagement Report'} (${b.year})`, 
+            department: 'CWTS', 
+            description: `Official comprehensive documentation and field accomplishment report for NSTP CWTS activities during ${b.year}.`,
+            status: 'Approved', 
+            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15` : `${b.sy.split('-')[1]}-04-15`,
+            instructor: 'CWTS Instructor',
+            instructor_name: 'CWTS Instructor',
+            submissions: [
+              { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
+            ]
+          },
+          { 
+            id: 2, 
+            title: `Literacy Tutorial & Reading Outreach Milestone Report (${b.year})`, 
+            department: 'LTS', 
+            description: `Diagnostic assessments, remedial reading tutorials, and learning kit distribution report for ${b.year}.`,
+            status: 'Approved', 
+            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16` : `${b.sy.split('-')[1]}-04-16`,
+            instructor: 'LTS Instructor',
+            instructor_name: 'LTS Instructor',
+            submissions: [
+              { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
+            ]
+          },
+          { 
+            id: 3, 
+            title: `Annual ROTC Tactical Briefing, Review & Muster (${b.year})`, 
+            department: 'ROTC', 
+            description: `Troop formation muster, military tactics evaluation, and pass-in-review accomplishment for ${b.year}.`,
+            status: 'Approved', 
+            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17` : `${b.sy.split('-')[1]}-04-17`,
+            instructor: 'ROTC Instructor',
+            instructor_name: 'ROTC Instructor',
+            submissions: [
+              { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
+            ]
+          }
         ];
 
-        const archivePayload = JSON.stringify({ studentData, reportData, students: studentData.length, reports: reportData.length });
+        const letterData = [
+          { id: 'letter-1', title: 'Barangay Immersion & Community Service Request Letter', department: 'CWTS', description: 'Official formal institutional endorsement for CWTS community immersion projects.' },
+          { id: 'letter-2', title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement', department: 'LTS', description: 'Formal request for student-led reading tutorials and literacy clinic sessions.' },
+          { id: 'letter-3', title: 'ROTC Field Training Exercise & Range Facility Request', department: 'ROTC', description: 'Endorsement to Armed Forces training command for tactical exercises.' },
+          { id: 'letter-4', title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form', department: 'All', description: 'Institutional waiver required for all off-campus community and training engagements.' },
+          { id: 'letter-5', title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement', department: 'All', description: 'CHED submission document certifying graduates and requesting assigned national serial numbers.' }
+        ];
+
+        const archivePayload = JSON.stringify({ studentData, reportData, letterData, students: studentData.length, reports: reportData.length });
         await pool.execute(
-          'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?)',
+          'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = VALUES(students), reports = VALUES(reports), data = VALUES(data)',
           [b.year, studentData.length, reportData.length, archivePayload]
         );
         console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);

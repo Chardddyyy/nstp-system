@@ -543,20 +543,36 @@ function AdminDashboard() {
     }
   };
 
-  // View archived batch data — fetch detailed student/report data
-  const handleViewBatch = async (yearData) => {
+  // View archived batch data — instant UI display with non-blocking hydration
+  const handleViewBatch = (yearData) => {
     setShowArchiveModal(false);
-    try {
-      const detailed = await archivesAPI.getByYear(yearData.year);
-      setArchiveViewData({
-        ...yearData,
-        studentData: detailed.studentData || [],
-        reportData: detailed.reportData || []
-      });
-    } catch {
-      setArchiveViewData({ ...yearData, studentData: [], reportData: [] });
-    }
+    const existingStudentData = yearData.data?.studentData || yearData.studentData || [];
+    const existingReportData = yearData.data?.reportData || yearData.reportData || [];
+    const existingLetterData = yearData.data?.letterData || yearData.letterData || [];
+
+    setArchiveViewData({
+      ...yearData,
+      studentData: existingStudentData,
+      reportData: existingReportData,
+      letterData: existingLetterData
+    });
     setViewingArchive(true);
+
+    // If student list was empty, hydrate in background without blocking
+    if (existingStudentData.length === 0) {
+      archivesAPI.getByYear(yearData.year).then((detailed) => {
+        const sData = detailed.studentData || detailed.data?.studentData || [];
+        const rData = detailed.reportData || detailed.data?.reportData || [];
+        const lData = detailed.letterData || detailed.data?.letterData || [];
+        setArchiveViewData((prev) => ({
+          ...prev,
+          ...yearData,
+          studentData: sData,
+          reportData: rData,
+          letterData: lData
+        }));
+      }).catch(() => {});
+    }
   };
 
   // Delete archived batch
@@ -1746,8 +1762,8 @@ function AdminDashboard() {
                         className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                       >
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform text-center leading-tight p-1">
-                            {year.year}
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-800/10 text-emerald-800 flex items-center justify-center font-black shrink-0 border border-emerald-200 group-hover:scale-105 group-hover:bg-emerald-800 group-hover:text-amber-300 transition-all shadow-2xs">
+                            <History className="w-5 h-5" />
                           </div>
                           <div>
                             <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>

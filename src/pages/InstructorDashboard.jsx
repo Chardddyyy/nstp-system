@@ -61,14 +61,32 @@ function InstructorDashboard() {
     setShowArchiveModal(true);
   };
 
-  const handleViewBatch = async (batch) => {
-    try {
-      const full = await archivesAPI.getByYear(batch.year);
-      setArchiveViewData(full || batch);
-      setShowArchiveDetails(true);
-    } catch {
-      setArchiveViewData(batch);
-      setShowArchiveDetails(true);
+  const handleViewBatch = (batch) => {
+    const existingStudentData = batch.data?.studentData || batch.studentData || [];
+    const existingReportData = batch.data?.reportData || batch.reportData || [];
+    const existingLetterData = batch.data?.letterData || batch.letterData || [];
+
+    setArchiveViewData({
+      ...batch,
+      studentData: existingStudentData,
+      reportData: existingReportData,
+      letterData: existingLetterData
+    });
+    setShowArchiveDetails(true);
+
+    if (existingStudentData.length === 0) {
+      archivesAPI.getByYear(batch.year).then((full) => {
+        const sData = full.studentData || full.data?.studentData || [];
+        const rData = full.reportData || full.data?.reportData || [];
+        const lData = full.letterData || full.data?.letterData || [];
+        setArchiveViewData((prev) => ({
+          ...prev,
+          ...batch,
+          studentData: sData,
+          reportData: rData,
+          letterData: lData
+        }));
+      }).catch(() => {});
     }
   };
 
@@ -710,8 +728,8 @@ function InstructorDashboard() {
                         className="flex items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                       >
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform text-center leading-tight p-1">
-                            {year.year}
+                          <div className="w-11 h-11 rounded-2xl bg-emerald-800/10 text-emerald-800 flex items-center justify-center font-black shrink-0 border border-emerald-200 group-hover:scale-105 group-hover:bg-emerald-800 group-hover:text-amber-300 transition-all shadow-2xs">
+                            <History className="w-5 h-5" />
                           </div>
                           <div>
                             <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>

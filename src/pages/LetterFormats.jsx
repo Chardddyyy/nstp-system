@@ -2,10 +2,58 @@ import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
-import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File } from 'lucide-react';
+import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
+
+const DEFAULT_TEMPLATES = [
+  {
+    id: 'tpl-1',
+    title: 'Barangay Immersion & Community Service Request Letter',
+    department: 'CWTS',
+    description: 'Official formal institutional endorsement requesting barangay clearance and partner community facilitation for NSTP-CWTS immersion projects.',
+    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.pdf', size: '142.5 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    createdBy: 'CWTS Department Coordinator',
+    createdAt: '2024-09-01T08:00:00Z'
+  },
+  {
+    id: 'tpl-2',
+    title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement',
+    department: 'LTS',
+    description: 'Formal request to elementary school principals for student-led reading tutorials and literacy clinic sessions.',
+    file: { name: 'CvSU_LTS_School_Outreach_Permission.pdf', size: '128.0 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    createdBy: 'LTS Department Coordinator',
+    createdAt: '2024-09-01T08:00:00Z'
+  },
+  {
+    id: 'tpl-3',
+    title: 'ROTC Field Training Exercise & Range Facility Request',
+    department: 'ROTC',
+    description: 'Endorsement to Armed Forces / Naval training Command for weekend field tactics and firearm handling exercises.',
+    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.pdf', size: '165.2 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    createdBy: 'ROTC Commandant',
+    createdAt: '2024-09-01T08:00:00Z'
+  },
+  {
+    id: 'tpl-4',
+    title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form',
+    department: 'All',
+    description: 'Standard institutional waiver and health declaration required for all off-campus community and training engagements.',
+    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.pdf', size: '98.4 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    createdBy: 'NSTP Office',
+    createdAt: '2024-09-01T08:00:00Z'
+  },
+  {
+    id: 'tpl-5',
+    title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement',
+    department: 'All',
+    description: 'Official CHED submission document certifying graduates and requesting assigned national serial numbers.',
+    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.pdf', size: '184.8 KB', type: 'application/pdf', data: 'data:application/pdf;base64,JVBERi0xLjQKJcTl8uXr...' },
+    createdBy: 'NSTP Director',
+    createdAt: '2024-09-01T08:00:00Z'
+  }
+];
 
 export default function LetterFormats() {
-  const { user, logout } = useAuth();
+  const { user, logout, viewingArchive, archiveViewData, setViewingArchive } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -16,9 +64,10 @@ export default function LetterFormats() {
   const [templates, setTemplates] = useState(() => {
     try {
       const saved = localStorage.getItem('nstp_letter_templates');
-      return saved ? JSON.parse(saved) : [];
+      const parsed = saved ? JSON.parse(saved) : [];
+      return parsed.length > 0 ? parsed : DEFAULT_TEMPLATES;
     } catch {
-      return [];
+      return DEFAULT_TEMPLATES;
     }
   });
 
@@ -134,7 +183,11 @@ export default function LetterFormats() {
     return ['All', 'ROTC', 'CWTS', 'LTS'];
   }, [user]);
 
-  const filteredTemplates = templates.filter(t => {
+  const sourceTemplates = viewingArchive && archiveViewData?.letterData && archiveViewData.letterData.length > 0
+    ? archiveViewData.letterData
+    : templates;
+
+  const filteredTemplates = sourceTemplates.filter(t => {
     if (user?.role === 'instructor' && user?.department) {
       const isAllowed = t.department === 'All' || t.department === user.department;
       if (!isAllowed) return false;
@@ -176,11 +229,13 @@ export default function LetterFormats() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Letter Formats &amp; Attachments</h1>
+                <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
+                  {viewingArchive ? `Archived Letter Formats - Batch ${archiveViewData?.year}` : 'Letter Formats & Attachments'}
+                </h1>
               </div>
             </div>
 
-            {(user?.role === 'admin' || user?.role === 'instructor') && (
+            {(user?.role === 'admin' || user?.role === 'instructor') && !viewingArchive && (
               <button
                 type="button"
                 onClick={() => {
@@ -199,6 +254,23 @@ export default function LetterFormats() {
             )}
           </div>
         </div>
+
+        {/* Viewing Archive Banner */}
+        {viewingArchive && archiveViewData && (
+          <div className="flex-shrink-0 bg-amber-500 text-emerald-950 px-4 py-2.5 rounded-2xl flex items-center justify-between shadow-md mb-6 font-bold text-xs sm:text-sm">
+            <div className="flex items-center space-x-2">
+              <History className="w-5 h-5 text-emerald-950 shrink-0" />
+              <span>Viewing Archived Batch Letter Formats: <strong>Batch {archiveViewData.year}</strong></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewingArchive(false)}
+              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0"
+            >
+              Exit Archive
+            </button>
+          </div>
+        )}
 
         {/* Filter Tabs & Search Bar — Perfectly Aligned */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 mb-6 w-full">

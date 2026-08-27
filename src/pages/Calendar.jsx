@@ -1,14 +1,14 @@
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon, Plus, X, Pencil,
-  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock
+  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 
 function Calendar() {
-  const { user, logout, pushNotification } = useAuth();
+  const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
@@ -23,6 +23,26 @@ function Calendar() {
     return saved ? JSON.parse(saved) : [];
   });
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '' });
+
+  // When in archive mode, jump the calendar to the appropriate academic semester
+  useEffect(() => {
+    if (viewingArchive && archiveViewData?.year) {
+      const yr = archiveViewData.year;
+      if (yr.includes('2023-2024')) {
+        if (yr.includes('1st Semester')) {
+          setCurrentDate(new Date(2023, 9, 15)); // Oct 2023
+        } else {
+          setCurrentDate(new Date(2024, 3, 15)); // Apr 2024
+        }
+      } else if (yr.includes('2024-2025')) {
+        if (yr.includes('1st Semester')) {
+          setCurrentDate(new Date(2024, 9, 15)); // Oct 2024
+        } else {
+          setCurrentDate(new Date(2025, 3, 15)); // Apr 2025
+        }
+      }
+    }
+  }, [viewingArchive, archiveViewData]);
   
   // Philippine Holidays 2024-2030
   const philippineHolidays = [
@@ -170,11 +190,64 @@ function Calendar() {
     return dateStr < todayStr;
   };
 
+  const archiveEvents = useMemo(() => {
+    if (!viewingArchive || !archiveViewData?.year) return [];
+    const yr = String(archiveViewData.year);
+    if (yr.includes('2023-2024')) {
+      if (yr.includes('1st Semester')) {
+        return [
+          { id: 'arch-1', title: 'NSTP 1 General Orientation & Plenary', date: '2023-09-02', description: 'Institutional NSTP orientation for all incoming 1st year students at CvSU Naic Gymnasium.', isArchived: true },
+          { id: 'arch-2', title: 'CWTS Community Needs Assessment Field Visit', date: '2023-10-07', description: 'Participatory community profiling across Brgy. Bucana and Brgy. Halang.', isArchived: true },
+          { id: 'arch-3', title: 'LTS Diagnostic Reading Assessment', date: '2023-10-14', description: 'Conduct of pre-literacy assessment for adopted public elementary schools.', isArchived: true },
+          { id: 'arch-4', title: 'ROTC Midterm Drill & Muster', date: '2023-10-21', description: 'Inspection and formation testing by AFP Reservist Command.', isArchived: true },
+          { id: 'arch-5', title: 'NSTP 1 Midterm Evaluation & Submission', date: '2023-11-11', description: 'Submission of midterm project milestone progress reports.', isArchived: true },
+          { id: 'arch-6', title: 'Disaster Risk Reduction Training Session', date: '2023-11-25', description: 'First aid and basic life support demonstration with Naic MDRRMO.', isArchived: true },
+          { id: 'arch-7', title: '1st Semester Culminating Project Defense', date: '2023-12-09', description: 'Final departmental presentation of community outputs.', isArchived: true },
+        ];
+      } else {
+        return [
+          { id: 'arch-8', title: 'NSTP 2 Resumption & Project Implementation Briefing', date: '2024-02-10', description: 'Planning session for 2nd semester community engagement and culminating projects.', isArchived: true },
+          { id: 'arch-9', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', date: '2024-03-02', description: 'Coastal cleanup and 500 mangrove seedling planting along Bucana shoreline.', isArchived: true },
+          { id: 'arch-10', title: 'LTS Reading Clinic & Storybook Distribution', date: '2024-03-16', description: 'Elementary tutorial sessions and distribution of learning kits.', isArchived: true },
+          { id: 'arch-11', title: 'ROTC Field Tactics & Land Navigation Exercise', date: '2024-03-23', description: 'Field orienteering and compass movement simulation.', isArchived: true },
+          { id: 'arch-12', title: 'Final Project Culmination & Document Audit', date: '2024-04-13', description: 'Verification of community portfolios and grade requirements.', isArchived: true },
+          { id: 'arch-13', title: 'NSTP Passing-in-Review & Recognition Ceremony', date: '2024-04-27', description: 'Culminating graduation muster and issuance of NSTP certificates.', isArchived: true },
+        ];
+      }
+    } else if (yr.includes('2024-2025')) {
+      if (yr.includes('1st Semester')) {
+        return [
+          { id: 'arch-14', title: 'NSTP 1 General Orientation & Briefing', date: '2024-09-07', description: 'Academic orientation and program assignments for Batch 2024-2025.', isArchived: true },
+          { id: 'arch-15', title: 'CWTS Barangay Profiling & Immersion Preparation', date: '2024-10-05', description: 'Coordination meeting with Barangay officials of Bucana Malaki.', isArchived: true },
+          { id: 'arch-16', title: 'LTS Literacy Pre-Assessment in Partner School', date: '2024-10-12', description: 'Diagnostic phonics and numeracy evaluation for elementary students.', isArchived: true },
+          { id: 'arch-17', title: 'ROTC Troop Muster & Ceremonial Formations', date: '2024-10-19', description: 'Basic military customs, discipline, and troop movement drill.', isArchived: true },
+          { id: 'arch-18', title: 'NSTP 1 Midterm Evaluation & Defense', date: '2024-11-09', description: 'Mid-term documentation audit and project status verification.', isArchived: true },
+          { id: 'arch-19', title: 'Community Disaster Preparedness & First Aid Clinic', date: '2024-11-23', description: 'Emergency response simulations in partnership with MDRRMO.', isArchived: true },
+        ];
+      } else {
+        return [
+          { id: 'arch-20', title: 'NSTP 2 Project Launch & Field Immersion', date: '2025-02-08', description: 'Mobilization of students for second semester projects in Naic.', isArchived: true },
+          { id: 'arch-21', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', date: '2025-03-08', description: 'Workshop on community organic composting and eco-crafts.', isArchived: true },
+          { id: 'arch-22', title: 'LTS Mini-Library Handover & Literacy Graduation', date: '2025-03-22', description: 'Turnover of 300 children storybooks and graduation of young readers.', isArchived: true },
+          { id: 'arch-23', title: 'ROTC Annual Tactical Inspection & Drill Review', date: '2025-04-05', description: 'Annual tactical evaluation conducted by Naval Reserve Command.', isArchived: true },
+          { id: 'arch-24', title: 'NSTP Final Culminating Defense & Document Audit', date: '2025-04-12', description: 'Final requirements audit and endorsement for CHED serial numbers.', isArchived: true },
+          { id: 'arch-25', title: 'NSTP Graduation & Ceremonial Pass-in-Review', date: '2025-04-26', description: 'Formal graduation pass-in-review and certificate awarding ceremony.', isArchived: true },
+        ];
+      }
+    }
+    return [];
+  }, [viewingArchive, archiveViewData]);
+
   const getEventsForDate = (date) => {
     const dateStr = formatDate(currentDate.getFullYear(), currentDate.getMonth(), date);
     const holidays = philippineHolidays.filter(h => h.date === dateStr);
     
-    // Only instructors can see admin-added events
+    if (viewingArchive) {
+      const archEvents = archiveEvents.filter(e => e.date === dateStr);
+      return [...holidays, ...archEvents];
+    }
+
+    // Only instructors and admins can see admin-added events
     const customEvents = isInstructor || isAdmin 
       ? events.filter(e => e.date === dateStr)
       : events.filter(e => e.date === dateStr && e.type === 'holiday'); // Students only see holidays
@@ -183,6 +256,7 @@ function Calendar() {
   };
 
   const handleSaveEvent = () => {
+    if (viewingArchive) return;
     if (!newEvent.title.trim() || !newEvent.date) return;
     
     if (editingEvent) {
@@ -218,25 +292,25 @@ function Calendar() {
       setEditingEvent(null);
       setShowAddEventModal(false);
     } else {
-      const event = {
-        id: Date.now(),
+      const newEventObj = {
+        id: Date.now().toString(),
         title: newEvent.title.trim(),
         date: newEvent.date,
         description: newEvent.description.trim(),
-        type: 'event',
-        createdBy: user?.name,
-        isEdited: false
+        type: 'custom',
+        createdBy: user?.name || 'Administrator',
+        createdAt: new Date().toISOString()
       };
 
-      const updated = [...events, event];
-      setEvents(updated);
-      localStorage.setItem('nstp_calendar_events', JSON.stringify(updated));
+      const updatedEvents = [...events, newEventObj];
+      setEvents(updatedEvents);
+      localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
 
       // Push real-time notification
       if (typeof pushNotification === 'function') {
         pushNotification({
-          title: 'New Calendar Activity',
-          message: `New activity "${newEvent.title.trim()}" scheduled for ${newEvent.date}`,
+          title: 'New Calendar Event',
+          message: `Event "${newEvent.title.trim()}" was added for ${newEvent.date}`,
           type: 'calendar',
           link: '/calendar',
         });
@@ -259,6 +333,7 @@ function Calendar() {
   };
 
   const handleDeleteEvent = (eventId) => {
+    if (viewingArchive) return;
     const updatedEvents = events.filter(e => e.id !== eventId);
     setEvents(updatedEvents);
     localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
@@ -300,11 +375,11 @@ function Calendar() {
 
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">
-                  Calendar
+                  {viewingArchive ? `Archived Calendar - Batch ${archiveViewData?.year}` : 'Calendar'}
                 </h1>
               </div>
             </div>
-            {isAdmin && (
+            {isAdmin && !viewingArchive && (
               <button type="button"
                 onClick={() => setShowAddEventModal(true)}
                 className="flex items-center space-x-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-sm cursor-pointer shrink-0"
@@ -315,6 +390,23 @@ function Calendar() {
             )}
           </div>
         </div>
+
+        {/* Viewing Archive Banner */}
+        {viewingArchive && archiveViewData && (
+          <div className="flex-shrink-0 bg-amber-500 text-emerald-950 px-4 py-2.5 rounded-2xl flex items-center justify-between shadow-md mb-3 font-bold text-xs sm:text-sm">
+            <div className="flex items-center space-x-2">
+              <History className="w-5 h-5 text-emerald-950 shrink-0" />
+              <span>Viewing Archived Batch Calendar: <strong>Batch {archiveViewData.year}</strong></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setViewingArchive(false)}
+              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0"
+            >
+              Exit Archive
+            </button>
+          </div>
+        )}
 
         {/* Calendar Component — fills remaining viewport height */}
         <div className="flex-1 bg-white rounded-xl shadow-md p-2 sm:p-3 lg:p-5 flex flex-col overflow-hidden min-h-0">
