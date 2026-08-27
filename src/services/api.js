@@ -133,12 +133,19 @@ async function apiCall(endpoint, options) {
 }
 
 // Auth
-export async function loginUser(email, password, forceLogin = false) {
+export async function loginUser(email, password, forceLogin = true) {
   try {
-    const res = await apiCall('/auth/login', {
+    let res = await apiCall('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: email, password: password, forceLogin: forceLogin })
+      body: JSON.stringify({ email: email, password: password, forceLogin: true })
     });
+    // If an older server instance returned warning / activeSession, automatically force login to complete authentication instantly
+    if (res && res.warning && res.activeSession && !res.token) {
+      res = await apiCall('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: email, password: password, forceLogin: true })
+      });
+    }
     if (res && res.token) {
       localStorage.setItem('nstp_token', res.token);
     }

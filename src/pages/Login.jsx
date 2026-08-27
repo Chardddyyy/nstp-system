@@ -207,6 +207,17 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
+        if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
+          const retryResult = await login(cleanEmail, password, true);
+          if (retryResult.success) {
+            if (retryResult.role === 'admin') {
+              navigate('/admin/dashboard');
+            } else {
+              navigate('/instructor/dashboard');
+            }
+            return;
+          }
+        }
         setError(result.message || 'Invalid email or password');
         setPassword('');
       }
@@ -215,6 +226,19 @@ function Login() {
       clearTimeout(timer2);
       console.error('Login error:', err);
       const errMsg = err?.message || '';
+      if (errMsg.includes('another device') || errMsg.includes('currently active')) {
+        try {
+          const retryResult = await login(cleanEmail, password, true);
+          if (retryResult.success) {
+            if (retryResult.role === 'admin') {
+              navigate('/admin/dashboard');
+            } else {
+              navigate('/instructor/dashboard');
+            }
+            return;
+          }
+        } catch (_) {}
+      }
       if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted')) {
         setError('Cloud server is waking up (~15s). Please tap Login again.');
       } else {

@@ -715,9 +715,12 @@ function App() {
     }
   }
 
-  async function login(email, password, forceLogin = false) {
+  async function login(email, password, forceLogin = true) {
     try {
-      const response = await authAPI.login(email, password, forceLogin);
+      let response = await authAPI.login(email, password, true);
+      if (response && response.warning && response.activeSession && !response.token) {
+        response = await authAPI.login(email, password, true);
+      }
       if (!response || !response.token) return { success: false, message: response?.message || 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
