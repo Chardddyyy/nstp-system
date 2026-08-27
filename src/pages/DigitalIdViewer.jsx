@@ -51,35 +51,36 @@ function DigitalIdViewer() {
 
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // High-resolution render
+        scale: 2, // Fast, crisp 300dpi-equivalent render
         useCORS: true,
         allowTaint: true,
+        logging: false,
         backgroundColor: '#ffffff'
       });
 
       const imgData = canvas.toDataURL('image/png');
       
-      // Create standard portrait PDF formatted for ID Card (85.6mm x 53.98mm scaled or A4 centered)
+      // Create standard portrait PDF formatted for ID Card (A4 layout with centered standard card)
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
 
-      // Center the ID card on an A4 page
-      const cardWidthMm = 65; // standard card width on page
+      // Center the standard-sized ID card on an A4 page (~58mm x ~93mm standard ID size)
+      const cardWidthMm = 58;
       const cardHeightMm = (canvas.height * cardWidthMm) / canvas.width;
       const xPos = (210 - cardWidthMm) / 2;
-      const yPos = 30;
+      const yPos = 35;
 
       // Add Header text on PDF
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
+      pdf.setFontSize(13);
       pdf.setTextColor(6, 78, 59); // #064e3b
       pdf.text('CAVITE STATE UNIVERSITY - NAIC CAMPUS', 105, 18, { align: 'center' });
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
+      pdf.setFontSize(9.5);
       pdf.setTextColor(71, 85, 105);
       pdf.text(`Official NSTP Printable Digital ID Card • AY ${schoolYear}`, 105, 24, { align: 'center' });
 
@@ -88,14 +89,14 @@ function DigitalIdViewer() {
       // Add Guidelines below card on PDF
       const guideY = yPos + cardHeightMm + 15;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
+      pdf.setFontSize(9.5);
       pdf.setTextColor(6, 78, 59);
-      pdf.text('PRINTING & USAGE INSTRUCTIONS:', 105, guideY, { align: 'center' });
+      pdf.text('OFFICIAL PRINTING & USAGE INSTRUCTIONS:', 105, guideY, { align: 'center' });
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8.5);
+      pdf.setFontSize(8);
       pdf.setTextColor(51, 65, 85);
-      pdf.text('1. Print this page in full color on Photo Paper, PVC Card, or Heavy Cardstock.', 105, guideY + 6, { align: 'center' });
+      pdf.text('1. Print this page in full color on Photo Paper, PVC Card, or Cardstock (100% Scale).', 105, guideY + 6, { align: 'center' });
       pdf.text('2. Cut along the outer border and laminate with an official lanyard clip.', 105, guideY + 11, { align: 'center' });
       pdf.text('3. Present the embedded QR code to your NSTP Instructor during training activities.', 105, guideY + 16, { align: 'center' });
 
@@ -105,7 +106,6 @@ function DigitalIdViewer() {
       setTimeout(() => setPdfSuccess(false), 4000);
     } catch (err) {
       console.error('PDF generation error:', err);
-      // Fallback to window.print() if html2canvas/jspdf fails
       window.print();
     } finally {
       setIsGeneratingPdf(false);
@@ -114,20 +114,20 @@ function DigitalIdViewer() {
 
   // Automatic PDF download and/or print dialog when accessed from email button
   useEffect(() => {
-    const shouldDownload = searchParams.get('download') === 'pdf';
+    const shouldDownload = searchParams.get('download') === 'pdf' || searchParams.get('download') === '1' || searchParams.get('download') === 'true' || searchParams.get('auto') === '1';
     const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('autoprint') === '1';
 
     let dTimer, pTimer;
     if (shouldDownload) {
       dTimer = setTimeout(() => {
         handleDownloadPdf();
-      }, 600);
+      }, 500);
     }
     
     if (shouldAutoPrint) {
       pTimer = setTimeout(() => {
         window.print();
-      }, 1100);
+      }, 1000);
     }
 
     return () => {

@@ -24,6 +24,25 @@ const BASE_PATH = (() => {
   return import.meta.env.BASE_URL || '/';
 })();
 
+// Auto-normalize GitHub Pages hash routes or direct ID query links before router starts
+(() => {
+  try {
+    const l = window.location;
+    const hash = l.hash || '';
+    if (hash.startsWith('#/digital-id') || hash.startsWith('#/id-card') || hash.startsWith('#/enrollment') || hash.startsWith('#/login')) {
+      const hashContent = hash.slice(2);
+      const [routePart, queryPart] = hashContent.split('?');
+      const target = `${BASE_PATH}${routePart}${queryPart ? '?' + queryPart : ''}`;
+      window.history.replaceState(null, null, target);
+    } else if (l.search && (l.search.includes('view=digital-id') || l.search.includes('page=digital-id') || (l.search.includes('id=') && (l.search.includes('dept=') || l.search.includes('download='))))) {
+      if (!l.pathname.includes('/digital-id')) {
+        const cleanSearch = l.search.replace('view=digital-id&', '').replace('page=digital-id&', '');
+        window.history.replaceState(null, null, `${BASE_PATH}digital-id${cleanSearch}`);
+      }
+    }
+  } catch (_) {}
+})();
+
 // Defined OUTSIDE App so its reference never changes between re-renders, preventing
 // React from unmounting+remounting page children on every polling tick.
 function ProtectedRoute({ children, allowedRoles }) {
