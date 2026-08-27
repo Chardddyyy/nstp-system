@@ -112,26 +112,28 @@ function DigitalIdViewer() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Optional auto-download or auto-print on page load
+  // Automatic PDF download and/or print dialog when accessed from email button
   useEffect(() => {
     const shouldDownload = searchParams.get('download') === 'pdf';
-    const shouldAutoPrint = searchParams.get('autoprint') === '1' || searchParams.get('print') === '1';
+    const shouldAutoPrint = searchParams.get('print') === '1' || searchParams.get('autoprint') === '1';
 
+    let dTimer, pTimer;
     if (shouldDownload) {
-      const timer = setTimeout(() => {
+      dTimer = setTimeout(() => {
         handleDownloadPdf();
-      }, 1200);
-      return () => clearTimeout(timer);
-    } else if (shouldAutoPrint) {
-      const timer = setTimeout(() => {
-        window.print();
-      }, 800);
-      return () => clearTimeout(timer);
+      }, 600);
     }
+    
+    if (shouldAutoPrint) {
+      pTimer = setTimeout(() => {
+        window.print();
+      }, 1100);
+    }
+
+    return () => {
+      if (dTimer) clearTimeout(dTimer);
+      if (pTimer) clearTimeout(pTimer);
+    };
   }, [searchParams]);
 
   const handleDownloadHtml = () => {
