@@ -7,9 +7,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="NSTP System" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="icon" type="image/png" href="/nstp-system/cvsu.png" />
-    <link rel="apple-touch-icon" href="/nstp-system/icons/icon-192x192.png" />
-    <link rel="manifest" href="/nstp-system/manifest.json" />
+    <link rel="icon" type="image/png" href="cvsu.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
+    <link rel="manifest" href="manifest.json" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -29,13 +29,13 @@
           );
         }
       }(window.location));
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
-    <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
-    <script>
+
       // Automatically recover when a new deploy invalidates old cached chunk filenames
+      window.addEventListener('vite:preloadError', function(event) {
+        console.warn('Vite preload error (new deployment detected), refreshing...');
+        window.location.reload();
+      });
+
       window.addEventListener('error', function(e) {
         if (e && e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
           var src = e.target.src || e.target.href || '';
@@ -47,7 +47,11 @@
         }
       }, true);
     </script>
-    <script type="module" crossorigin src="/nstp-system/assets/index-DBLY74wi.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
+    <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
+    <script type="module" crossorigin src="/nstp-system/assets/index-DkuTcbtc.js"></script>
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-D-sc56nV.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-BOJ7S-Ns.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-xlsx-B1h6kJVQ.js">
