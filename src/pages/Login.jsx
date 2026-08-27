@@ -215,8 +215,8 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
-        if (result.message && (result.message.includes('another device') || result.message.includes('currently in use') || result.message.includes('active'))) {
-          setActiveSessionWarning(result.message);
+        if (result.activeSession || (result.message && (result.message.includes('another device') || result.message.includes('currently active on another device')))) {
+          setActiveSessionWarning(result.message || 'This account is currently active on another device. Sign-in is restricted while an active session exists.');
         } else {
           setError(result.message || 'Invalid email or password');
         }
@@ -583,16 +583,9 @@ function Login() {
               <button
                 type="button"
                 onClick={() => setActiveSessionWarning(null)}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-all cursor-pointer"
+                className="w-full py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleForceLogin}
-                className="flex-1 py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                Sign In on This Device
+                Understood / Close
               </button>
             </div>
           </div>

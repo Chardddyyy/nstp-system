@@ -585,85 +585,83 @@ async function ensureAllCoreTables() {
   }
 }
 
-// ── Seed Past Batches (2023-2024 and 2024-2025 with 20+ complete student records each) ──
+// ── Seed Past Batches (2023-2024 1st/2nd Sem and 2024-2025 1st/2nd Sem with 20+ students each) ──
 async function seedPastBatches() {
   try {
+    const rawStudents2023 = [
+      { firstName: 'Joshua', lastName: 'Bautista', middleName: 'Cruz', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Princess', lastName: 'Ramos', middleName: 'Santos', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Angelo', lastName: 'Mendoza', middleName: 'Garcia', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Jasmine', lastName: 'Castillo', middleName: 'Lopez', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Christian', lastName: 'Aquino', middleName: 'Torres', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Rhea', lastName: 'Tolentino', middleName: 'Flores', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Mark', lastName: 'Villanueva', middleName: 'Rivera', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Alyssa', lastName: 'De Guzman', middleName: 'Diaz', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+      
+      { firstName: 'Gabriel', lastName: 'Alcantara', middleName: 'Reyes', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Nicole', lastName: 'Mercado', middleName: 'Navarro', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Daniel', lastName: 'Castro', middleName: 'Morales', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Trisha', lastName: 'Salazar', middleName: 'Valdez', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Justin', lastName: 'Ferrer', middleName: 'Pascual', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Bea', lastName: 'Delos Santos', middleName: 'Velasco', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Jerome', lastName: 'Cortez', middleName: 'Dela Cruz', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
+      { firstName: 'Camille', lastName: 'Bernardo', middleName: 'Soriano', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
+
+      { firstName: 'Kevin', lastName: 'Padilla', middleName: 'Enriquez', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Stephanie', lastName: 'Manalo', middleName: 'Aguilar', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Patrick', lastName: 'Rosales', middleName: 'David', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Kimberly', lastName: 'Estrella', middleName: 'Gutierrez', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Adrian', lastName: 'Guerrero', middleName: 'Pineda', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Hannah', lastName: 'Concepcion', middleName: 'Serrano', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Elijah', lastName: 'Miranda', middleName: 'Ponce', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Chloe', lastName: 'Corpuz', middleName: 'Ocampo', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+    ];
+
+    const rawStudents2024 = [
+      { firstName: 'Nathan', lastName: 'Domingo', middleName: 'Villarreal', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Samantha', lastName: 'Evangelista', middleName: 'Fabian', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Kyle', lastName: 'Santiago', middleName: 'Galang', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Patricia', lastName: 'Hilario', middleName: 'Ignacio', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Sean', lastName: 'Jacinto', middleName: 'Katigbak', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Andrea', lastName: 'Laurel', middleName: 'Macaraeg', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Matthew', lastName: 'Natividad', middleName: 'Ortega', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Angelica', lastName: 'Panganiban', middleName: 'Quirino', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+      { firstName: 'Carlo', lastName: 'Romulo', middleName: 'Silang', sex: 'Male', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-1', brgy: 'Bucana' },
+      { firstName: 'Janine', lastName: 'Tañada', middleName: 'Umali', sex: 'Female', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-2', brgy: 'Halang' },
+
+      { firstName: 'Brent', lastName: 'Valenzuela', middleName: 'Yulo', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Ella', lastName: 'Zamora', middleName: 'Abad', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Dominic', lastName: 'Belmonte', middleName: 'Cojuangco', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Kyla', lastName: 'Dimagiba', middleName: 'Espiritu', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Francis', lastName: 'Fajardo', middleName: 'Guevarra', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Cheska', lastName: 'Hermoso', middleName: 'Ilagan', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Julian', lastName: 'Javier', middleName: 'Lagman', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
+      { firstName: 'Mariel', lastName: 'Magno', middleName: 'Nobleza', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
+
+      { firstName: 'Bryan', lastName: 'Ople', middleName: 'Pascual', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Gillian', lastName: 'Quezon', middleName: 'Recto', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Louie', lastName: 'Sarmiento', middleName: 'Tan', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Danielle', lastName: 'Urbano', middleName: 'Villareal', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Kenneth', lastName: 'Wenceslao', middleName: 'Yanson', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Joy', lastName: 'Zulueta', middleName: 'Agoncillo', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Darren', lastName: 'Balagtas', middleName: 'Crisostomo', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+    ];
+
     const batches = [
-      {
-        year: '2023-2024',
-        prefix: '20231',
-        students: [
-          { firstName: 'Joshua', lastName: 'Bautista', middleName: 'Cruz', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Princess', lastName: 'Ramos', middleName: 'Santos', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Angelo', lastName: 'Mendoza', middleName: 'Garcia', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Jasmine', lastName: 'Castillo', middleName: 'Lopez', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Christian', lastName: 'Aquino', middleName: 'Torres', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Rhea', lastName: 'Tolentino', middleName: 'Flores', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Mark', lastName: 'Villanueva', middleName: 'Rivera', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-          { firstName: 'Alyssa', lastName: 'De Guzman', middleName: 'Diaz', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-          
-          { firstName: 'Gabriel', lastName: 'Alcantara', middleName: 'Reyes', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Nicole', lastName: 'Mercado', middleName: 'Navarro', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Daniel', lastName: 'Castro', middleName: 'Morales', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Trisha', lastName: 'Salazar', middleName: 'Valdez', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Justin', lastName: 'Ferrer', middleName: 'Pascual', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Bea', lastName: 'Delos Santos', middleName: 'Velasco', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Jerome', lastName: 'Cortez', middleName: 'Dela Cruz', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
-          { firstName: 'Camille', lastName: 'Bernardo', middleName: 'Soriano', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
-
-          { firstName: 'Kevin', lastName: 'Padilla', middleName: 'Enriquez', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Stephanie', lastName: 'Manalo', middleName: 'Aguilar', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Patrick', lastName: 'Rosales', middleName: 'David', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Kimberly', lastName: 'Estrella', middleName: 'Gutierrez', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Adrian', lastName: 'Guerrero', middleName: 'Pineda', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Hannah', lastName: 'Concepcion', middleName: 'Serrano', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Elijah', lastName: 'Miranda', middleName: 'Ponce', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-          { firstName: 'Chloe', lastName: 'Corpuz', middleName: 'Ocampo', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-        ]
-      },
-      {
-        year: '2024-2025',
-        prefix: '20241',
-        students: [
-          { firstName: 'Nathan', lastName: 'Domingo', middleName: 'Villarreal', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Samantha', lastName: 'Evangelista', middleName: 'Fabian', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Kyle', lastName: 'Santiago', middleName: 'Galang', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Patricia', lastName: 'Hilario', middleName: 'Ignacio', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Sean', lastName: 'Jacinto', middleName: 'Katigbak', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Andrea', lastName: 'Laurel', middleName: 'Macaraeg', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Matthew', lastName: 'Natividad', middleName: 'Ortega', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-          { firstName: 'Angelica', lastName: 'Panganiban', middleName: 'Quirino', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-          { firstName: 'Carlo', lastName: 'Romulo', middleName: 'Silang', sex: 'Male', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-1', brgy: 'Bucana' },
-          { firstName: 'Janine', lastName: 'Tañada', middleName: 'Umali', sex: 'Female', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-2', brgy: 'Halang' },
-
-          { firstName: 'Brent', lastName: 'Valenzuela', middleName: 'Yulo', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Ella', lastName: 'Zamora', middleName: 'Abad', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Dominic', lastName: 'Belmonte', middleName: 'Cojuangco', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Kyla', lastName: 'Dimagiba', middleName: 'Espiritu', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Francis', lastName: 'Fajardo', middleName: 'Guevarra', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Cheska', lastName: 'Hermoso', middleName: 'Ilagan', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Julian', lastName: 'Javier', middleName: 'Lagman', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
-          { firstName: 'Mariel', lastName: 'Magno', middleName: 'Nobleza', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
-
-          { firstName: 'Bryan', lastName: 'Ople', middleName: 'Pascual', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-          { firstName: 'Gillian', lastName: 'Quezon', middleName: 'Recto', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
-          { firstName: 'Louie', lastName: 'Sarmiento', middleName: 'Tan', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-          { firstName: 'Danielle', lastName: 'Urbano', middleName: 'Villareal', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-          { firstName: 'Kenneth', lastName: 'Wenceslao', middleName: 'Yanson', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-          { firstName: 'Joy', lastName: 'Zulueta', middleName: 'Agoncillo', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-          { firstName: 'Darren', lastName: 'Balagtas', middleName: 'Crisostomo', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-          { firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-        ]
-      }
+      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023 },
+      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023 },
+      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024 },
+      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024 },
     ];
 
     for (const b of batches) {
       const [existing] = await pool.execute('SELECT id FROM archived_years WHERE year = ?', [b.year]);
       if (existing.length === 0) {
-        const studentData = b.students.map((s, idx) => {
+        const studentData = b.list.map((s, idx) => {
           const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
           return {
-            id: parseInt(`${b.prefix.slice(0, 4)}${idx + 1}`),
+            id: parseInt(`${b.prefix}${idx + 1}`),
             studentId: sid,
             firstName: s.firstName,
             lastName: s.lastName,
@@ -683,7 +681,7 @@ async function seedPastBatches() {
             gender: s.sex,
             birthMonth: '08',
             birthDay: String((idx % 28) + 1).padStart(2, '0'),
-            birthYear: b.year.startsWith('2023') ? '2004' : '2005',
+            birthYear: b.sy.startsWith('2023') ? '2004' : '2005',
             age: '19',
             civilStatus: 'Single',
             registeredVoter: idx % 3 === 0 ? 'Yes' : 'No',
@@ -696,16 +694,16 @@ async function seedPastBatches() {
             address: `Brgy. ${s.brgy}, Naic, Cavite`,
             emergencyContact: `Maria ${s.lastName}`,
             emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
-            semester: '2nd Semester',
-            schoolYear: b.year,
+            semester: b.sem,
+            schoolYear: b.sy,
             status: 'active'
           };
         });
 
         const reportData = [
-          { id: 1, title: `Final NSTP Community Service Report (${b.year})`, department: 'CWTS', status: 'Approved', submittedAt: `${b.year.split('-')[1]}-04-15` },
-          { id: 2, title: `Literacy Tutorial Outreach Documentation (${b.year})`, department: 'LTS', status: 'Approved', submittedAt: `${b.year.split('-')[1]}-04-16` },
-          { id: 3, title: `Annual ROTC Tactical Briefing & Muster (${b.year})`, department: 'ROTC', status: 'Approved', submittedAt: `${b.year.split('-')[1]}-04-17` }
+          { id: 1, title: `Final NSTP Community Service Report (${b.year})`, department: 'CWTS', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-15` },
+          { id: 2, title: `Literacy Tutorial Outreach Documentation (${b.year})`, department: 'LTS', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-16` },
+          { id: 3, title: `Annual ROTC Tactical Briefing & Muster (${b.year})`, department: 'ROTC', status: 'Approved', submittedAt: `${b.sy.split('-')[1]}-04-17` }
         ];
 
         const archivePayload = JSON.stringify({ studentData, reportData, students: studentData.length, reports: reportData.length });

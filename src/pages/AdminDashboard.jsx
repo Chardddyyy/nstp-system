@@ -1596,14 +1596,14 @@ function AdminDashboard() {
 
               {/* Bar Chart — Fitted 100% on Mobile */}
               <div className="w-full space-y-3 sm:space-y-4">
-                {[...archivedYears.filter(y => y.year !== parseInt(currentBatch)).map(y => ({ 
+                {[...archivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
                   year: y.year, 
-                  cwts: y.data?.cwts || y.cwts || 0, 
-                  lts: y.data?.lts || y.lts || 0, 
-                  rotc: y.data?.rotc || y.rotc || 0 
+                  cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
+                  lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || 0, 
+                  rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || 0 
                 })), 
-                  { year: parseInt(currentBatch), cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
-                ].sort((a, b) => a.year - b.year).map((data) => {
+                  { year: currentBatch, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
+                ].sort((a, b) => String(a.year).localeCompare(String(b.year))).map((data) => {
                   const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
                   const totalForYear = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
 
@@ -1611,9 +1611,9 @@ function AdminDashboard() {
                     <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch Year {data.year}</span>
-                          {data.year === parseInt(currentBatch) && (
-                            <span className="text-[9px] sm:text-[10px] bg-emerald-700 text-white font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full uppercase">Active</span>
+                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch {data.year}</span>
+                          {String(data.year) === String(currentBatch) && (
+                            <span className="text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs">Active Batch</span>
                           )}
                         </div>
                         <span className="text-[10px] sm:text-xs font-bold text-gray-700 bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
@@ -1740,13 +1740,13 @@ function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {archivedYears.sort((a, b) => b.year - a.year).map((year) => (
+                    {[...archivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
                       <div
                         key={year.year}
                         className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                       >
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-11 h-11 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-sm shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform text-center leading-tight p-1">
                             {year.year}
                           </div>
                           <div>

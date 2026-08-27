@@ -1055,11 +1055,9 @@ function App() {
     setReports([]);
   }
 
-  const userConversations = useMemo(() => getUserConversations(), [getUserConversations]);
-
   const contextValue = {
     user, login, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
-    students, reports, conversations: userConversations, messages, pendingEnrollments,
+    students, setStudents, reports, conversations: userConversations, messages, pendingEnrollments,
     archivedYears, currentBatch,
     viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData,
     addStudent: addStudentFunc, updateStudent: updateStudentFunc, deleteStudent: deleteStudentFunc,

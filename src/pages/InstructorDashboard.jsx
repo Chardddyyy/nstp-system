@@ -704,13 +704,13 @@ function InstructorDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {archivedYears.sort((a, b) => b.year - a.year).map((year) => (
+                    {[...archivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
                       <div
                         key={year.year}
                         className="flex items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                       >
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-11 h-11 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-sm shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          <div className="w-12 h-12 rounded-2xl bg-emerald-800 text-amber-300 flex items-center justify-center font-black text-xs shrink-0 shadow-sm group-hover:scale-105 transition-transform text-center leading-tight p-1">
                             {year.year}
                           </div>
                           <div>

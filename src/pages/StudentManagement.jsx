@@ -49,7 +49,7 @@ const compressPhoto = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.8) 
 };
 
 function StudentManagement() {
-  const { user, logout, students, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
@@ -759,6 +759,7 @@ function StudentManagement() {
   };
 
   const handleToggleSelectStudent = (id) => {
+    if (!id) return;
     setSelectedStudentIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -774,7 +775,7 @@ function StudentManagement() {
     if (selectedStudentIds.size === currentStudents.length && currentStudents.length > 0) {
       setSelectedStudentIds(new Set());
     } else {
-      const next = new Set(currentStudents.map((s) => s.id));
+      const next = new Set(currentStudents.map((s) => s.id || s.studentId).filter(Boolean));
       setSelectedStudentIds(next);
     }
   };
@@ -785,9 +786,18 @@ function StudentManagement() {
     try {
       setIsBatchAssigning(true);
       // Optimistically update students list in real-time immediately
-      setStudents((prev) =>
-        prev.map((st) => (selectedStudentIds.has(st.id) ? { ...st, nstp_section: batchNstpSection } : st))
-      );
+      if (typeof setStudents === 'function') {
+        setStudents((prev) =>
+          prev.map((st) => {
+            const key = st.id || st.studentId;
+            const match = selectedStudentIds.has(key) || (st.id && selectedStudentIds.has(st.id)) || (st.studentId && selectedStudentIds.has(st.studentId));
+            if (match) {
+              return { ...st, nstp_section: batchNstpSection, nstpSection: batchNstpSection };
+            }
+            return st;
+          })
+        );
+      }
       await studentsAPI.batchAssignSection(ids, batchNstpSection);
       if (typeof refreshData === 'function') {
         try { await refreshData(); } catch (_) {}
@@ -1623,15 +1633,16 @@ function StudentManagement() {
           {/* Mobile Cards (No Horizontal Scroll Needed) */}
           <div className="sm:hidden divide-y divide-gray-100">
             {currentStudents.map((student, index) => {
-              const isSelected = selectedStudentIds.has(student.id);
+              const sKey = student.id || student.studentId || `student-m-${index}`;
+              const isSelected = selectedStudentIds.has(student.id) || selectedStudentIds.has(student.studentId) || selectedStudentIds.has(sKey) || (student.id && selectedStudentIds.has(String(student.id))) || (student.studentId && selectedStudentIds.has(String(student.studentId)));
               const showCheck = isAdmin && (isSectioningMode || selectedStudentIds.size > 0);
               return (
                 <div
-                  key={student.id || student.studentId || `student-m-${index}`}
+                  key={sKey}
                   className={`p-3.5 hover:bg-emerald-50/40 cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50/70 border-l-4 border-emerald-600' : ''}`}
                   onClick={() => {
                     if (isSectioningMode) {
-                      handleToggleSelectStudent(student.id);
+                      handleToggleSelectStudent(student.id || student.studentId);
                     } else {
                       handleViewStudent(student);
                     }
@@ -1642,7 +1653,7 @@ function StudentManagement() {
                       {showCheck && (
                         <div
                           className="pt-0.5 shrink-0 cursor-pointer"
-                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
+                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id || student.studentId); }}
                         >
                           {isSelected ? (
                             <CheckSquare className="w-5 h-5 text-emerald-700" />
@@ -1654,7 +1665,7 @@ function StudentManagement() {
                       <div className="min-w-0">
                         <p className="text-xs font-black text-gray-900 truncate">{student.name}</p>
                         <p className="text-[11px] text-gray-500 font-mono mt-0.5">
-                          {student.studentId} • <span className="font-bold text-gray-700">School: {student.section || '-'}</span> | <span className="font-black text-emerald-800">NSTP: {student.nstp_section || '-'}</span>
+                          {student.studentId} • <span className="font-bold text-gray-700">School: {student.section || '-'}</span> | <span className="font-black text-emerald-800">NSTP: {student.nstp_section || student.nstpSection || '-'}</span>
                         </p>
                         <p className="text-[10.5px] text-gray-400 truncate">{student.email}</p>
                       </div>
@@ -1817,15 +1828,16 @@ function StudentManagement() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {currentStudents.map((student, index) => {
-                  const isSelected = selectedStudentIds.has(student.id);
+                  const sKey = student.id || student.studentId || `student-${index}`;
+                  const isSelected = selectedStudentIds.has(student.id) || selectedStudentIds.has(student.studentId) || selectedStudentIds.has(sKey) || (student.id && selectedStudentIds.has(String(student.id))) || (student.studentId && selectedStudentIds.has(String(student.studentId)));
                   const showCheck = isAdmin && (isSectioningMode || selectedStudentIds.size > 0);
                   return (
                     <tr 
-                      key={student.id || student.studentId || `student-${index}`} 
+                      key={sKey} 
                       className={`hover:bg-green-50 cursor-pointer transition-colors duration-150 ${isSelected ? 'bg-emerald-50/80 font-semibold' : ''}`}
                       onClick={() => {
                         if (isSectioningMode) {
-                          handleToggleSelectStudent(student.id);
+                          handleToggleSelectStudent(student.id || student.studentId);
                         } else {
                           handleViewStudent(student);
                         }
@@ -1834,7 +1846,7 @@ function StudentManagement() {
                       {showCheck && (
                         <td 
                           className="px-4 py-4 whitespace-nowrap text-center bg-emerald-50/40 border-r border-emerald-100"
-                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id); }}
+                          onClick={(e) => { e.stopPropagation(); handleToggleSelectStudent(student.id || student.studentId); }}
                         >
                           <div className="inline-flex items-center justify-center cursor-pointer p-1 rounded hover:bg-emerald-100/80 transition-colors">
                             {isSelected ? (
@@ -1859,7 +1871,7 @@ function StudentManagement() {
                       {/* Assigned NSTP Section */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
                         <span className="inline-block px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-black text-xs border border-emerald-300/70">
-                          {student.nstp_section || '-'}
+                          {student.nstp_section || student.nstpSection || '-'}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -4125,7 +4137,7 @@ function StudentManagement() {
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
-                      Export CHED NSTP Form B
+                      Export OSDS-NSTP Form B
                     </h3>
                     <p className="text-[11px] text-emerald-300 font-medium">
                       Official Student Directory &amp; Enrollment List
