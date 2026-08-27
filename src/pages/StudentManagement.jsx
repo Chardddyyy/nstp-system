@@ -612,6 +612,23 @@ function StudentManagement() {
         { s: { r: 9, c: 24 }, e: { r: 9, c: 25 } }
       ];
 
+      // Apply borders to Form A
+      for (let R = 7; R <= 11; ++R) {
+        for (let C = 0; C <= 25; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!wsA[cellAddress]) wsA[cellAddress] = { t: 's', v: '' };
+          wsA[cellAddress].s = {
+            border: {
+              top: { style: 'thin', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '000000' } },
+              right: { style: 'thin', color: { rgb: '000000' } }
+            },
+            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+          };
+        }
+      }
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsA, 'OSDS-NSTP Form 2-A');
 
@@ -779,6 +796,29 @@ function StudentManagement() {
         // Email Address rowSpan 2
         { s: { r: 10, c: 12 }, e: { r: 11, c: 12 } }
       ];
+
+      // Apply borders to Form B
+      const rangeB = XLSX.utils.decode_range(wsB['!ref'] || 'A1:M14');
+      for (let R = 10; R <= rangeB.e.r - 2; ++R) {
+        for (let C = 0; C <= 12; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!wsB[cellAddress]) wsB[cellAddress] = { t: 's', v: '' };
+          const isCenter = [0, 1, 5, 6, 7, 11].includes(C);
+          wsB[cellAddress].s = {
+            border: {
+              top: { style: 'thin', color: { rgb: '000000' } },
+              bottom: { style: 'thin', color: { rgb: '000000' } },
+              left: { style: 'thin', color: { rgb: '000000' } },
+              right: { style: 'thin', color: { rgb: '000000' } }
+            },
+            alignment: {
+              horizontal: isCenter ? 'center' : 'left',
+              vertical: 'center',
+              wrapText: true
+            }
+          };
+        }
+      }
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsB, 'CHED NSTP Form B');

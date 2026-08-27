@@ -2765,6 +2765,12 @@ function buildChedWorkbook(students, info = {}) {
     cell.fill = headerStyle.fill;
   });
 
+  // Ensure full border around all merged header cells in rows 11 and 12
+  for (let c = 1; c <= 15; c++) {
+    ws.getCell(11, c).border = border;
+    ws.getCell(12, c).border = border;
+  }
+
   // ── Data rows starting at row 13 ──
   let r = 13;
   students.forEach((s, idx) => {
@@ -2844,6 +2850,10 @@ function buildChedWorkbook(students, info = {}) {
     });
     ws.mergeCells(r, 9, r, 10);
     ws.mergeCells(r, 11, r, 12);
+    // Re-apply border across merged columns so right border is crisp
+    for (let c = 1; c <= 15; c++) {
+      ws.getCell(r, c).border = border;
+    }
     r++;
   });
 
