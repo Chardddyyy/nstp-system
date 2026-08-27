@@ -375,17 +375,8 @@ export default function LetterFormats() {
                       <div className="flex items-center gap-2 shrink-0 mt-2 sm:mt-0">
                         <button
                           type="button"
-                          onClick={() => setViewingFile({ ...item.file, rawTemplate: item, batchYear: viewingArchive && archiveViewData?.year ? archiveViewData.year : '2024-2025' })}
-                          className="px-3 py-1.5 text-xs font-bold bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
-                          title="View File"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>View</span>
-                        </button>
-                        <button
-                          type="button"
                           onClick={() => handleDownloadAttachment(item)}
-                          className="px-3 py-1.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          className="px-3.5 py-1.5 text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                           title="Download File"
                         >
                           <Download className="w-3.5 h-3.5 text-amber-300" />
