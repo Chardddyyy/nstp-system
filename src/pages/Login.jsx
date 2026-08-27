@@ -318,8 +318,8 @@ function Login() {
       setForgotError('Please enter your new password');
       return;
     }
-    if (forgotNewPassword.length < 6) {
-      setForgotError('Password must be at least 6 characters');
+    if (forgotNewPassword.length < 8) {
+      setForgotError('Password must be at least 8 characters for security');
       return;
     }
     if (forgotNewPassword !== forgotConfirmPassword) {

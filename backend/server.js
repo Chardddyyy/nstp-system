@@ -14,6 +14,7 @@ const { initCronScheduler, recordBackupTimestamp } = require('./utils/cronSchedu
 const { uploadMedia, isConfigured: isCloudinaryConfigured } = require('./config/cloudinary');
 
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
@@ -22,6 +23,24 @@ const fs = require('fs');
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// ── Global Process Crash Guards (Prevents Render Server Downtime) ─────────────
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRASH GUARD] Unhandled Promise Rejection:', reason?.stack || reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH GUARD] Uncaught Exception:', err?.stack || err);
+});
+
+// Root Health Check for Render Service Monitors
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', service: 'NSTP System Backend API', timestamp: new Date().toISOString() });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
 
 // ── Socket.io Setup with Auto-Reconnect & Handshake Auth ──────────────────────
 const io = new SocketIOServer(httpServer, {
@@ -1306,7 +1325,7 @@ app.post('/api/auth/login', async function(req, res) {
     var providedPassword = String(password).trim();
 
     var passwordMatch = false;
-    var isBcryptHash = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$');
+    var isBcryptHash = storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$') || storedPassword.startsWith('$2y$');
     if (isBcryptHash) {
       passwordMatch = await bcrypt.compare(providedPassword, storedPassword);
     } else if (users.length > 0) {
@@ -1314,21 +1333,6 @@ app.post('/api/auth/login', async function(req, res) {
       if (passwordMatch) {
         var hashed = await bcrypt.hash(providedPassword, 12);
         await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, users[0].id]);
-      }
-    }
-
-    // Defense & Evaluation fallback support for standard seed credentials
-    if (!passwordMatch && users.length > 0) {
-      var u = users[0];
-      if (
-        (u.role === 'admin' && (providedPassword === 'admin123' || providedPassword === 'Admin@123')) ||
-        (u.department === 'CWTS' && (providedPassword === 'cwts123' || providedPassword === 'admin123')) ||
-        (u.department === 'LTS' && (providedPassword === 'lts123' || providedPassword === 'admin123')) ||
-        (u.department === 'ROTC' && (providedPassword === 'rotc123' || providedPassword === 'admin123'))
-      ) {
-        passwordMatch = true;
-        var newHashed = await bcrypt.hash(providedPassword, 12);
-        await pool.execute('UPDATE users SET password = ? WHERE id = ?', [newHashed, u.id]).catch(function() {});
       }
     }
 
@@ -2172,8 +2176,25 @@ app.get('/api/auth/test-email', async (req, res) => {
   });
 });
 
-// Forgot Password — generate OTP and send to registered email
-app.post('/api/auth/forgot-password', async (req, res) => {
+// Rate limiters for authentication recovery endpoints
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many password reset requests from this IP. Please wait 15 minutes before requesting again.' }
+});
+
+const verifyOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many OTP verification attempts from this IP. Please wait 15 minutes before trying again.' }
+});
+
+// Forgot Password — generate cryptographically secure OTP and send to registered email
+app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
   await ensurePasswordResetsTable();
   try {
     var email = req.body && req.body.email;
@@ -2182,10 +2203,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
-    var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-    var configuredAdminEmail = String(rawUser).trim().toLowerCase();
-    var users = [];
-
+    
     // 1. Search strictly in users table (Instructors and Admins only)
     var [foundUsers] = await pool.execute(
       `SELECT id, name, email, role FROM users 
@@ -2204,12 +2222,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     var user = foundUsers[0];
     var targetDeliveryEmail = user.email ? user.email.toLowerCase().trim() : cleanEmail;
-    var otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Cryptographically secure 6-digit OTP generation (prevents Math.random predictability)
+    var otp = crypto.randomInt(100000, 1000000).toString();
 
-    // Save in-memory
-    inMemoryResetOtps.set(cleanEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false });
+    // Save in-memory with attempt tracking
+    inMemoryResetOtps.set(cleanEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false, attempts: 0 });
     if (targetDeliveryEmail !== cleanEmail) {
-      inMemoryResetOtps.set(targetDeliveryEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false });
+      inMemoryResetOtps.set(targetDeliveryEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false, attempts: 0 });
     }
 
     // Also persist in DB if connected
@@ -2242,7 +2262,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
-// Verify Reset OTP Code — validate OTP before moving to Step 3
+// Verify Reset OTP Code — validate OTP before moving to Step 3 with attempt lockout
 const handleVerifyOtp = async (req, res) => {
   await ensurePasswordResetsTable();
   try {
@@ -2257,13 +2277,29 @@ const handleVerifyOtp = async (req, res) => {
     var cleanOtp = String(otp_code).trim();
     var isValid = false;
 
-    // Check in-memory first
+    // Check in-memory record
     var memRecord = inMemoryResetOtps.get(cleanEmail);
-    if (memRecord && memRecord.otp === cleanOtp && !memRecord.used && memRecord.expiresAt > Date.now()) {
-      isValid = true;
+    if (memRecord) {
+      if (memRecord.used || memRecord.expiresAt <= Date.now()) {
+        return res.status(400).json({ message: 'This verification code has expired. Please request a new code.' });
+      }
+
+      memRecord.attempts = (memRecord.attempts || 0) + 1;
+      if (memRecord.attempts > 5) {
+        memRecord.used = true;
+        inMemoryResetOtps.delete(cleanEmail);
+        try {
+          await pool.execute('UPDATE password_resets SET used = 1 WHERE LOWER(TRIM(email)) = ? AND used = 0', [cleanEmail]);
+        } catch (_) {}
+        return res.status(429).json({ message: 'Too many incorrect verification attempts. For security, this code has been invalidated. Please request a new OTP.' });
+      }
+
+      if (memRecord.otp === cleanOtp) {
+        isValid = true;
+      }
     }
 
-    // Check DB
+    // Check DB record
     if (!isValid) {
       try {
         var [resets] = await pool.execute(
@@ -2293,9 +2329,9 @@ const handleVerifyOtp = async (req, res) => {
     res.status(500).json({ message: err.message || 'Server error verifying code.' });
   }
 };
-app.post('/api/auth/verify-reset-otp', handleVerifyOtp);
-app.post('/api/auth/verify-otp', handleVerifyOtp);
-app.post('/verify-otp', handleVerifyOtp);
+app.post('/api/auth/verify-reset-otp', verifyOtpLimiter, handleVerifyOtp);
+app.post('/api/auth/verify-otp', verifyOtpLimiter, handleVerifyOtp);
+app.post('/verify-otp', verifyOtpLimiter, handleVerifyOtp);
 
 // Reset Password — verify OTP and update user password
 const handleResetPassword = async (req, res) => {
@@ -2309,20 +2345,19 @@ const handleResetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email, verification code, and new password.' });
     }
 
-    if (String(new_password).length < 6) {
-      return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+    if (String(new_password).length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long for account security.' });
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
-    var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-    var configuredAdminEmail = String(rawUser).trim().toLowerCase();
     var isValid = false;
 
     var memRecord = inMemoryResetOtps.get(cleanEmail);
     if (memRecord && memRecord.otp === cleanOtp && !memRecord.used && memRecord.expiresAt > Date.now()) {
       isValid = true;
       memRecord.used = true;
+      inMemoryResetOtps.delete(cleanEmail);
     }
 
     var dbResetId = null;
@@ -2350,7 +2385,7 @@ const handleResetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired verification code. Please enter the 6-digit code sent to your email inbox.' });
     }
 
-    var hashedPassword = await bcrypt.hash(new_password, 10);
+    var hashedPassword = await bcrypt.hash(String(new_password).trim(), 12);
 
     // Update users table for Instructor or Admin
     try {
@@ -2363,6 +2398,8 @@ const handleResetPassword = async (req, res) => {
       if (dbResetId) {
         await pool.execute('UPDATE password_resets SET used = 1 WHERE id = ?', [dbResetId]);
       }
+      // Also mark any dangling resets as used
+      await pool.execute('UPDATE password_resets SET used = 1 WHERE LOWER(TRIM(email)) = ?', [cleanEmail]).catch(() => {});
     } catch (dbUpdateErr) {
       console.warn('Database update password notice:', dbUpdateErr.message);
     }
@@ -2378,8 +2415,8 @@ const handleResetPassword = async (req, res) => {
     res.status(500).json({ message: err.message || 'Server error resetting password.' });
   }
 };
-app.post('/api/auth/reset-password', handleResetPassword);
-app.post('/reset-password', handleResetPassword);
+app.post('/api/auth/reset-password', verifyOtpLimiter, handleResetPassword);
+app.post('/reset-password', verifyOtpLimiter, handleResetPassword);
 
 // Alias for forgot-password
 app.post('/forgot-password', (req, res, next) => {
