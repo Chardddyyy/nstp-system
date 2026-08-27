@@ -2938,8 +2938,9 @@ const handleBatchAssignSection = async (req, res) => {
       return res.status(400).json({ message: 'NSTP section is required' });
     }
 
-    let query = 'UPDATE students SET nstp_section = ? WHERE (id IN (?) OR studentId IN (?))';
-    let params = [cleanSection, studentIds, studentIds];
+    const placeholders = studentIds.map(() => '?').join(',');
+    let query = `UPDATE students SET nstp_section = ? WHERE id IN (${placeholders}) OR studentId IN (${placeholders})`;
+    let params = [cleanSection, ...studentIds, ...studentIds.map(String)];
 
     if (req.user.role !== 'admin') {
       query += ' AND department = ?';
@@ -2950,8 +2951,8 @@ const handleBatchAssignSection = async (req, res) => {
     
     try {
       await pool.query(
-        'UPDATE enrollments e JOIN students s ON (e.studentId = s.studentId OR (e.student_name = s.name AND e.department = s.department)) SET e.nstp_section = ? WHERE s.id IN (?) OR s.studentId IN (?)',
-        [cleanSection, studentIds, studentIds]
+        `UPDATE enrollments e JOIN students s ON (e.studentId = s.studentId OR (e.student_name = s.name AND e.department = s.department)) SET e.nstp_section = ? WHERE s.id IN (${placeholders}) OR s.studentId IN (${placeholders})`,
+        [cleanSection, ...studentIds, ...studentIds.map(String)]
       );
     } catch (_) {}
 

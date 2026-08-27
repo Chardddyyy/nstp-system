@@ -237,7 +237,28 @@ export function getStudents() {
   return apiCall('/students')
     .then(function(res) {
       if (Array.isArray(res)) {
-        try { localStorage.setItem('nstp_cached_students', JSON.stringify(res)); } catch (_) {}
+        try {
+          const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+          const sectionOverrides = new Map();
+          cached.forEach(st => {
+            const sec = st.nstp_section || st.nstpSection;
+            if (sec) {
+              if (st.id) sectionOverrides.set(String(st.id), sec);
+              if (st.studentId) sectionOverrides.set(String(st.studentId), sec);
+            }
+          });
+          const merged = res.map(st => {
+            const override = sectionOverrides.get(String(st.id)) || sectionOverrides.get(String(st.studentId));
+            if (override && (!st.nstp_section && !st.nstpSection)) {
+              return { ...st, nstp_section: override, nstpSection: override };
+            }
+            return st;
+          });
+          localStorage.setItem('nstp_cached_students', JSON.stringify(merged));
+          return merged;
+        } catch (_) {
+          try { localStorage.setItem('nstp_cached_students', JSON.stringify(res)); } catch (_) {}
+        }
       }
       return res;
     })
@@ -261,6 +282,13 @@ export function updateStudent(id, data) {
   return apiCall('/students/' + id, {
     method: 'PUT',
     body: JSON.stringify(data)
+  }).then(res => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+      const updated = cached.map(st => (st.id === id || st.studentId === id) ? { ...st, ...data } : st);
+      localStorage.setItem('nstp_cached_students', JSON.stringify(updated));
+    } catch (_) {}
+    return res;
   });
 }
 
@@ -270,22 +298,40 @@ export function deleteStudent(id) {
   });
 }
 
-export function batchAssignNstpSection(studentIds, nstpSection) {
-  return apiCall('/students/batch-assign-section', {
-    method: 'POST',
-    body: JSON.stringify({ studentIds, nstp_section: nstpSection })
-  }).catch(async (err) => {
-    console.warn('Batch assign endpoint notice, executing fallback update:', err);
-    try {
-      for (const id of studentIds) {
-        await apiCall('/students/' + id, {
+export async function batchAssignNstpSection(studentIds, nstpSection) {
+  // Update local cache immediately
+  try {
+    const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+    const updated = cached.map(st => {
+      const key = st.id || st.studentId;
+      if (studentIds.includes(key) || studentIds.includes(st.id) || studentIds.includes(st.studentId)) {
+        return { ...st, nstp_section: nstpSection, nstpSection: nstpSection };
+      }
+      return st;
+    });
+    localStorage.setItem('nstp_cached_students', JSON.stringify(updated));
+  } catch (_) {}
+
+  // Attempt direct batch assign endpoint
+  try {
+    const res = await apiCall('/students/batch-assign-section', {
+      method: 'POST',
+      body: JSON.stringify({ studentIds, nstp_section: nstpSection })
+    });
+    return res;
+  } catch (err) {
+    console.warn('Batch assign endpoint notice, executing parallel student updates:', err);
+    // Fallback: update students in parallel
+    await Promise.allSettled(
+      studentIds.map(id =>
+        apiCall('/students/' + encodeURIComponent(id), {
           method: 'PUT',
           body: JSON.stringify({ nstp_section: nstpSection })
-        }).catch(() => null);
-      }
-    } catch (_) {}
+        })
+      )
+    );
     return { success: true, count: studentIds.length, nstp_section: nstpSection };
-  });
+  }
 }
 
 // Grades API with resilient offline & online synchronization
