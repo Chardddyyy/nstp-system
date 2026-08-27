@@ -566,6 +566,19 @@ function StudentManagement() {
 
       const wsA = XLSX.utils.aoa_to_sheet(aoaA);
 
+      // Apply Column Widths and Row Heights
+      wsA['!cols'] = [
+        { wch: 34 }, // HEI Name
+        { wch: 22 }, // Classification
+        ...Array(24).fill({ wch: 9 }) // M/F subcolumns
+      ];
+      wsA['!rows'] = [
+        { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
+        { hpt: 24 }, { hpt: 20 }, { hpt: 10 },
+        { hpt: 22 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
+        { hpt: 24 }
+      ];
+
       // Apply Excel Cell Merges for Form A
       wsA['!merges'] = [
         // Title merge
@@ -719,6 +732,29 @@ function StudentManagement() {
       ];
 
       const wsB = XLSX.utils.aoa_to_sheet(aoaB);
+
+      // Apply Column Widths and Row Heights
+      wsB['!cols'] = [
+        { wch: 6 },  // No.
+        { wch: 16 }, // Student No.
+        { wch: 18 }, // Surname
+        { wch: 18 }, // First Name
+        { wch: 16 }, // Middle Name
+        { wch: 14 }, // Program
+        { wch: 10 }, // Sex
+        { wch: 14 }, // Birthdate
+        { wch: 24 }, // Street/Barangay
+        { wch: 20 }, // Municipality/City
+        { wch: 18 }, // Province
+        { wch: 18 }, // Contact Number
+        { wch: 30 }  // Email Address
+      ];
+      wsB['!rows'] = [
+        { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
+        { hpt: 24 }, { hpt: 20 }, { hpt: 10 },
+        { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
+        { hpt: 22 }, { hpt: 22 }
+      ];
 
       // Apply Excel Cell Merges for Form B
       wsB['!merges'] = [

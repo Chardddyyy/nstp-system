@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  Calendar, User, LogOut, Shield, X, FileCheck
+  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw
 } from 'lucide-react';
 
 const DEPT_COLORS = {
@@ -14,6 +15,12 @@ const DEPT_COLORS = {
 export default function Sidebar({ open, onClose, onLogout, user, archiveMode = false }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth() || {};
+  const viewingArchive = archiveMode || auth.viewingArchive || false;
+  const archiveViewData = auth.archiveViewData || null;
+  const setViewingArchive = auth.setViewingArchive || (() => {});
+  const setArchiveViewData = auth.setArchiveViewData || (() => {});
+
   const isAdmin = user?.role === 'admin';
   const dashPath = isAdmin ? '/admin/dashboard' : '/instructor/dashboard';
   const colors = DEPT_COLORS[user?.department] || DEPT_COLORS.Admin;
@@ -23,19 +30,24 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
     onClose();
   }
 
+  function handleExitArchive() {
+    setViewingArchive(false);
+    setArchiveViewData(null);
+    navigate(dashPath);
+    onClose();
+  }
+
   function navClass(path) {
     const active = location.pathname === path;
-    return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 ${
+    return `w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer ${
       active 
         ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 font-black shadow-md shadow-amber-950/30' 
         : 'text-emerald-100/90 hover:bg-emerald-800/60 hover:text-white font-semibold hover:translate-x-1'
     }`;
   }
 
-  function archiveNavClass() {
-    return `w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
-      archiveMode ? 'opacity-40 cursor-not-allowed text-emerald-200/50' : 'text-emerald-100/90 hover:bg-emerald-800/60'
-    }`;
+  function liveOnlyNavClass() {
+    return 'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors opacity-45 cursor-not-allowed text-emerald-200/50';
   }
 
   return (
@@ -48,9 +60,9 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-r border-emerald-800/50 z-50 transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-r border-emerald-800/50 z-50 transition-transform duration-300 ease-in-out flex flex-col ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Header */}
-        <div className="p-6 border-b border-emerald-800/60">
+        <div className="p-5 border-b border-emerald-800/60 shrink-0">
           {isAdmin ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -64,7 +76,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                   </span>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors">
+              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -81,76 +93,105 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                   </span>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors">
+              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="p-4 space-y-1.5">
-          <button type="button" onClick={() => go(dashPath)}
-            disabled={archiveMode}
-            className={isAdmin ? (archiveMode
-              ? 'w-full flex items-center space-x-3 px-4 py-3 rounded-xl opacity-40 cursor-not-allowed text-emerald-200/50'
-              : navClass(dashPath))
-              : navClass(dashPath)}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span>Dashboard</span>
+        {/* Scrollable Nav Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
+          {/* Archived Batch Active Indicator in Sidebar */}
+          {viewingArchive && (
+            <div className="mb-3 p-3 rounded-2xl bg-amber-400/15 border border-amber-400/35 text-amber-300 shadow-inner">
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-300">
+                  <Archive className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Archive Mode</span>
+                </span>
+                <span className="text-[10px] bg-amber-400/25 text-amber-200 px-1.5 py-0.5 rounded-full font-black border border-amber-400/30">
+                  Active
+                </span>
+              </div>
+              <p className="text-xs font-black text-white truncate mb-2.5">
+                Batch {archiveViewData?.year || 'Historical'}
+              </p>
+              <button
+                type="button"
+                onClick={handleExitArchive}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-emerald-950 rounded-xl text-[11px] font-black transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Exit Archive Batch</span>
+              </button>
+            </div>
+          )}
+
+          {/* Nav Items */}
+          <button type="button" onClick={() => go(dashPath)} className={navClass(dashPath)}>
+            <div className="flex items-center space-x-3">
+              <LayoutDashboard className="w-5 h-5" />
+              <span>Dashboard</span>
+            </div>
+            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           <button type="button" onClick={() => go('/students')} className={navClass('/students')}>
-            <Users className="w-5 h-5" />
-            <span>{isAdmin ? 'Students' : 'My Students'}</span>
+            <div className="flex items-center space-x-3">
+              <Users className="w-5 h-5" />
+              <span>{isAdmin ? 'Students' : 'My Students'}</span>
+            </div>
+            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           <button type="button" onClick={() => go('/reports')} className={navClass('/reports')}>
-            <FileText className="w-5 h-5" />
-            <span>Reports</span>
+            <div className="flex items-center space-x-3">
+              <FileText className="w-5 h-5" />
+              <span>Reports</span>
+            </div>
+            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
-          <button type="button"
-            onClick={() => { if (!archiveMode) go('/chat'); }}
-            disabled={archiveMode}
-            className={archiveMode ? archiveNavClass() : navClass('/chat')}
+          <button type="button" onClick={() => go('/calendar')} className={navClass('/calendar')}>
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-5 h-5" />
+              <span>Calendar</span>
+            </div>
+            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
+          </button>
+
+          <button type="button" onClick={() => go('/letter-formats')} className={navClass('/letter-formats')}>
+            <div className="flex items-center space-x-3">
+              <FileCheck className="w-5 h-5" />
+              <span>Letter Formats</span>
+            </div>
+            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) go('/chat'); }}
+            disabled={viewingArchive}
+            className={viewingArchive ? liveOnlyNavClass() : navClass('/chat')}
           >
-            <MessageSquare className="w-5 h-5" />
-            <span>Messages</span>
+            <div className="flex items-center space-x-3">
+              <MessageSquare className="w-5 h-5" />
+              <span>Messages</span>
+            </div>
+            {viewingArchive && <span className="text-[9px] bg-white/10 text-emerald-200 px-1.5 py-0.5 rounded font-bold">Live Only</span>}
           </button>
 
-          <button type="button"
-            onClick={() => { if (!archiveMode) go('/calendar'); }}
-            disabled={archiveMode}
-            className={archiveMode ? archiveNavClass() : navClass('/calendar')}
-          >
-            <Calendar className="w-5 h-5" />
-            <span>Calendar</span>
+          <button type="button" onClick={() => go('/profile')} className={navClass('/profile')}>
+            <div className="flex items-center space-x-3">
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </div>
           </button>
+        </div>
 
-          <button type="button"
-            onClick={() => { if (!archiveMode) go('/letter-formats'); }}
-            disabled={archiveMode}
-            className={archiveMode ? archiveNavClass() : navClass('/letter-formats')}
-          >
-            <FileCheck className="w-5 h-5" />
-            <span>Letter Formats</span>
-          </button>
-
-
-          <button type="button"
-            onClick={() => { if (!archiveMode) go('/profile'); }}
-            disabled={archiveMode}
-            className={archiveMode ? archiveNavClass() : navClass('/profile')}
-          >
-            <User className="w-5 h-5" />
-            <span>Profile</span>
-          </button>
-        </nav>
-
-        {/* Logout */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-emerald-800/60 bg-emerald-950/40">
+        {/* Logout Footer */}
+        <div className="p-4 border-t border-emerald-800/60 bg-emerald-950/40 shrink-0">
           <button type="button" onClick={onLogout}
             className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >

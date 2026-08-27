@@ -2562,11 +2562,18 @@ function buildChedWorkbook(students, info = {}) {
       s.email          || '',
     ];
     rowVals.forEach((v, i) => {
-      const cell = ws.getCell(r, i + 1);
+      const colIdx = i + 1;
+      const cell = ws.getCell(r, colIdx);
       cell.value = v;
       cell.font = { name: 'Arial', size: 9 };
       cell.border = border;
-      cell.alignment = { vertical: 'middle', wrapText: true };
+      // Center numeric, code, sex, birthdate, and contact numbers; Left-align names and text addresses
+      const isCenter = [1, 2, 6, 7, 8, 14].includes(colIdx);
+      cell.alignment = { 
+        horizontal: isCenter ? 'center' : 'left', 
+        vertical: 'middle', 
+        wrapText: true 
+      };
     });
     ws.mergeCells(r, 9, r, 10);
     ws.mergeCells(r, 11, r, 12);

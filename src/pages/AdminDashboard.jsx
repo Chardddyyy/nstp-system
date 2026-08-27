@@ -692,54 +692,6 @@ function AdminDashboard() {
                 </button>
               </div>
             </div>
-
-            {/* Quick Portal Navigation Links */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5 pt-3.5 border-t border-amber-300/40">
-              <button
-                type="button"
-                onClick={() => navigate('/admin/students')}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
-              >
-                <span className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
-                  <span>Students ({archiveViewData.students || archiveViewData.studentData?.length || 0})</span>
-                </span>
-                <span className="text-amber-700 font-black">&rarr;</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/reports')}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
-              >
-                <span className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
-                  <span>Reports ({archiveViewData.reports || archiveViewData.reportData?.length || 0})</span>
-                </span>
-                <span className="text-amber-700 font-black">&rarr;</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/calendar')}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
-              >
-                <span className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
-                  <span>Calendar Schedule</span>
-                </span>
-                <span className="text-amber-700 font-black">&rarr;</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/letter-formats')}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white border border-amber-200 text-emerald-950 text-xs font-bold transition-all shadow-2xs cursor-pointer group"
-              >
-                <span className="flex items-center gap-2">
-                  <FileCheck className="w-4 h-4 text-emerald-700 group-hover:scale-110 transition-transform" />
-                  <span>Letter Formats ({archiveViewData.letterData?.length || 5})</span>
-                </span>
-                <span className="text-amber-700 font-black">&rarr;</span>
-              </button>
-            </div>
           </div>
         )}
 

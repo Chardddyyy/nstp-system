@@ -415,6 +415,47 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     ];
 
     const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Apply column widths & row heights
+    worksheet['!cols'] = [
+      { wch: 6 },  // No.
+      { wch: 16 }, // Student No.
+      { wch: 18 }, // Surname
+      { wch: 18 }, // First Name
+      { wch: 16 }, // Middle Name
+      { wch: 14 }, // Program
+      { wch: 10 }, // Sex
+      { wch: 14 }, // Birthdate
+      { wch: 24 }, // Street
+      { wch: 20 }, // Municipality
+      { wch: 18 }, // Province
+      { wch: 18 }, // Contact Number
+      { wch: 30 }, // Email
+      { wch: 16 }, // Section
+      { wch: 15 }, // 1st Sem Grade
+      { wch: 15 }, // 2nd Sem Grade
+      { wch: 15 }, // Final Rating
+      { wch: 18 }  // Overall Remarks
+    ];
+    worksheet['!rows'] = [
+      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 18 }, { hpt: 18 },
+      { hpt: 24 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 26 }
+    ];
+    worksheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 17 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 17 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 17 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 17 } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 17 } },
+      { s: { r: 5, c: 0 }, e: { r: 5, c: 17 } },
+      { s: { r: 6, c: 0 }, e: { r: 6, c: 7 } },
+      { s: { r: 6, c: 8 }, e: { r: 6, c: 17 } },
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 7 } },
+      { s: { r: 7, c: 8 }, e: { r: 7, c: 17 } },
+      { s: { r: 8, c: 0 }, e: { r: 8, c: 7 } },
+      { s: { r: 8, c: 8 }, e: { r: 8, c: 17 } }
+    ];
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'OSDS-NSTP Form 2-A');
 
@@ -463,6 +504,22 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 6 },  // No.
+      { wch: 16 }, // Student ID
+      { wch: 28 }, // Student Name
+      { wch: 14 }, // Department
+      { wch: 14 }, // Program
+      { wch: 16 }, // School Section
+      { wch: 16 }, // NSTP Section
+      { wch: 18 }, // Semester / Academic Year
+      { wch: 16 }, // 1st Sem / Midterm Grade
+      { wch: 16 }, // 2nd Sem / Final Grade
+      { wch: 16 }, // Annual Rating
+      { wch: 20 }  // Overall Remarks
+    ];
+    worksheet['!rows'] = [{ hpt: 24 }];
+
     const workbook = XLSX.utils.book_new();
     const sheetLabel = isAnnualView ? 'Annual NSTP Grades' : 'Semester Grades';
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetLabel);
