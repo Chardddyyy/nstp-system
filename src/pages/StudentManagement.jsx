@@ -358,7 +358,7 @@ function StudentManagement() {
   const [exportDept, setExportDept] = useState('All');
   const [exportCourse, setExportCourse] = useState('All');
   const [exportSem, setExportSem] = useState('1st Semester');
-  const [exportAcadYear, setExportAcadYear] = useState('2025-2026');
+  const [exportAcadYear, setExportAcadYear] = useState('2026-2027');
   const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 

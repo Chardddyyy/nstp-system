@@ -25,7 +25,7 @@ function InstructorDashboard() {
     messages = {}, 
     notifications = [], 
     setNotifications,
-    currentBatch = new Date().getFullYear().toString()
+    currentBatch = '2026-2027 1st Semester'
   } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);

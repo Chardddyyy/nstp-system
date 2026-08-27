@@ -853,6 +853,14 @@ async function ensureNstpIdAndAttendanceTables() {
     try { await pool.execute("ALTER TABLE archived_years MODIFY COLUMN year VARCHAR(100) NOT NULL"); } catch (_) {}
     try { await pool.execute("ALTER TABLE current_batch MODIFY COLUMN year VARCHAR(100) NOT NULL"); } catch (_) {}
     try { await pool.execute("ALTER TABLE current_batch ADD COLUMN semester VARCHAR(50) NULL"); } catch (_) {}
+    try {
+      const [cbRows] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
+      if (!cbRows || cbRows.length === 0) {
+        await pool.execute("INSERT INTO current_batch (id, year, semester) VALUES (1, '2026-2027 1st Semester', '1st Semester')");
+      } else {
+        await pool.execute("UPDATE current_batch SET year = '2026-2027 1st Semester', semester = '1st Semester' WHERE id = 1");
+      }
+    } catch (_) {}
     try { await pool.execute("ALTER TABLE reports MODIFY COLUMN batch_year VARCHAR(100) NULL"); } catch (_) {}
 
     // Fix Gonzaga to LTS department as required
@@ -4531,10 +4539,10 @@ app.post('/api/calls/:id/webrtc/ice', authenticateToken, async (req, res) => {
 app.get('/api/current-batch', authenticateToken, async (req, res) => {
   try {
     const [batches] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
-    res.json(batches[0] || { year: new Date().getFullYear() });
+    res.json(batches[0] || { year: '2026-2027 1st Semester', semester: '1st Semester' });
   } catch (error) {
     console.error('Get current batch error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.json({ year: '2026-2027 1st Semester', semester: '1st Semester' });
   }
 });
 

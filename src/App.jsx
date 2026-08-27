@@ -135,7 +135,7 @@ function App() {
     const checkInterval = setInterval(checkVersion, 12000);
     return () => clearInterval(checkInterval);
   }, []);
-  const [currentBatch, setCurrentBatch] = useState(new Date().getFullYear().toString());
+  const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
   const [viewingArchive, setViewingArchive] = useState(false);
   const [archiveViewData, setArchiveViewData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -685,7 +685,7 @@ function App() {
         setArchivedYears(DEFAULT_PAST_BATCHES);
         safeSetStorage('nstp_cached_archives', DEFAULT_PAST_BATCHES);
       }
-      if (batchData?.year) setCurrentBatch(batchData.year.toString());
+      setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
 
       if (conversationsData && Array.isArray(conversationsData)) {
         setConversations(conversationsData);

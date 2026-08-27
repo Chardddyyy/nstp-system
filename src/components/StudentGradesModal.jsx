@@ -28,7 +28,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
   const [selectedDept, setSelectedDept] = useState(defaultDept);
   const [selectedSemester, setSelectedSemester] = useState(defaultSemester);
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState('2025-2026');
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState('2026-2027');
   const [selectedNstpSection, setSelectedNstpSection] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -780,9 +780,9 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 onChange={(e) => setSelectedSchoolYear(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-xs font-bold rounded-xl border border-emerald-200 bg-white text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
               >
+                <option value="2026-2027">2026-2027</option>
                 <option value="2025-2026">2025-2026</option>
                 <option value="2024-2025">2024-2025</option>
-                <option value="2026-2027">2026-2027</option>
               </select>
             </div>
 

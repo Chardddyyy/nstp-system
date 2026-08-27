@@ -182,7 +182,7 @@ function AdminDashboard() {
     declineEnrollment, 
     refreshData, 
     archivedYears = [], 
-    currentBatch = new Date().getFullYear().toString(), 
+    currentBatch = '2026-2027 1st Semester', 
     notifications = [], 
     setNotifications, 
     viewingArchive, 
