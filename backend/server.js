@@ -2698,6 +2698,23 @@ function buildChedWorkbook(students, info = {}) {
   const widths = [6, 14, 16, 16, 16, 12, 6, 14, 18, 14, 18, 14, 14, 16, 24];
   widths.forEach((w, i) => (ws.getColumn(i + 1).width = w));
 
+  // Magic Print Settings: Landscape, A4 (paperSize: 9), Fit to Width 1 page, Custom margins
+  ws.pageSetup = {
+    paperSize: 9, // A4
+    orientation: 'landscape',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: {
+      left: 0.25,
+      right: 0.25,
+      top: 0.5,
+      bottom: 0.5,
+      header: 0.3,
+      footer: 0.3
+    }
+  };
+
   // Row heights — compact title rows so logos don't stretch the sheet
   for (let i = 1; i <= 6; i++) ws.getRow(i).height = 13;
 

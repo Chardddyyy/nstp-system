@@ -629,6 +629,16 @@ function StudentManagement() {
         }
       }
 
+      // Magic Print Settings for Form A: Landscape, A4, Fit to 1 page
+      wsA['!pageSetup'] = {
+        paperSize: 9, // A4
+        orientation: 'landscape',
+        fitToWidth: 1,
+        fitToHeight: 1,
+        fitToPage: true
+      };
+      wsA['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsA, 'OSDS-NSTP Form 2-A');
 
@@ -819,6 +829,16 @@ function StudentManagement() {
           };
         }
       }
+
+      // Magic Print Settings for Form B: Landscape, A4, Fit to 1 page width
+      wsB['!pageSetup'] = {
+        paperSize: 9, // A4
+        orientation: 'landscape',
+        fitToWidth: 1,
+        fitToHeight: 0,
+        fitToPage: true
+      };
+      wsB['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsB, 'CHED NSTP Form B');
