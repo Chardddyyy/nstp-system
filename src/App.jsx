@@ -274,22 +274,11 @@ function App() {
       }
     };
 
-    // 5. Instant Concurrent Login Attempt Alert
-    const handleConcurrentLogin = (payload) => {
-      pushNotification({
-        title: '🔒 Security Alert: Sign-in Attempt Detected',
-        message: payload?.message || 'Another device or browser attempted to sign in to this account.',
-        type: 'warning'
-      });
-    };
-
     socket.on('chat:message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:ended', handleCallEnded);
-    socket.on('concurrent_login_detected', handleConcurrentLogin);
-    socket.on('concurrent_login_alert', handleConcurrentLogin);
 
     return () => {
       socket.off('chat:message', handleChatMessage);
@@ -297,8 +286,6 @@ function App() {
       socket.off('enrollment:new', handleNewEnrollment);
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
-      socket.off('concurrent_login_detected', handleConcurrentLogin);
-      socket.off('concurrent_login_alert', handleConcurrentLogin);
     };
   }, [user, pushNotification]);
 
@@ -731,14 +718,6 @@ function App() {
   async function login(email, password, forceLogin = false) {
     try {
       const response = await authAPI.login(email, password, forceLogin);
-      if (response && (response.warning || response.blocked) && response.activeSession) {
-        return {
-          success: false,
-          blocked: true,
-          activeSession: true,
-          message: response.message || '⚠️ Account Active: This account is currently in use on another device.'
-        };
-      }
       if (!response || !response.token) return { success: false, message: response?.message || 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
@@ -750,14 +729,6 @@ function App() {
       return { success: true, role: response.user.role };
     } catch (error) {
       console.error('Login error:', error);
-      if (error?.message && (error.message.includes('another device') || error.message.includes('currently in use') || error.message.includes('Account In Use'))) {
-        return {
-          success: false,
-          blocked: true,
-          activeSession: true,
-          message: error.message
-        };
-      }
       return { success: false, message: error.message || 'Invalid email or password' };
     }
   }

@@ -56,7 +56,6 @@ function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Signing in...');
-  const [activeSessionWarning, setActiveSessionWarning] = useState(null);
 
   // Forgot Password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -202,12 +201,6 @@ function Login() {
       clearTimeout(timer1);
       clearTimeout(timer2);
 
-      if ((result.warning || result.blocked) && result.activeSession) {
-        setActiveSessionWarning(result.message || '⚠️ Account Active: This account is currently in use on another device.');
-        setLoading(false);
-        return;
-      }
-
       if (result.success) {
         if (result.role === 'admin') {
           navigate('/admin/dashboard');
@@ -215,11 +208,7 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
-        if (result.activeSession || (result.message && (result.message.includes('another device') || result.message.includes('currently active on another device')))) {
-          setActiveSessionWarning(result.message || 'This account is currently active on another device. Sign-in is restricted while an active session exists.');
-        } else {
-          setError(result.message || 'Invalid email or password');
-        }
+        setError(result.message || 'Invalid email or password');
         setPassword('');
       }
     } catch (err) {
@@ -233,37 +222,6 @@ function Login() {
         setError(errMsg || 'Server connection failed. Please try again.');
       }
       setPassword('');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForceLogin = async () => {
-    const cleanEmail = email.trim().toLowerCase();
-    const pw = password || submittedPassword;
-    if (!cleanEmail || !pw) {
-      setActiveSessionWarning(null);
-      setError('Please re-enter your password');
-      return;
-    }
-
-    setLoading(true);
-    setLoadingText('Signing in on this device...');
-    setActiveSessionWarning(null);
-
-    try {
-      const result = await login(cleanEmail, pw, true);
-      if (result.success) {
-        if (result.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/instructor/dashboard');
-        }
-      } else {
-        setError(result.message || 'Login failed. Please try again.');
-      }
-    } catch (err) {
-      setError(err?.message || 'Login failed.');
     } finally {
       setLoading(false);
     }
@@ -565,32 +523,6 @@ function Login() {
           </div>
         </div>
       </main>
-
-      {/* Concurrent Active Session Notice Modal */}
-      {activeSessionWarning && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white text-gray-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-300">
-            <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-4 mx-auto border border-amber-300 shadow-sm">
-              <AlertTriangle className="w-7 h-7" />
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-2">
-              Account Active on Another Device
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-600 text-center mb-6 leading-relaxed">
-              {activeSessionWarning}
-            </p>
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setActiveSessionWarning(null)}
-                className="w-full py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                Understood / Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Institutional Forgot Password Modal */}
       {showForgotPassword && (

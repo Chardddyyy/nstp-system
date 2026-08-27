@@ -216,21 +216,6 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ message: 'Invalid token' });
     }
 
-    // Check single-session device validity
-    if (user && user.id && user.sessionId) {
-      try {
-        var [uRows] = await pool.execute('SELECT current_session_id FROM users WHERE id = ?', [user.id]);
-        if (uRows.length > 0 && uRows[0].current_session_id && uRows[0].current_session_id !== user.sessionId) {
-          return res.status(401).json({
-            code: 'SESSION_TERMINATED',
-            message: '⚠️ Session Expired: Your account has been logged in from another device.'
-          });
-        }
-      } catch (e) {
-        // Continue if transient db error
-      }
-    }
-
     req.user = user;
     if (user && user.id) {
       pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
@@ -1353,66 +1338,8 @@ app.post('/api/auth/login', async function(req, res) {
     resetLoginAttempts(email);
     auditLog('login_success', user.id, `role: ${user.role}`, ip);
 
-    // Check if account has an active session in another device
-    var forceLogin = req.body && (req.body.forceLogin === true || req.body.forceLogin === 'true');
-    var isDeviceActivelyInUse = false;
-
-    // Check if there is an actual live socket connection for this user
-    var hasLiveSocket = false;
-    if (typeof io !== 'undefined' && io && io.sockets && io.sockets.adapter && io.sockets.adapter.rooms) {
-      var userRoom = io.sockets.adapter.rooms.get('user_' + user.id);
-      if (userRoom && userRoom.size > 0) {
-        hasLiveSocket = true;
-      }
-    }
-
-    if (!forceLogin && user.current_session_id && String(user.current_session_id).trim() !== '') {
-      var secondsSinceActive = user.seconds_since_active;
-      // Only treat as actively in use if there is an actual LIVE connected socket AND recent activity
-      if (
-        hasLiveSocket &&
-        secondsSinceActive !== null &&
-        secondsSinceActive !== undefined &&
-        !isNaN(Number(secondsSinceActive)) &&
-        Number(secondsSinceActive) >= 0 &&
-        Number(secondsSinceActive) < 30
-      ) {
-        isDeviceActivelyInUse = true;
-      } else {
-        // Automatically clear stale, closed, or inactive session in DB
-        await pool.execute('UPDATE users SET current_session_id = NULL, last_active_at = NULL WHERE id = ?', [user.id]);
-      }
-    }
-
-    if (isDeviceActivelyInUse && !forceLogin) {
-      auditLog('login_prompt_active_session', user.id, `prompt_concurrent_login: ${email}`, ip);
-      // Alert the currently active session in real-time via Socket.io
-      if (typeof io !== 'undefined') {
-        io.to('user_' + user.id).emit('concurrent_login_detected', {
-          ip: ip,
-          timestamp: new Date().toISOString(),
-          message: 'Security Notice: Another device/browser is attempting to access this account.'
-        });
-      }
-      return res.status(200).json({
-        warning: true,
-        activeSession: true,
-        message: 'This account is currently active on another device. An alert has been sent to the active session. Do you want to sign in on this device and continue?'
-      });
-    }
-
-    if (forceLogin && isDeviceActivelyInUse) {
-      if (typeof io !== 'undefined') {
-        io.to('user_' + user.id).emit('concurrent_login_alert', {
-          ip: ip,
-          timestamp: new Date().toISOString(),
-          message: 'Notice: A concurrent sign-in was completed from another device.'
-        });
-      }
-    }
-
     var sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
-    await pool.execute('UPDATE users SET current_session_id = ?, last_active_at = NOW() WHERE id = ?', [sessionId, user.id]);
+    await pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
 
     var token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, department: user.department, sessionId: sessionId },

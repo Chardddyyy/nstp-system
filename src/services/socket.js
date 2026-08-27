@@ -41,14 +41,6 @@ export function initSocket() {
     console.log('[Socket.io] 🟡 Disconnected:', reason);
   });
 
-  socket.on('concurrent_login_detected', (data) => {
-    console.warn('[Security Notice] Concurrent login attempt detected:', data);
-    if (typeof window !== 'undefined' && window.alert) {
-      // Non-blocking alert / notification banner
-      window.dispatchEvent(new CustomEvent('nstp_security_alert', { detail: data }));
-    }
-  });
-
   socket.on('connect_error', (err) => {
     console.warn('[Socket.io] ⚠️ Connection notice (auto-retrying):', err.message);
   });
