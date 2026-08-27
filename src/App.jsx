@@ -1055,6 +1055,8 @@ function App() {
     setReports([]);
   }
 
+  const userConversations = useMemo(() => getUserConversations(), [getUserConversations]);
+
   const contextValue = {
     user, login, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
     students, setStudents, reports, conversations: userConversations, messages, pendingEnrollments,
