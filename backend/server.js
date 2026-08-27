@@ -20,6 +20,7 @@ const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const { generateStudentIdPdf } = require('./utils/pdfIdGenerator');
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -1953,7 +1954,26 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
 
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
-  const directIdViewerUrl = `https://chardddyyy.github.io/nstp-system/#/digital-id?id=${encodeURIComponent(studentId)}&name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}&contact=${encodeURIComponent(emergencyContact)}&phone=${encodeURIComponent(emergencyNumber)}&qr=${encodeURIComponent(qrToken)}`;
+  const directPdfDownloadUrl = `https://nstp-system-iw5p.onrender.com/api/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
+  const directIdViewerUrl = `https://chardddyyy.github.io/nstp-system/#/digital-id?id=${encodeURIComponent(studentId)}&name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}&contact=${encodeURIComponent(emergencyContact)}&phone=${encodeURIComponent(emergencyNumber)}&qr=${encodeURIComponent(qrToken)}&download=pdf`;
+
+  // Generate official PDF file buffer for attachment
+  let pdfBuffer = null;
+  try {
+    pdfBuffer = await generateStudentIdPdf({
+      studentId,
+      name: studentName,
+      department: nstpDept,
+      section,
+      nstp_serial_id: serialNo,
+      qr_token: qrToken,
+      schoolYear,
+      emergencyContact,
+      emergencyNumber
+    });
+  } catch (pdfErr) {
+    console.warn('[DIGITAL ID PDF] Notice generating PDF attachment:', pdfErr.message);
+  }
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -1974,12 +1994,25 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Top Action Button: Links Directly to Dedicated Printable ID Card / PDF Viewer -->
+    <!-- Top Action Buttons: Direct PDF Download & Web Viewer -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <a href="${directIdViewerUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 11px 26px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
-          Download &amp; Print Official ID Card
-        </a>
+        <table role="presentation" cellspacing="0" cellpadding="0">
+          <tr>
+            <td align="center" style="padding: 0 4px 8px 4px;">
+              <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 11px 22px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+                Download PDF ID Card File
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <a href="${directIdViewerUrl}" target="_blank" style="font-size: 12px; font-weight: 700; color: #047857; text-decoration: underline;">
+                Open &amp; Print in Browser
+              </a>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
 
@@ -2109,7 +2142,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 11.5px; line-height: 1.55; color: #475569;">
             <tr>
               <td width="20" valign="top" style="font-weight: 900; color: #047857;">1.</td>
-              <td style="padding-bottom: 6px;"><strong>Print &amp; Laminate:</strong> Print this official ID card in full color (Standard PVC or Photo Card size) and laminate for protection.</td>
+              <td style="padding-bottom: 6px;"><strong>Print &amp; Laminate:</strong> Print the attached PDF ID file in full color (Standard PVC or Photo Card size) and laminate for protection.</td>
             </tr>
             <tr>
               <td width="20" valign="top" style="font-weight: 900; color: #047857;">2.</td>
@@ -2138,24 +2171,46 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     html: htmlContent
   };
 
+  if (pdfBuffer) {
+    mailOptions.attachments = [
+      {
+        filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
+    ];
+  }
+
   const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
   const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || defaultWebhookUrl;
 
   if (webhookUrl) {
     try {
+      const webhookPayload = {
+        to: deliveryEmail,
+        subject: mailOptions.subject,
+        text: mailOptions.text,
+        html: mailOptions.html
+      };
+
+      if (pdfBuffer) {
+        webhookPayload.attachments = [
+          {
+            filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
+            base64: pdfBuffer.toString('base64'),
+            mimeType: 'application/pdf'
+          }
+        ];
+      }
+
       const hookRes = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          to: deliveryEmail,
-          subject: mailOptions.subject,
-          text: mailOptions.text,
-          html: mailOptions.html
-        }),
+        body: JSON.stringify(webhookPayload),
         redirect: 'follow'
       });
       if (hookRes.ok) {
-        console.log(`[DIGITAL ID EMAIL] Delivered via Webhook to ${deliveryEmail}`);
+        console.log(`[DIGITAL ID EMAIL] Delivered via Webhook with PDF attachment to ${deliveryEmail}`);
         return { sent: true, method: 'https-webhook' };
       }
     } catch (_) {}
@@ -2167,13 +2222,59 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
       auth: { user: emailUser, pass: emailPass }
     });
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service to ${deliveryEmail} (${info.messageId})`);
+    console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service with PDF attachment to ${deliveryEmail} (${info.messageId})`);
     return { sent: true, method: 'gmail-service', messageId: info.messageId };
   } catch (err) {
     console.warn('[DIGITAL ID EMAIL] Error:', err.message);
     return { sent: false, error: err.message };
   }
 }
+
+// ── Public Endpoint: Direct Instant PDF Download for Student ID Card ───────────
+const handleDownloadIdPdf = async (req, res) => {
+  try {
+    const studentId = req.params.id || req.query.id;
+    let studentData = null;
+
+    if (studentId) {
+      const [rows] = await pool.execute('SELECT * FROM students WHERE studentId = ? OR id = ? LIMIT 1', [studentId, studentId]).catch(() => [[]]);
+      if (rows && rows.length > 0) studentData = rows[0];
+
+      if (!studentData) {
+        const [enrollRows] = await pool.execute('SELECT * FROM enrollments WHERE studentId = ? OR id = ? LIMIT 1', [studentId, studentId]).catch(() => [[]]);
+        if (enrollRows && enrollRows.length > 0) studentData = enrollRows[0];
+      }
+    }
+
+    if (!studentData) {
+      studentData = {
+        studentId: studentId || '202610001',
+        name: req.query.name || 'STUDENT',
+        department: req.query.dept || 'CWTS',
+        section: req.query.sec || 'CWTS 1',
+        nstp_serial_id: req.query.serial || 'NSTP-CWTS-2026-00001',
+        schoolYear: req.query.sy || '2026-2027',
+        emergencyContact: req.query.contact || 'Emergency Contact',
+        emergencyNumber: req.query.phone || '09000000000'
+      };
+    }
+
+    const pdfBuffer = await generateStudentIdPdf(studentData);
+    const fileName = `NSTP_Official_ID_Card_${studentData.studentId || studentId || 'student'}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Download ID PDF Error:', err);
+    res.status(500).json({ message: 'Error generating PDF ID card' });
+  }
+};
+app.get('/api/students/:id/download-id-pdf', handleDownloadIdPdf);
+app.get('/api/students/download-id-pdf', handleDownloadIdPdf);
+app.get('/download-id-pdf', handleDownloadIdPdf);
 
 // Diagnostic test endpoint to test email delivery in real-time
 app.get('/api/auth/test-email', async (req, res) => {
