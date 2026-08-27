@@ -1920,10 +1920,15 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const section = studentData.nstp_section || studentData.section || `${nstpDept} 1`;
   const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
   const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
-  const schoolYear = studentData.schoolYear || studentData.year || '2026-2027';
+  
+  let rawSy = studentData.schoolYear || studentData.academicYear || studentData.batch || '';
+  let schoolYear = '2026-2027';
+  if (rawSy && !String(rawSy).toLowerCase().includes('year') && !String(rawSy).toLowerCase().includes('yr')) {
+    schoolYear = String(rawSy).trim();
+  }
+
   const emergencyContact = studentData.emergencyContact || studentData.emergencyName || 'Emergency Contact';
   const emergencyNumber = studentData.emergencyNumber || studentData.contactNumber || '09000000000';
-  const bloodType = studentData.bloodType || 'O+';
   const photoSrc = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.profilePicture || null;
 
   const trackLabels = {
@@ -1954,12 +1959,12 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Printable Notice Banner -->
+    <!-- Top Action Button -->
     <tr class="no-print">
-      <td style="padding-bottom: 16px; text-align: center;">
-        <div style="display: inline-block; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 12px; padding: 8px 18px; font-size: 11.5px; font-weight: 800; color: #065f46; box-shadow: 0 2px 8px rgba(16,185,129,0.15);">
-          🖨️ Official Printable NSTP ID Card (A.Y. ${schoolYear})
-        </div>
+      <td align="center" style="padding-bottom: 20px;">
+        <a href="https://chardddyyy.github.io/nstp-system/#/student-management" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 10px 24px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+          Download &amp; Print Official ID Card
+        </a>
       </td>
     </tr>
 
@@ -2044,17 +2049,20 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
               ${serialNo}
             </div>
 
-            <!-- Emergency Contact Strip -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 6px; font-size: 7.5px; color: #334155; text-align: left; margin-bottom: 8px;">
-              <span style="font-weight: 800; color: #0f172a;">Emergency:</span> ${emergencyContact} (${emergencyNumber}) &bull; <span style="font-weight: 800; color: #b91c1c;">Type: ${bloodType}</span>
+            <!-- Emergency Contact Strip (Blood Type removed) -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 8px; font-size: 8px; color: #334155; text-align: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; color: #0f172a;">Emergency Contact:</span> ${emergencyContact} (${emergencyNumber})
             </div>
 
-            <!-- Coordinator Signature Area -->
-            <div style="margin-top: 6px; padding-top: 4px;">
-              <div style="width: 140px; border-top: 1px solid #64748b; margin: 8px auto 2px auto;"></div>
+            <!-- Coordinator Signature Area with Fake E-Signature -->
+            <div style="margin-top: 6px; padding-top: 2px;">
+              <div style="height: 32px; margin-bottom: -10px; text-align: center;">
+                <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 70' width='140' height='40'%3E%3Cpath d='M15 48 C 25 15, 32 10, 42 22 C 50 32, 45 52, 60 40 C 72 30, 85 18, 98 32 C 105 39, 112 28, 122 36 C 132 44, 140 22, 155 35 C 168 45, 180 30, 195 38 C 205 42, 218 36, 230 42 M 30 54 Q 110 46 220 50' fill='none' stroke='%231e3a8a' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt="Coordinator E-Signature" width="115" height="32" style="display: inline-block; pointer-events: none;" />
+              </div>
+              <div style="width: 140px; border-top: 1px solid #475569; margin: 4px auto 2px auto;"></div>
               <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">FN MI. LN</div>
-              <div style="font-size: 6.5px; font-weight: 800; color: #64748b; text-transform: uppercase;">NSTP COORDINATOR</div>
-              <div style="font-size: 6px; color: #94a3b8;">Cavite State University - Naic</div>
+              <div style="font-size: 6.5px; font-weight: 800; color: #047857; text-transform: uppercase;">NSTP CAMPUS COORDINATOR</div>
+              <div style="font-size: 6px; color: #64748b;">Cavite State University - Naic</div>
             </div>
 
           </div>
@@ -2077,14 +2085,27 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
       </td>
     </tr>
 
-    <!-- Print & Lamination Instructions -->
+    <!-- Official ID & Attendance Guidelines in English -->
     <tr class="no-print">
-      <td style="padding-top: 16px; text-align: center;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; font-size: 11px; color: #475569; line-height: 1.5; text-align: left;">
-          <strong style="color: #065f46;">📌 Paalala sa Pag-print at Pagdala ng ID:</strong><br>
-          1. <strong>Print:</strong> I-print ang opisyal na ID Card na ito sa full color (Standard ID o PVC/Photo Paper size).<br>
-          2. <strong>Laminate:</strong> Ipa-laminate at lagyan ng ID clip/lanyard para maprotektahan sa buong semestre.<br>
-          3. <strong>Sunday Attendance:</strong> Ipakita at ipa-scan ang QR Code na ito sa iyong NSTP Instructor tuwing Sunday training sessions.
+      <td style="padding-top: 20px; text-align: center;">
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 18px; font-size: 12px; color: #334155; line-height: 1.6; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+          <div style="font-size: 12px; font-weight: 900; color: #064e3b; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">
+            📌 Official ID &amp; Attendance Guidelines:
+          </div>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size: 11.5px; line-height: 1.55; color: #475569;">
+            <tr>
+              <td width="20" valign="top" style="font-weight: 900; color: #047857;">1.</td>
+              <td style="padding-bottom: 6px;"><strong>Print &amp; Laminate:</strong> Print this official ID card in full color (Standard PVC or Photo Card size) and laminate for protection.</td>
+            </tr>
+            <tr>
+              <td width="20" valign="top" style="font-weight: 900; color: #047857;">2.</td>
+              <td style="padding-bottom: 6px;"><strong>Official Attendance:</strong> Present the embedded QR code to your NSTP Instructor or official scanner for attendance recording during all training sessions and community activities.</td>
+            </tr>
+            <tr>
+              <td width="20" valign="top" style="font-weight: 900; color: #047857;">3.</td>
+              <td><strong>Campus Policy:</strong> Always carry this official Digital ID card during all scheduled NSTP activities.</td>
+            </tr>
+          </table>
         </div>
       </td>
     </tr>

@@ -156,8 +156,8 @@ export function NstpIdCard({ student }) {
         </div>
 
         {/* Emergency Contact Single-Line Strip */}
-        <div className="w-full bg-slate-50 border border-slate-200/60 px-1 py-0.5 rounded text-[4.5px] text-left leading-tight text-slate-700">
-          <span className="font-bold text-slate-900">Emergency:</span> {emergencyName} ({emergencyContact}) • <span className="font-bold text-rose-700">Type: {bloodType}</span>
+        <div className="w-full bg-slate-50 border border-slate-200/60 px-1 py-0.5 rounded text-[4.5px] text-center leading-tight text-slate-700">
+          <span className="font-bold text-slate-900">Emergency Contact:</span> {emergencyName} ({emergencyContact})
         </div>
 
         {/* NSTP Coordinator Signature Area (With Demo E-Signature & FN MI. LN) */}
@@ -184,7 +184,7 @@ export function NstpIdCard({ student }) {
       {/* Card Footer Strip */}
       <div className="bg-emerald-950 text-amber-300 px-2 py-0.5 text-[5px] font-black flex items-center justify-between uppercase tracking-wider border-t border-amber-400 relative z-10 shrink-0">
         <span className="font-mono truncate">{currentTheme.label}</span>
-        <span className="text-[4.8px] text-amber-200 font-mono shrink-0 ml-1">AY 2025-2026</span>
+        <span className="text-[4.8px] text-amber-200 font-mono shrink-0 ml-1">AY 2026-2027</span>
       </div>
     </div>
   );
