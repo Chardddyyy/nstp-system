@@ -729,9 +729,6 @@ function InstructorDashboard() {
                         className="flex items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                       >
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-11 h-11 rounded-2xl bg-emerald-800/10 text-emerald-800 flex items-center justify-center font-black shrink-0 border border-emerald-200 group-hover:scale-105 group-hover:bg-emerald-800 group-hover:text-amber-300 transition-all shadow-2xs">
-                            <History className="w-5 h-5" />
-                          </div>
                           <div>
                             <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -746,16 +743,6 @@ function InstructorDashboard() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => downloadChedFormat(year, null, user?.department || 'CWTS')}
-                            className="bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold px-3 py-2 rounded-xl text-xs shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                            title={`Download ${user?.department} CHED Form B Masterlist Excel`}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>CHED Format</span>
-                          </button>
-
                           <button
                             type="button"
                             onClick={() => handleViewBatch(year)}
