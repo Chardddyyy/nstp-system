@@ -172,7 +172,6 @@ function Login() {
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setError('');
-    setActiveSessionWarning(null);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
