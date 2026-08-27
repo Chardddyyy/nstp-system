@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { archivesAPI } from '../services/api';
+import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import AttendanceScannerModal from '../components/AttendanceScannerModal';
@@ -37,16 +37,16 @@ function InstructorDashboard() {
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
-  const [archivedYears, setArchivedYears] = useState([]);
+  const [archivedYears, setArchivedYears] = useState(() => DEFAULT_PAST_BATCHES);
   const [archiveViewData, setArchiveViewData] = useState(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
   const loadArchivedYears = async () => {
     try {
       const data = await archivesAPI.getAll();
-      setArchivedYears(Array.isArray(data) ? data : []);
+      setArchivedYears(Array.isArray(data) && data.length > 0 ? data : DEFAULT_PAST_BATCHES);
     } catch {
-      setArchivedYears([]);
+      setArchivedYears(DEFAULT_PAST_BATCHES);
     }
   };
 

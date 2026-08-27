@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
 import RealtimeToastStack from './components/RealtimeToastStack';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
@@ -85,7 +85,14 @@ function App() {
   const [reports, setReports] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState({});
-  const [archivedYears, setArchivedYears] = useState([]);
+  const [archivedYears, setArchivedYears] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_archives') || '[]');
+      return Array.isArray(cached) && cached.length > 0 ? cached : DEFAULT_PAST_BATCHES;
+    } catch {
+      return DEFAULT_PAST_BATCHES;
+    }
+  });
 
   // Live Auto-Update & Auto-Restart Detection (Brave Mobile Cache Buster)
   useEffect(() => {
@@ -671,7 +678,13 @@ function App() {
       if (studentsData && Array.isArray(studentsData)) setStudents(studentsData);
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
       if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
-      if (archivesData && Array.isArray(archivesData)) setArchivedYears(archivesData);
+      if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
+        setArchivedYears(archivesData);
+        safeSetStorage('nstp_cached_archives', archivesData);
+      } else {
+        setArchivedYears(DEFAULT_PAST_BATCHES);
+        safeSetStorage('nstp_cached_archives', DEFAULT_PAST_BATCHES);
+      }
       if (batchData?.year) setCurrentBatch(batchData.year.toString());
 
       if (conversationsData && Array.isArray(conversationsData)) {

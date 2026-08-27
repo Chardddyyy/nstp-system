@@ -5454,9 +5454,17 @@ app.post('/api/attendance/override', authenticateToken, async (req, res) => {
 // GET all archived years (with instructor department isolation)
 app.get('/api/archives', authenticateToken, async (req, res) => {
   try {
-    const [archives] = await pool.execute(
+    let [archives] = await pool.execute(
       'SELECT * FROM archived_years ORDER BY year DESC'
     ).catch(() => [[]]);
+
+    if (!archives || archives.length === 0) {
+      await seedPastBatches();
+      const [reloaded] = await pool.execute(
+        'SELECT * FROM archived_years ORDER BY year DESC'
+      ).catch(() => [[]]);
+      archives = reloaded || [];
+    }
 
     const isInstructor = req.user && req.user.role === 'instructor';
     const instructorDept = req.user?.department;

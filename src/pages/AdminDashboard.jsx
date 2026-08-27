@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { archivesAPI } from '../services/api';
+import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import {
@@ -191,6 +191,12 @@ function AdminDashboard() {
   } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const safeArchivedYears = useMemo(() => {
+    return Array.isArray(archivedYears) && archivedYears.length > 0
+      ? archivedYears
+      : DEFAULT_PAST_BATCHES;
+  }, [archivedYears]);
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
@@ -1674,7 +1680,7 @@ function AdminDashboard() {
 
               {/* Bar Chart — Fitted 100% on Mobile */}
               <div className="w-full space-y-3 sm:space-y-4">
-                {[...archivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
+                {[...safeArchivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
                   year: y.year, 
                   cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
                   lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || 0, 
@@ -1811,14 +1817,14 @@ function AdminDashboard() {
 
               {/* Batch List Body */}
               <div className="p-5 sm:p-6 overflow-y-auto space-y-3 max-h-[60vh]">
-                {archivedYears.length === 0 ? (
+                {safeArchivedYears.length === 0 ? (
                   <div className="text-center py-10">
                     <History className="w-12 h-12 text-emerald-200 mx-auto mb-2 opacity-50" />
                     <p className="text-gray-500 font-bold text-sm">No archived batches found</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...archivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
+                    {[...safeArchivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
                       <div
                         key={year.year}
                         className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"

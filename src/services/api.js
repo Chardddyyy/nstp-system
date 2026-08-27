@@ -624,7 +624,7 @@ const DEFAULT_ARCHIVE_LETTERS = [
   }
 ];
 
-const DEFAULT_PAST_BATCHES = [
+export const DEFAULT_PAST_BATCHES = [
   {
     id: 1,
     year: '2023-2024 1st Semester',
