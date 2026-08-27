@@ -17,8 +17,19 @@
     <script type="text/javascript">
       // Ensure current window/tab can be reused by email OTP links without opening new tabs
       window.name = "nstp_system_tab";
-      // Single Page Apps for GitHub Pages
+      // Single Page Apps for GitHub Pages with Hash and Path Support
       (function(l) {
+        // 1. If URL has hash route like /#/digital-id?id=... convert to path /digital-id?id=...
+        if (l.hash && l.hash.startsWith('#/')) {
+          var hashParts = l.hash.slice(2).split('?');
+          var route = hashParts[0];
+          var query = hashParts[1] || '';
+          var basePath = l.pathname.endsWith('/') ? l.pathname : l.pathname + '/';
+          if (route) {
+            window.history.replaceState(null, null, basePath + route + (query ? '?' + query : ''));
+          }
+        }
+        // 2. If redirected by 404.html using /?/route
         if (l.search[1] === '/' ) {
           var decoded = l.search.slice(1).split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
@@ -51,7 +62,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
     <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
-    <script type="module" crossorigin src="/nstp-system/assets/index-Rkq4thDg.js"></script>
+    <script type="module" crossorigin src="/nstp-system/assets/index-BOwn--ft.js"></script>
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-D8Co40v1.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-MKd6omt-.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-xlsx-B1h6kJVQ.js">
