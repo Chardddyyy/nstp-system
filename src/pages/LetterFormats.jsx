@@ -1,3 +1,7 @@
+import { useState, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import Sidebar from '../components/layout/Sidebar';
 import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
 
