@@ -1,7 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl, studentsAPI, gradesAPI } from '../services/api';
 import * as XLSX from 'xlsx';
-import ScrollToTopButton from '../components/ScrollToTopButton';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
@@ -4557,7 +4556,6 @@ function StudentManagement() {
         )}
 
       </main>
-      <ScrollToTopButton />
     </div>
   );
 }

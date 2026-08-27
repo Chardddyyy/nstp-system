@@ -1,30 +1,30 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-var express = require('express');
-var cors = require('cors');
-var jwt = require('jsonwebtoken');
-var helmet = require('helmet');
-var rateLimit = require('express-rate-limit');
-var pool = require('./config/database');
-var { getDbConfig } = require('./config/dbEnv');
-var { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
+const express = require('express');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const pool = require('./config/database');
+const { getDbConfig } = require('./config/dbEnv');
+const { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
 
-var http = require('http');
-var { Server: SocketIOServer } = require('socket.io');
-var { initCronScheduler, recordBackupTimestamp } = require('./utils/cronScheduler');
-var { uploadMedia, isConfigured: isCloudinaryConfigured } = require('./config/cloudinary');
+const http = require('http');
+const { Server: SocketIOServer } = require('socket.io');
+const { initCronScheduler, recordBackupTimestamp } = require('./utils/cronScheduler');
+const { uploadMedia, isConfigured: isCloudinaryConfigured } = require('./config/cloudinary');
 
-var bcrypt = require('bcryptjs');
-var ExcelJS = require('exceljs');
-var nodemailer = require('nodemailer');
-var QRCode = require('qrcode');
-var path = require('path');
-var fs = require('fs');
-var app = express();
-var httpServer = http.createServer(app);
-var PORT = process.env.PORT || 3001;
+const bcrypt = require('bcryptjs');
+const ExcelJS = require('exceljs');
+const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
+const path = require('path');
+const fs = require('fs');
+const app = express();
+const httpServer = http.createServer(app);
+const PORT = process.env.PORT || 3001;
 
 // ── Socket.io Setup with Auto-Reconnect & Handshake Auth ──────────────────────
-var io = new SocketIOServer(httpServer, {
+const io = new SocketIOServer(httpServer, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -40,8 +40,8 @@ app.use((req, res, next) => {
 });
 
 // ── Security: JWT Secret configuration ──────────────────────────────────────
-var JWT_SECRET = process.env.JWT_SECRET || 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
-var JWT_EXPIRY = '30d';
+const JWT_SECRET = process.env.JWT_SECRET || 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
+const JWT_EXPIRY = '30d';
 
 // Socket.io JWT Auth Middleware
 io.use((socket, next) => {

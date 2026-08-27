@@ -1,5 +1,4 @@
 import { useAuth } from '../context/AuthContext';
-import ScrollToTopButton from '../components/ScrollToTopButton';
 import {
   FileText, Plus, Search, Calendar,
   Send, MessageCircle, CheckCircle, Clock,
@@ -977,7 +976,6 @@ function Reports() {
         )}
 
       </main>
-      <ScrollToTopButton />
     </div>
   );
 }

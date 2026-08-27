@@ -1,6 +1,5 @@
 import { useAuth } from '../context/AuthContext';
 import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
-import ScrollToTopButton from '../components/ScrollToTopButton';
 import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
@@ -2818,7 +2817,6 @@ function AdminDashboard() {
         )}
 
       </main>
-      <ScrollToTopButton />
     </div>
   );
 }

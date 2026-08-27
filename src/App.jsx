@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { AuthContext } from './context/AuthContext';
-import RealtimeToastStack from './components/RealtimeToastStack';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket } from './services/socket';
 
@@ -1070,7 +1069,6 @@ function App() {
   return (
     <AuthContext.Provider value={contextValue}>
       <BrowserRouter basename={BASE_PATH}>
-        <RealtimeToastStack />
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-xs mx-auto">
