@@ -1969,7 +1969,9 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
       qr_token: qrToken,
       schoolYear,
       emergencyContact,
-      emergencyNumber
+      emergencyNumber,
+      id_photo_2x2: photoSrc,
+      photo: photoSrc
     });
   } catch (pdfErr) {
     console.warn('[DIGITAL ID PDF] Notice generating PDF attachment:', pdfErr.message);
@@ -1994,25 +1996,12 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Top Action Buttons: Direct PDF Download & Web Viewer -->
+    <!-- Top Action Button: Direct PDF Download -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0">
-          <tr>
-            <td align="center" style="padding: 0 4px 8px 4px;">
-              <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 11px 22px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
-                Download PDF ID Card File
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td align="center">
-              <a href="${directIdViewerUrl}" target="_blank" style="font-size: 12px; font-weight: 700; color: #047857; text-decoration: underline;">
-                Open &amp; Print in Browser
-              </a>
-            </td>
-          </tr>
-        </table>
+        <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 12px 28px; border-radius: 25px; box-shadow: 0 4px 12px rgba(6,78,59,0.25); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+          Download PDF ID Card File
+        </a>
       </td>
     </tr>
 
@@ -2255,8 +2244,11 @@ const handleDownloadIdPdf = async (req, res) => {
         nstp_serial_id: req.query.serial || 'NSTP-CWTS-2026-00001',
         schoolYear: req.query.sy || '2026-2027',
         emergencyContact: req.query.contact || 'Emergency Contact',
-        emergencyNumber: req.query.phone || '09000000000'
+        emergencyNumber: req.query.phone || '09000000000',
+        id_photo_2x2: req.query.photo || null
       };
+    } else {
+      studentData.id_photo_2x2 = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.registration_photo || null;
     }
 
     const pdfBuffer = await generateStudentIdPdf(studentData);
