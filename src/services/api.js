@@ -1071,7 +1071,16 @@ export async function sendStudentDigitalId(studentOrId) {
   const nstpDept = (studentObj?.department || 'CWTS').toUpperCase();
   const serialNo = studentObj?.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
   const qrToken = studentObj?.qr_token || `NSTP-${studentId}-${serialNo}`;
-  const section = studentObj?.nstp_section || studentObj?.section || `${nstpDept} 1`;
+  
+  // Format NSTP Section strictly (e.g. CWTS 1, ROTC 1, LTS 1), never academic degree section like "BSIT 3A"
+  let nstpSection = studentObj?.nstp_section || studentObj?.nstpSection || '';
+  if (!nstpSection || (!nstpSection.toUpperCase().includes('CWTS') && !nstpSection.toUpperCase().includes('ROTC') && !nstpSection.toUpperCase().includes('LTS'))) {
+    const rawSec = studentObj?.section || '';
+    const numMatch = String(rawSec).match(/\d+/);
+    const secNum = numMatch ? numMatch[0] : '1';
+    nstpSection = `${nstpDept} ${secNum}`;
+  }
+  const section = nstpSection.replace('-', ' ').trim();
   
   let rawSy = studentObj?.schoolYear || studentObj?.academicYear || studentObj?.batch || '';
   let schoolYear = '2026-2027';

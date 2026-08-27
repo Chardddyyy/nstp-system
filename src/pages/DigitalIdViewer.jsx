@@ -1,16 +1,32 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Printer, Download, ArrowLeft, Shield, CheckCircle, Award, Sparkles } from 'lucide-react';
+import { Printer, Download, ArrowLeft, Shield, FileText, Loader2, CheckCircle } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { DEMO_COORDINATOR_SIGNATURE_SVG, COORDINATOR_NAME, COORDINATOR_TITLE, COORDINATOR_INSTITUTION } from '../utils/signatureAssets';
 
 function DigitalIdViewer() {
   const [searchParams] = useSearchParams();
+  const cardRef = useRef(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfSuccess, setPdfSuccess] = useState(false);
 
   // Extract student details from URL parameters
   const studentId = searchParams.get('id') || searchParams.get('studentId') || '202610001';
   const fullName = (searchParams.get('name') || searchParams.get('fullName') || 'STUDENT NAME').toUpperCase();
   const department = (searchParams.get('dept') || searchParams.get('department') || 'CWTS').toUpperCase();
-  const section = searchParams.get('sec') || searchParams.get('section') || `${department} 1`;
+  
+  // Format NSTP Section strictly (e.g. CWTS 1, ROTC 1, LTS 1), never academic degree section like "BSIT 3A"
+  const rawSection = searchParams.get('sec') || searchParams.get('section') || '';
+  const section = (() => {
+    if (rawSection && (rawSection.toUpperCase().includes('CWTS') || rawSection.toUpperCase().includes('ROTC') || rawSection.toUpperCase().includes('LTS'))) {
+      return rawSection.toUpperCase().replace('-', ' ').trim();
+    }
+    const numMatch = String(rawSection).match(/\d+/);
+    const secNum = numMatch ? numMatch[0] : '1';
+    return `${department} ${secNum}`;
+  })();
+
   const serialNo = searchParams.get('serial') || searchParams.get('serialNo') || `NSTP-${department}-2026-00001`;
   const schoolYear = searchParams.get('sy') || searchParams.get('schoolYear') || '2026-2027';
   const emergencyContact = searchParams.get('contact') || searchParams.get('emergencyContact') || 'Emergency Contact';
@@ -27,9 +43,96 @@ function DigitalIdViewer() {
 
   const qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
 
+  // Direct PDF Generation & Download
+  const handleDownloadPdf = async () => {
+    if (!cardRef.current || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    setPdfSuccess(false);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3, // High-resolution render
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Create standard portrait PDF formatted for ID Card (85.6mm x 53.98mm scaled or A4 centered)
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Center the ID card on an A4 page
+      const cardWidthMm = 65; // standard card width on page
+      const cardHeightMm = (canvas.height * cardWidthMm) / canvas.width;
+      const xPos = (210 - cardWidthMm) / 2;
+      const yPos = 30;
+
+      // Add Header text on PDF
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.setTextColor(6, 78, 59); // #064e3b
+      pdf.text('CAVITE STATE UNIVERSITY - NAIC CAMPUS', 105, 18, { align: 'center' });
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`Official NSTP Printable Digital ID Card • AY ${schoolYear}`, 105, 24, { align: 'center' });
+
+      pdf.addImage(imgData, 'PNG', xPos, yPos, cardWidthMm, cardHeightMm);
+
+      // Add Guidelines below card on PDF
+      const guideY = yPos + cardHeightMm + 15;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(6, 78, 59);
+      pdf.text('PRINTING & USAGE INSTRUCTIONS:', 105, guideY, { align: 'center' });
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('1. Print this page in full color on Photo Paper, PVC Card, or Heavy Cardstock.', 105, guideY + 6, { align: 'center' });
+      pdf.text('2. Cut along the outer border and laminate with an official lanyard clip.', 105, guideY + 11, { align: 'center' });
+      pdf.text('3. Present the embedded QR code to your NSTP Instructor during training activities.', 105, guideY + 16, { align: 'center' });
+
+      const fileName = `NSTP_ID_Card_${studentId}_${fullName.replace(/\s+/g, '_')}.pdf`;
+      pdf.save(fileName);
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4000);
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      // Fallback to window.print() if html2canvas/jspdf fails
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
+
+  // Optional auto-download or auto-print on page load
+  useEffect(() => {
+    const shouldDownload = searchParams.get('download') === 'pdf';
+    const shouldAutoPrint = searchParams.get('autoprint') === '1' || searchParams.get('print') === '1';
+
+    if (shouldDownload) {
+      const timer = setTimeout(() => {
+        handleDownloadPdf();
+      }, 1200);
+      return () => clearTimeout(timer);
+    } else if (shouldAutoPrint) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const handleDownloadHtml = () => {
     const htmlDoc = `<!DOCTYPE html>
@@ -115,36 +218,60 @@ function DigitalIdViewer() {
     <div className="min-h-screen bg-slate-100 flex flex-col items-center py-6 px-3 sm:px-6 font-sans">
       
       {/* Top Action Bar (Hidden during Print) */}
-      <div className="w-full max-w-md mb-5 bg-white p-4 rounded-2xl shadow-md border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
-        <Link to="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-emerald-800 transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span>NSTP Portal</span>
-        </Link>
+      <div className="w-full max-w-md mb-5 bg-white p-4 rounded-2xl shadow-md border border-slate-200 flex flex-col items-center gap-3 print:hidden">
+        
+        <div className="w-full flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-emerald-800 transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            <span>NSTP Portal</span>
+          </Link>
+          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            Official Student ID
+          </span>
+        </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        {/* Primary Download & Print Buttons */}
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving PDF...</span>
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4 text-amber-300" />
+                <span>Download PDF</span>
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={handlePrint}
-            className="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-900 hover:to-teal-900 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
-            <Printer className="w-4 h-4" />
-            <span>Print ID / Save PDF</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadHtml}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all border border-slate-300 flex items-center justify-center gap-1 cursor-pointer"
-            title="Download Standalone File"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Download</span>
+            <Printer className="w-4 h-4 text-emerald-400" />
+            <span>Print ID Card</span>
           </button>
         </div>
+
+        {pdfSuccess && (
+          <div className="w-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-bold py-1 px-3 rounded-lg flex items-center justify-center gap-1 animate-fade-in">
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+            <span>PDF downloaded to your device!</span>
+          </div>
+        )}
+
       </div>
 
       {/* THE OFFICIAL PORTRAIT PRINTABLE ID CARD */}
-      <div className="id-card-print-target w-[320px] bg-white rounded-3xl border-[2.5px] border-emerald-950 overflow-hidden shadow-2xl text-center relative print:shadow-none print:m-0 print:border-2">
+      <div ref={cardRef} className="id-card-print-target w-[320px] bg-white rounded-3xl border-[2.5px] border-emerald-950 overflow-hidden shadow-2xl text-center relative print:shadow-none print:m-0 print:border-2">
         
         {/* Top Header Bar with Lanyard Slot & CvSU Seal */}
         <div className="bg-emerald-950 p-2.5 border-b-2 border-amber-400 relative">

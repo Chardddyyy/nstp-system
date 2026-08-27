@@ -1921,7 +1921,17 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const studentName = (studentData.fullName || studentData.name || `${studentData.firstName || ''} ${studentData.lastName || ''}`).trim().toUpperCase() || 'STUDENT NAME';
   const studentId = String(studentData.studentId || studentData.student_id || studentData.studentNumber || studentData.id || '202610001').trim();
   const nstpDept = (studentData.department || 'CWTS').toUpperCase();
-  const section = studentData.nstp_section || studentData.section || `${nstpDept} 1`;
+  
+  // Format NSTP Section strictly (e.g. CWTS 1, ROTC 1, LTS 1), never academic degree section like "BSIT 3A"
+  let nstpSection = studentData.nstp_section || studentData.nstpSection || '';
+  if (!nstpSection || (!nstpSection.toUpperCase().includes('CWTS') && !nstpSection.toUpperCase().includes('ROTC') && !nstpSection.toUpperCase().includes('LTS'))) {
+    const rawSec = studentData.section || '';
+    const numMatch = String(rawSec).match(/\d+/);
+    const secNum = numMatch ? numMatch[0] : '1';
+    nstpSection = `${nstpDept} ${secNum}`;
+  }
+  const section = nstpSection.replace('-', ' ').trim();
+
   const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
   const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
   
