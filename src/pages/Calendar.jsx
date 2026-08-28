@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon, Plus, X, Pencil,
   ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive,
-  List, Grid, Search, Filter, Printer, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
+  List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -646,18 +646,6 @@ function Calendar() {
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
                   Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.
                 </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-300 cursor-pointer active:scale-95"
-                  title="Print Annual Calendar Summary"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Summary</span>
-                </button>
               </div>
             </div>
 

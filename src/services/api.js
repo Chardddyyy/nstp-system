@@ -161,8 +161,8 @@ export async function loginUser(email, password, _forceLogin = true) {
       err.status === 503
     ) {
       const cleanEmail = String(email).trim().toLowerCase();
-      if (cleanEmail === 'admin@cvsu.edu.ph' && password === 'admin123') {
-        const adminUser = { id: 1, name: 'System Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'All' };
+      if ((cleanEmail === 'richardbelen99@gmail.com' || cleanEmail === 'admin') && (password === 'admin123' || password === 'Admin@123')) {
+        const adminUser = { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' };
         const demoToken = 'demo-jwt-admin-token';
         localStorage.setItem('nstp_token', demoToken);
         return { token: demoToken, user: adminUser };
@@ -186,7 +186,7 @@ export function getUsers() {
       if (stored.length > 0) return stored;
     } catch (_) {}
     return [
-      { id: 1, name: 'System Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'All' },
+      { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' },
       { id: 2, name: 'Prof. Juan Dela Cruz', email: 'instructor@cvsu.edu.ph', role: 'instructor', department: 'CWTS' }
     ];
   });
@@ -198,7 +198,7 @@ export async function getMe() {
   } catch (err) {
     const token = localStorage.getItem('nstp_token');
     if (token && token.includes('admin')) {
-      return { user: { id: 1, name: 'System Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'All' } };
+      return { user: { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' } };
     }
     if (token && token.includes('instructor')) {
       return { user: { id: 2, name: 'Prof. Juan Dela Cruz', email: 'instructor@cvsu.edu.ph', role: 'instructor', department: 'CWTS' } };

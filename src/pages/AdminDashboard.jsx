@@ -1451,6 +1451,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             <img 
                               src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
                               alt="2x2" 
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover" 
                             />
                           </div>
@@ -1609,6 +1611,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 <img 
                                   src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
                                   alt="2x2" 
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover" 
                                 />
                               </div>

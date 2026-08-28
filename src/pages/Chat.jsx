@@ -1614,10 +1614,10 @@ function Chat() {
 
 
   const handleClearChat = () => {
-    if (!activeConversation) return;
+    if (!activeConversation || isGroupConversation(activeConversation)) return;
     setConfirmModalData({
       title: 'Clear Chat',
-      message: `Clear all messages in ${isGroupConversation(activeConversation) ? (activeConversation.groupName || activeConversation.group_name || 'this group') : activeConversation.with}?`,
+      message: `Clear all messages with ${activeConversation.with}?`,
       confirmText: 'Clear',
       cancelText: 'Cancel',
       isDanger: false,
@@ -1632,7 +1632,7 @@ function Chat() {
   };
 
   const handleDeleteConversation = () => {
-    if (!activeConversation) return;
+    if (!activeConversation || isGroupConversation(activeConversation)) return;
     setConfirmModalData({
       title: 'Delete Conversation',
       message: `Delete this conversation with ${activeConversation.with}? This removes it for both parties and cannot be undone.`,
@@ -2089,24 +2089,24 @@ function Chat() {
                           </button>
                         </div>
                         
-                        <div className="py-1.5 space-y-0.5">
-                          <button type="button"
-                            onClick={() => { handleClearChat(); setShowChatMenu(false); }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-gray-100 text-gray-700 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
-                          >
-                            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
-                            <span>Clear Chat History</span>
-                          </button>
-                          
-                          <button type="button"
-                            onClick={() => { handleDeleteConversation(); setShowChatMenu(false); }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
-                          >
-                            <X className="w-4 h-4 text-rose-500 shrink-0" />
-                            <span>Delete Conversation</span>
-                          </button>
+                        {!isGroupConversation(activeConversation) && (
+                          <div className="py-1.5 space-y-0.5">
+                            <button type="button"
+                              onClick={() => { handleClearChat(); setShowChatMenu(false); }}
+                              className="w-full text-left px-3.5 py-2 hover:bg-gray-100 text-gray-700 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
+                            >
+                              <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+                              <span>Clear Chat History</span>
+                            </button>
+                            
+                            <button type="button"
+                              onClick={() => { handleDeleteConversation(); setShowChatMenu(false); }}
+                              className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
+                            >
+                              <X className="w-4 h-4 text-rose-500 shrink-0" />
+                              <span>Delete Conversation</span>
+                            </button>
 
-                          {!isGroupConversation(activeConversation) && (
                             <button type="button"
                               onClick={() => { handleBlockUser(); setShowChatMenu(false); }}
                               className={`w-full text-left px-3.5 py-2 hover:bg-gray-100 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold ${isBlocked ? 'text-emerald-700 font-bold' : 'text-rose-600'}`}
@@ -2114,8 +2114,8 @@ function Chat() {
                               <Filter className="w-4 h-4 shrink-0" />
                               <span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -568,15 +568,6 @@ async function ensureAllCoreTables() {
 
   // Seed default admin users if not exists
   try {
-    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', ['admin@cvsu.edu.ph']);
-    if (existingAdmin.length === 0) {
-      const hashedPw = await bcrypt.hash('Admin@123', 12);
-      await pool.execute(
-        'INSERT INTO users (email, password, role, name, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
-        ['admin@cvsu.edu.ph', hashedPw, 'admin', 'NSTP Administrator', 'NSTP Office', 'default']
-      );
-      console.log('Seeded default admin user: admin@cvsu.edu.ph');
-    }
     const [existingRichard] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', ['richardbelen99@gmail.com']);
     if (existingRichard.length === 0) {
       const hashedPw2 = await bcrypt.hash('Admin@123', 12);
@@ -940,7 +931,6 @@ async function ensureUserColumns() {
   }
   userColumnsMigrated = true;
   try {
-    await pool.execute("UPDATE users SET email = 'admin@cvsu.edu.ph' WHERE role = 'admin' AND (email IS NULL OR TRIM(email) = '')");
     await pool.execute("UPDATE users SET email = CONCAT('instructor', id, '@cvsu.edu.ph') WHERE email IS NULL OR TRIM(email) = ''");
   } catch (e) {}
   await ensureNstpIdAndAttendanceTables();
@@ -3560,30 +3550,38 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
       ORDER BY r.created_at DESC
     `);
     
-    // Get submissions for each report
-    for (let report of reports) {
-      const [submissions] = await pool.execute(`
-        SELECT rs.*, u.name as instructor_name, u.department 
-        FROM report_submissions rs 
-        JOIN users u ON rs.instructor_id = u.id 
-        WHERE rs.report_id = ?
-      `, [report.id]);
-      report.submissions = submissions;
+    // Get submissions and comments for each report
+    for (let report of (reports || [])) {
+      try {
+        const [submissions] = await pool.execute(`
+          SELECT rs.*, u.name as instructor_name, u.department 
+          FROM report_submissions rs 
+          LEFT JOIN users u ON rs.instructor_id = u.id 
+          WHERE rs.report_id = ?
+        `, [report.id]);
+        report.submissions = submissions || [];
+      } catch (_) {
+        report.submissions = [];
+      }
 
-      const [comments] = await pool.execute(`
-        SELECT rc.*, u.name as user_name, u.role, u.department
-        FROM report_comments rc
-        JOIN users u ON rc.user_id = u.id
-        WHERE rc.report_id = ?
-        ORDER BY rc.created_at ASC
-      `, [report.id]);
-      report.comments = comments;
+      try {
+        const [comments] = await pool.execute(`
+          SELECT rc.*, u.name as user_name, u.role, u.department
+          FROM report_comments rc
+          LEFT JOIN users u ON rc.user_id = u.id
+          WHERE rc.report_id = ?
+          ORDER BY rc.created_at ASC
+        `, [report.id]);
+        report.comments = comments || [];
+      } catch (_) {
+        report.comments = [];
+      }
     }
 
-    res.json(reports);
+    res.json(reports || []);
   } catch (error) {
     console.error('Get reports error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.json([]);
   }
 });
 
@@ -6716,10 +6714,6 @@ async function startServer() {
           console.log(`Hashed plain-text password for user id=${u.id}`);
         }
       }
-      // Self-healing: ensure admin account always retains role='admin' and NSTP Office department
-      try {
-        await pool.execute("UPDATE users SET role = 'admin', department = 'NSTP Office' WHERE email = 'admin@cvsu.edu.ph'");
-      } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('Password hash migration warning:', e.message);
     }

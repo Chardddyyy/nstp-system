@@ -515,14 +515,17 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1200;
+        const MAX = 900; // Ultra-fast lightweight document resolution (~50KB)
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.70);
         setRegistrationPhoto(dataUrl);
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
 
@@ -554,14 +557,17 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 1000;
+        const MAX = 480; // Crisp, ultra-lightweight 2x2 ID photo (~30KB)
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.85));
+        const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.80));
         if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
       };
       img.onerror = () => {

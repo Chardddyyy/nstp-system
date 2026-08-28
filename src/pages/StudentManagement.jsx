@@ -16,8 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useMemo, useEffect, useRef } from 'react';
 
-// Client-side photo compression utility to prevent payload overflow
-const compressPhoto = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
+// Client-side photo compression utility to prevent payload overflow & ensure instant loading on slow mobile connections
+const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80) => {
   return new Promise((resolve) => {
     if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
       return resolve(dataUrl);
@@ -3153,6 +3153,8 @@ function StudentManagement() {
                                 <img 
                                   src={currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2} 
                                   alt="2x2 ID Photo" 
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                                 />
                                 <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
@@ -3240,6 +3242,8 @@ function StudentManagement() {
                                         <img 
                                           src={regSrc} 
                                           alt="Registration Form (COR)" 
+                                          loading="lazy"
+                                          decoding="async"
                                           className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                                         />
                                         <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
