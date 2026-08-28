@@ -1,0 +1,663 @@
+import jsPDF from 'jspdf';
+
+/**
+ * Fetch and convert image into Base64 Data URL for jsPDF embedding
+ */
+async function getLogoDataUrl(filename) {
+  try {
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    const fullPath = `${cleanBase}${filename.replace(/^\//, '')}`;
+    const response = await fetch(fullPath);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn(`Could not load logo (${filename}):`, err);
+    return null;
+  }
+}
+
+/**
+ * Helper to truncate text safely for cell width
+ */
+function fitText(doc, text, maxWidth) {
+  const str = String(text ?? '');
+  if (!str) return '';
+  if (doc.getTextWidth(str) <= maxWidth) return str;
+  let truncated = str;
+  while (truncated.length > 1 && doc.getTextWidth(truncated + '…') > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+  return truncated + '…';
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 1. OFFICIAL CHED OSDS-NSTP FORM 2-B PDF (Landscape A4 NSTP Enrollment List)
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept = 'All') {
+  let yearStr = '2025-2026';
+  let students = [];
+
+  if (typeof batchOrYear === 'string') {
+    yearStr = batchOrYear;
+    students = studentList || [];
+  } else if (batchOrYear && typeof batchOrYear === 'object') {
+    yearStr = batchOrYear.year || '2025-2026';
+    students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
+  }
+
+  if (dept !== 'All') {
+    students = students.filter(s => (s.department || '').toUpperCase() === dept.toUpperCase());
+  }
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
+  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+
+  const isSecondSem = String(yearStr).toLowerCase().includes('2nd');
+  const formTitle = isSecondSem ? 'NSTP 2 ENROLLMENT LIST' : 'NSTP 1 ENROLLMENT LIST';
+  const deptLabel = dept === 'All' ? 'CWTS / ROTC / LTS' : dept;
+
+  const cols = [
+    { key: 'no', title: 'No.', w: 8, align: 'center' },
+    { key: 'studentId', title: 'Student No.', w: 22, align: 'center' },
+    { key: 'lastName', title: 'Surname', w: 24, align: 'left' },
+    { key: 'firstName', title: 'First Name', w: 24, align: 'left' },
+    { key: 'middleName', title: 'Middle Name', w: 22, align: 'left' },
+    { key: 'program', title: 'Program', w: 16, align: 'center' },
+    { key: 'sex', title: 'Sex', w: 9, align: 'center' },
+    { key: 'birthDate', title: 'Birthdate', w: 18, align: 'center' },
+    { key: 'street', title: 'Street / Brgy', w: 29, align: 'left' },
+    { key: 'municipality', title: 'Municipality', w: 22, align: 'left' },
+    { key: 'province', title: 'Province', w: 20, align: 'left' },
+    { key: 'contactNumber', title: 'Contact No.', w: 24, align: 'center' },
+    { key: 'email', title: 'Email Address', w: 39, align: 'left' }
+  ];
+
+  const leftMargin = 10;
+  const topMargin = 8;
+  const bottomMargin = 18;
+  const pageHeight = 210;
+
+  function renderHeader(_pageNum) {
+    // Header Logos
+    if (chedLogo) {
+      try { doc.addImage(chedLogo, 'PNG', leftMargin + 2, topMargin, 16, 16); } catch (_) {}
+    }
+    if (cvsuLogo) {
+      try { doc.addImage(cvsuLogo, 'PNG', 287 - 18, topMargin, 16, 16); } catch (_) {}
+    }
+
+    // Top Institutional Text
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Republic of the Philippines', 148.5, topMargin + 3, { align: 'center' });
+    doc.text('Office of the President', 148.5, topMargin + 6.5, { align: 'center' });
+
+    doc.setFontSize(9.5);
+    doc.setTextColor(6, 78, 59);
+    doc.text('COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 10.5, { align: 'center' });
+
+    doc.setFontSize(10.5);
+    doc.text(formTitle, 148.5, topMargin + 15, { align: 'center' });
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Academic Year: ${yearStr}`, 148.5, topMargin + 19, { align: 'center' });
+
+    // Institutional Details
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Name of HEI: Cavite State University - Naic', leftMargin, topMargin + 24);
+    doc.text('Address: Bucana Malaki, Naic, Cavite', leftMargin, topMargin + 28);
+
+    doc.text('Region: 4A - CALABARZON', 205, topMargin + 24);
+    doc.text(`NSTP Components: ${deptLabel}`, 205, topMargin + 28);
+
+    // Table Header Top Group Box
+    const tableTop = topMargin + 31;
+    doc.setFillColor(226, 239, 218); // Soft green #E2EFDA
+    doc.rect(leftMargin, tableTop, 277, 10, 'FD');
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+
+    let x = leftMargin;
+    cols.forEach(col => {
+      doc.rect(x, tableTop, col.w, 10);
+      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
+      doc.text(col.title, textX, tableTop + 6, {
+        align: col.align === 'center' ? 'center' : 'left'
+      });
+      x += col.w;
+    });
+
+    return tableTop + 10;
+  }
+
+  let currentY = renderHeader(1);
+  const rowHeight = 6.2;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+
+  students.forEach((st, idx) => {
+    if (currentY + rowHeight > (pageHeight - bottomMargin)) {
+      doc.addPage('a4', 'landscape');
+      currentY = renderHeader(doc.internal.getNumberOfPages());
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.8);
+    }
+
+    let surname = st.lastName || '';
+    let firstName = st.firstName || '';
+    let middleName = st.middleName || '';
+    if (!surname && st.name && st.name.includes(',')) {
+      const parts = st.name.split(',');
+      surname = parts[0].trim();
+      const rest = (parts[1] || '').trim().split(/\s+/);
+      firstName = rest[0] || '';
+      middleName = rest.slice(1).join(' ') || '';
+    } else if (!surname && st.name) {
+      const parts = st.name.trim().split(/\s+/);
+      surname = parts[parts.length - 1] || '';
+      firstName = parts.slice(0, -1).join(' ') || '';
+    }
+
+    let birthdate = '';
+    if (st.birthDate) {
+      const d = new Date(st.birthDate);
+      if (!isNaN(d.getTime())) {
+        birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+      } else {
+        birthdate = String(st.birthDate).slice(0, 10);
+      }
+    } else if (st.birthMonth && st.birthDay && st.birthYear) {
+      birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
+    }
+
+    const rowData = {
+      no: String(idx + 1),
+      studentId: st.studentId || st.id || '',
+      lastName: surname,
+      firstName: firstName,
+      middleName: middleName,
+      program: st.program || st.course || 'BSIT',
+      sex: (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
+      birthDate: birthdate,
+      street: st.street || st.address || '',
+      municipality: st.municipality || st.city || 'Naic',
+      province: st.province || 'Cavite',
+      contactNumber: st.contactNumber || st.contact_no || '',
+      email: st.email || ''
+    };
+
+    let x = leftMargin;
+    cols.forEach(col => {
+      doc.rect(x, currentY, col.w, rowHeight);
+      const val = fitText(doc, rowData[col.key] ?? '', col.w - 2.5);
+      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
+      doc.text(val, textX, currentY + 4.2, {
+        align: col.align === 'center' ? 'center' : 'left'
+      });
+      x += col.w;
+    });
+
+    currentY += rowHeight;
+  });
+
+  // Signatories Section
+  const sigHeight = 16;
+  if (currentY + sigHeight > (pageHeight - 12)) {
+    doc.addPage('a4', 'landscape');
+    currentY = topMargin + 10;
+  } else {
+    currentY += 4;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(0, 0, 0);
+
+  doc.text('Prepared by:', leftMargin, currentY);
+  doc.text('Certified Correct:', 110, currentY);
+  doc.text('Approved:', 215, currentY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('NSTP Department Coordinator', leftMargin, currentY + 4.5);
+  doc.text('Campus NSTP Director', 110, currentY + 4.5);
+  doc.text('Campus Administrator', 215, currentY + 4.5);
+
+  // Add Page Numbers
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      `Official CHED OSDS-NSTP Form 2-B • Cavite State University - Naic • Page ${i} of ${totalPages}`,
+      148.5,
+      204,
+      { align: 'center' }
+    );
+  }
+
+  const safeLabel = String(yearStr).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filename = `CHED_NSTP_Form_2-B_${dept !== 'All' ? dept : 'ALL'}_${safeLabel}.pdf`;
+  doc.save(filename);
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 2. OFFICIAL CHED OSDS-NSTP FORM 2-A PDF (Summary Matrix of Enrollees & Grads)
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept = 'All') {
+  let yearStr = '2025-2026';
+  let students = [];
+
+  if (typeof batchOrYear === 'string') {
+    yearStr = batchOrYear;
+    students = studentList || [];
+  } else if (batchOrYear && typeof batchOrYear === 'object') {
+    yearStr = batchOrYear.year || '2025-2026';
+    students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
+  }
+
+  const statsMatrix = {
+    sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+    sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+    summer: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
+    graduates: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } }
+  };
+
+  (students || []).forEach((st) => {
+    const sexRaw = (st.sex || st.gender || 'Male').toUpperCase();
+    const genKey = sexRaw.startsWith('F') ? 'f' : 'm';
+    const deptRaw = (st.department || '').toUpperCase();
+    let targetDept = null;
+    if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
+    else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
+    else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+
+    if (!targetDept) return;
+    statsMatrix.sem1[targetDept][genKey] += 1;
+    statsMatrix.sem2[targetDept][genKey] += 1;
+    statsMatrix.graduates[targetDept][genKey] += 1;
+  });
+
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
+  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+
+  const leftMargin = 10;
+  const topMargin = 10;
+
+  // Header Logos
+  if (chedLogo) {
+    try { doc.addImage(chedLogo, 'PNG', leftMargin + 4, topMargin, 18, 18); } catch (_) {}
+  }
+  if (cvsuLogo) {
+    try { doc.addImage(cvsuLogo, 'PNG', 287 - 22, topMargin, 18, 18); } catch (_) {}
+  }
+
+  // Header Text
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Republic of the Philippines', 148.5, topMargin + 3, { align: 'center' });
+  doc.text('Office of the President', 148.5, topMargin + 7, { align: 'center' });
+
+  doc.setFontSize(10.5);
+  doc.setTextColor(6, 78, 59);
+  doc.text('COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 11.5, { align: 'center' });
+
+  doc.setFontSize(11);
+  doc.text('OSDS-NSTP Form 2-A (SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP)', 148.5, topMargin + 16.5, { align: 'center' });
+
+  doc.setFontSize(9);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`Academic Year: ${yearStr}`, 148.5, topMargin + 21, { align: 'center' });
+
+  // Institutional Info Row
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Name of HEI: CAVITE STATE UNIVERSITY - NAIC', leftMargin, topMargin + 28);
+  doc.text('Classification: PUBLIC', 120, topMargin + 28);
+  doc.text('Region: 4A - CALABARZON', 220, topMargin + 28);
+
+  // ── 3-TIER DEMOGRAPHIC MATRIX TABLE ──
+  const tableTop = topMargin + 32;
+  const totalTableWidth = 277;
+
+  const colW = {
+    hei: 55,
+    class: 22,
+    block: 50
+  };
+
+  doc.setFillColor(226, 239, 218); // Soft green #E2EFDA
+  doc.rect(leftMargin, tableTop, totalTableWidth, 8, 'FD');
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
+
+  // Level 1 Headers
+  doc.rect(leftMargin, tableTop, colW.hei, 18);
+  doc.text('HIGHER EDUCATION\nINSTITUTION (HEI)', leftMargin + (colW.hei / 2), tableTop + 8, { align: 'center' });
+
+  doc.rect(leftMargin + colW.hei, tableTop, colW.class, 18);
+  doc.text('CLASSIFICATION', leftMargin + colW.hei + (colW.class / 2), tableTop + 10, { align: 'center' });
+
+  const periods = [
+    { title: 'FIRST SEMESTER', x: leftMargin + colW.hei + colW.class },
+    { title: 'SECOND SEMESTER', x: leftMargin + colW.hei + colW.class + colW.block },
+    { title: 'SUMMER TERM', x: leftMargin + colW.hei + colW.class + (colW.block * 2) },
+    { title: 'NUMBER OF GRADUATES', x: leftMargin + colW.hei + colW.class + (colW.block * 3) }
+  ];
+
+  periods.forEach(p => {
+    doc.rect(p.x, tableTop, colW.block, 6);
+    doc.text(p.title, p.x + (colW.block / 2), tableTop + 4.2, { align: 'center' });
+
+    // Level 2 Subheaders: ROTC, CWTS, LTS
+    const compW = colW.block / 3;
+    const comps = ['ROTC', 'CWTS', 'LTS'];
+    comps.forEach((c, idx) => {
+      const cx = p.x + (idx * compW);
+      doc.rect(cx, tableTop + 6, compW, 6);
+      doc.text(c, cx + (compW / 2), tableTop + 10.2, { align: 'center' });
+
+      // Level 3 Subheaders: M, F
+      const genW = compW / 2;
+      doc.rect(cx, tableTop + 12, genW, 6);
+      doc.text('M', cx + (genW / 2), tableTop + 16, { align: 'center' });
+      doc.rect(cx + genW, tableTop + 12, genW, 6);
+      doc.text('F', cx + genW + (genW / 2), tableTop + 16, { align: 'center' });
+    });
+  });
+
+  // Data Row
+  const dataY = tableTop + 18;
+  const dataRowHeight = 9;
+
+  doc.rect(leftMargin, dataY, colW.hei, dataRowHeight);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CAVITE STATE UNIVERSITY - NAIC', leftMargin + 2, dataY + 5.5);
+
+  doc.rect(leftMargin + colW.hei, dataY, colW.class, dataRowHeight);
+  doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), dataY + 5.5, { align: 'center' });
+
+  // Render Numbers into Grid
+  const dataValues = [
+    // 1st Sem
+    statsMatrix.sem1.ROTC.m, statsMatrix.sem1.ROTC.f,
+    statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
+    statsMatrix.sem1.LTS.m, statsMatrix.sem1.LTS.f,
+    // 2nd Sem
+    statsMatrix.sem2.ROTC.m, statsMatrix.sem2.ROTC.f,
+    statsMatrix.sem2.CWTS.m, statsMatrix.sem2.CWTS.f,
+    statsMatrix.sem2.LTS.m, statsMatrix.sem2.LTS.f,
+    // Summer
+    statsMatrix.summer.ROTC.m, statsMatrix.summer.ROTC.f,
+    statsMatrix.summer.CWTS.m, statsMatrix.summer.CWTS.f,
+    statsMatrix.summer.LTS.m, statsMatrix.summer.LTS.f,
+    // Graduates
+    statsMatrix.graduates.ROTC.m, statsMatrix.graduates.ROTC.f,
+    statsMatrix.graduates.CWTS.m, statsMatrix.graduates.CWTS.f,
+    statsMatrix.graduates.LTS.m, statsMatrix.graduates.LTS.f
+  ];
+
+  const singleGenWidth = colW.block / 6;
+  let startColX = leftMargin + colW.hei + colW.class;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+
+  dataValues.forEach(val => {
+    doc.rect(startColX, dataY, singleGenWidth, dataRowHeight);
+    doc.text(String(val), startColX + (singleGenWidth / 2), dataY + 5.5, { align: 'center' });
+    startColX += singleGenWidth;
+  });
+
+  // Signatories
+  const sigY = dataY + dataRowHeight + 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(0, 0, 0);
+
+  doc.text('Prepared by:', leftMargin, sigY);
+  doc.text('Verified by:', 110, sigY);
+  doc.text('Approved:', 215, sigY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('NSTP Department Coordinator', leftMargin, sigY + 5);
+  doc.text('Campus NSTP Director', 110, sigY + 5);
+  doc.text('Campus Administrator', 215, sigY + 5);
+
+  // Footer Note
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(7);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    `Official CHED OSDS-NSTP Form 2-A Summary Matrix • Cavite State University - Naic • Academic Year ${yearStr}`,
+    148.5,
+    202,
+    { align: 'center' }
+  );
+
+  const safeLabel = String(yearStr).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filename = `OSDS-NSTP-Form-2-A_Summary_${dept !== 'All' ? dept : 'ALL'}_${safeLabel}.pdf`;
+  doc.save(filename);
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 3. OFFICIAL OSDS-NSTP FORM 2-A ANNUAL GRADES MASTERLIST PDF
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+export async function downloadAnnualForm2APdf({
+  students = [],
+  selectedSchoolYear = '2025-2026',
+  selectedDept = 'All',
+  getAnnualStudentInfo = () => ({ g1: '', g2: '', finalRating: '', overallRemarks: '' }),
+  currentUser = null
+}) {
+  const doc = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
+  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+
+  const deptLabel = selectedDept !== 'All' ? selectedDept : 'CWTS / LTS / ROTC';
+  const leftMargin = 10;
+  const topMargin = 8;
+  const bottomMargin = 18;
+  const pageHeight = 210;
+
+  const cols = [
+    { key: 'no', title: 'No.', w: 8, align: 'center' },
+    { key: 'studentId', title: 'Student No.', w: 22, align: 'center' },
+    { key: 'name', title: 'Student Full Name', w: 42, align: 'left' },
+    { key: 'program', title: 'Course', w: 16, align: 'center' },
+    { key: 'sex', title: 'Sex', w: 9, align: 'center' },
+    { key: 'section', title: 'NSTP Sec', w: 16, align: 'center' },
+    { key: 'contactNumber', title: 'Contact No.', w: 24, align: 'center' },
+    { key: 'email', title: 'Email Address', w: 42, align: 'left' },
+    { key: 'g1', title: '1st Sem', w: 16, align: 'center' },
+    { key: 'g2', title: '2nd Sem', w: 16, align: 'center' },
+    { key: 'finalRating', title: 'Rating', w: 16, align: 'center' },
+    { key: 'remarks', title: 'Remarks', w: 50, align: 'left' }
+  ];
+
+  function renderHeader() {
+    if (chedLogo) {
+      try { doc.addImage(chedLogo, 'PNG', leftMargin + 2, topMargin, 16, 16); } catch (_) {}
+    }
+    if (cvsuLogo) {
+      try { doc.addImage(cvsuLogo, 'PNG', 287 - 18, topMargin, 16, 16); } catch (_) {}
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Republic of the Philippines', 148.5, topMargin + 3, { align: 'center' });
+    doc.text('Office of the President', 148.5, topMargin + 6.5, { align: 'center' });
+
+    doc.setFontSize(9.5);
+    doc.setTextColor(6, 78, 59);
+    doc.text('COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 10.5, { align: 'center' });
+
+    doc.setFontSize(10.5);
+    doc.text('OSDS-NSTP Form 2-A (ANNUAL GRADE MASTERLIST & RATINGS)', 148.5, topMargin + 15, { align: 'center' });
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Academic Year: ${selectedSchoolYear} • Annual Report`, 148.5, topMargin + 19, { align: 'center' });
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Name of HEI: Cavite State University - Naic', leftMargin, topMargin + 24);
+    doc.text('Address: Bucana Malaki, Naic, Cavite', leftMargin, topMargin + 28);
+
+    doc.text('Region: 4A - CALABARZON', 205, topMargin + 24);
+    doc.text(`NSTP Component: ${deptLabel}`, 205, topMargin + 28);
+
+    const tableTop = topMargin + 31;
+    doc.setFillColor(226, 239, 218);
+    doc.rect(leftMargin, tableTop, 277, 9, 'FD');
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+
+    let x = leftMargin;
+    cols.forEach(col => {
+      doc.rect(x, tableTop, col.w, 9);
+      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
+      doc.text(col.title, textX, tableTop + 5.5, {
+        align: col.align === 'center' ? 'center' : 'left'
+      });
+      x += col.w;
+    });
+
+    return tableTop + 9;
+  }
+
+  let currentY = renderHeader();
+  const rowHeight = 6.2;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+
+  students.forEach((st, idx) => {
+    if (currentY + rowHeight > (pageHeight - bottomMargin)) {
+      doc.addPage('a4', 'landscape');
+      currentY = renderHeader();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.8);
+    }
+
+    const sid = st.studentId || st.id;
+    const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
+
+    let fullName = st.name || '';
+    if (!fullName) {
+      const parts = [st.lastName, st.firstName, st.middleName].filter(Boolean);
+      fullName = parts.join(', ');
+    }
+
+    const rowData = {
+      no: String(idx + 1),
+      studentId: st.studentId || st.id || '',
+      name: fullName,
+      program: st.program || st.course || 'BSIT',
+      sex: (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
+      section: st.nstp_section || st.section || 'A',
+      contactNumber: st.contactNumber || '',
+      email: st.email || '',
+      g1: g1 || '-',
+      g2: g2 || '-',
+      finalRating: finalRating !== '-' ? finalRating : '-',
+      remarks: overallRemarks || 'Incomplete'
+    };
+
+    let x = leftMargin;
+    cols.forEach(col => {
+      doc.rect(x, currentY, col.w, rowHeight);
+      const val = fitText(doc, rowData[col.key] ?? '', col.w - 2.5);
+      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
+      doc.text(val, textX, currentY + 4.2, {
+        align: col.align === 'center' ? 'center' : 'left'
+      });
+      x += col.w;
+    });
+
+    currentY += rowHeight;
+  });
+
+  // Signatures
+  const sigHeight = 16;
+  if (currentY + sigHeight > (pageHeight - 12)) {
+    doc.addPage('a4', 'landscape');
+    currentY = topMargin + 10;
+  } else {
+    currentY += 4;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(0, 0, 0);
+
+  doc.text('Prepared & Certified Correct:', leftMargin, currentY);
+  doc.text('Verified by:', 110, currentY);
+  doc.text('Approved:', 215, currentY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text(currentUser?.name ? `${currentUser.name} (Instructor)` : 'NSTP Faculty Instructor', leftMargin, currentY + 4.5);
+  doc.text('Campus NSTP Director', 110, currentY + 4.5);
+  doc.text('Campus Administrator', 215, currentY + 4.5);
+
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(
+      `Official OSDS-NSTP Form 2-A Annual Grade Masterlist • Cavite State University - Naic • Page ${i} of ${totalPages}`,
+      148.5,
+      204,
+      { align: 'center' }
+    );
+  }
+
+  const deptTag = selectedDept !== 'All' ? selectedDept : 'ALL';
+  const filename = `OSDS-NSTP-Form-2-A_Grades_${deptTag}_${selectedSchoolYear}.pdf`;
+  doc.save(filename);
+}

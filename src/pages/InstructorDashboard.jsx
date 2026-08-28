@@ -783,10 +783,10 @@ function InstructorDashboard() {
                     type="button"
                     onClick={() => downloadChedFormat(archiveViewData, null, user?.department || 'CWTS')}
                     className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title={`Download ${user?.department} CHED Form B Masterlist Excel`}
+                    title={`Download ${user?.department} CHED Form B Masterlist PDF`}
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download CHED Format (.xlsx)</span>
+                    <span>Download CHED Format (.pdf)</span>
                   </button>
                   <button type="button" onClick={() => setShowArchiveDetails(false)} className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white">
                     <X className="w-5 h-5" />

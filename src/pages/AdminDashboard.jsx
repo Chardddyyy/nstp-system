@@ -732,10 +732,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   type="button"
                   onClick={() => downloadChedFormat(archiveViewData)}
                   className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  title="Download CHED Form B Enrollment List Excel"
+                  title="Download CHED Form B Enrollment List PDF"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-950" />
-                  <span>Download CHED Format (.xlsx)</span>
+                  <span>Download CHED Format (.pdf)</span>
                 </button>
                 <button
                   type="button"
@@ -2331,19 +2331,19 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     type="button"
                     onClick={() => downloadChedFormat(archiveViewData)}
                     className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title="Download Official CHED Form B Masterlist Excel"
+                    title="Download Official CHED Form B Masterlist PDF"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download CHED Format (.xlsx)</span>
+                    <span>Download CHED Format (.pdf)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => downloadChedFormA(archiveViewData)}
                     className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 border border-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title="Download CHED Form 2-A Summary Matrix Excel"
+                    title="Download CHED Form 2-A Summary Matrix PDF"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Form 2-A (.xlsx)</span>
+                    <span>Form 2-A (.pdf)</span>
                   </button>
                   <button type="button"
                     onClick={() => setShowArchiveDetails(false)}

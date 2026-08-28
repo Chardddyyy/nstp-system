@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl, studentsAPI, gradesAPI } from '../services/api';
 import * as XLSX from 'xlsx';
+import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
@@ -361,413 +362,43 @@ function StudentManagement() {
   const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 
-  // ── 1-Click Instant Download for Form A (OSDS-NSTP Form: SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP) ──
+  // ── 1-Click Instant Download for Form A PDF (OSDS-NSTP Form: SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP) ──
   const handleDirectDownloadFormA = async () => {
     try {
       setIsDownloadingFormA(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
       const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
 
-      // Fetch official grades for this school year from backend
-      let allGrades = [];
-      try {
-        allGrades = await gradesAPI.getAll({
-          schoolYear: activeBatchYear,
-          department: dept !== 'All' ? dept : undefined
-        });
-      } catch (e) {
-        console.warn('Backend grades fetch warning:', e);
-      }
-
-      const gradesMap = {};
-      if (Array.isArray(allGrades)) {
-        allGrades.forEach((r) => {
-          const sid = r.studentId || r.student_id;
-          const sem = r.semester || '1st Semester';
-          if (sid) {
-            if (!gradesMap[sid]) gradesMap[sid] = {};
-            gradesMap[sid][sem] = r;
-          }
-        });
-      }
-
-      // Filter target students
       const targetStudents = (students || []).filter((st) => {
         if (dept !== 'All' && st.department !== dept) return false;
         return true;
-      }).sort((a, b) => {
-        const nameA = (a.lastName || a.name || '').toLowerCase();
-        const nameB = (b.lastName || b.name || '').toLowerCase();
-        return nameA.localeCompare(nameB);
       });
 
-      // Calculate 4-tier matrix: 1st Sem, 2nd Sem, Summer, Graduates (Passed BOTH 1st & 2nd Sem)
-      const statsMatrix = {
-        sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-        sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-        summer: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-        graduates: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } }
-      };
-
-      targetStudents.forEach((st) => {
-        const deptRaw = (st.department || '').toUpperCase().trim();
-        const sexRaw = (st.sex || st.gender || '').toLowerCase().trim();
-        const isFemale = sexRaw.startsWith('f') || sexRaw === 'female';
-        const genKey = isFemale ? 'f' : 'm';
-
-        let targetDept = null;
-        if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
-        else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
-        else if (deptRaw.includes('LTS')) targetDept = 'LTS';
-
-        if (!targetDept) return;
-
-        // 1st Sem Enrollee
-        statsMatrix.sem1[targetDept][genKey] += 1;
-        // 2nd Sem Enrollee
-        statsMatrix.sem2[targetDept][genKey] += 1;
-
-        // Check if student passed BOTH 1st and 2nd Semester -> Graduates
-        const sid = st.studentId || st.id;
-        const semGrades = gradesMap[sid] || {};
-        const g1Str = semGrades['1st Semester']?.final_grade || '';
-        const g2Str = semGrades['2nd Semester']?.final_grade || '';
-
-        const num1 = parseFloat(g1Str);
-        const num2 = parseFloat(g2Str);
-
-        const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
-        const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p';
-
-        if (passed1 && passed2) {
-          statsMatrix.graduates[targetDept][genKey] += 1;
-        }
-      });
-
-      // Build Form A AOA matching exact CHED template
-      const aoaA = [
-        ['Republic of the Philippines'],
-        ['Office of the President'],
-        ['Commission on Higher Education'],
-        [],
-        ['SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP'],
-        [`Academic Year: ${activeBatchYear}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Region: 4A - CALABARZON'],
-        [],
-        // Row 8 (Index 7) - Header Row 1
-        ['NAME OF HEI/CAMPUS', 'Classification (Private/Public)', 'ENROLLMENT', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'GRADUATES', '', '', '', '', ''],
-        // Row 9 (Index 8) - Header Row 2
-        ['', '', '1st Sem.', '', '', '', '', '', '2nd Sem.', '', '', '', '', '', 'Summer', '', '', '', '', '', '', '', '', '', '', ''],
-        // Row 10 (Index 9) - Header Row 3
-        ['', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', '', 'ROTC', '', 'CWTS', '', 'LTS', ''],
-        // Row 11 (Index 10) - Header Row 4 (M/F)
-        ['', '', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F', 'M', 'F'],
-        // Row 12 (Index 11) - Data Row
-        [
-          'Cavite State University - Naic',
-          'PUBLIC',
-          statsMatrix.sem1.ROTC.m, statsMatrix.sem1.ROTC.f,
-          statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
-          statsMatrix.sem1.LTS.m, statsMatrix.sem1.LTS.f,
-          statsMatrix.sem2.ROTC.m, statsMatrix.sem2.ROTC.f,
-          statsMatrix.sem2.CWTS.m, statsMatrix.sem2.CWTS.f,
-          statsMatrix.sem2.LTS.m, statsMatrix.sem2.LTS.f,
-          statsMatrix.summer.ROTC.m, statsMatrix.summer.ROTC.f,
-          statsMatrix.summer.CWTS.m, statsMatrix.summer.CWTS.f,
-          statsMatrix.summer.LTS.m, statsMatrix.summer.LTS.f,
-          statsMatrix.graduates.ROTC.m, statsMatrix.graduates.ROTC.f,
-          statsMatrix.graduates.CWTS.m, statsMatrix.graduates.CWTS.f,
-          statsMatrix.graduates.LTS.m, statsMatrix.graduates.LTS.f
-        ],
-        [],
-        [],
-        ['Prepared by: NSTP Department Coordinator', '', '', '', '', '', '', '', 'Verified by: Campus NSTP Director', '', '', '', '', '', '', '', 'Approved by: Campus Administrator']
-      ];
-
-      const wsA = XLSX.utils.aoa_to_sheet(aoaA);
-
-      // Apply Column Widths and Row Heights
-      wsA['!cols'] = [
-        { wch: 34 }, // HEI Name
-        { wch: 22 }, // Classification
-        ...Array(24).fill({ wch: 9 }) // M/F subcolumns
-      ];
-      wsA['!rows'] = [
-        { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
-        { hpt: 24 }, { hpt: 20 }, { hpt: 10 },
-        { hpt: 22 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 },
-        { hpt: 24 }
-      ];
-
-      // Apply Excel Cell Merges for Form A
-      wsA['!merges'] = [
-        // Title merge
-        { s: { r: 4, c: 0 }, e: { r: 4, c: 25 } },
-        // HEI and Classification rowSpan 4
-        { s: { r: 7, c: 0 }, e: { r: 10, c: 0 } },
-        { s: { r: 7, c: 1 }, e: { r: 10, c: 1 } },
-        // ENROLLMENT colSpan 18
-        { s: { r: 7, c: 2 }, e: { r: 7, c: 19 } },
-        // GRADUATES colSpan 6
-        { s: { r: 7, c: 20 }, e: { r: 7, c: 25 } },
-        // 1st Sem colSpan 6
-        { s: { r: 8, c: 2 }, e: { r: 8, c: 7 } },
-        // 2nd Sem colSpan 6
-        { s: { r: 8, c: 8 }, e: { r: 8, c: 13 } },
-        // Summer colSpan 6
-        { s: { r: 8, c: 14 }, e: { r: 8, c: 19 } },
-        // Under Graduates in Row 2 colSpan 6
-        { s: { r: 8, c: 20 }, e: { r: 8, c: 25 } },
-        // Component spans in Row 3 (2 cols each: ROTC, CWTS, LTS)
-        { s: { r: 9, c: 2 }, e: { r: 9, c: 3 } },
-        { s: { r: 9, c: 4 }, e: { r: 9, c: 5 } },
-        { s: { r: 9, c: 6 }, e: { r: 9, c: 7 } },
-        { s: { r: 9, c: 8 }, e: { r: 9, c: 9 } },
-        { s: { r: 9, c: 10 }, e: { r: 9, c: 11 } },
-        { s: { r: 9, c: 12 }, e: { r: 9, c: 13 } },
-        { s: { r: 9, c: 14 }, e: { r: 9, c: 15 } },
-        { s: { r: 9, c: 16 }, e: { r: 9, c: 17 } },
-        { s: { r: 9, c: 18 }, e: { r: 9, c: 19 } },
-        { s: { r: 9, c: 20 }, e: { r: 9, c: 21 } },
-        { s: { r: 9, c: 22 }, e: { r: 9, c: 23 } },
-        { s: { r: 9, c: 24 }, e: { r: 9, c: 25 } }
-      ];
-
-      // Apply borders to Form A
-      for (let R = 7; R <= 11; ++R) {
-        for (let C = 0; C <= 25; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!wsA[cellAddress]) wsA[cellAddress] = { t: 's', v: '' };
-          wsA[cellAddress].s = {
-            border: {
-              top: { style: 'thin', color: { rgb: '000000' } },
-              bottom: { style: 'thin', color: { rgb: '000000' } },
-              left: { style: 'thin', color: { rgb: '000000' } },
-              right: { style: 'thin', color: { rgb: '000000' } }
-            },
-            alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
-          };
-        }
-      }
-
-      // Magic Print Settings for Form A: Landscape, A4, Fit to 1 page
-      wsA['!pageSetup'] = {
-        paperSize: 9, // A4
-        orientation: 'landscape',
-        fitToWidth: 1,
-        fitToHeight: 1,
-        fitToPage: true
-      };
-      wsA['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, wsA, 'OSDS-NSTP Form 2-A');
-
-      const filename = `OSDS-NSTP-Form-2-A_Summary_${dept !== 'All' ? dept : 'ALL'}_${activeBatchYear}.xlsx`;
-      XLSX.writeFile(wb, filename);
+      await downloadChedFormAPdf(activeBatchYear, targetStudents, dept);
     } catch (err) {
       console.error('Direct download Form A error:', err);
-      alert('Failed to download Form A. Please try again.');
+      alert('Failed to download Form A PDF. Please try again.');
     } finally {
       setIsDownloadingFormA(false);
     }
   };
 
-  // ── Instant Download for Form B (OSDS-NSTP Form 2-B / CHED NSTP Form B: NSTP 1 Enrollment List) ──
+  // ── Instant Download for Form B PDF (OSDS-NSTP Form 2-B: NSTP Enrollment List) ──
   const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem) => {
     try {
       setIsDownloadingFormB(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
       const deptFilter = targetDept || 'All';
-      const sem = targetSem || '1st Semester';
 
       const targetStudents = (students || []).filter((st) => {
         if (deptFilter !== 'All' && st.department !== deptFilter) return false;
         return true;
-      }).sort((a, b) => {
-        const nameA = (a.lastName || a.name || '').toLowerCase();
-        const nameB = (b.lastName || b.name || '').toLowerCase();
-        return nameA.localeCompare(nameB);
       });
 
-      const dataRows = targetStudents.map((st, idx) => {
-        let surname = st.lastName || '';
-        let firstName = st.firstName || '';
-        let middleName = st.middleName || '';
-        if (!surname && st.name && st.name.includes(',')) {
-          const parts = st.name.split(',');
-          surname = parts[0].trim();
-          const rest = (parts[1] || '').trim().split(/\s+/);
-          firstName = rest[0] || '';
-          middleName = rest.slice(1).join(' ') || '';
-        } else if (!surname && st.name) {
-          const parts = st.name.trim().split(/\s+/);
-          surname = parts[parts.length - 1] || '';
-          firstName = parts.slice(0, -1).join(' ') || '';
-        }
-
-        let street = st.street || '';
-        let municipality = st.municipality || '';
-        let province = st.province || '';
-        if (!street && !municipality && (st.address || st.homeAddress)) {
-          const addr = st.address || st.homeAddress || '';
-          const parts = addr.split(',').map((p) => p.trim());
-          if (parts.length >= 3) {
-            street = parts[0];
-            municipality = parts[1];
-            province = parts.slice(2).join(', ');
-          } else if (parts.length === 2) {
-            street = parts[0];
-            municipality = parts[1];
-          } else {
-            street = addr;
-          }
-        }
-
-        let birthdate = '';
-        if (st.birthDate) {
-          const d = new Date(st.birthDate);
-          if (!isNaN(d.getTime())) {
-            birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-          } else {
-            birthdate = st.birthDate;
-          }
-        } else if (st.birthMonth && st.birthDay && st.birthYear) {
-          birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
-        }
-
-        const sexVal = (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M';
-
-        return [
-          idx + 1,
-          st.studentId || '',
-          surname,
-          firstName,
-          middleName,
-          st.program || st.course || 'BSIT',
-          sexVal,
-          birthdate,
-          street,
-          municipality,
-          province,
-          st.contactNumber || '',
-          st.email || ''
-        ];
-      });
-
-      const nstpComponentLabel = deptFilter === 'All' ? 'CWTS / ROTC / LTS' : deptFilter;
-
-      const aoaB = [
-        ['Republic of the Philippines'],
-        ['Office of the President'],
-        ['Commission on Higher Education'],
-        [],
-        ['NSTP 1 Enrollment List'],
-        [`${sem}, Academic Year: ${activeBatchYear}`],
-        [],
-        ['Name of HEI: Cavite State University - Naic', '', '', '', '', '', '', 'Region: 4A - CALABARZON'],
-        ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', `NSTP Components: ${nstpComponentLabel}`],
-        [],
-        // Row 11 (Index 10) - Main Column Headers
-        ['No.', 'Student No.', 'Student Name', '', '', 'Program', 'Sex', 'Birthdate', 'Address', '', '', 'Contact Number', 'Email Address'],
-        // Row 12 (Index 11) - Sub-Column Headers
-        ['', '', 'Surname', 'First Name', 'Middle Name', '', '', '', 'Street/Barangay', 'Municipality/City', 'Province', '', ''],
-        // Data Rows (Index 12 onwards)
-        ...dataRows,
-        [],
-        ['Prepared by: NSTP Department Coordinator', '', '', '', 'Certified Correct by: Campus NSTP Director', '', '', '', 'Approved by: Campus Administrator']
-      ];
-
-      const wsB = XLSX.utils.aoa_to_sheet(aoaB);
-
-      // Apply Column Widths and Row Heights
-      wsB['!cols'] = [
-        { wch: 6 },  // No.
-        { wch: 16 }, // Student No.
-        { wch: 18 }, // Surname
-        { wch: 18 }, // First Name
-        { wch: 16 }, // Middle Name
-        { wch: 14 }, // Program
-        { wch: 10 }, // Sex
-        { wch: 14 }, // Birthdate
-        { wch: 24 }, // Street/Barangay
-        { wch: 20 }, // Municipality/City
-        { wch: 18 }, // Province
-        { wch: 18 }, // Contact Number
-        { wch: 30 }  // Email Address
-      ];
-      wsB['!rows'] = [
-        { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
-        { hpt: 24 }, { hpt: 20 }, { hpt: 10 },
-        { hpt: 20 }, { hpt: 20 }, { hpt: 10 },
-        { hpt: 22 }, { hpt: 22 }
-      ];
-
-      // Apply Excel Cell Merges for Form B
-      wsB['!merges'] = [
-        // Title merge
-        { s: { r: 4, c: 0 }, e: { r: 4, c: 12 } },
-        { s: { r: 5, c: 0 }, e: { r: 5, c: 12 } },
-        // No. rowSpan 2
-        { s: { r: 10, c: 0 }, e: { r: 11, c: 0 } },
-        // Student No. rowSpan 2
-        { s: { r: 10, c: 1 }, e: { r: 11, c: 1 } },
-        // Student Name colSpan 3
-        { s: { r: 10, c: 2 }, e: { r: 10, c: 4 } },
-        // Program rowSpan 2
-        { s: { r: 10, c: 5 }, e: { r: 11, c: 5 } },
-        // Sex rowSpan 2
-        { s: { r: 10, c: 6 }, e: { r: 11, c: 6 } },
-        // Birthdate rowSpan 2
-        { s: { r: 10, c: 7 }, e: { r: 11, c: 7 } },
-        // Address colSpan 3
-        { s: { r: 10, c: 8 }, e: { r: 10, c: 10 } },
-        // Contact Number rowSpan 2
-        { s: { r: 10, c: 11 }, e: { r: 11, c: 11 } },
-        // Email Address rowSpan 2
-        { s: { r: 10, c: 12 }, e: { r: 11, c: 12 } }
-      ];
-
-      // Apply borders to Form B
-      const rangeB = XLSX.utils.decode_range(wsB['!ref'] || 'A1:M14');
-      for (let R = 10; R <= rangeB.e.r - 2; ++R) {
-        for (let C = 0; C <= 12; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!wsB[cellAddress]) wsB[cellAddress] = { t: 's', v: '' };
-          const isCenter = [0, 1, 5, 6, 7, 11].includes(C);
-          wsB[cellAddress].s = {
-            border: {
-              top: { style: 'thin', color: { rgb: '000000' } },
-              bottom: { style: 'thin', color: { rgb: '000000' } },
-              left: { style: 'thin', color: { rgb: '000000' } },
-              right: { style: 'thin', color: { rgb: '000000' } }
-            },
-            alignment: {
-              horizontal: isCenter ? 'center' : 'left',
-              vertical: 'center',
-              wrapText: true
-            }
-          };
-        }
-      }
-
-      // Magic Print Settings for Form B: Landscape, A4, Fit to 1 page width
-      wsB['!pageSetup'] = {
-        paperSize: 9, // A4
-        orientation: 'landscape',
-        fitToWidth: 1,
-        fitToHeight: 0,
-        fitToPage: true
-      };
-      wsB['!margins'] = { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, wsB, 'CHED NSTP Form B');
-
-      const filename = `CHED_NSTP_Form_B_${deptFilter !== 'All' ? deptFilter : 'ALL'}_${activeBatchYear}.xlsx`;
-      XLSX.writeFile(wb, filename);
+      await downloadChedFormBPdf(activeBatchYear, targetStudents, deptFilter);
     } catch (err) {
       console.error('Direct download Form B error:', err);
-      alert('Failed to download Form B. Please try again.');
+      alert('Failed to download Form B PDF. Please try again.');
     } finally {
       setIsDownloadingFormB(false);
     }
@@ -833,31 +464,18 @@ function StudentManagement() {
   const downloadChed = async (overrideArchiveYear) => {
     try {
       const dept = isAdmin ? exportDept : (user?.department || 'CWTS');
-      const token = localStorage.getItem('nstp_token');
-      const API_URL = getPrimaryApiUrl();
       const targetArchive = overrideArchiveYear || (viewingArchive ? archiveViewData?.year : null);
-      const params = new URLSearchParams({
-        department: dept,
-        sem: exportSem,
-        year: exportAcadYear,
-        program: exportCourse,
-        token: token || '',
-        ...(targetArchive ? { archive_year: targetArchive } : {})
+      const activeBatchYear = targetArchive || exportAcadYear;
+      const targetStudents = (students || []).filter((st) => {
+        if (dept !== 'All' && st.department !== dept) return false;
+        if (exportCourse !== 'All' && (st.program || '').toLowerCase() !== (exportCourse === 'BSED' ? 'bsed' : exportCourse).toLowerCase()) return false;
+        return true;
       });
-      const res = await fetch(`${API_URL}/students/ched-export?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const safeLabel = targetArchive ? String(targetArchive).replace(/[^a-zA-Z0-9_-]/g, '_') : dept;
-      a.download = `CHED_NSTP_EnrollmentList_${safeLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      await downloadChedFormBPdf(activeBatchYear, targetStudents, dept);
       setShowExportModal(false);
-    } catch {
+    } catch (err) {
+      console.error('CHED export failed:', err);
       alert('CHED export failed. Please try again.');
     }
   };
@@ -2078,7 +1696,7 @@ function StudentManagement() {
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-bold text-gray-900">Export Masterlist</h3>
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">CHED Excel</span>
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">CHED PDF</span>
                     </div>
                     <p className="text-xs text-gray-500">Configure parameters for official CHED masterlist export</p>
                   </div>
@@ -2215,7 +1833,7 @@ function StudentManagement() {
                   onClick={downloadChed}
                   className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/20 active:scale-95 hover:-translate-y-0.5"
                 >
-                  <Download className="w-4 h-4" /> Download Excel
+                  <Download className="w-4 h-4" /> Download PDF
                 </button>
               </div>
             </div>
@@ -4336,7 +3954,7 @@ function StudentManagement() {
                     className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download Excel</span>
+                    <span>Download PDF</span>
                   </button>
                 </div>
               </div>
@@ -4432,7 +4050,7 @@ function StudentManagement() {
                     className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download Excel</span>
+                    <span>Download PDF</span>
                   </button>
                 </div>
               </div>
@@ -4464,7 +4082,7 @@ function StudentManagement() {
                     className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Excel</span>
+                    <span>Download PDF</span>
                   </button>
                   <button
                     type="button"
@@ -4514,7 +4132,7 @@ function StudentManagement() {
                     className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Excel</span>
+                    <span>Download PDF</span>
                   </button>
                   <button
                     type="button"

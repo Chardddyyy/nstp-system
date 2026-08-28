@@ -582,68 +582,21 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
   return workbook;
 }
 
+import { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf } from './chedPdfGenerator';
+
+export { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf };
+
 /**
- * Trigger browser download of Form B Excel file with full formatting and embedded logos
+ * Trigger browser download of Form B as official print-ready PDF (CHED OSDS-NSTP Form 2-B)
  */
 export async function downloadChedFormat(batchOrYear, studentList = null, dept = 'All') {
-  let yearStr = '2024-2025';
-  let students = [];
-
-  if (typeof batchOrYear === 'string') {
-    yearStr = batchOrYear;
-    students = studentList || [];
-  } else if (batchOrYear && typeof batchOrYear === 'object') {
-    yearStr = batchOrYear.year || '2024-2025';
-    students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
-  }
-
-  if (dept !== 'All') {
-    students = students.filter(s => (s.department || '').toUpperCase() === dept.toUpperCase());
-  }
-
-  const workbook = await generateChedFormBWorkbook(students, yearStr, dept);
-  const safeLabel = String(yearStr).replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `CHED_NSTP_Form_B_${dept !== 'All' ? dept : 'ALL'}_${safeLabel}.xlsx`;
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+  return downloadChedFormBPdf(batchOrYear, studentList, dept);
 }
 
 /**
- * Trigger browser download of Form A Excel file with full formatting and embedded logos
+ * Trigger browser download of Form A as official print-ready PDF (OSDS-NSTP Form 2-A Summary Matrix)
  */
 export async function downloadChedFormA(batchOrYear, studentList = null, dept = 'All') {
-  let yearStr = '2024-2025';
-  let students = [];
-
-  if (typeof batchOrYear === 'string') {
-    yearStr = batchOrYear;
-    students = studentList || [];
-  } else if (batchOrYear && typeof batchOrYear === 'object') {
-    yearStr = batchOrYear.year || '2024-2025';
-    students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
-  }
-
-  const workbook = await generateChedFormAWorkbook(students, yearStr, dept);
-  const safeLabel = String(yearStr).replace(/[^a-zA-Z0-9_-]/g, '_');
-  const filename = `OSDS-NSTP-Form-2-A_Summary_${dept !== 'All' ? dept : 'ALL'}_${safeLabel}.xlsx`;
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+  return downloadChedFormAPdf(batchOrYear, studentList, dept);
 }
+

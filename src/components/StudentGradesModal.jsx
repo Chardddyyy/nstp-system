@@ -5,6 +5,7 @@ import {
   Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
+import { downloadAnnualForm2APdf } from '../utils/chedPdfGenerator';
 
 const GRADE_OPTIONS = [
   '',
@@ -308,161 +309,22 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
   };
 
-  // ── Official OSDS-NSTP Form 2-A Excel Generator (Whole Academic Year with 1st & 2nd Sem Grades) ──
-  const handleDownloadOSDSForm2A = () => {
-    const headers = [
-      'No.',
-      'Student No.',
-      'Surname',
-      'First Name',
-      'Middle Name',
-      'Course',
-      'Sex',
-      'Birthdate',
-      'Street / Barangay',
-      'Municipality / City',
-      'Province',
-      'Contact Number',
-      'E-mail Address',
-      'NSTP Section',
-      '1st Sem Grade',
-      '2nd Sem Grade',
-      'Final Rating',
-      'Remarks'
-    ];
-
-    const dataRows = filteredStudents.map((st, idx) => {
-      const sid = st.studentId || st.id;
-      const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
-
-      let surname = st.lastName || '';
-      let firstName = st.firstName || '';
-      let middleName = st.middleName || '';
-      if (!surname && st.name && st.name.includes(',')) {
-        const parts = st.name.split(',');
-        surname = parts[0].trim();
-        const rest = (parts[1] || '').trim().split(/\s+/);
-        firstName = rest[0] || '';
-        middleName = rest.slice(1).join(' ') || '';
-      } else if (!surname && st.name) {
-        const parts = st.name.trim().split(/\s+/);
-        surname = parts[parts.length - 1] || '';
-        firstName = parts.slice(0, -1).join(' ') || '';
-      }
-
-      let street = st.street || '';
-      let municipality = st.municipality || '';
-      let province = st.province || '';
-      if (!street && !municipality && (st.address || st.homeAddress)) {
-        const addr = st.address || st.homeAddress || '';
-        const parts = addr.split(',').map((p) => p.trim());
-        if (parts.length >= 3) {
-          street = parts[0];
-          municipality = parts[1];
-          province = parts.slice(2).join(', ');
-        } else if (parts.length === 2) {
-          street = parts[0];
-          municipality = parts[1];
-        } else {
-          street = addr;
-        }
-      }
-
-      let birthdate = '';
-      if (st.birthDate) {
-        const d = new Date(st.birthDate);
-        if (!isNaN(d.getTime())) {
-          birthdate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
-        }
-      } else if (st.birthMonth && st.birthDay && st.birthYear) {
-        birthdate = `${String(st.birthMonth).padStart(2, '0')}/${String(st.birthDay).padStart(2, '0')}/${st.birthYear}`;
-      }
-
-      return [
-        idx + 1,
-        st.studentId || '',
-        surname,
-        firstName,
-        middleName,
-        st.program || st.course || '',
-        st.sex || st.gender || '',
-        birthdate,
-        street,
-        municipality,
-        province,
-        st.contactNumber || '',
-        st.email || '',
-        st.nstp_section || st.section || '',
-        g1 || '',
-        g2 || '',
-        finalRating !== '-' ? finalRating : '',
-        overallRemarks
-      ];
-    });
-
-    const aoa = [
-      ['Republic of the Philippines'],
-      ['Office of the President'],
-      ['COMMISSION ON HIGHER EDUCATION'],
-      ['Office of Student Development and Services (OSDS)'],
-      ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-      ['OSDS-NSTP Form 2-A (Graduating / Enrolled Masterlist with Complete Annual Grades)'],
-      ['Name of HEI: CAVITE STATE UNIVERSITY - NAIC', '', '', '', '', '', '', '', 'Region: IV (CALABARZON)'],
-      ['Address: Bucana Malaki, Naic, Cavite', '', '', '', '', '', '', '', `NSTP Component: ${selectedDept !== 'All' ? selectedDept : 'CWTS / LTS / ROTC'}`],
-      [`Academic Year: ${selectedSchoolYear}`, '', '', '', '', '', '', '', 'Annual Masterlist (1st & 2nd Semesters Combined)'],
-      headers,
-      ...dataRows
-    ];
-
-    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
-
-    // Apply column widths & row heights
-    worksheet['!cols'] = [
-      { wch: 6 },  // No.
-      { wch: 16 }, // Student No.
-      { wch: 18 }, // Surname
-      { wch: 18 }, // First Name
-      { wch: 16 }, // Middle Name
-      { wch: 14 }, // Program
-      { wch: 10 }, // Sex
-      { wch: 14 }, // Birthdate
-      { wch: 24 }, // Street
-      { wch: 20 }, // Municipality
-      { wch: 18 }, // Province
-      { wch: 18 }, // Contact Number
-      { wch: 30 }, // Email
-      { wch: 16 }, // Section
-      { wch: 15 }, // 1st Sem Grade
-      { wch: 15 }, // 2nd Sem Grade
-      { wch: 15 }, // Final Rating
-      { wch: 18 }  // Overall Remarks
-    ];
-    worksheet['!rows'] = [
-      { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 18 }, { hpt: 18 },
-      { hpt: 24 }, { hpt: 20 }, { hpt: 20 }, { hpt: 20 }, { hpt: 26 }
-    ];
-    worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 17 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 17 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 17 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 17 } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 17 } },
-      { s: { r: 5, c: 0 }, e: { r: 5, c: 17 } },
-      { s: { r: 6, c: 0 }, e: { r: 6, c: 7 } },
-      { s: { r: 6, c: 8 }, e: { r: 6, c: 17 } },
-      { s: { r: 7, c: 0 }, e: { r: 7, c: 7 } },
-      { s: { r: 7, c: 8 }, e: { r: 7, c: 17 } },
-      { s: { r: 8, c: 0 }, e: { r: 8, c: 7 } },
-      { s: { r: 8, c: 8 }, e: { r: 8, c: 17 } }
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'OSDS-NSTP Form 2-A');
-
-    const deptTag = selectedDept !== 'All' ? selectedDept : 'ALL';
-    const filename = `OSDS-NSTP-Form-2-A_${deptTag}_${selectedSchoolYear}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+  // ── Official OSDS-NSTP Form 2-A PDF Generator (Whole Academic Year with 1st & 2nd Sem Grades) ──
+  const handleDownloadOSDSForm2A = async () => {
+    try {
+      await downloadAnnualForm2APdf({
+        students: filteredStudents,
+        selectedSchoolYear,
+        selectedDept,
+        getAnnualStudentInfo,
+        currentUser
+      });
+    } catch (err) {
+      console.error('Error generating Form 2-A PDF:', err);
+      alert('Failed to generate Form 2-A PDF. Please try again.');
+    }
   };
+
 
   const handleExportExcel = () => {
     const rows = filteredStudents.map((st, idx) => {
@@ -871,15 +733,15 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 </div>
               )}
 
-              {/* Download OSDS-NSTP Form 2-A (.xlsx) Button — Whole Academic Year */}
+              {/* Download OSDS-NSTP Form 2-A (.pdf) Button — Whole Academic Year */}
               <button
                 type="button"
                 onClick={handleDownloadOSDSForm2A}
-                title="Download official OSDS-NSTP Form 2-A spreadsheet for the entire Academic Year (Parsed at row 10 / range 9)"
+                title="Download official OSDS-NSTP Form 2-A PDF for the entire Academic Year"
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-xl shadow-xs hover:shadow-md cursor-pointer active:scale-95 border border-amber-500/60"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-950" />
-                <span>OSDS-NSTP Form 2-A (Annual)</span>
+                <span>OSDS-NSTP Form 2-A (.pdf)</span>
               </button>
 
               {/* Export Standard Excel */}
