@@ -4,7 +4,7 @@ import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
   User, Shield,
-  BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, Trash2, CheckSquare, Square,
+  BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
 import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
+import { getRegformAuditStatus } from '../utils/documentValidation';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -1401,8 +1402,25 @@ function AdminDashboard() {
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-1">
-                              <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{enrollment.fullName}</p>
+                            <div className="flex items-start justify-between gap-1 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{enrollment.fullName}</p>
+                                {(() => {
+                                  const audit = getRegformAuditStatus(enrollment);
+                                  if (audit.isSuspicious) {
+                                    return (
+                                      <span 
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9.5px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0 animate-pulse" 
+                                        title={audit.reason}
+                                      >
+                                        <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                        <span>{audit.badgeLabel || '⚠️ Check RegForm'}</span>
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                               <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${deptColor}`}>
                                 {enrollment.nstpComponent || '—'}
                               </span>
@@ -1542,7 +1560,24 @@ function AdminDashboard() {
                                 />
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-black text-gray-900">{enrollment.fullName}</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-black text-gray-900">{enrollment.fullName}</p>
+                                  {(() => {
+                                    const audit = getRegformAuditStatus(enrollment);
+                                    if (audit.isSuspicious) {
+                                      return (
+                                        <span 
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0 animate-pulse" 
+                                          title={audit.reason}
+                                        >
+                                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                          <span>{audit.badgeLabel || '⚠️ Check RegForm'}</span>
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                </div>
                                 <p className="text-xs text-gray-500">{enrollment.email}</p>
                               </div>
                             </div>
@@ -2032,6 +2067,21 @@ function AdminDashboard() {
 
                 {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
                 <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">
+                  {(() => {
+                    const audit = getRegformAuditStatus(selectedEnrollment);
+                    if (audit.isSuspicious) {
+                      return (
+                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-2.5 shadow-2xs">
+                          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>
+                            <p className="text-[11.5px] text-amber-800 font-medium mt-0.5 leading-relaxed">{audit.reason}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form

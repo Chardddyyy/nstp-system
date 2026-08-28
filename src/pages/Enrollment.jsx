@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
+import { analyzeDocumentFile } from '../utils/documentValidation';
 
 function Enrollment() {
   const { submitEnrollment } = useAuth();
@@ -188,6 +189,8 @@ function Enrollment() {
 
   // Full Photo Inspection & Lightbox Modal State
   const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
+  const [showSampleCorModal, setShowSampleCorModal] = useState(false);
+  const [corUploadWarning, setCorUploadWarning] = useState('');
 
   // Live Camera Capture Modal State & WebRTC Refs
   const [showCameraModal, setShowCameraModal] = useState(false);
@@ -495,9 +498,11 @@ function Enrollment() {
           await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
           const imgDataUrl = canvas.toDataURL('image/jpeg', 0.85);
           setRegistrationPhoto(imgDataUrl);
+          setCorUploadWarning('');
         } catch (err) {
           console.warn('PDF to image preview conversion fallback:', err);
           setRegistrationPhoto(rawPdfData); // fallback to raw base64 PDF
+          setCorUploadWarning('');
         }
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
       };
@@ -517,8 +522,18 @@ function Enrollment() {
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        setRegistrationPhoto(canvas.toDataURL('image/jpeg', 0.75));
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        setRegistrationPhoto(dataUrl);
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
+
+        // Smart check if uploaded image has paper document characteristics
+        analyzeDocumentFile(dataUrl).then(res => {
+          if (res.isSuspicious) {
+            setCorUploadWarning('⚠️ Paalala: Ang na-upload na litrato ay mukhang selfie o litrato ng tao. Siguraduhing ang opisyal na Certificate of Registration (COR) papel ang iyong ipinapasa.');
+          } else {
+            setCorUploadWarning('');
+          }
+        });
       };
       // Fallback for formats the browser can't decode in canvas (e.g. HEIC on desktop)
       img.onerror = () => {
@@ -1644,11 +1659,37 @@ function Enrollment() {
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <FileCheck className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
-                    <p className="text-xs text-gray-500 font-medium">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowSampleCorModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 shrink-0"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>📋 Halimbawa / Sample ng RegForm</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
                   </div>
                 </div>
+
+                {corUploadWarning && (
+                  <div className="mb-4 p-3.5 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-2.5 shadow-2xs animate-fade-in">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-amber-900 leading-snug">{corUploadWarning}</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowSampleCorModal(true)}
+                        className="text-[11px] text-emerald-800 font-extrabold underline mt-1 inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Tingnan ang tamang sample ng RegForm</span> &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <input
                   ref={photoInputRef}
@@ -2278,6 +2319,189 @@ function Enrollment() {
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Photo</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Sample Registration Form (COR) Visual Specimen & Guide Modal ── */}
+      {showSampleCorModal && (
+        <div 
+          className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in overflow-y-auto"
+          onClick={() => setShowSampleCorModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-emerald-200 my-auto animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-emerald-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight">Halimbawa ng Tamang Registration Form (COR)</h3>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Gabay sa pag-picture at pag-attach ng official CvSU document</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSampleCorModal(false)}
+                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
+              
+              {/* Document Specimen Simulation */}
+              <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-dashed border-emerald-300 shadow-sm font-sans text-slate-800 relative">
+                
+                {/* Visual "SAMPLE ONLY" Watermark */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06] select-none">
+                  <span className="text-7xl font-black text-emerald-950 uppercase rotate-[-25deg]">CVSU SPECIMEN</span>
+                </div>
+
+                {/* Specimen Header */}
+                <div className="text-center pb-3 border-b border-gray-300">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Republic of the Philippines</p>
+                  <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase">CAVITE STATE UNIVERSITY</h4>
+                  <p className="text-[10.5px] font-bold text-emerald-800">Naic Campus • Bucana Malaki, Naic, Cavite</p>
+                  <p className="text-[10px] text-gray-500 font-bold tracking-wider uppercase mt-0.5">Office of the University Registrar</p>
+                  <div className="inline-block mt-2 px-3 py-0.5 bg-emerald-100/80 text-emerald-900 rounded-md text-[11px] font-black tracking-wider uppercase border border-emerald-300">
+                    CERTIFICATE OF REGISTRATION (COR)
+                  </div>
+                </div>
+
+                {/* Specimen Student Data */}
+                <div className="grid grid-cols-2 gap-2 text-[10.5px] sm:text-xs py-3 border-b border-gray-200">
+                  <div>
+                    <span className="text-gray-500 font-semibold">Student No.:</span>{' '}
+                    <strong className="text-emerald-950 font-black font-mono">202610001</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 font-semibold">Academic Year:</span>{' '}
+                    <strong className="text-gray-900 font-bold">2026-2027 1st Sem</strong>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 font-semibold">Name:</span>{' '}
+                    <strong className="text-gray-900 font-black uppercase">DELA CRUZ, JUAN SANTOS</strong>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 font-semibold">Degree Program:</span>{' '}
+                    <strong className="text-gray-900 font-bold">BS in Information Technology (BSIT 1-A)</strong>
+                  </div>
+                </div>
+
+                {/* Specimen Subjects Table */}
+                <div className="py-2">
+                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1.5">Enrolled Subjects Schedule:</p>
+                  <table className="w-full text-[10px] sm:text-[11px] border border-gray-200 rounded-lg overflow-hidden">
+                    <thead className="bg-emerald-50/70 text-emerald-950 font-black border-b border-gray-200">
+                      <tr>
+                        <th className="p-1.5 text-left">Code</th>
+                        <th className="p-1.5 text-left">Course Title</th>
+                        <th className="p-1.5 text-center">Units</th>
+                        <th className="p-1.5 text-left">Schedule</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-gray-700">
+                      <tr>
+                        <td className="p-1.5 font-mono font-bold">GNED 01</td>
+                        <td className="p-1.5">Art Appreciation</td>
+                        <td className="p-1.5 text-center font-bold">3.0</td>
+                        <td className="p-1.5">M-TH 08:00-09:30</td>
+                      </tr>
+                      <tr className="bg-amber-50/70 font-semibold text-amber-950 border-l-4 border-amber-500">
+                        <td className="p-1.5 font-mono font-black text-emerald-800">NSTP 1</td>
+                        <td className="p-1.5 font-black">
+                          NSTP 1 - CWTS (Civic Welfare Training)
+                          <span className="block text-[9px] text-amber-700 font-bold">★ Siguraduhing makikita ang enrolled NSTP subject mo</span>
+                        </td>
+                        <td className="p-1.5 text-center font-black">3.0</td>
+                        <td className="p-1.5">SAT 08:00-11:00</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1.5 font-mono font-bold">ITEC 50</td>
+                        <td className="p-1.5">Web Systems and Technologies</td>
+                        <td className="p-1.5 text-center font-bold">3.0</td>
+                        <td className="p-1.5">T-F 10:00-12:00</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Specimen Validation Stamp */}
+                <div className="mt-3 pt-2 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2 text-[10px]">
+                  <div className="border border-emerald-500 rounded-md px-2.5 py-1 text-emerald-800 font-black uppercase bg-emerald-50/60">
+                    ✓ OFFICIALLY ENROLLED • ASSESSED
+                  </div>
+                  <span className="text-gray-400 italic">Registrar Signature &amp; Stamp</span>
+                </div>
+              </div>
+
+              {/* Guidelines / Tips Checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
+                  <p className="font-black text-emerald-900 flex items-center gap-1.5 mb-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    MGA DAPAT GAWIN:
+                  </p>
+                  <ul className="space-y-1.5 text-[11.5px] text-emerald-900/90 font-medium">
+                    <li>• I-picture ang <strong>buong papel</strong> ng Certificate of Registration (COR).</li>
+                    <li>• Siguraduhing <strong>malinaw mabasa</strong> ang Student No., Pangalan, at Subjects.</li>
+                    <li>• Ilatag sa maliwanag na lugar na walang anino.</li>
+                  </ul>
+                </div>
+
+                <div className="p-3.5 bg-red-50/80 rounded-2xl border border-red-200 text-xs text-red-950">
+                  <p className="font-black text-red-900 flex items-center gap-1.5 mb-1.5">
+                    <X className="w-4 h-4 text-red-600 shrink-0" />
+                    MGA HINDI DAPAT I-UPLOAD:
+                  </p>
+                  <ul className="space-y-1.5 text-[11.5px] text-red-900/90 font-medium">
+                    <li>• <strong>HUWAG</strong> mag-upload ng 2x2 selfie o portrait photo sa bahaging ito.</li>
+                    <li>• <strong>HUWAG</strong> mag-upload ng screenshots ng FB / chat o ibang larawan.</li>
+                    <li>• <strong>HUWAG</strong> magpasa ng malabo o putol na dokumento.</li>
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
+              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
+                Pindutin ang isa sa mga buttons para mag-attach ng iyong sariling RegForm:
+              </span>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSampleCorModal(false);
+                    startLiveCamera('regform');
+                  }}
+                  className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <Camera className="w-3.5 h-3.5 text-amber-400" />
+                  Kumuha ng Litrato
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSampleCorModal(false);
+                    photoInputRef.current?.click();
+                  }}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Pumili ng File (PDF/Image)
                 </button>
               </div>
             </div>

@@ -1128,7 +1128,7 @@ export async function sendStudentDigitalId(studentOrId) {
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
         <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; padding: 13px 32px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
-          📥 Download Official ID Card (PDF)
+          Download Official ID Card (PDF)
         </a>
       </td>
     </tr>
