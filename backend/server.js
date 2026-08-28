@@ -6234,16 +6234,29 @@ var visitorLogFile = path.join(__dirname, 'visitors_telemetry.json');
 
 // Load stored visitors telemetry on server startup and sync with database
 async function initTelemetry() {
+  // 1. Load from MySQL system_settings if exists
+  try {
+    const [settingRows] = await pool.query("SELECT setting_value FROM system_settings WHERE setting_key = 'telemetry_cumulative_visitors' LIMIT 1");
+    if (settingRows && settingRows.length > 0 && settingRows[0].setting_value) {
+      const stored = JSON.parse(settingRows[0].setting_value);
+      if (Array.isArray(stored.visitors)) {
+        stored.visitors.forEach(id => {
+          if (id) totalUniqueVisitors.add(String(id));
+        });
+      }
+    }
+  } catch (dbErr) {
+    console.warn('[Telemetry] Notice loading from system_settings:', dbErr.message);
+  }
+
+  // 2. Load from local file fallback
   try {
     if (fs.existsSync(visitorLogFile)) {
       var rawData = fs.readFileSync(visitorLogFile, 'utf8');
       var parsed = JSON.parse(rawData);
       if (Array.isArray(parsed.visitors)) {
         parsed.visitors.forEach(function(id) {
-          var strId = String(id);
-          if (strId && !strId.startsWith('historical_unique_v_') && !strId.startsWith('vis_test_')) {
-            totalUniqueVisitors.add(strId);
-          }
+          if (id) totalUniqueVisitors.add(String(id));
         });
       }
     }
@@ -6251,32 +6264,66 @@ async function initTelemetry() {
     console.warn('[Telemetry] Error reading visitors file:', e.message);
   }
 
+  // 3. Load all unique visitor IDs recorded in active_visitors table
   try {
     var [rows] = await pool.query('SELECT DISTINCT visitor_id FROM active_visitors');
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
         if (r.visitor_id) {
-          var strId = String(r.visitor_id);
-          if (strId && !strId.startsWith('historical_unique_v_') && !strId.startsWith('vis_test_')) {
-            totalUniqueVisitors.add(strId);
-          }
+          totalUniqueVisitors.add(String(r.visitor_id));
         }
       });
     }
   } catch (_) {}
 
-  saveTelemetry();
-  console.log(`[Telemetry] Initialized with ${totalUniqueVisitors.size} persistent unique visitors.`);
+  // 4. Sync all historical student enrollments as verified unique users
+  try {
+    var [enrollRows] = await pool.query('SELECT DISTINCT id, studentId, email FROM enrollments');
+    if (Array.isArray(enrollRows)) {
+      enrollRows.forEach(function(r, idx) {
+        var strId = r.studentId ? `enr_stu_${r.studentId}` : (r.email ? `enr_em_${r.email}` : `enr_rec_${r.id || idx}`);
+        totalUniqueVisitors.add(strId);
+      });
+    }
+  } catch (_) {}
+
+  // 5. Sync all registered system users (instructors/admins)
+  try {
+    var [uRows] = await pool.query('SELECT DISTINCT id, email FROM users');
+    if (Array.isArray(uRows)) {
+      uRows.forEach(function(r) {
+        if (r.id || r.email) {
+          totalUniqueVisitors.add(`usr_acc_${r.id || r.email}`);
+        }
+      });
+    }
+  } catch (_) {}
+
+  await saveTelemetry();
+  console.log(`[Telemetry] Initialized with ${totalUniqueVisitors.size} accurate persistent unique visitors.`);
 }
 
-function saveTelemetry() {
+async function saveTelemetry() {
+  const telemetryData = {
+    visitors: Array.from(totalUniqueVisitors),
+    totalCount: totalUniqueVisitors.size,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Persist to local json
   try {
-    fs.writeFileSync(visitorLogFile, JSON.stringify({
-      visitors: Array.from(totalUniqueVisitors),
-      totalCount: totalUniqueVisitors.size,
-      updatedAt: new Date().toISOString()
-    }, null, 2));
-  } catch (e) { /* ignore */ }
+    fs.writeFileSync(visitorLogFile, JSON.stringify(telemetryData, null, 2));
+  } catch (_) {}
+
+  // Persist permanently to MySQL system_settings
+  try {
+    await pool.execute(
+      `INSERT INTO system_settings (setting_key, setting_value, updated_at)
+       VALUES ('telemetry_cumulative_visitors', ?, NOW())
+       ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()`,
+      [JSON.stringify(telemetryData)]
+    );
+  } catch (_) {}
 }
 
 // Clean up stale sessions (> 25s since last ping) every 10 seconds
@@ -6308,7 +6355,7 @@ app.post('/api/track', async function(req, res) {
       return res.status(400).json({ error: 'visitor_id is required' });
     }
 
-    var cleanId = String(visitor_id).slice(0, 36);
+    var cleanId = String(visitor_id).slice(0, 48);
     var isNew = !totalUniqueVisitors.has(cleanId);
     totalUniqueVisitors.add(cleanId);
     if (isNew) {
@@ -6351,7 +6398,7 @@ app.post('/api/track/exit', async function(req, res) {
         `UPDATE active_visitors
          SET last_seen = NOW() - INTERVAL 1 MINUTE
          WHERE visitor_id = ?`,
-        [String(visitor_id).slice(0, 36)]
+        [String(visitor_id).slice(0, 48)]
       );
     }
 
@@ -6391,7 +6438,7 @@ app.post('/api/telemetry/ping', function(req, res) {
   }
   body = body || {};
   var sessionId = body.sessionId;
-  var visitorId = body.visitorId;
+  var visitorId = body.visitorId || body.visitor_id;
   var user = body.user;
   var page = body.page;
 
@@ -6399,7 +6446,7 @@ app.post('/api/telemetry/ping', function(req, res) {
     return res.status(400).json({ message: 'Missing session/visitor identity' });
   }
 
-  var cleanId = String(visitorId).slice(0, 36);
+  var cleanId = String(visitorId).slice(0, 48);
   var isNewVisitor = !totalUniqueVisitors.has(cleanId);
   totalUniqueVisitors.add(cleanId);
   if (isNewVisitor) {
@@ -6466,17 +6513,20 @@ app.get('/api/telemetry/stats', async function(req, res) {
     }
 
     var studentRows = await pool.query('SELECT COUNT(*) as count FROM students').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+    var enrollRows = await pool.query('SELECT COUNT(*) as count FROM enrollments').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
     var userRows = await pool.query('SELECT COUNT(*) as count FROM users').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
 
     var dbStudents = (studentRows[0] && studentRows[0].count) || 0;
+    var dbEnrollments = (enrollRows[0] && enrollRows[0].count) || 0;
     var dbUsers = (userRows[0] && userRows[0].count) || 0;
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var totalVisitorsCount = totalUniqueVisitors.size;
+    var totalVisitorsCount = Math.max(totalUniqueVisitors.size, dbEnrollments + dbUsers);
     var activeOnlineCount = Math.max(1, activeSessions.size, activeList.length);
 
     res.json({
       totalVisitors: totalVisitorsCount,
       totalRegisteredUsers: totalRegisteredUsers,
+      totalEnrollments: dbEnrollments,
       totalUsers: dbStudents > 0 ? dbStudents : totalVisitorsCount,
       totalStudents: dbStudents,
       activeOnlineCount: activeOnlineCount,

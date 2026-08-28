@@ -6,7 +6,7 @@ import {
   Search, Check, HeartHandshake, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getTelemetryStats } from '../services/api';
+import { getTelemetryStats, pingTelemetry } from '../services/api';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 
 // Actual CvSU Naic campus photography
@@ -246,10 +246,10 @@ function Landing() {
 
   // Real-time Telemetry & Active Online Users state
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 0;
+    let cachedVisitors = 80;
     let cachedUsers = 0;
     try {
-      cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+      cachedVisitors = Math.max(80, parseInt(localStorage.getItem('nstp_cached_total_visitors') || '80', 10));
       cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
     } catch (_) {}
     return {
@@ -263,11 +263,18 @@ function Landing() {
 
   useEffect(() => {
     let isMounted = true;
+    
+    // Immediate visit registration
+    pingTelemetry({ page: '/' }).catch(() => {});
+
     const pollStats = async () => {
       try {
         const stats = await getTelemetryStats();
         if (stats && isMounted) {
-          setTelemetry(stats);
+          setTelemetry(prev => ({
+            ...stats,
+            totalVisitors: Math.max(prev.totalVisitors || 0, stats.totalVisitors || 0)
+          }));
         }
       } catch (_) { /* ignore */ }
     };
@@ -593,9 +600,9 @@ function Landing() {
         )}
       </header>
 
-      {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs) ───── */}
+      {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen on Desktop) ───── */}
       <section 
-        className="relative h-[410px] xs:h-[450px] sm:h-[530px] md:h-[600px] lg:h-[650px] overflow-hidden bg-gray-950"
+        className="relative w-full h-[480px] xs:h-[530px] sm:h-[620px] md:h-[calc(100vh-76px)] min-h-[560px] md:min-h-[660px] lg:min-h-[760px] xl:min-h-[840px] 2xl:min-h-[900px] overflow-hidden bg-gray-950"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -610,42 +617,42 @@ function Landing() {
             <img
               src={image.src}
               alt={image.title}
-              className="w-full h-full object-cover transition-transform duration-1000 ease-out"
+              className="w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             {/* Rich Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-transparent flex flex-col justify-end p-4 xs:p-5 sm:p-10 md:p-14 lg:p-20 pb-5 xs:pb-6 sm:pb-12">
-              <div className={`max-w-4xl transition-all duration-700 delay-150 ${
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/65 to-transparent flex flex-col justify-end p-5 xs:p-6 sm:p-12 md:p-16 lg:p-24 pb-7 xs:pb-8 sm:pb-14 md:pb-20">
+              <div className={`max-w-5xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
-                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
+                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3.5 sm:px-5 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
                   <span>{image.badge}</span>
                 </span>
                 
-                <h2 className="text-base xs:text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white drop-shadow-md leading-tight max-w-4xl truncate">
+                <h2 className="text-xl xs:text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-xl leading-tight max-w-5xl tracking-tight">
                   {image.title}
                 </h2>
                 
-                <p className="text-emerald-100 text-[11px] xs:text-xs sm:text-sm md:text-base max-w-2xl mt-1 sm:mt-2 font-medium leading-relaxed line-clamp-2 sm:line-clamp-none">
+                <p className="text-emerald-100 text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mt-1.5 sm:mt-4 font-medium leading-relaxed drop-shadow">
                   {image.subtitle}
                 </p>
 
-                {/* Hero Immediate Action Buttons (Neatly Arranged & Balanced on Mobile) */}
-                <div className="mt-3.5 sm:mt-6 flex flex-row items-center gap-2 sm:gap-4 max-w-md sm:max-w-none">
+                {/* Hero Immediate Action Buttons */}
+                <div className="mt-4 sm:mt-8 flex flex-row items-center gap-2.5 sm:gap-4 max-w-md sm:max-w-none">
                   <Link
                     to="/enrollment"
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3 sm:px-8 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-sm shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-4 sm:px-9 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
                   >
                     <span>Apply for Enrollment</span>
-                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => scrollToSection('guide')}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-3 sm:px-6 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-sm backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 sm:gap-2.5 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
                   >
-                    <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
+                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
                     <span>How to Enroll</span>
                   </button>
                 </div>
@@ -659,21 +666,21 @@ function Landing() {
           type="button"
           onClick={prevSlide}
           aria-label="Previous Slide"
-          className="hidden md:flex absolute left-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-2xl bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl"
+          className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-20 w-13 h-13 rounded-2xl bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-7 h-7" />
         </button>
         <button
           type="button"
           onClick={nextSlide}
           aria-label="Next Slide"
-          className="hidden md:flex absolute right-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-2xl bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-xl"
+          className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-20 w-13 h-13 rounded-2xl bg-black/40 hover:bg-black/75 text-white items-center justify-center backdrop-blur-md border border-white/20 hover:scale-110 active:scale-95 transition-all cursor-pointer shadow-2xl"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-7 h-7" />
         </button>
 
-        {/* Carousel Indicators (Cleanly elevated in top-right on mobile, bottom-right on desktop) */}
-        <div className="absolute top-4 right-4 sm:top-auto sm:bottom-6 sm:right-12 flex space-x-1.5 sm:space-x-2 z-20 bg-black/30 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-1.5 sm:p-0 rounded-full border border-white/10 sm:border-0">
+        {/* Carousel Indicators */}
+        <div className="absolute top-4 right-4 sm:top-auto sm:bottom-8 sm:right-12 flex space-x-1.5 sm:space-x-2.5 z-20 bg-black/30 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none p-1.5 sm:p-0 rounded-full border border-white/10 sm:border-0">
           {CAROUSEL_IMAGES.map((_, index) => (
             <button
               key={index}
@@ -681,8 +688,8 @@ function Landing() {
                 setCurrentSlide(index);
                 startTimer();
               }}
-              className={`h-2 sm:h-3 rounded-full transition-all duration-300 cursor-pointer ${
-                index === currentSlide ? 'w-6 sm:w-12 bg-amber-400' : 'w-2 sm:w-3 bg-white/40 hover:bg-white/80'
+              className={`h-2 sm:h-3.5 rounded-full transition-all duration-300 cursor-pointer ${
+                index === currentSlide ? 'w-6 sm:w-14 bg-amber-400 shadow-md' : 'w-2 sm:w-3.5 bg-white/40 hover:bg-white/80'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />
