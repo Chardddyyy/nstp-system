@@ -8,11 +8,58 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 
+// Philippine Holidays 2024-2030 (Static top-level constant)
+const PHILIPPINE_HOLIDAYS = [
+  // 2024
+  { date: '2024-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-02-10', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-03-28', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-03-29', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-03-30', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-08-26', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  
+  // 2025
+  { date: '2025-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-01-29', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-04-17', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-04-18', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-04-19', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-08-25', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  
+  // 2026
+  { date: '2026-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-02-17', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-04-02', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-04-03', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-04-04', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-08-31', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' }
+];
+
 function Calendar() {
   const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
-  const isInstructor = user?.role === 'instructor';
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'annual_summary'
@@ -33,88 +80,20 @@ function Calendar() {
 
   // When in archive mode, jump the calendar to the appropriate academic semester
   useEffect(() => {
-    if (viewingArchive && archiveViewData?.year) {
-      const yr = archiveViewData.year;
-      if (yr.includes('2023-2024')) {
-        if (yr.includes('1st Semester')) {
-          setCurrentDate(new Date(2023, 9, 15)); // Oct 2023
-        } else {
-          setCurrentDate(new Date(2024, 3, 15)); // Apr 2024
+    let timer = setTimeout(() => {
+      if (viewingArchive && archiveViewData?.year) {
+        const yr = archiveViewData.year;
+        if (yr.includes('2023-2024')) {
+          setCurrentDate(yr.includes('1st Semester') ? new Date(2023, 9, 15) : new Date(2024, 3, 15));
+        } else if (yr.includes('2024-2025')) {
+          setCurrentDate(yr.includes('1st Semester') ? new Date(2024, 9, 15) : new Date(2025, 3, 15));
         }
-      } else if (yr.includes('2024-2025')) {
-        if (yr.includes('1st Semester')) {
-          setCurrentDate(new Date(2024, 9, 15)); // Oct 2024
-        } else {
-          setCurrentDate(new Date(2025, 3, 15)); // Apr 2025
-        }
+      } else if (!viewingArchive) {
+        setCurrentDate(new Date());
       }
-    } else if (!viewingArchive) {
-      setCurrentDate(new Date());
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [viewingArchive, archiveViewData]);
-  
-  // Philippine Holidays 2024-2030
-  const philippineHolidays = [
-    // 2024
-    { date: '2024-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-02-10', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-03-28', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-03-29', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-03-30', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-08-26', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2024-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    
-    // 2025
-    { date: '2025-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-01-29', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-04-17', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-04-18', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-04-19', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-08-25', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2025-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    
-    // 2026
-    { date: '2026-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-02-17', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-04-02', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-04-03', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-04-04', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-08-31', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2026-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    
-    // 2027
-    { date: '2027-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-02-06', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-03-25', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-03-26', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-03-27', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-08-30', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-    { date: '2027-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  ];
 
   const handleLogout = async () => {
     await logout();
@@ -231,11 +210,11 @@ function Calendar() {
   // Combine all events for the year
   const allAnnualEvents = useMemo(() => {
     if (viewingArchive) {
-      return [...archiveEvents, ...philippineHolidays];
+      return [...archiveEvents, ...PHILIPPINE_HOLIDAYS];
     }
-    const combined = [...defaultAnnualEvents2026, ...events, ...philippineHolidays];
+    const combined = [...defaultAnnualEvents2026, ...events, ...PHILIPPINE_HOLIDAYS];
     return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [viewingArchive, archiveEvents, defaultAnnualEvents2026, events, philippineHolidays]);
+  }, [viewingArchive, archiveEvents, defaultAnnualEvents2026, events]);
 
   // Filtered list for the Annual Summary View
   const filteredSummaryEvents = useMemo(() => {
@@ -244,7 +223,6 @@ function Calendar() {
       if (summarySemester === '1st') {
         const d = new Date(ev.date);
         const m = d.getMonth(); // 7=Aug to 11=Dec
-        const y = d.getFullYear();
         if (ev.semester && ev.semester !== '1st Semester') return false;
         if (!ev.semester && !(m >= 7 && m <= 11)) return false;
       } else if (summarySemester === '2nd') {
@@ -298,7 +276,7 @@ function Calendar() {
 
   const getEventsForDate = (date) => {
     const dateStr = formatDate(currentDate.getFullYear(), currentDate.getMonth(), date);
-    const holidays = philippineHolidays.filter(h => h.date === dateStr);
+    const holidays = PHILIPPINE_HOLIDAYS.filter(h => h.date === dateStr);
     
     if (viewingArchive) {
       const archEvents = archiveEvents.filter(e => e.date === dateStr);

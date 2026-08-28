@@ -51,7 +51,6 @@ function fallbackExecCopy(text) {
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [submittedPassword, setSubmittedPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,7 +67,6 @@ function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
-  const [copiedOtp, setCopiedOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -183,7 +181,6 @@ function Login() {
       return;
     }
 
-    setSubmittedPassword(password);
     setLoading(true);
     setLoadingText('Verifying credentials...');
 

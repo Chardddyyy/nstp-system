@@ -3,7 +3,6 @@
 export function generateOfficialLetterHTML(template, batchYear = '2024-2025') {
   const tTitle = template?.title || 'Official NSTP Endorsement Letter';
   const tDept = template?.department || 'All';
-  const tDesc = template?.description || '';
   
   let specificBody = '';
   let addressee = '';

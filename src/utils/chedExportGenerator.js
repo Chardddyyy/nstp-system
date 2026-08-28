@@ -165,7 +165,7 @@ export function generateChedFormBWorkbook(students = [], batchYear = '2024-2025'
   return wb;
 }
 
-export function generateChedFormAWorkbook(students = [], batchYear = '2024-2025', deptFilter = 'All') {
+export function generateChedFormAWorkbook(students = [], batchYear = '2024-2025', _deptFilter = 'All') {
   const statsMatrix = {
     sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
     sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },

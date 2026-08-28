@@ -342,25 +342,35 @@ function AdminDashboard() {
   }), [students, allUsers, reports, notifications]);
 
 
-  const displayStats = viewingArchive && archiveViewData ? (() => {
-    const sd = archiveViewData.studentData || [];
-    const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
-    const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
-    const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
-    return {
-      totalStudents: archiveViewData.students || sd.length,
-      cwtsStudents: cwts, ltsStudents: lts, rotcStudents: rotc,
-      totalInstructors: 0, pendingReports: 0, unreadMessages: 0
-    };
-  })() : stats;
+  const displayStats = useMemo(() => {
+    if (viewingArchive && archiveViewData) {
+      const sd = archiveViewData.studentData || [];
+      const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
+      const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
+      const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
+      return {
+        totalStudents: archiveViewData.students || sd.length,
+        cwtsStudents: cwts, ltsStudents: lts, rotcStudents: rotc,
+        totalInstructors: 0, pendingReports: 0, unreadMessages: 0
+      };
+    }
+    return stats;
+  }, [viewingArchive, archiveViewData, stats]);
 
-  const currentStats = useMemo(() => ({
-    total: displayStats.totalStudents,
-    cwts: displayStats.cwtsStudents,
-    lts: displayStats.ltsStudents,
-    rotc: displayStats.rotcStudents,
-    completionRate: displayStats.totalStudents > 0 ? Math.round(((viewingArchive && archiveViewData ? archiveViewData.completed : students.filter(s => s.status === 'completed').length) / displayStats.totalStudents) * 100) : 0
-  }), [displayStats, viewingArchive, archiveViewData, students]);
+  const currentStats = useMemo(() => {
+    const total = displayStats.totalStudents;
+    const completedCount = viewingArchive && archiveViewData 
+      ? (archiveViewData.completed || 0) 
+      : students.filter(s => s.status === 'completed').length;
+    const rate = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+    return {
+      total: displayStats.totalStudents,
+      cwts: displayStats.cwtsStudents,
+      lts: displayStats.ltsStudents,
+      rotc: displayStats.rotcStudents,
+      completionRate: rate
+    };
+  }, [displayStats, viewingArchive, archiveViewData, students]);
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Printer, Download, ArrowLeft, Shield, FileText, Loader2, CheckCircle } from 'lucide-react';
 import jsPDF from 'jspdf';
@@ -44,8 +44,9 @@ function DigitalIdViewer() {
   const qrCodeUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
 
   // Direct PDF Generation & Download
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = useCallback(async () => {
     if (!cardRef.current || isGeneratingPdf) return;
+
     setIsGeneratingPdf(true);
     setPdfSuccess(false);
 
@@ -110,7 +111,7 @@ function DigitalIdViewer() {
     } finally {
       setIsGeneratingPdf(false);
     }
-  };
+  }, [isGeneratingPdf, fullName, studentId, schoolYear]);
 
   const handlePrint = () => {
     window.print();
@@ -138,87 +139,7 @@ function DigitalIdViewer() {
       if (dTimer) clearTimeout(dTimer);
       if (pTimer) clearTimeout(pTimer);
     };
-  }, [searchParams]);
-
-  const handleDownloadHtml = () => {
-    const htmlDoc = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NSTP ID Card - ${fullName} (${studentId})</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 24px; display: flex; flex-direction: column; align-items: center; }
-    @media print {
-      body { background: #fff !important; padding: 0 !important; }
-      .no-print { display: none !important; }
-    }
-  </style>
-</head>
-<body>
-  <div style="width: 320px; background: #fff; border-radius: 18px; border: 2.5px solid #064e3b; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.15); text-align: center;">
-    <div style="background: #064e3b; padding: 8px 12px; border-bottom: 2px solid #fbbf24;">
-      <div style="width: 44px; height: 5px; background: #022c22; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); margin: 0 auto 6px auto;"></div>
-      <table width="100%" cellspacing="0" cellpadding="0">
-        <tr>
-          <td width="32"><img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="Logo" width="30" height="30" style="display:block;border-radius:50%;background:#fff;padding:1.5px;"></td>
-          <td align="left" style="padding-left: 8px;">
-            <div style="font-size: 8.5px; font-weight: 900; color: #fff; text-transform: uppercase;">CAVITE STATE UNIVERSITY</div>
-            <div style="font-size: 7.5px; font-weight: 800; color: #fde047;">NAIC CAMPUS • NSTP</div>
-          </td>
-          <td width="48" align="right">
-            <span style="background: rgba(0,0,0,0.4); color: #fde047; border: 1px solid #fde047; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px;">${department}</span>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <div style="padding: 14px;">
-      <div style="width: 84px; height: 88px; margin: 0 auto 8px auto; background: #f8fafc; border-radius: 10px; border: 2px solid #064e3b; box-shadow: 0 0 0 1.5px #fbbf24; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-        ${photoUrl ? `<img src="${photoUrl}" width="84" height="88" style="object-fit:cover;width:100%;height:100%;">` : `<div style="font-size: 9px; font-weight: 900; color: #064e3b;">2x2 PHOTO</div>`}
-      </div>
-      <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${fullName}</div>
-      <div style="font-size: 7.5px; font-weight: 900; color: #047857; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">STUDENT</div>
-      <table width="100%" style="background: #f1f5f9; border-radius: 8px; padding: 6px; margin-bottom: 6px; font-size: 9px;">
-        <tr>
-          <td align="left"><strong>STUDENT NO:</strong><br><span style="font-family:monospace;font-weight:900;font-size:10.5px;">${studentId}</span></td>
-          <td align="left" style="border-left: 1px dashed #cbd5e1; padding-left: 8px;"><strong>SECTION:</strong><br><span style="font-family:monospace;font-weight:900;color:#047857;font-size:10.5px;">${section}</span></td>
-        </tr>
-      </table>
-      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px; font-size: 8px; font-weight: 900; color: #064e3b; margin-bottom: 8px; font-family: monospace;">
-        MATRICULATION NO: ${serialNo}
-      </div>
-      <div style="width: 106px; padding: 4px; background: #fff; border: 1.5px solid #064e3b; border-radius: 8px; margin: 0 auto 4px auto;">
-        <img src="${qrCodeUrl}" width="98" height="98" style="display:block;margin:0 auto;">
-      </div>
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; font-size: 7.5px; margin-bottom: 8px;">
-        <strong>Emergency Contact:</strong> ${emergencyContact} (${emergencyNumber})
-      </div>
-      <div style="margin-top: 6px; text-align: center;">
-        <img src="https://chardddyyy.github.io/nstp-system/signature.png" alt="Signature" width="115" height="32" style="display:inline-block;">
-        <div style="width: 140px; border-top: 1px solid #475569; margin: 2px auto;"></div>
-        <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${COORDINATOR_NAME}</div>
-        <div style="font-size: 6.5px; font-weight: 800; color: #047857; text-transform: uppercase;">${COORDINATOR_TITLE}</div>
-        <div style="font-size: 6px; color: #64748b;">${COORDINATOR_INSTITUTION}</div>
-      </div>
-    </div>
-    <div style="background: #022c22; color: #fde047; padding: 5px 10px; font-size: 7.5px; font-weight: 900; border-top: 1.5px solid #fbbf24; display: flex; justify-content: space-between;">
-      <span>${deptFull}</span>
-      <span>AY ${schoolYear}</span>
-    </div>
-  </div>
-</body>
-</html>`;
-
-    const blob = new Blob([htmlDoc], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `NSTP_ID_Card_${studentId}_${fullName.replace(/\s+/g, '_')}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  }, [searchParams, handleDownloadPdf]);
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center py-6 px-3 sm:px-6 font-sans">

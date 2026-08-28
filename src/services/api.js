@@ -133,7 +133,7 @@ async function apiCall(endpoint, options) {
 }
 
 // Auth
-export async function loginUser(email, password, forceLogin = true) {
+export async function loginUser(email, password, _forceLogin = true) {
   try {
     let res = await apiCall('/auth/login', {
       method: 'POST',
@@ -1103,7 +1103,6 @@ export async function sendStudentDigitalId(studentOrId) {
 
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
   const directPdfDownloadUrl = `https://nstp-system-iw5p.onrender.com/api/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
-  const directIdViewerUrl = `https://chardddyyy.github.io/nstp-system/#/digital-id?id=${encodeURIComponent(studentId)}&name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}&contact=${encodeURIComponent(emergencyContact)}&phone=${encodeURIComponent(emergencyNumber)}&photo=${encodeURIComponent(photoSrc || '')}&qr=${encodeURIComponent(qrToken)}&download=pdf&print=1`;
 
   const htmlContent = `
 <!DOCTYPE html>
