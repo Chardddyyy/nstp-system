@@ -5455,17 +5455,6 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
               [matriculationNumber, token, id]
             ).catch(() => {});
-
-            // Asynchronously dispatch Official Printable Digital ID & QR Code to student's email
-            sendDigitalIdEmail({
-              ...enrollment,
-              studentId: studentIdVal,
-              section: finalSection,
-              nstp_serial_id: matriculationNumber,
-              qr_token: token
-            }).catch(emailErr => {
-              console.warn('[DIGITAL ID EMAIL] Non-fatal delivery notice:', emailErr.message);
-            });
           }
         } catch (insertError) {
           console.error('Error inserting student during enrollment approval:', insertError);
