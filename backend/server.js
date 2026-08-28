@@ -6240,14 +6240,19 @@ var visitorLogFile = path.join(__dirname, 'visitors_telemetry.json');
 
 // Load stored visitors telemetry on server startup and sync with database
 async function initTelemetry() {
-  // 1. Load from MySQL system_settings if exists
+  totalUniqueVisitors.clear();
+
+  // 1. Load pure web visitor UUIDs from MySQL system_settings
   try {
     const [settingRows] = await pool.query("SELECT setting_value FROM system_settings WHERE setting_key = 'telemetry_cumulative_visitors' LIMIT 1");
     if (settingRows && settingRows.length > 0 && settingRows[0].setting_value) {
       const stored = JSON.parse(settingRows[0].setting_value);
       if (Array.isArray(stored.visitors)) {
         stored.visitors.forEach(id => {
-          if (id) totalUniqueVisitors.add(String(id));
+          // Only keep genuine web visitor UUIDs (exclude synthetic student/enrollment IDs)
+          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_')) {
+            totalUniqueVisitors.add(String(id));
+          }
         });
       }
     }
@@ -6262,7 +6267,9 @@ async function initTelemetry() {
       var parsed = JSON.parse(rawData);
       if (Array.isArray(parsed.visitors)) {
         parsed.visitors.forEach(function(id) {
-          if (id) totalUniqueVisitors.add(String(id));
+          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_')) {
+            totalUniqueVisitors.add(String(id));
+          }
         });
       }
     }
@@ -6270,64 +6277,25 @@ async function initTelemetry() {
     console.warn('[Telemetry] Error reading visitors file:', e.message);
   }
 
-  // 3. Load all unique visitor IDs recorded in active_visitors table
+  // 3. Load all pure unique visitor IDs recorded in active_visitors table
   try {
     var [rows] = await pool.query('SELECT DISTINCT visitor_id FROM active_visitors');
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
-        if (r.visitor_id) {
+        if (r.visitor_id && !String(r.visitor_id).startsWith('std_') && !String(r.visitor_id).startsWith('enr_') && !String(r.visitor_id).startsWith('usr_') && !String(r.visitor_id).startsWith('audit_')) {
           totalUniqueVisitors.add(String(r.visitor_id));
         }
       });
     }
   } catch (_) {}
 
-  // 4. Sync all historical student enrollments as verified unique users
-  try {
-    var [enrollRows] = await pool.query('SELECT DISTINCT id, studentId, email FROM enrollments');
-    if (Array.isArray(enrollRows)) {
-      enrollRows.forEach(function(r, idx) {
-        var strId = r.studentId ? `enr_stu_${r.studentId}` : (r.email ? `enr_em_${r.email}` : `enr_rec_${r.id || idx}`);
-        totalUniqueVisitors.add(strId);
-      });
-    }
-  } catch (_) {}
-
-  // 5. Sync all registered system users (instructors/admins)
-  try {
-    var [uRows] = await pool.query('SELECT DISTINCT id, email FROM users');
-    if (Array.isArray(uRows)) {
-      uRows.forEach(function(r) {
-        if (r.id || r.email) {
-          totalUniqueVisitors.add(`usr_acc_${r.id || r.email}`);
-        }
-      });
-    }
-  } catch (_) {}
-
-  // 6. Sync all registered students across all batches
-  try {
-    var [stRows] = await pool.query('SELECT DISTINCT id, studentId, email FROM students');
-    if (Array.isArray(stRows)) {
-      stRows.forEach(function(r, idx) {
-        var strId = r.studentId ? `std_id_${r.studentId}` : (r.email ? `std_em_${r.email}` : `std_rec_${r.id || idx}`);
-        totalUniqueVisitors.add(strId);
-      });
-    }
-  } catch (_) {}
-
-  // 7. Sync all historical audit logs (actions performed by visitors/users)
-  try {
-    var [logRows] = await pool.query('SELECT DISTINCT ip FROM audit_logs WHERE ip IS NOT NULL');
-    if (Array.isArray(logRows)) {
-      logRows.forEach(function(r) {
-        if (r.ip) totalUniqueVisitors.add(`audit_ip_${r.ip}`);
-      });
-    }
-  } catch (_) {}
+  // If brand new, initialize with at least the current active visitor session
+  if (totalUniqueVisitors.size === 0) {
+    totalUniqueVisitors.add('vid_live_init_' + Date.now().toString(36));
+  }
 
   await saveTelemetry();
-  console.log(`[Telemetry] Initialized with ${totalUniqueVisitors.size} accurate persistent unique visitors.`);
+  console.log(`[Telemetry] Initialized with ${totalUniqueVisitors.size} pure unique website visitors.`);
 }
 
 async function saveTelemetry() {
@@ -6547,7 +6515,7 @@ app.get('/api/telemetry/stats', async function(req, res) {
     var dbEnrollments = (enrollRows[0] && enrollRows[0].count) || 0;
     var dbUsers = (userRows[0] && userRows[0].count) || 0;
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var totalVisitorsCount = Math.max(totalUniqueVisitors.size, dbEnrollments + dbUsers);
+    var totalVisitorsCount = Math.max(1, totalUniqueVisitors.size);
     var activeOnlineCount = Math.max(1, activeSessions.size, activeList.length);
 
     res.json({

@@ -273,7 +273,7 @@ function Landing() {
         if (stats && isMounted) {
           setTelemetry(prev => ({
             ...stats,
-            totalVisitors: Math.max(prev.totalVisitors || 0, stats.totalVisitors || 0)
+            totalVisitors: stats.totalVisitors !== undefined ? stats.totalVisitors : (prev.totalVisitors || 0)
           }));
         }
       } catch (_) { /* ignore */ }
