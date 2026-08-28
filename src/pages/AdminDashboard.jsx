@@ -508,25 +508,65 @@ function AdminDashboard() {
   };
 
   
-  // Archive current year and start new batch with semester support
+// Automatically compute consecutive academic year, semester, and batch label name
+function getConsecutiveBatchDetails(currentBatchStr) {
+  const str = String(currentBatchStr || '').trim();
+  
+  // Extract academic year numbers (e.g., 2026-2027)
+  const yearMatch = str.match(/(\d{4})\s*[-–—/]\s*(\d{4})/);
+  let startYear = 2026;
+  let endYear = 2027;
+
+  if (yearMatch) {
+    startYear = parseInt(yearMatch[1], 10);
+    endYear = parseInt(yearMatch[2], 10);
+  } else {
+    const singleYearMatch = str.match(/(\d{4})/);
+    if (singleYearMatch) {
+      startYear = parseInt(singleYearMatch[1], 10);
+      endYear = startYear + 1;
+    } else {
+      const now = new Date();
+      startYear = now.getFullYear();
+      endYear = startYear + 1;
+    }
+  }
+
+  const isFirstSem = /1st|first/i.test(str);
+  const isSecondSem = /2nd|second/i.test(str);
+  const isSummer = /summer/i.test(str);
+
+  let nextYear = '';
+  let nextSemester = '1st Semester';
+
+  if (isFirstSem) {
+    // 1st Sem -> 2nd Sem of SAME academic year (e.g. 2026-2027 1st Sem -> 2026-2027 2nd Sem)
+    nextYear = `${startYear}-${endYear}`;
+    nextSemester = '2nd Semester';
+  } else if (isSecondSem || isSummer) {
+    // 2nd Sem or Summer -> 1st Sem of NEXT academic year (e.g. 2026-2027 2nd Sem -> 2027-2028 1st Sem)
+    nextYear = `${startYear + 1}-${endYear + 1}`;
+    nextSemester = '1st Semester';
+  } else {
+    nextYear = `${startYear}-${endYear}`;
+    nextSemester = '2nd Semester';
+  }
+
+  return {
+    academicYear: nextYear,
+    semester: nextSemester,
+    fullBatchName: `${nextYear} ${nextSemester}`
+  };
+}
+
+  // Archive current year and start new batch with dynamic automatic semester/year progression
   const handleNewBatch = () => {
     setShowNewBatchConfirm(true);
     setConfirmText('');
-    const curStr = String(currentBatch || '');
-    if (curStr.includes('1st Sem')) {
-      setNewBatchSem('2nd Semester');
-      setNewBatchYearInput(curStr.replace(/1st\s*Sem(ester)?/i, '').trim() || '2025-2026');
-      setNewBatchName(`${curStr.replace(/1st\s*Sem(ester)?/i, '').trim()} 2nd Semester`.trim());
-    } else if (curStr.includes('2nd Sem')) {
-      const nextYr = '2026-2027';
-      setNewBatchSem('1st Semester');
-      setNewBatchYearInput(nextYr);
-      setNewBatchName(`${nextYr} 1st Semester`);
-    } else {
-      setNewBatchSem('2nd Semester');
-      setNewBatchYearInput('2025-2026');
-      setNewBatchName('2025-2026 2nd Semester');
-    }
+    const next = getConsecutiveBatchDetails(currentBatch);
+    setNewBatchYearInput(next.academicYear);
+    setNewBatchSem(next.semester);
+    setNewBatchName(next.fullBatchName);
   };
   
   const confirmNewBatch = async () => {
@@ -1904,7 +1944,7 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
-                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1918,9 +1958,23 @@ function AdminDashboard() {
                   </p>
                 </div>
 
+                {/* Auto-Calculated Next Batch Highlight */}
+                <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3 text-xs flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">Incoming Batch (Auto-Calculated):</span>
+                    <p className="text-sm font-black text-emerald-950 mt-0.5">{newBatchName || `${newBatchYearInput} ${newBatchSem}`}</p>
+                  </div>
+                  <span className="px-2.5 py-1 bg-emerald-700 text-white font-black text-[10px] rounded-full uppercase tracking-wider shrink-0 shadow-xs">
+                    ⚡ Auto-Set
+                  </span>
+                </div>
+
                 {/* New Batch Configuration */}
                 <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">New Batch Details</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">New Batch Details</p>
+                    <span className="text-[10px] text-gray-500 font-medium">Editable if needed</span>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1933,7 +1987,7 @@ function AdminDashboard() {
                           setNewBatchYearInput(val);
                           setNewBatchName(`${val} ${newBatchSem}`.trim());
                         }}
-                        placeholder="e.g. 2025-2026"
+                        placeholder="e.g. 2026-2027"
                         className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30"
                       />
                     </div>
@@ -1947,7 +2001,7 @@ function AdminDashboard() {
                           setNewBatchSem(val);
                           setNewBatchName(`${newBatchYearInput} ${val}`.trim());
                         }}
-                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
                       >
                         <option value="1st Semester">1st Semester</option>
                         <option value="2nd Semester">2nd Semester</option>
@@ -1962,7 +2016,7 @@ function AdminDashboard() {
                       type="text"
                       value={newBatchName}
                       onChange={(e) => setNewBatchName(e.target.value)}
-                      placeholder="e.g. Batch 2020 1st Sem or 2025-2026 2nd Semester"
+                      placeholder="e.g. 2026-2027 2nd Semester"
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-lg font-black text-emerald-950 outline-none focus:ring-2 focus:ring-emerald-500/30"
                     />
                   </div>
@@ -1990,7 +2044,7 @@ function AdminDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowNewBatchConfirm(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors"
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
