@@ -27,6 +27,9 @@ const OSDSNSTPForm2B = ({
     }
   ];
 
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8 bg-white text-sm font-sans text-black">
       
@@ -34,7 +37,17 @@ const OSDSNSTPForm2B = ({
       <div className="flex items-center justify-between mb-6 sm:mb-8 relative border-b border-gray-100 pb-4">
         {/* Left Logo - CHED */}
         <div className="shrink-0">
-          <img src="/ched-logo.png" alt="CHED Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+          <img
+            src={`${cleanBase}ched-logo.png`}
+            alt="CHED Logo"
+            className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+            onError={(e) => {
+              if (!e.currentTarget.dataset.failed) {
+                e.currentTarget.dataset.failed = '1';
+                e.currentTarget.src = './ched-logo.png';
+              }
+            }}
+          />
         </div>
         
         {/* Header Text (Centered) */}
@@ -46,7 +59,20 @@ const OSDSNSTPForm2B = ({
 
         {/* Right Logo - Institution Logo */}
         <div className="shrink-0">
-          <img src="/cvsu-logo.png" alt="Institution Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain" />
+          <img
+            src={`${cleanBase}cvsu.png`}
+            alt="Institution Logo"
+            className="w-16 h-16 sm:w-24 sm:h-24 object-contain"
+            onError={(e) => {
+              if (!e.currentTarget.dataset.failed) {
+                e.currentTarget.dataset.failed = '1';
+                e.currentTarget.src = `${cleanBase}cvsu-logo.png`;
+              } else if (e.currentTarget.dataset.failed === '1') {
+                e.currentTarget.dataset.failed = '2';
+                e.currentTarget.src = './cvsu.png';
+              }
+            }}
+          />
         </div>
       </div>
 

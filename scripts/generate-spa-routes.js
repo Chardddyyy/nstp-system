@@ -8,6 +8,8 @@ const distDir = path.resolve(__dirname, '../dist');
 const indexHtml = path.join(distDir, 'index.html');
 const manifestJson = path.join(distDir, 'manifest.json');
 const cvsuPng = path.join(distDir, 'cvsu.png');
+const cvsuLogoPng = path.join(distDir, 'cvsu-logo.png');
+const chedLogoPng = path.join(distDir, 'ched-logo.png');
 
 if (fs.existsSync(indexHtml)) {
   const routes = [
@@ -49,6 +51,12 @@ if (fs.existsSync(indexHtml)) {
     }
     if (fs.existsSync(cvsuPng)) {
       fs.copyFileSync(cvsuPng, path.join(routeDir, 'cvsu.png'));
+    }
+    if (fs.existsSync(cvsuLogoPng)) {
+      fs.copyFileSync(cvsuLogoPng, path.join(routeDir, 'cvsu-logo.png'));
+    }
+    if (fs.existsSync(chedLogoPng)) {
+      fs.copyFileSync(chedLogoPng, path.join(routeDir, 'ched-logo.png'));
     }
   });
 
