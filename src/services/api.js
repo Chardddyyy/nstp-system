@@ -1395,7 +1395,7 @@ function getClientSideTelemetry() {
   const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
 
   return {
-    totalVisitors: Math.max(cachedVisitors, 80),
+    totalVisitors: cachedVisitors > 0 ? cachedVisitors : 0,
     totalRegisteredUsers: cachedUsers,
     totalUsers: cachedUsers,
     activeOnlineCount: Math.max(1, activeCount),

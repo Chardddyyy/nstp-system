@@ -796,7 +796,7 @@ async function ensureActiveVisitorsTable() {
   try {
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS active_visitors (
-        visitor_id VARCHAR(36) PRIMARY KEY,
+        visitor_id VARCHAR(128) PRIMARY KEY,
         page_url VARCHAR(500) NOT NULL,
         user_agent TEXT,
         first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -804,6 +804,7 @@ async function ensureActiveVisitorsTable() {
         INDEX idx_active_visitors_last_seen (last_seen)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    await pool.execute(`ALTER TABLE active_visitors MODIFY visitor_id VARCHAR(128);`).catch(function() {});
   } catch (_) {}
 }
 
@@ -6300,6 +6301,27 @@ async function initTelemetry() {
         if (r.id || r.email) {
           totalUniqueVisitors.add(`usr_acc_${r.id || r.email}`);
         }
+      });
+    }
+  } catch (_) {}
+
+  // 6. Sync all registered students across all batches
+  try {
+    var [stRows] = await pool.query('SELECT DISTINCT id, studentId, email FROM students');
+    if (Array.isArray(stRows)) {
+      stRows.forEach(function(r, idx) {
+        var strId = r.studentId ? `std_id_${r.studentId}` : (r.email ? `std_em_${r.email}` : `std_rec_${r.id || idx}`);
+        totalUniqueVisitors.add(strId);
+      });
+    }
+  } catch (_) {}
+
+  // 7. Sync all historical audit logs (actions performed by visitors/users)
+  try {
+    var [logRows] = await pool.query('SELECT DISTINCT ip FROM audit_logs WHERE ip IS NOT NULL');
+    if (Array.isArray(logRows)) {
+      logRows.forEach(function(r) {
+        if (r.ip) totalUniqueVisitors.add(`audit_ip_${r.ip}`);
       });
     }
   } catch (_) {}
