@@ -1,17 +1,31 @@
-/**
- * Document & RegForm (COR) Validation & Verification Utilities
- * Detects if an uploaded attachment is a valid paper Certificate of Registration (COR)
- * or a suspicious non-document file (e.g. 2x2 selfie uploaded twice, random photo, or non-paper image).
- */
+import { useState, useEffect } from 'react';
 
+// Global memory cache for fast instantaneous audit lookups
+const regformAuditCache = new Map();
+
+/**
+ * Robust image & canvas pixel analysis for document characteristics.
+ */
 export function analyzeDocumentFile(fileOrDataUrl) {
   return new Promise((resolve) => {
     if (!fileOrDataUrl) {
-      return resolve({ isDocument: false, isSuspicious: true, reason: 'Missing document attachment' });
+      return resolve({ isDocument: false, isSuspicious: true, badgeLabel: '⚠️ No RegForm', reason: 'No Certificate of Registration (COR) attachment uploaded.' });
+    }
+
+    const strUrl = String(fileOrDataUrl).trim();
+
+    // Check if placeholder or avatar
+    if (strUrl.includes('cvsu.png') || strUrl.includes('avatars') || strUrl.includes('placeholder')) {
+      return resolve({
+        isDocument: false,
+        isSuspicious: true,
+        badgeLabel: '⚠️ Invalid RegForm',
+        reason: 'Placeholder or default image detected instead of official Certificate of Registration.'
+      });
     }
 
     // If PDF, it is a valid document file format
-    if (typeof fileOrDataUrl === 'string' && (fileOrDataUrl.startsWith('data:application/pdf') || fileOrDataUrl.toLowerCase().includes('.pdf'))) {
+    if (strUrl.startsWith('data:application/pdf') || strUrl.toLowerCase().includes('.pdf')) {
       return resolve({ isDocument: true, isSuspicious: false, reason: 'Valid PDF document format' });
     }
 
@@ -27,10 +41,9 @@ export function analyzeDocumentFile(fileOrDataUrl) {
         const height = img.naturalHeight || img.height;
         const aspectRatio = width / (height || 1);
 
-        // Standard paper documents (Letter/A4 portrait) have aspect ratio ~0.65 to 0.85
-        // Standard paper documents in landscape have aspect ratio ~1.25 to 1.55
-        // Square selfies / 2x2 photos have aspect ratio ~0.95 to 1.05 (1:1)
-        const isSquareSelfieRatio = aspectRatio >= 0.92 && aspectRatio <= 1.08 && width < 1200;
+        // Standard paper documents (Letter/A4 portrait) have aspect ratio ~0.65 to 0.82
+        // Square selfies / 2x2 photos have aspect ratio ~0.90 to 1.15
+        const isSquareOrPortraitPhotoRatio = aspectRatio >= 0.88 && aspectRatio <= 1.15;
 
         // Perform canvas pixel sample analysis for document paper texture (high white/light background ratio)
         const canvas = document.createElement('canvas');
@@ -43,34 +56,37 @@ export function analyzeDocumentFile(fileOrDataUrl) {
         const data = imgData.data;
         let lightPixelCount = 0;
         let totalSampled = 0;
+        let highSaturationCount = 0;
 
         for (let i = 0; i < data.length; i += 16) {
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
           totalSampled++;
-          // High brightness pixel typical for white/light paper background (> 190)
-          if (r > 185 && g > 185 && b > 185) {
+
+          // Light pixel typical of printed white document paper
+          if (r > 175 && g > 175 && b > 175) {
             lightPixelCount++;
+          }
+
+          // Measure color saturation variance (faces, shirts, colorful scenery have higher variance than black text on white paper)
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          if (max - min > 45) {
+            highSaturationCount++;
           }
         }
 
         const lightRatio = lightPixelCount / (totalSampled || 1);
+        const saturationRatio = highSaturationCount / (totalSampled || 1);
 
-        // If very low light ratio (< 25%) and square/selfie ratio, it is very likely a photo/selfie, not a paper document
-        if (isSquareSelfieRatio && lightRatio < 0.35) {
+        // If square ratio or not standard paper aspect, and low light background ratio
+        if (isSquareOrPortraitPhotoRatio || lightRatio < 0.40 || saturationRatio > 0.45) {
           return resolve({
             isDocument: false,
             isSuspicious: true,
-            reason: 'Square portrait/selfie ratio detected instead of full paper document'
-          });
-        }
-
-        if (lightRatio < 0.20) {
-          return resolve({
-            isDocument: false,
-            isSuspicious: true,
-            reason: 'Dark/scenic image detected without paper document background'
+            badgeLabel: '⚠️ Not a RegForm',
+            reason: 'The uploaded file appears to be a selfie, portrait photo, or non-document image rather than a printed Certificate of Registration (COR).'
           });
         }
 
@@ -84,16 +100,17 @@ export function analyzeDocumentFile(fileOrDataUrl) {
       resolve({ isDocument: true, isSuspicious: false });
     };
 
-    img.src = typeof fileOrDataUrl === 'string' ? fileOrDataUrl : URL.createObjectURL(fileOrDataUrl);
+    img.src = strUrl;
   });
 }
 
 /**
  * Returns audit status for an enrollment record to show immediate badge to Admin.
  */
-export function getRegformAuditStatus(enrollment) {
+export function getRegformAuditStatus(enrollment, auditStateMap = {}) {
   if (!enrollment) return { isSuspicious: false };
 
+  const enrollId = String(enrollment.id || enrollment.studentId || '');
   const regPhoto = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.cor || enrollment.reg_form || '';
   const idPhoto = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || '';
 
@@ -102,7 +119,7 @@ export function getRegformAuditStatus(enrollment) {
     return {
       isSuspicious: true,
       badgeLabel: '⚠️ Check RegForm',
-      reason: enrollment.regform_flag_reason || 'Document flagged during submission: Possible non-document photo uploaded.'
+      reason: enrollment.regform_flag_reason || 'Document flagged: Possible non-document photo uploaded.'
     };
   }
 
@@ -124,5 +141,55 @@ export function getRegformAuditStatus(enrollment) {
     };
   }
 
+  // 4. Check dynamic audit state map from active analysis
+  if (enrollId && auditStateMap[enrollId]) {
+    return auditStateMap[enrollId];
+  }
+
+  // 5. Check global memory cache
+  if (regformAuditCache.has(regPhoto)) {
+    return regformAuditCache.get(regPhoto);
+  }
+
   return { isSuspicious: false };
 }
+
+/**
+ * React hook that actively analyzes all pending enrollments in the background
+ * and returns an audit status map { [enrollmentId]: auditResult }
+ */
+export function useRegformAuditor(enrollments = []) {
+  const [auditMap, setAuditMap] = useState({});
+
+  useEffect(() => {
+    if (!Array.isArray(enrollments) || enrollments.length === 0) return;
+
+    let isMounted = true;
+    enrollments.forEach((enr) => {
+      const enrId = String(enr.id || enr.studentId || '');
+      const regPhoto = enr.registration_photo || enr.registrationPhoto || enr.cor || enr.reg_form || '';
+
+      if (!enrId || !regPhoto) return;
+
+      if (regformAuditCache.has(regPhoto)) {
+        const cached = regformAuditCache.get(regPhoto);
+        setAuditMap(prev => prev[enrId] === cached ? prev : { ...prev, [enrId]: cached });
+        return;
+      }
+
+      analyzeDocumentFile(regPhoto).then(result => {
+        regformAuditCache.set(regPhoto, result);
+        if (isMounted) {
+          setAuditMap(prev => ({ ...prev, [enrId]: result }));
+        }
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [enrollments]);
+
+  return auditMap;
+}
+

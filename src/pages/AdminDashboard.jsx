@@ -12,7 +12,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
 import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
-import { getRegformAuditStatus } from '../utils/documentValidation';
+import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -201,6 +201,9 @@ function AdminDashboard() {
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  
+  // Real-time RegForm document validator audit hook
+  const regformAudits = useRegformAuditor(pendingEnrollments);
   
   // Enrollment Timed Schedule & Portal Control
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -1406,15 +1409,15 @@ function AdminDashboard() {
                               <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                                 <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{enrollment.fullName}</p>
                                 {(() => {
-                                  const audit = getRegformAuditStatus(enrollment);
+                                  const audit = getRegformAuditStatus(enrollment, regformAudits);
                                   if (audit.isSuspicious) {
                                     return (
                                       <span 
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9.5px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0 animate-pulse" 
+                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[9.5px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse" 
                                         title={audit.reason}
                                       >
-                                        <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
-                                        <span>{audit.badgeLabel || '⚠️ Check RegForm'}</span>
+                                        <AlertTriangle className="w-3.5 h-3.5 text-amber-900 shrink-0" />
+                                        <span>{audit.badgeLabel || '⚠️ Not a RegForm'}</span>
                                       </span>
                                     );
                                   }
@@ -1563,15 +1566,15 @@ function AdminDashboard() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <p className="text-sm font-black text-gray-900">{enrollment.fullName}</p>
                                   {(() => {
-                                    const audit = getRegformAuditStatus(enrollment);
+                                    const audit = getRegformAuditStatus(enrollment, regformAudits);
                                     if (audit.isSuspicious) {
                                       return (
                                         <span 
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs shrink-0 animate-pulse" 
+                                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse" 
                                           title={audit.reason}
                                         >
-                                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                          <span>{audit.badgeLabel || '⚠️ Check RegForm'}</span>
+                                          <AlertTriangle className="w-3.5 h-3.5 text-amber-900 shrink-0" />
+                                          <span>{audit.badgeLabel || '⚠️ Not a RegForm'}</span>
                                         </span>
                                       );
                                     }
@@ -2068,10 +2071,10 @@ function AdminDashboard() {
                 {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
                 <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">
                   {(() => {
-                    const audit = getRegformAuditStatus(selectedEnrollment);
+                    const audit = getRegformAuditStatus(selectedEnrollment, regformAudits);
                     if (audit.isSuspicious) {
                       return (
-                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-start gap-2.5 shadow-2xs">
+                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-2.5 shadow-sm">
                           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                           <div>
                             <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>

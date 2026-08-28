@@ -698,6 +698,8 @@ function Enrollment() {
         reg_form: registrationPhoto || null,
         id_photo_2x2: idPhoto2x2 || null,
         photo: idPhoto2x2 || null,
+        is_flagged_regform: Boolean(corUploadWarning),
+        regform_flag_reason: corUploadWarning || null,
         recaptchaToken: googleRecaptchaToken || null,
       };
 
