@@ -1963,7 +1963,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </div>
 
                 {/* Auto-Calculated Next Batch Highlight */}
-                <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3 text-xs flex items-center justify-between gap-3">
+                <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3.5 text-xs flex items-center justify-between gap-3">
                   <div>
                     <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">Incoming Batch (Auto-Calculated):</span>
                     <p className="text-sm font-black text-emerald-950 mt-0.5">{newBatchName || `${newBatchYearInput} ${newBatchSem}`}</p>
@@ -1972,63 +1972,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     ⚡ Auto-Set
                   </span>
                 </div>
-
-                {/* New Batch Configuration */}
-                <div className="bg-gray-50 border border-gray-200/80 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black text-emerald-950 uppercase tracking-wider">New Batch Details</p>
-                    <span className="text-[10px] text-gray-500 font-medium">Editable if needed</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Academic Year</label>
-                      <input
-                        type="text"
-                        value={newBatchYearInput}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setNewBatchYearInput(val);
-                          setNewBatchName(`${val} ${newBatchSem}`.trim());
-                        }}
-                        placeholder="e.g. 2026-2027"
-                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Semester</label>
-                      <select
-                        value={newBatchSem}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setNewBatchSem(val);
-                          setNewBatchName(`${newBatchYearInput} ${val}`.trim());
-                        }}
-                        className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/30 cursor-pointer"
-                      >
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                        <option value="Summer Term">Summer Term</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-gray-600 mb-1">Full Batch Label Name</label>
-                    <input
-                      type="text"
-                      value={newBatchName}
-                      onChange={(e) => setNewBatchName(e.target.value)}
-                      placeholder="e.g. 2026-2027 2nd Semester"
-                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-lg font-black text-emerald-950 outline-none focus:ring-2 focus:ring-emerald-500/30"
-                    />
-                  </div>
-                </div>
                 
                 <div>
                   <label htmlFor="confirm-batch" className="block text-xs font-bold text-gray-700 mb-1.5">
-                    Type <span className="text-red-600 font-black">"confirm"</span> to create new batch:
+                    Type <span className="text-red-600 font-black">"confirm"</span> to continue:
                   </label>
                   <input
                     type="text"
