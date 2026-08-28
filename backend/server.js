@@ -2759,8 +2759,7 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
 
 // ===== STUDENT ROUTES =====
 
-// Get students — admins see all, instructors see only their department
-app.get('/api/students', authenticateToken, async (req, res) => {
+const handleGetStudents = async (req, res) => {
   try {
     let students;
     if (req.user.role === 'admin') {
@@ -2789,7 +2788,9 @@ app.get('/api/students', authenticateToken, async (req, res) => {
       res.status(500).json({ message: 'Server error retrieving students' });
     }
   }
-});
+};
+app.get('/api/students', authenticateToken, handleGetStudents);
+app.get('/students', authenticateToken, handleGetStudents);
 
 // CHED Excel export
 function buildChedWorkbook(students, info = {}) {
