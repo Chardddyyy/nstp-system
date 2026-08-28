@@ -677,6 +677,8 @@ function App() {
 
   async function loadAllData(currentUser) {
     try {
+      const activeUser = currentUser || user;
+      const isAdmin = activeUser?.role === 'admin';
       const [
         usersData, studentsData, reportsData, enrollmentsData,
         conversationsData, archivesData, batchData,
@@ -684,7 +686,7 @@ function App() {
         usersAPI.getAll().catch(() => null),
         studentsAPI.getAll().catch(() => null),
         reportsAPI.getAll().catch(() => null),
-        enrollmentsAPI.getAll().catch(() => null),
+        isAdmin ? enrollmentsAPI.getAll().catch(() => null) : Promise.resolve([]),
         conversationsAPI.getAll().catch(() => null),
         archivesAPI.getAll().catch(() => null),
         archivesAPI.getCurrentBatch().catch(() => null),
@@ -730,7 +732,6 @@ function App() {
         }
       }
 
-      const activeUser = currentUser || user;
       if (activeUser && conversationsData && Array.isArray(conversationsData)) {
         resetRealtimeBaseline();
         seedRealtimeBaseline(

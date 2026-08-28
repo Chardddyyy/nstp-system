@@ -26,23 +26,26 @@ export function initSocket() {
   socket = io(serverUrl, {
     transports: ['polling', 'websocket'],
     upgrade: true,
+    autoConnect: true,
     auth: { token: token ? `Bearer ${token}` : null },
     reconnection: true,
-    reconnectionAttempts: 15,
-    reconnectionDelay: 2000,
-    timeout: 20000,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 3000,
+    timeout: 25000,
   });
 
   socket.on('connect', () => {
-    console.log('[Socket.io] 🟢 Real-time connection established to:', serverUrl);
+    // Connected
   });
 
   socket.on('disconnect', (reason) => {
-    console.log('[Socket.io] 🟡 Disconnected:', reason);
+    if (reason === 'io server disconnect') {
+      socket.connect();
+    }
   });
 
-  socket.on('connect_error', (err) => {
-    console.warn('[Socket.io] ⚠️ Connection notice (auto-retrying):', err.message);
+  socket.on('connect_error', () => {
+    // Handled gracefully without noisy console errors
   });
 
   return socket;

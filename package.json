@@ -9,6 +9,7 @@
     "dev:all": "concurrently \"npm run dev\" \"cd backend && node server.js\"",
     "prebuild": "node scripts/generate-version.js",
     "build": "vite build",
+    "postbuild": "node scripts/generate-spa-routes.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "lint": "eslint .",

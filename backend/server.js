@@ -50,6 +50,10 @@ const io = new SocketIOServer(httpServer, {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   },
+  transports: ['polling', 'websocket'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
   maxHttpBufferSize: 5e7 // 50MB buffer
 });
 

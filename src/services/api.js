@@ -553,7 +553,9 @@ export function clearConversationMessages(id) {
 
 // Enrollments
 export function getEnrollments() {
-  return apiCall('/enrollments');
+  const token = localStorage.getItem('nstp_token');
+  if (!token) return Promise.resolve([]);
+  return apiCall('/enrollments').catch(function() { return []; });
 }
 
 export function submitEnrollment(data) {
