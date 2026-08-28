@@ -529,7 +529,7 @@ function Enrollment() {
         // Smart check if uploaded image has paper document characteristics
         analyzeDocumentFile(dataUrl).then(res => {
           if (res.isSuspicious) {
-            setCorUploadWarning('⚠️ Paalala: Ang na-upload na litrato ay mukhang selfie o litrato ng tao. Siguraduhing ang opisyal na Certificate of Registration (COR) papel ang iyong ipinapasa.');
+            setCorUploadWarning('⚠️ Note: The uploaded image appears to be a portrait photo or selfie. Please ensure you upload your official paper Certificate of Registration (COR) to avoid application rejection.');
           } else {
             setCorUploadWarning('');
           }
@@ -1668,7 +1668,7 @@ function Enrollment() {
                         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 shrink-0"
                       >
                         <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span>📋 Halimbawa / Sample ng RegForm</span>
+                        <span>📋 View RegForm (COR) Sample Guide</span>
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
@@ -1685,7 +1685,7 @@ function Enrollment() {
                         onClick={() => setShowSampleCorModal(true)}
                         className="text-[11px] text-emerald-800 font-extrabold underline mt-1 inline-flex items-center gap-1 cursor-pointer"
                       >
-                        <span>Tingnan ang tamang sample ng RegForm</span> &rarr;
+                        <span>View valid RegForm sample</span> &rarr;
                       </button>
                     </div>
                   </div>
@@ -2344,8 +2344,8 @@ function Enrollment() {
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black tracking-tight">Halimbawa ng Tamang Registration Form (COR)</h3>
-                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Gabay sa pag-picture at pag-attach ng official CvSU document</p>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight">Official Registration Form (COR) Specimen &amp; Guide</h3>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Guidelines for taking a clear photo and attaching your official CvSU Certificate of Registration</p>
                 </div>
               </div>
               <button
@@ -2421,8 +2421,8 @@ function Enrollment() {
                       <tr className="bg-amber-50/70 font-semibold text-amber-950 border-l-4 border-amber-500">
                         <td className="p-1.5 font-mono font-black text-emerald-800">NSTP 1</td>
                         <td className="p-1.5 font-black">
-                          NSTP 1 - CWTS (Civic Welfare Training)
-                          <span className="block text-[9px] text-amber-700 font-bold">★ Siguraduhing makikita ang enrolled NSTP subject mo</span>
+                          NSTP 1 - CWTS (Civic Welfare Training Service)
+                          <span className="block text-[9px] text-amber-700 font-bold">★ Enrolled NSTP course track must be clearly visible</span>
                         </td>
                         <td className="p-1.5 text-center font-black">3.0</td>
                         <td className="p-1.5">SAT 08:00-11:00</td>
@@ -2442,7 +2442,7 @@ function Enrollment() {
                   <div className="border border-emerald-500 rounded-md px-2.5 py-1 text-emerald-800 font-black uppercase bg-emerald-50/60">
                     ✓ OFFICIALLY ENROLLED • ASSESSED
                   </div>
-                  <span className="text-gray-400 italic">Registrar Signature &amp; Stamp</span>
+                  <span className="text-gray-400 italic">Registrar Signature &amp; Official Stamp</span>
                 </div>
               </div>
 
@@ -2451,24 +2451,24 @@ function Enrollment() {
                 <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
                   <p className="font-black text-emerald-900 flex items-center gap-1.5 mb-1.5">
                     <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                    MGA DAPAT GAWIN:
+                    DOs / BEST PRACTICES:
                   </p>
                   <ul className="space-y-1.5 text-[11.5px] text-emerald-900/90 font-medium">
-                    <li>• I-picture ang <strong>buong papel</strong> ng Certificate of Registration (COR).</li>
-                    <li>• Siguraduhing <strong>malinaw mabasa</strong> ang Student No., Pangalan, at Subjects.</li>
-                    <li>• Ilatag sa maliwanag na lugar na walang anino.</li>
+                    <li>• Capture the <strong>full physical page</strong> of your Certificate of Registration (COR).</li>
+                    <li>• Ensure <strong>Student Number, Full Name, and Courses</strong> are clearly readable.</li>
+                    <li>• Place the document on a flat, well-lit surface without glare or shadows.</li>
                   </ul>
                 </div>
 
                 <div className="p-3.5 bg-red-50/80 rounded-2xl border border-red-200 text-xs text-red-950">
                   <p className="font-black text-red-900 flex items-center gap-1.5 mb-1.5">
                     <X className="w-4 h-4 text-red-600 shrink-0" />
-                    MGA HINDI DAPAT I-UPLOAD:
+                    DON'Ts / PROHIBITED UPLOADS:
                   </p>
                   <ul className="space-y-1.5 text-[11.5px] text-red-900/90 font-medium">
-                    <li>• <strong>HUWAG</strong> mag-upload ng 2x2 selfie o portrait photo sa bahaging ito.</li>
-                    <li>• <strong>HUWAG</strong> mag-upload ng screenshots ng FB / chat o ibang larawan.</li>
-                    <li>• <strong>HUWAG</strong> magpasa ng malabo o putol na dokumento.</li>
+                    <li>• <strong>DO NOT</strong> upload a 2x2 portrait photo or selfie in this section.</li>
+                    <li>• <strong>DO NOT</strong> upload screenshots of social media, messaging apps, or random pictures.</li>
+                    <li>• <strong>DO NOT</strong> submit cropped, blurred, or cut-off documents.</li>
                   </ul>
                 </div>
               </div>
@@ -2478,7 +2478,7 @@ function Enrollment() {
             {/* Modal Footer */}
             <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
               <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                Pindutin ang isa sa mga buttons para mag-attach ng iyong sariling RegForm:
+                Click either button below to attach your official Registration Form:
               </span>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
@@ -2490,7 +2490,7 @@ function Enrollment() {
                   className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                 >
                   <Camera className="w-3.5 h-3.5 text-amber-400" />
-                  Kumuha ng Litrato
+                  Scan / Take Photo
                 </button>
                 <button
                   type="button"
@@ -2501,7 +2501,7 @@ function Enrollment() {
                   className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  Pumili ng File (PDF/Image)
+                  Choose File (PDF/Image)
                 </button>
               </div>
             </div>
