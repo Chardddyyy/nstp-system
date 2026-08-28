@@ -112,6 +112,10 @@ function DigitalIdViewer() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   // Automatic PDF download and/or print dialog when accessed from email button
   useEffect(() => {
     const shouldDownload = searchParams.get('download') === 'pdf' || searchParams.get('download') === '1' || searchParams.get('download') === 'true' || searchParams.get('auto') === '1';

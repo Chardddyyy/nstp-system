@@ -1513,8 +1513,8 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
                                 <!-- Direct Action Button with Meaningful, Short Text -->
                                 <div>
-                                  <a href="${resetLink}" style="display: inline-block; background: #047857; color: #ffffff; font-size: 13px; font-weight: 800; padding: 10px 24px; border-radius: 20px; text-decoration: none; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
-                                    Verify OTP
+                                  <a href="${resetLink}" style="display: inline-block; background: #047857; color: #ffffff; font-size: 13px; font-weight: 800; padding: 11px 26px; border-radius: 20px; text-decoration: none; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
+                                    Reset Password &amp; Continue
                                   </a>
                                 </div>
                               </td>
@@ -1996,11 +1996,11 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
-    <!-- Top Action Button: Instant One-Click PDF Download & Print -->
+    <!-- Top Action Button: Instant Direct PDF Download -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <a href="${directIdViewerUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 800; padding: 12px 28px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
-          Download &amp; Print Official ID Card
+        <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; padding: 13px 32px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+          📥 Download Official ID Card (PDF)
         </a>
       </td>
     </tr>
@@ -6639,6 +6639,23 @@ app.get('/', function(req, res) {
 
 app.get('/api/ping', function(req, res) {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Fallback 404 handler for unknown API routes (ensures clean CORS headers)
+app.use('/api', function(req, res) {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(404).json({ message: `API route not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Global error handler
+app.use(function(err, req, res, next) {
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  console.error('[API Error Handler]', err.message);
+  res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
 });
 
 async function startServer() {

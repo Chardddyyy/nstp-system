@@ -711,31 +711,6 @@ function Login() {
                         required
                         autoFocus
                       />
-                      {forgotOtp && forgotOtp.length >= 1 && (
-                        <div className="mt-2 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              copyTextToClipboard(forgotOtp);
-                              setCopiedOtp(true);
-                              setTimeout(() => setCopiedOtp(false), 2500);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 rounded-lg text-[11px] font-bold transition-all cursor-pointer active:scale-95 border border-emerald-300 shadow-2xs"
-                          >
-                            {copiedOtp ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>Copied to Clipboard!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>Copy OTP to Clipboard</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      )}
                       <p className="text-[10px] text-gray-400 text-center mt-1.5">Check your inbox or Spam/Junk folder for the code.</p>
                     </div>
 
