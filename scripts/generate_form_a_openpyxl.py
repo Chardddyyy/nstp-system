@@ -6,9 +6,20 @@ Generates/populates official CHED OSDS-NSTP Form 2-A (Summary Number of Enrollme
 
 import os
 import openpyxl
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.worksheet.page import PageMargins
 from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
+
+def find_logo_file(filenames):
+    """Helper to locate logo image files across standard project paths."""
+    search_dirs = ['.', 'public', '../public', 'backend/assets', '../backend/assets']
+    for d in search_dirs:
+        for f in filenames:
+            full_path = os.path.join(d, f)
+            if os.path.exists(full_path):
+                return full_path
+    return None
 
 def create_base_form_a_template(template_path='OSDS-NSTP-Form-2-A.xlsx'):
     """Creates the official CHED OSDS-NSTP Form 2-A base template if not present."""
@@ -28,6 +39,28 @@ def create_base_form_a_template(template_path='OSDS-NSTP-Form-2-A.xlsx'):
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 1
     ws.page_margins = PageMargins(left=0.25, right=0.25, top=0.5, bottom=0.5)
+
+    # Insert Official Logos in Header
+    cvsu_logo = find_logo_file(['cvsu.png', 'cvsu-logo.png'])
+    ched_logo = find_logo_file(['ched-logo.png', 'ched.png'])
+
+    if cvsu_logo:
+        try:
+            img_cvsu = Image(cvsu_logo)
+            img_cvsu.width = 62
+            img_cvsu.height = 62
+            ws.add_image(img_cvsu, 'A1') # Left Header (CvSU Logo)
+        except Exception as e:
+            print(f"Notice: CvSU logo load ({e})")
+
+    if ched_logo:
+        try:
+            img_ched = Image(ched_logo)
+            img_ched.width = 62
+            img_ched.height = 62
+            ws.add_image(img_ched, 'Y1') # Right Header (CHED Logo)
+        except Exception as e:
+            print(f"Notice: CHED logo load ({e})")
 
     # Styling definitions
     font_header_bold = Font(name="Arial", size=10, bold=True)

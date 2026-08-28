@@ -31,49 +31,44 @@ def generate_nstp_reports(
     # ==============================================================
     # 1. PROCESS FORM 2-B (NSTP Enrollment List)
     # ==============================================================
-    if os.path.exists(form_b_template):
-        wb_b = openpyxl.load_workbook(form_b_template)
-        ws_b = wb_b.active
-        enforce_print_setup(ws_b)
+    try:
+        from generate_form_b_openpyxl import generate_ready_to_print_form_b, create_base_form_b_template
+        if not os.path.exists(form_b_template):
+            create_base_form_b_template(form_b_template)
 
-        # Magic Print Settings
-        ws_b.page_setup.paperSize = 9  # 9 = A4 Size Paper
-        ws_b.page_setup.orientation = ws_b.ORIENTATION_LANDSCAPE
-        ws_b.page_setup.fitToHeight = False  # Allows multiple pages vertically for long lists
-        ws_b.page_setup.fitToWidth = 1       # Fit to exactly 1 page width horizontally
-        ws_b.page_margins = PageMargins(left=0.25, right=0.25, top=0.5, bottom=0.5)
-
-        # Default sample student records if none supplied
-        # Notice Column 10 and 12 are blank ("") to safeguard merged address columns
-        sample_data_b = students_data or [
-            [1, "2024-00101", "Dela Cruz", "Juan", "P.", "BSIT 3A", "M", "2005-08-17", "Brgy 1", "", "Imus", "", "Cavite", "09123456789", "juan@email.com"],
-            [2, "2024-00102", "Santos", "Maria", "C.", "BSIT 3A", "F", "2006-01-20", "Brgy 2", "", "Bacoor", "", "Cavite", "09987654321", "maria@email.com"]
+        sample_students_b = students_data or [
+            {
+                'student_no': '2025-0001',
+                'surname': 'Dela Cruz',
+                'first_name': 'Juan',
+                'middle_name': 'Santos',
+                'program': 'BSIT',
+                'sex': 'M',
+                'birthdate': '2005-08-17',
+                'street_brgy': 'Bancaan',
+                'city': 'Naic',
+                'province': 'Cavite',
+                'contact_no': '09123456789',
+                'email': 'juan@cvsu.edu.ph'
+            },
+            {
+                'student_no': '2025-0002',
+                'surname': 'Belen',
+                'first_name': 'Richard',
+                'middle_name': 'Mariño',
+                'program': 'BSIT',
+                'sex': 'M',
+                'birthdate': '2005-08-17',
+                'street_brgy': 'Halang',
+                'city': 'Naic',
+                'province': 'Cavite',
+                'contact_no': '09987654321',
+                'email': 'richard@cvsu.edu.ph'
+            }
         ]
-
-        thin_border = Border(
-            left=Side(style='thin', color='000000'),
-            right=Side(style='thin', color='000000'),
-            top=Side(style='thin', color='000000'),
-            bottom=Side(style='thin', color='000000')
-        )
-        data_font = Font(name="Arial", size=9)
-
-        # Start writing at Row 13 in Form-2-B
-        for row_idx, data in enumerate(sample_data_b, start=13):
-            ws_b.row_dimensions[row_idx].height = 20
-            for col_idx, value in enumerate(data, start=1):
-                cell = ws_b.cell(row=row_idx, column=col_idx)
-                if value != "":  # Write non-empty value to keep template merges intact
-                    cell.value = value
-                cell.border = thin_border
-                cell.font = data_font
-                is_center = col_idx in [1, 2, 6, 7, 8, 14]
-                cell.alignment = Alignment(horizontal="center" if is_center else "left", vertical="center", wrap_text=True)
-
-        wb_b.save(out_b)
-        print(f"✅ Form 2-B generated: {out_b}")
-    else:
-        print(f"⚠️ Form 2-B template not found at '{form_b_template}', skipping template injection.")
+        generate_ready_to_print_form_b(sample_students_b, template_path=form_b_template, output_filename=out_b)
+    except Exception as e:
+        print(f"⚠️ Form 2-B generation notice: {e}")
 
     # ==============================================================
     # 2. PROCESS FORM 2-A (Summary Report)
