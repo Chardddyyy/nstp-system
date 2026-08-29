@@ -10,6 +10,7 @@ const manifestJson = path.join(distDir, 'manifest.json');
 const cvsuPng = path.join(distDir, 'cvsu.png');
 const cvsuLogoPng = path.join(distDir, 'cvsu-logo.png');
 const chedLogoPng = path.join(distDir, 'ched-logo.png');
+const versionJson = path.join(distDir, 'version.json');
 
 if (fs.existsSync(indexHtml)) {
   const routes = [
@@ -48,6 +49,9 @@ if (fs.existsSync(indexHtml)) {
     // Also copy manifest.json & assets to handle any nested relative requests without 404
     if (manifestContent) {
       fs.writeFileSync(path.join(routeDir, 'manifest.json'), manifestContent);
+    }
+    if (fs.existsSync(versionJson)) {
+      fs.copyFileSync(versionJson, path.join(routeDir, 'version.json'));
     }
     if (fs.existsSync(cvsuPng)) {
       fs.copyFileSync(cvsuPng, path.join(routeDir, 'cvsu.png'));

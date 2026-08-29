@@ -25,21 +25,22 @@ const BASE_PATH = (() => {
   return envBase === '/' ? '' : envBase.replace(/\/$/, '');
 })();
 
+const BASE_URL_WITH_SLASH = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') : '/';
+
 // Auto-normalize GitHub Pages hash routes or direct ID query links before router starts
 (() => {
   try {
     const l = window.location;
     const hash = l.hash || '';
-    const basePathWithSlash = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') : '/';
     if (hash.startsWith('#/digital-id') || hash.startsWith('#/id-card') || hash.startsWith('#/enrollment') || hash.startsWith('#/login')) {
       const hashContent = hash.slice(2);
       const [routePart, queryPart] = hashContent.split('?');
-      const target = `${basePathWithSlash}${routePart}${queryPart ? '?' + queryPart : ''}`;
+      const target = `${BASE_URL_WITH_SLASH}${routePart}${queryPart ? '?' + queryPart : ''}`;
       window.history.replaceState(null, null, target);
     } else if (l.search && (l.search.includes('view=digital-id') || l.search.includes('page=digital-id') || (l.search.includes('id=') && (l.search.includes('dept=') || l.search.includes('download='))))) {
       if (!l.pathname.includes('/digital-id')) {
         const cleanSearch = l.search.replace('view=digital-id&', '').replace('page=digital-id&', '');
-        window.history.replaceState(null, null, `${basePathWithSlash}digital-id${cleanSearch}`);
+        window.history.replaceState(null, null, `${BASE_URL_WITH_SLASH}digital-id${cleanSearch}`);
       }
     }
   } catch (_) {}
@@ -118,11 +119,14 @@ function App() {
   // Live Auto-Update & Auto-Restart Detection (Brave Mobile Cache Buster)
   useEffect(() => {
     let currentVersion = localStorage.getItem('nstp_app_version') || null;
-    const getVUrl = () => `${BASE_PATH}version.json?t=${Date.now()}`;
+    const getVUrl = () => `${BASE_URL_WITH_SLASH}version.json?t=${Date.now()}`;
 
     const checkVersion = () => {
       fetch(getVUrl(), { cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) return null;
+          return res.json();
+        })
         .then(data => {
           if (data?.version) {
             if (!currentVersion) {
