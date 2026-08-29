@@ -17,7 +17,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { getAvatarSrc } from '../utils/avatars';
 
 // Emoji list for reactions
-const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
 
 // Image compression utility
 const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
