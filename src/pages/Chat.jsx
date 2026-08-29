@@ -8,7 +8,8 @@ import {
   Mic, Camera, Image, X, Download,
   Play, Menu, ArrowLeft, MicOff,
   Volume2, VolumeX, MessageSquare, Plus,
-  FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter
+  FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter,
+  ChevronUp, ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -18,6 +19,31 @@ import { getAvatarSrc } from '../utils/avatars';
 
 // Emoji list for reactions
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢'];
+
+// Highlight search term inside message text
+const renderHighlightedText = (text, query) => {
+  if (!text || typeof text !== 'string') return '';
+  if (!query || !query.trim()) return text;
+  
+  const trimmed = query.trim();
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  try {
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(regex);
+    if (parts.length <= 1) return text;
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <mark key={i} className="bg-amber-300 text-slate-950 font-bold px-0.5 rounded shadow-2xs">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  } catch (_) {
+    return text;
+  }
+};
 
 // Image compression utility
 const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) => {
@@ -1563,6 +1589,56 @@ function Chat() {
     ].sort((a, b) => new Date(b.created_at || b.timestamp || 0) - new Date(a.created_at || a.timestamp || 0));
   }, [sharedImages, sharedFiles, sharedVoiceNotes]);
 
+  // ── In-Chat Message Search State & Jump-to-Message Navigation ────────────────
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
+  const [matchedMessageIndex, setMatchedMessageIndex] = useState(0);
+
+  const matchedMessageIds = useMemo(() => {
+    const q = (messageSearchQuery || '').trim().toLowerCase();
+    if (!q || !currentMessages.length) return [];
+    return currentMessages
+      .filter(m => {
+        if (isMessageDeletedForEveryone(m) || isMessageDeletedForMe(m)) return false;
+        const text = (m.text || m.content || m.fileName || m.file_name || '').toLowerCase();
+        return text.includes(q);
+      })
+      .map(m => m.id);
+  }, [currentMessages, messageSearchQuery, isMessageDeletedForEveryone, isMessageDeletedForMe]);
+
+  const scrollToMessageId = useCallback((msgId) => {
+    if (!msgId) return;
+    setTimeout(() => {
+      const el = document.getElementById(`msg-${msgId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  }, []);
+
+  useEffect(() => {
+    if (matchedMessageIds.length > 0) {
+      setMatchedMessageIndex(matchedMessageIds.length - 1);
+      scrollToMessageId(matchedMessageIds[matchedMessageIds.length - 1]);
+    } else {
+      setMatchedMessageIndex(0);
+    }
+  }, [matchedMessageIds, scrollToMessageId]);
+
+  const handlePrevMatch = () => {
+    if (!matchedMessageIds.length) return;
+    const nextIdx = matchedMessageIndex <= 0 ? matchedMessageIds.length - 1 : matchedMessageIndex - 1;
+    setMatchedMessageIndex(nextIdx);
+    scrollToMessageId(matchedMessageIds[nextIdx]);
+  };
+
+  const handleNextMatch = () => {
+    if (!matchedMessageIds.length) return;
+    const nextIdx = matchedMessageIndex >= matchedMessageIds.length - 1 ? 0 : matchedMessageIndex + 1;
+    setMatchedMessageIndex(nextIdx);
+    scrollToMessageId(matchedMessageIds[nextIdx]);
+  };
+
   // Scroll to bottom on initial load and when sending messages
   useEffect(() => {
     if (isNearBottom) {
@@ -2060,6 +2136,24 @@ function Chat() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 sm:space-x-1.5 flex-shrink-0">
+                  {/* Search Messages Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSearchingMessages(!isSearchingMessages);
+                      if (!isSearchingMessages) {
+                        setMessageSearchQuery('');
+                      }
+                    }}
+                    className={`p-1.5 sm:p-2 rounded-full transition-all touch-manipulation cursor-pointer border ${
+                      isSearchingMessages ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs' : 'text-gray-700 hover:bg-gray-100 border-transparent hover:border-gray-200'
+                    }`}
+                    title="Search Messages"
+                    aria-label="Search messages"
+                  >
+                    <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+
                   {/* More Options Dropdown (Shared Files & Media, Clear Chat, Delete, Block) */}
                   <div className="relative" ref={chatMenuRef}>
                     <button type="button"
@@ -2121,6 +2215,72 @@ function Chat() {
                   </div>
                 </div>
               </div>
+
+              {/* In-Chat Message Search Bar */}
+              {isSearchingMessages && (
+                <div className="bg-emerald-50/95 border-b border-emerald-200 px-3 py-2 flex items-center justify-between gap-2 z-20 animate-fade-in shrink-0">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <Search className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <input
+                      type="text"
+                      value={messageSearchQuery}
+                      onChange={(e) => setMessageSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (e.shiftKey) handlePrevMatch();
+                          else handleNextMatch();
+                        }
+                        if (e.key === 'Escape') {
+                          setIsSearchingMessages(false);
+                          setMessageSearchQuery('');
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Search messages in this conversation..."
+                      className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {messageSearchQuery.trim() && (
+                      <span className="text-[11px] font-bold text-emerald-900 mr-1 whitespace-nowrap">
+                        {matchedMessageIds.length > 0
+                          ? `${matchedMessageIndex + 1} of ${matchedMessageIds.length}`
+                          : 'No matches'}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handlePrevMatch}
+                      disabled={!matchedMessageIds.length}
+                      className="p-1 rounded-lg hover:bg-emerald-200/70 text-emerald-900 disabled:opacity-40 cursor-pointer active:scale-95 transition-colors"
+                      title="Previous match (Shift+Enter)"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextMatch}
+                      disabled={!matchedMessageIds.length}
+                      className="p-1 rounded-lg hover:bg-emerald-200/70 text-emerald-900 disabled:opacity-40 cursor-pointer active:scale-95 transition-colors"
+                      title="Next match (Enter)"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSearchingMessages(false);
+                        setMessageSearchQuery('');
+                      }}
+                      className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 cursor-pointer active:scale-95 transition-colors ml-0.5"
+                      title="Close search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Messages */}
               {isBlocked && (
@@ -2206,10 +2366,20 @@ function Chat() {
                       );
                     }
 
+                    const isCurrentMatch = matchedMessageIds[matchedMessageIndex] === message.id;
+                    const isMatch = Boolean(messageSearchQuery.trim() && matchedMessageIds.includes(message.id));
+
                     return (
                       <div key={message.id}
+                        id={`msg-${message.id}`}
                         data-is-own={isOwn}
-                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full relative my-1 ${showMessageMenu === message.id ? 'z-40' : 'z-0'}`}>
+                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full relative my-1 transition-all duration-300 ${
+                          isCurrentMatch
+                            ? 'ring-2 ring-amber-400 ring-offset-2 rounded-2xl p-1 bg-amber-100/50 shadow-md'
+                            : isMatch
+                            ? 'ring-1 ring-amber-300/80 rounded-2xl p-0.5 bg-amber-50/30'
+                            : ''
+                        } ${showMessageMenu === message.id ? 'z-40' : 'z-0'}`}>
                         {/* Avatar */}
                         <div className="flex-shrink-0 self-end mb-1">
                           {isOwn ? (
@@ -2320,7 +2490,9 @@ function Chat() {
                                   >
                                     <Paperclip className="w-4 h-4 text-gray-600 flex-shrink-0" />
                                     <div className="flex flex-col min-w-0 flex-1">
-                                      <span className="text-xs font-medium text-gray-800 truncate">{message.fileName || message.file_name}</span>
+                                      <span className="text-xs font-medium text-gray-800 truncate">
+                                        {renderHighlightedText(message.fileName || message.file_name, messageSearchQuery)}
+                                      </span>
                                       <span className="text-[10px] text-blue-600 underline">Click to download</span>
                                     </div>
                                   </button>
@@ -2368,7 +2540,9 @@ function Chat() {
                                     )}
                                   </button>
                                 ) : (
-                                  <p className="break-words whitespace-pre-wrap overflow-hidden text-xs sm:text-sm leading-relaxed">{message.text || message.content || ''}</p>
+                                  <p className="break-words whitespace-pre-wrap overflow-hidden text-xs sm:text-sm leading-relaxed">
+                                    {renderHighlightedText(message.text || message.content || '', messageSearchQuery)}
+                                  </p>
                                 )}
                               </>
                             )}
