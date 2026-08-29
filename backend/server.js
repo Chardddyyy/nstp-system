@@ -6615,10 +6615,6 @@ app.use(function(err, req, res, next) {
 });
 
 // ── Health Check Endpoints for Render Deployment ──────────────────────────────
-app.get('/', function(req, res) {
-  res.status(200).json({ status: 'online', service: 'CvSU Naic NSTP API Server', version: '1.0.0' });
-});
-
 app.get('/api/ping', function(req, res) {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -6630,6 +6626,22 @@ app.use('/api', function(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.status(404).json({ message: `API route not found: ${req.method} ${req.originalUrl}` });
 });
+
+// ── Static Frontend Serving & Single Page App Fallback ────────────────────────
+const distPath = path.resolve(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', function(req, res, next) {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  app.get('/', function(req, res) {
+    res.status(200).json({ status: 'online', service: 'CvSU Naic NSTP API Server', version: '1.0.0' });
+  });
+}
 
 // Global error handler
 app.use(function(err, req, res, next) {

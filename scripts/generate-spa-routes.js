@@ -60,6 +60,9 @@ if (fs.existsSync(indexHtml)) {
     }
   });
 
+  // Write 404.html to root dist for direct fallback routing
+  fs.writeFileSync(path.join(distDir, '404.html'), htmlContent);
+
   console.log(`✅ Generated comprehensive static SPA route directories & fallback assets for: ${routes.join(', ')}`);
 } else {
   console.warn('⚠️ dist/index.html not found, skipping route generation.');
