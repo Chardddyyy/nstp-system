@@ -125,8 +125,7 @@ const FAQ_ITEMS = [
 ];
 
 function Landing() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [openFaqs, setOpenFaqs] = useState(() => new Set([0]));
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
   const [showAllFaqs, setShowAllFaqs] = useState(false);
@@ -938,123 +937,242 @@ function Landing() {
         </div>
       </section>
 
-      {/* ── Searchable & Filterable FAQ Interactive Accordion (Compact 2-Column Design) ────────── */}
-      <section id="faq" className="py-10 sm:py-14 px-4 bg-slate-50 border-t border-slate-200/80">
+      {/* ── Searchable & Filterable FAQ Interactive Accordion (Smooth & User-Friendly) ────────── */}
+      <section id="faq" className="py-12 sm:py-16 px-4 bg-gradient-to-b from-slate-50 via-emerald-50/20 to-slate-50 border-t border-slate-200/80">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-5 sm:mb-8">
-            <span className="bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shadow-2xs">
-              Knowledge Base &amp; FAQ
+          <div className="text-center mb-6 sm:mb-8">
+            <span className="inline-flex items-center gap-1.5 bg-emerald-100/90 text-emerald-900 text-xs font-black uppercase tracking-wider px-4 py-1.5 rounded-full shadow-2xs border border-emerald-200">
+              <HelpCircle className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Knowledge Base &amp; FAQ</span>
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mt-2.5">Frequently Asked Questions</h2>
-            <p className="text-slate-600 text-xs sm:text-sm mt-1">Quick answers regarding enrollment, components, units, and campus policies</p>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 mt-3 tracking-tight">Frequently Asked Questions</h2>
+            <p className="text-slate-600 text-xs sm:text-sm mt-1.5 max-w-xl mx-auto">
+              Everything you need to know about NSTP enrollment, CWTS/ROTC/LTS tracks, units, and graduation policies.
+            </p>
           </div>
 
-          {/* Interactive Search & Filter Box */}
-          <div className="mb-5 space-y-2.5 max-w-3xl mx-auto">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          {/* Interactive Search & Filter Controls */}
+          <div className="mb-6 space-y-3 max-w-3xl mx-auto">
+            <div className="relative group">
+              <Search className="w-4 h-4 text-slate-400 group-focus-within:text-emerald-700 absolute left-4 top-1/2 -translate-y-1/2 transition-colors pointer-events-none" />
               <input
                 type="text"
                 id="faq-search-input"
                 name="faqSearch"
                 value={faqSearch}
-                onChange={(e) => setFaqSearch(e.target.value)}
+                onChange={(e) => {
+                  setFaqSearch(e.target.value);
+                  if (e.target.value) setShowAllFaqs(true);
+                }}
                 placeholder="Search questions (e.g. graduation, CWTS, documents, units)..."
-                className="w-full pl-11 pr-4 py-2.5 bg-white rounded-2xl border border-slate-200 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 shadow-2xs"
+                className="w-full pl-11 pr-10 py-3 bg-white rounded-2xl border-2 border-slate-200/90 text-xs sm:text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 shadow-xs transition-all"
               />
               {faqSearch && (
                 <button
                   type="button"
                   onClick={() => setFaqSearch('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 justify-start sm:justify-center">
-              {['All', 'ROTC', 'CWTS', 'LTS', 'Enrollment', 'Academics', 'Policies'].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => { setFaqCategory(cat); setOpenFaqIndex(null); }}
-                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    faqCategory === cat 
-                      ? 'bg-emerald-800 text-white shadow-2xs scale-102' 
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            {/* Category Filter Pills & Expand Toggle */}
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 flex-1 py-0.5">
+                {[
+                  { name: 'All', count: FAQ_ITEMS.length },
+                  { name: 'Enrollment', count: FAQ_ITEMS.filter(f => f.category === 'Enrollment').length },
+                  { name: 'Academics', count: FAQ_ITEMS.filter(f => f.category === 'Academics').length },
+                  { name: 'CWTS', count: FAQ_ITEMS.filter(f => f.category === 'CWTS').length },
+                  { name: 'ROTC', count: FAQ_ITEMS.filter(f => f.category === 'ROTC').length },
+                  { name: 'LTS', count: FAQ_ITEMS.filter(f => f.category === 'LTS').length },
+                  { name: 'Policies', count: FAQ_ITEMS.filter(f => f.category === 'Policies').length }
+                ].map((cat) => {
+                  const isActive = faqCategory === cat.name;
+                  return (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => {
+                        setFaqCategory(cat.name);
+                        setOpenFaqs(new Set([0]));
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 select-none ${
+                        isActive
+                          ? 'bg-gradient-to-r from-emerald-800 to-teal-900 text-white shadow-md shadow-emerald-950/10 scale-102 ring-2 ring-emerald-600/30'
+                          : 'bg-white text-slate-600 border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{cat.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Expand / Collapse All Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (openFaqs.size === filteredFaqs.length) {
+                    setOpenFaqs(new Set());
+                  } else {
+                    setOpenFaqs(new Set(filteredFaqs.map((_, i) => i)));
+                  }
+                }}
+                className="shrink-0 px-2.5 py-1 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-emerald-800 hover:border-emerald-300 text-[11px] font-bold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                title="Expand or collapse all answers"
+              >
+                <Layers className="w-3 h-3 text-emerald-700" />
+                <span>{openFaqs.size === filteredFaqs.length ? 'Collapse All' : 'Expand All'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Compact 2-Column Responsive Accordion Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5 items-start">
+          {/* Smooth 2-Column Grid (Zero Layout Shift) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 items-start">
             {filteredFaqs.length > 0 ? (
               (showAllFaqs || faqSearch || faqCategory !== 'All' 
                 ? filteredFaqs 
-                : filteredFaqs.slice(0, 6)
+                : filteredFaqs.slice(0, 8)
               ).map((item, idx) => {
-                const isOpen = openFaqIndex === idx;
+                const isOpen = openFaqs.has(idx);
+
+                // Category badge colors
+                let categoryColor = 'bg-emerald-50 text-emerald-800 border-emerald-200/80';
+                if (item.category === 'ROTC') categoryColor = 'bg-rose-50 text-rose-800 border-rose-200/80';
+                else if (item.category === 'LTS') categoryColor = 'bg-sky-50 text-sky-800 border-sky-200/80';
+                else if (item.category === 'CWTS') categoryColor = 'bg-emerald-50 text-emerald-800 border-emerald-200/80';
+                else if (item.category === 'Enrollment') categoryColor = 'bg-amber-50 text-amber-900 border-amber-200/80';
+                else if (item.category === 'Academics') categoryColor = 'bg-indigo-50 text-indigo-800 border-indigo-200/80';
+                else if (item.category === 'Policies') categoryColor = 'bg-purple-50 text-purple-800 border-purple-200/80';
+                else if (item.category === 'Programs') categoryColor = 'bg-teal-50 text-teal-800 border-teal-200/80';
+
                 return (
                   <div 
                     key={idx} 
-                    className={`bg-white rounded-2xl border transition-all duration-300 shadow-2xs overflow-hidden ${
+                    className={`col-span-1 bg-white rounded-2xl border transition-all duration-300 overflow-hidden ${
                       isOpen 
-                        ? 'md:col-span-2 border-emerald-400/80 ring-2 ring-emerald-500/10 shadow-md' 
-                        : 'col-span-1 border-slate-200 hover:border-slate-300'
+                        ? 'border-emerald-500/90 ring-4 ring-emerald-500/10 shadow-lg shadow-emerald-950/5' 
+                        : 'border-slate-200/90 hover:border-emerald-300/80 hover:shadow-md hover:-translate-y-0.5'
                     }`}
                   >
                     <button
                       type="button"
-                      onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                      className="w-full p-3.5 sm:p-4 flex items-start justify-between text-left gap-3 hover:bg-slate-50/70 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setOpenFaqs(prev => {
+                          const next = new Set(prev);
+                          if (next.has(idx)) {
+                            next.delete(idx);
+                          } else {
+                            next.add(idx);
+                          }
+                          return next;
+                        });
+                      }}
+                      aria-expanded={isOpen}
+                      className="w-full p-4 sm:p-4.5 flex items-start justify-between text-left gap-3.5 transition-colors cursor-pointer group select-none"
                     >
                       <div className="min-w-0 flex-1">
-                        <span className="inline-block text-[9px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md mb-1.5">
+                        <span className={`inline-block text-[9.5px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md mb-2 border ${categoryColor}`}>
                           {item.category}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                        <h4 className={`text-xs sm:text-sm leading-snug transition-colors ${
+                          isOpen ? 'font-black text-emerald-950' : 'font-bold text-slate-800 group-hover:text-emerald-800'
+                        }`}>
                           {item.q}
                         </h4>
                       </div>
-                      <div className={`w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 shrink-0 transition-transform duration-200 mt-0.5 ${isOpen ? 'rotate-180 bg-emerald-600 text-white' : ''}`}>
+                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 mt-0.5 ${
+                        isOpen 
+                          ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white rotate-180 shadow-xs scale-105' 
+                          : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-800'
+                      }`}>
                         <ChevronDown className="w-3.5 h-3.5" />
                       </div>
                     </button>
 
-                    {isOpen && (
-                      <div className="px-3.5 sm:px-4 pb-3.5 sm:pb-4 pt-1 text-xs text-slate-600 leading-relaxed border-t border-slate-100 whitespace-pre-line bg-slate-50/50 animate-fade-in">
-                        {item.a}
+                    {/* Smooth Animated Grid Accordion Drawer */}
+                    <div 
+                      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                        isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="px-4 sm:px-4.5 pb-4 sm:pb-4.5 pt-2 text-xs sm:text-[13px] text-slate-700 leading-relaxed border-t border-emerald-100/70 bg-gradient-to-b from-emerald-50/40 via-emerald-50/10 to-transparent">
+                          <div className="flex gap-2.5 items-start">
+                            <div className="w-5 h-5 rounded-lg bg-emerald-600/10 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                              <Sparkles className="w-3 h-3 text-emerald-600" />
+                            </div>
+                            <div className="flex-1 whitespace-pre-line text-slate-700 font-medium leading-relaxed">
+                              {item.a}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 );
               })
             ) : (
-              <div className="col-span-full p-8 text-center bg-white rounded-3xl border border-slate-200 text-slate-500 text-xs">
-                No matching questions found for "{faqSearch}". Try another keyword or browse all topics.
+              <div className="col-span-full p-8 sm:p-10 text-center bg-white rounded-3xl border border-slate-200 text-slate-600 shadow-2xs">
+                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                <p className="font-bold text-sm text-slate-800">No matching questions found</p>
+                <p className="text-xs text-slate-500 mt-1">We couldn't find any results for "{faqSearch}". Try another keyword or reset the category filter.</p>
+                <button
+                  type="button"
+                  onClick={() => { setFaqSearch(''); setFaqCategory('All'); }}
+                  className="mt-3 px-4 py-1.5 rounded-xl bg-emerald-800 text-white text-xs font-bold hover:bg-emerald-900 transition-all cursor-pointer"
+                >
+                  Reset Search &amp; Filters
+                </button>
               </div>
             )}
           </div>
 
           {/* Toggle to Show More/Fewer Questions when browsing All */}
-          {!faqSearch && faqCategory === 'All' && filteredFaqs.length > 6 && (
-            <div className="text-center mt-5">
+          {!faqSearch && faqCategory === 'All' && filteredFaqs.length > 8 && (
+            <div className="text-center mt-6">
               <button
                 type="button"
                 onClick={() => setShowAllFaqs(!showAllFaqs)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-800 text-xs font-bold shadow-2xs hover:bg-emerald-50 transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white border-2 border-emerald-300 text-emerald-900 hover:bg-emerald-50 text-xs font-black shadow-xs hover:shadow-md transition-all cursor-pointer active:scale-95"
               >
                 <span>{showAllFaqs ? 'Show Fewer Questions' : `View All ${filteredFaqs.length} Questions`}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllFaqs ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAllFaqs ? 'rotate-180 text-emerald-700' : ''}`} />
               </button>
             </div>
           )}
+
+          {/* Helpful Support Footer Card */}
+          <div className="mt-8 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 rounded-3xl p-5 sm:p-6 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-11 h-11 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shrink-0 shadow-md">
+                <HeartHandshake className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-sm sm:text-base font-black">Still have questions about NSTP?</h4>
+                <p className="text-xs text-emerald-200 mt-0.5">Reach out to our campus coordinators or visit the NSTP office at CvSU Naic.</p>
+              </div>
+            </div>
+            <a
+              href="#contact"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              Contact Support
+            </a>
+          </div>
         </div>
       </section>
 
