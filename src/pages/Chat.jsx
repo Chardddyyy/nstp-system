@@ -2122,38 +2122,6 @@ function Chat() {
                 </div>
               </div>
 
-              {/* Active Voice Recording Notification Banner - Highly Visible on Mobile & Desktop */}
-              {isRecording && (
-                <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-3 sm:px-4 py-2.5 shadow-lg flex items-center justify-between gap-2 z-40 animate-pulse border-b border-red-500 shrink-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="relative flex h-3 w-3 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                    </span>
-                    <Mic className="w-4 h-4 text-white animate-bounce shrink-0" />
-                    <span className="font-black text-xs sm:text-sm tracking-wider uppercase truncate">
-                      RECORDING VOICE MESSAGE ({Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={cancelVoiceRecording}
-                      className="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-extrabold transition-colors cursor-pointer touch-manipulation"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleVoiceToggle}
-                      className="px-3 py-1 bg-white text-rose-700 hover:bg-rose-50 rounded-lg text-xs font-black transition-colors cursor-pointer shadow-xs touch-manipulation"
-                    >
-                      Send 🚀
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Messages */}
               {isBlocked && (
                 <div className="bg-red-100 border-l-4 border-red-500 p-4 mx-4 mt-4 rounded">
@@ -2558,38 +2526,44 @@ function Chat() {
                     <button type="button" onClick={handleCamera} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0" title="Live Camera">
                       <Camera className="w-5 h-5" />
                     </button>
-                    <button type="button" onClick={handleVoiceToggle} className={`p-1.5 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0 ${isRecording ? 'bg-red-500 text-white' : 'text-gray-500 hover:bg-gray-100'}`} title={isRecording ? 'Stop Recording' : 'Voice Message'}>
+                    <button type="button" onClick={handleVoiceToggle} className={`p-1.5 rounded-lg active:scale-95 transition-all touch-manipulation flex-shrink-0 ${isRecording ? 'bg-rose-600 text-white shadow-xs' : 'text-gray-500 hover:bg-gray-100'}`} title={isRecording ? 'Stop Recording' : 'Voice Message'}>
                       <Mic className="w-5 h-5" />
-                      {isRecording && <span className="ml-1 text-xs">{recordingTime}s</span>}
                     </button>
                   </div>
 
                   {isRecording ? (
-                    <div className="flex-1 flex items-center justify-between bg-red-50 border-2 border-red-500/80 rounded-2xl px-3 py-1.5 shadow-xs gap-2 min-w-0 animate-pulse">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex-1 flex items-center justify-between bg-rose-50/90 border border-rose-200 rounded-xl px-3 py-1.5 shadow-2xs gap-2 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className="relative flex h-2.5 w-2.5 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
                         </span>
-                        <Mic className="w-4 h-4 text-red-600 shrink-0 animate-bounce" />
-                        <span className="text-xs font-black text-red-700 truncate">
-                          Recording ({recordingTime}s)
+                        <span className="text-xs font-mono font-bold text-rose-700">
+                          {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
                         </span>
+                        {/* Audio Wave Bars */}
+                        <div className="flex items-center gap-0.5 h-3 ml-0.5">
+                          <span className="w-0.5 bg-rose-500 rounded-full animate-pulse h-2"></span>
+                          <span className="w-0.5 bg-rose-500 rounded-full animate-pulse h-3"></span>
+                          <span className="w-0.5 bg-rose-500 rounded-full animate-pulse h-1.5"></span>
+                          <span className="w-0.5 bg-rose-500 rounded-full animate-pulse h-2.5"></span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={cancelVoiceRecording}
-                          className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-[11px] font-extrabold transition-colors cursor-pointer touch-manipulation"
+                          className="px-2.5 py-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 rounded-lg text-xs font-medium transition-colors cursor-pointer touch-manipulation"
                         >
                           Cancel
                         </button>
                         <button
                           type="button"
                           onClick={handleVoiceToggle}
-                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[11px] font-black transition-colors cursor-pointer shadow-xs touch-manipulation"
+                          className="px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-xs touch-manipulation flex items-center gap-1"
                         >
-                          Send 🚀
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Send</span>
                         </button>
                       </div>
                     </div>
@@ -2707,15 +2681,19 @@ function Chat() {
             </div>
           )}
 
-          {/* Call Modal */}
+          {/* Minimalist Voice Call Modal */}
           {showCallModal && (
-            <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-              <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 max-w-sm w-full mx-auto text-center max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-xs sm:max-w-sm w-full mx-auto text-center shadow-2xl ring-1 ring-white/10">
                 <div className="mb-6 sm:mb-8">
-                  {/* Avatar */}
-                  <div className="relative mx-auto mb-4">
+                  {/* Minimalist Avatar */}
+                  <div className="relative mx-auto mb-4 w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
+                    {/* Subtle calling wave ripple */}
+                    {(callStatus === 'calling' || callStatus === 'ringing') && (
+                      <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
+                    )}
                     {activeConversation && !isGroupConversation(activeConversation) ? (
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full overflow-hidden bg-gray-700 border-4 border-gray-700">
+                      <div className="w-full h-full rounded-full overflow-hidden bg-slate-800 border-2 border-slate-700 shadow-xl relative z-10">
                         {(() => {
                           const partner = getConversationPartner(activeConversation);
                           return (
@@ -2728,54 +2706,48 @@ function Chat() {
                         })()}
                       </div>
                     ) : (
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-green-500 rounded-full flex items-center justify-center">
-                        <Phone className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
+                      <div className="w-full h-full bg-emerald-600 rounded-full flex items-center justify-center shadow-xl relative z-10">
+                        <Phone className="w-10 h-10 text-white" />
                       </div>
                     )}
 
-                    {/* Status indicator */}
+                    {/* Status badge */}
                     {callStatus === 'calling' && (
-                      <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center animate-pulse">
-                        <span className="text-white text-xs">...</span>
+                      <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center shadow-md z-20">
+                        <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
                       </div>
                     )}
                     {callStatus === 'connected' && (
-                      <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                        <Phone className="w-4 h-4 text-white" />
+                      <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-500 rounded-full flex items-center justify-center shadow-md z-20">
+                        <Phone className="w-3.5 h-3.5 text-white" />
                       </div>
                     )}
                   </div>
 
-                  <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{activePartnerName}</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5 truncate">{activePartnerName}</h3>
 
                   {/* Status text */}
-                  <p className="text-gray-400 text-base sm:text-lg">
+                  <div className="text-slate-400 text-xs sm:text-sm">
                     {callStatus === 'calling' && (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-                        Calling...
-                      </span>
+                      <span className="text-amber-400 font-medium">Calling...</span>
                     )}
                     {callStatus === 'ringing' && (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        Ringing...
-                      </span>
+                      <span className="text-emerald-400 font-medium">Ringing...</span>
                     )}
                     {callStatus === 'connected' && (
-                      <span className="text-green-400 flex items-center justify-center gap-2">
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Call in progress
+                      <span className="text-emerald-400 font-medium flex items-center justify-center gap-1.5">
+                        <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                        In call
                       </span>
                     )}
                     {callStatus === 'ended' && (
-                      <span className="text-red-400">Call ended</span>
+                      <span className="text-rose-400 font-medium">Call ended</span>
                     )}
-                  </p>
+                  </div>
 
                   {/* Call duration */}
                   {callStatus === 'connected' && activeCallStartTime && (
-                    <p className="text-gray-500 text-sm mt-2">
+                    <p className="text-slate-300 font-mono text-xs font-semibold mt-2 tracking-wider">
                       {(() => {
                         const duration = Math.floor((Date.now() - activeCallStartTime) / 1000);
                         const mins = Math.floor(duration / 60);
@@ -2786,14 +2758,15 @@ function Chat() {
                   )}
                 </div>
 
-                {/* Controls */}
+                {/* Minimalist Controls */}
                 <div className="flex justify-center items-center gap-4 sm:gap-6">
                   {(callStatus === 'ringing' || callStatus === 'calling') && (
                     <button type="button"
                       onClick={handleEndCall}
-                      className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105"
+                      className="w-14 h-14 bg-rose-600 hover:bg-rose-700 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-95 shadow-lg"
+                      title="End Call"
                     >
-                      <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                      <Phone className="w-6 h-6 text-white rotate-[135deg]" />
                     </button>
                   )}
                   {callStatus === 'connected' && (
@@ -2809,18 +2782,19 @@ function Chat() {
                             }
                           }
                         }}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105 ${isCallMuted ? 'bg-red-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-95 shadow-md ${isCallMuted ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
                         title={isCallMuted ? 'Unmute' : 'Mute'}
                       >
-                        {isCallMuted ? <MicOff className="w-6 h-6 sm:w-7 sm:h-7" /> : <Mic className="w-6 h-6 sm:w-7 sm:h-7" />}
+                        {isCallMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                       </button>
 
                       {/* End Call */}
                       <button type="button"
                         onClick={handleEndCall}
-                        className="w-16 h-16 sm:w-20 sm:h-20 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105"
+                        className="w-14 h-14 bg-rose-600 hover:bg-rose-700 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-95 shadow-lg"
+                        title="End Call"
                       >
-                        <Phone className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                        <Phone className="w-6 h-6 text-white rotate-[135deg]" />
                       </button>
 
                       {/* Speaker */}
@@ -2829,19 +2803,14 @@ function Chat() {
                           setIsSpeakerOn(!isSpeakerOn);
                           addNotification(isSpeakerOn ? 'Speaker off' : 'Speaker on', 'info');
                         }}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform hover:scale-105 ${isSpeakerOn ? 'bg-green-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-95 shadow-md ${isSpeakerOn ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}
                         title={isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
                       >
-                        {isSpeakerOn ? <Volume2 className="w-6 h-6 sm:w-7 sm:h-7" /> : <VolumeX className="w-6 h-6 sm:w-7 sm:h-7" />}
+                        {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
                       </button>
                     </>
                   )}
                 </div>
-
-                {/* Hint text */}
-                <p className="text-gray-500 text-sm mt-6">
-                  {callStatus === 'connected' ? 'Swipe up to minimize' : 'Tap red button to cancel'}
-                </p>
               </div>
             </div>
           )}
