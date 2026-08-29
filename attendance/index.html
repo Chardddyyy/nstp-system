@@ -30,10 +30,12 @@
           }
         }
         // 2. If redirected by 404.html using /?/route
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
+        if (l.search && (l.search.startsWith('/?') || l.search[1] === '/')) {
+          var searchStr = l.search.startsWith('/?') ? l.search.slice(2) : l.search.slice(1);
+          var decoded = searchStr.split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          if (!decoded.startsWith('/')) decoded = '/' + decoded;
           var basePath = l.pathname.endsWith('/') ? l.pathname.slice(0, -1) : l.pathname;
           window.history.replaceState(null, null,
               basePath + decoded + l.hash
@@ -62,7 +64,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
     <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
-    <script type="module" crossorigin src="/nstp-system/assets/index-Bnew61eq.js"></script>
+    <script type="module" crossorigin src="/nstp-system/assets/index-Ch0Plsm9.js"></script>
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-D8Co40v1.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-BTUvRs5F.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-qr-BThfL7Tz.js">
