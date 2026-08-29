@@ -534,7 +534,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 </>
               ) : (
                 <>
-                  <strong>Instructor Encoding Mode ({selectedSemester}):</strong> Encode Midterm and Final ratings for students. Changes will update the annual OSDS record.
+                  <strong>Instructor Encoding Mode ({selectedSemester}):</strong> Encode Final Ratings for students. Records will automatically update completion and graduation eligibility for Admin review.
                 </>
               )}
             </span>
@@ -687,16 +687,18 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 </div>
               )}
 
-              {/* Download OSDS-NSTP Form 2-A (.pdf) Button — Whole Academic Year */}
-              <button
-                type="button"
-                onClick={handleDownloadOSDSForm2A}
-                title="Download official OSDS-NSTP Form 2-A PDF for the entire Academic Year"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-xl shadow-xs hover:shadow-md cursor-pointer active:scale-95 border border-amber-500/60"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-950" />
-                <span>OSDS-NSTP Form 2-A (.pdf)</span>
-              </button>
+              {/* Download OSDS-NSTP Form 2-A (.pdf) Button — Admin Only */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleDownloadOSDSForm2A}
+                  title="Download official OSDS-NSTP Form 2-A PDF for the entire Academic Year"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-xl shadow-xs hover:shadow-md cursor-pointer active:scale-95 border border-amber-500/60"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-950" />
+                  <span>OSDS-NSTP Form 2-A (.pdf)</span>
+                </button>
+              )}
 
               {/* Export Standard PDF */}
               <button
@@ -885,8 +887,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                     <th className="p-2.5 sm:p-3">Student</th>
                     <th className="p-2.5 sm:p-3 hidden md:table-cell">School Section</th>
                     <th className="p-2.5 sm:p-3">NSTP Section</th>
-                    <th className="p-2.5 sm:p-3 w-28 sm:w-32 text-center">Midterm Grade</th>
-                    <th className="p-2.5 sm:p-3 w-28 sm:w-32 text-center">Final Grade</th>
+                    <th className="p-2.5 sm:p-3 w-32 sm:w-36 text-center">Final Grade</th>
                     <th className="p-2.5 sm:p-3 w-28 text-center">Remarks</th>
                     <th className="p-2.5 sm:p-3 w-16 text-center">Status</th>
                   </tr>
@@ -935,34 +936,13 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                           </span>
                         </td>
 
-                        {/* Midterm Grade Input / Badge */}
-                        <td className="p-2.5 sm:p-3 text-center">
-                          {canEditGrades ? (
-                            <select
-                              value={g.midterm_grade || ''}
-                              onChange={(e) => handleGradeChange(sid, 'midterm_grade', e.target.value)}
-                              className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer"
-                            >
-                              {GRADE_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt || '-- Select --'}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="px-2 py-1 text-xs font-black text-center text-emerald-950 bg-emerald-50/80 rounded-xl border border-emerald-200">
-                              {g.midterm_grade || '-'}
-                            </div>
-                          )}
-                        </td>
-
                         {/* Final Grade Input / Badge */}
                         <td className="p-2.5 sm:p-3 text-center">
                           {canEditGrades ? (
                             <select
                               value={g.final_grade || ''}
                               onChange={(e) => handleGradeChange(sid, 'final_grade', e.target.value)}
-                              className="w-full px-2 py-1 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer text-emerald-950"
+                              className="w-full px-2 py-1.5 text-xs font-black text-center rounded-xl border border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 outline-none bg-white cursor-pointer text-emerald-950"
                             >
                               {GRADE_OPTIONS.map((opt) => (
                                 <option key={opt} value={opt}>

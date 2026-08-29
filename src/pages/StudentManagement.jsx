@@ -13,7 +13,7 @@ import {
   CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye,
   ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer, CreditCard
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useMemo, useEffect, useRef } from 'react';
 
@@ -51,12 +51,26 @@ const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80)
 function StudentManagement() {
   const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isAdmin = user?.role === 'admin';
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterDept, setFilterDept] = useState('All');
-  const [filterCourse, setFilterCourse] = useState('All');
-  const [filterNstpSection, setFilterNstpSection] = useState('All');
+  const paramDept = searchParams.get('dept') || searchParams.get('department');
+  const paramCourse = searchParams.get('course') || searchParams.get('program');
+  const paramSection = searchParams.get('section') || searchParams.get('nstpSection');
+  const paramSearch = searchParams.get('search') || searchParams.get('q');
+
+  const [searchTerm, setSearchTerm] = useState(paramSearch || '');
+  const [filterDept, setFilterDept] = useState(paramDept || 'All');
+  const [filterCourse, setFilterCourse] = useState(paramCourse || 'All');
+  const [filterNstpSection, setFilterNstpSection] = useState(paramSection || 'All');
+
+  // Synchronize filters when URL query params change (e.g. from Dashboard View -> links)
+  useEffect(() => {
+    if (paramDept) setFilterDept(paramDept);
+    if (paramCourse) setFilterCourse(paramCourse);
+    if (paramSection) setFilterNstpSection(paramSection);
+    if (paramSearch) setSearchTerm(paramSearch);
+  }, [paramDept, paramCourse, paramSection, paramSearch]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -1026,35 +1040,40 @@ function StudentManagement() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-              {/* Form A: Modal & 1-Click Download OSDS-NSTP Form A */}
-              <button type="button"
-                onClick={() => setShowFormAModal(true)}
-                disabled={isDownloadingFormA}
-                title="Download or Preview: Official OSDS-NSTP Form A (Annual Summary of Enrollment & Graduates)"
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
-              >
-                {isDownloadingFormA ? (
-                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
-                ) : (
-                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                )}
-                <span>{isDownloadingFormA ? 'Downloading...' : 'Form A'}</span>
-              </button>
+              {/* Form A & Form B (Admin Only) */}
+              {isAdmin && (
+                <>
+                  {/* Form A: Modal & 1-Click Download OSDS-NSTP Form A */}
+                  <button type="button"
+                    onClick={() => setShowFormAModal(true)}
+                    disabled={isDownloadingFormA}
+                    title="Download or Preview: Official OSDS-NSTP Form A (Annual Summary of Enrollment & Graduates)"
+                    className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
+                  >
+                    {isDownloadingFormA ? (
+                      <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
+                    ) : (
+                      <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                    )}
+                    <span>{isDownloadingFormA ? 'Downloading...' : 'Form A'}</span>
+                  </button>
 
-              {/* Form B: Modal & Download CHED Enrollment Masterlist */}
-              <button type="button"
-                onClick={() => setShowFormBModal(true)}
-                disabled={isDownloadingFormB}
-                title="Download or Preview: Official CHED Form B (Select All or specific department: CWTS, LTS, ROTC)"
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
-              >
-                {isDownloadingFormB ? (
-                  <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
-                ) : (
-                  <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                )}
-                <span>{isDownloadingFormB ? 'Downloading...' : 'Form B'}</span>
-              </button>
+                  {/* Form B: Modal & Download CHED Enrollment Masterlist */}
+                  <button type="button"
+                    onClick={() => setShowFormBModal(true)}
+                    disabled={isDownloadingFormB}
+                    title="Download or Preview: Official CHED Form B (Select All or specific department: CWTS, LTS, ROTC)"
+                    className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
+                  >
+                    {isDownloadingFormB ? (
+                      <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
+                    ) : (
+                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
+                    )}
+                    <span>{isDownloadingFormB ? 'Downloading...' : 'Form B'}</span>
+                  </button>
+                </>
+              )}
 
               {/* Separate Student Section Button (Admin Only) */}
               {isAdmin && (

@@ -480,7 +480,18 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
           <div className="flex flex-col items-center justify-start space-y-3">
             <div className="w-full aspect-square max-w-[320px] bg-black rounded-3xl overflow-hidden relative shadow-2xl border-2 border-emerald-600 flex items-center justify-center group">
               {/* Raw Video Box from html5-qrcode */}
-              <div id="qr-reader-video-box" className="w-full h-full object-cover [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
+              <div id="qr-reader-video-box" className="w-full h-full object-cover [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_#qr-shaded-region]:!hidden [&_#qr-shaded-region_*]:!hidden"></div>
+
+              {/* Suppress html5-qrcode default white corner box overlays */}
+              <style>{`
+                #qr-reader-video-box #qr-shaded-region,
+                #qr-reader-video-box #qr-shaded-region > div {
+                  display: none !important;
+                  visibility: hidden !important;
+                  opacity: 0 !important;
+                  border: none !important;
+                }
+              `}</style>
 
               {/* Centered High-Tech Viewfinder Target Frame Overlay */}
               <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-6">

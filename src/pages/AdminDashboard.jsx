@@ -759,33 +759,33 @@ function getConsecutiveBatchDetails(currentBatchStr) {
         )}
 
         {/* Hero Header - Responsive Clean Layout */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3.5 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-2 sm:gap-4 relative z-10 w-full">
-            <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-4 relative z-10 w-full">
+            <div className="flex items-center space-x-1.5 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               
-              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight">
+                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                  <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                     {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
                   </h1>
                 </div>
-                <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
+                <p className="text-emerald-200 text-[9.5px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Administrator'}`}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
               {/* Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
                 <button type="button"
@@ -1259,10 +1259,15 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate('/students');
+                                const queryParts = [];
+                                if (item.program) queryParts.push(`course=${encodeURIComponent(item.program)}`);
+                                if (selectedComponentFilter && selectedComponentFilter !== 'ALL') {
+                                  queryParts.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
+                                }
+                                navigate(`/students${queryParts.length > 0 ? `?${queryParts.join('&')}` : ''}`);
                               }}
                               className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/70 hover:bg-emerald-200 px-2 py-0.5 rounded-md transition-colors"
-                              title="View full student list"
+                              title={`View ${item.program} students`}
                             >
                               View &rarr;
                             </button>
@@ -1960,17 +1965,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <p className="text-amber-800 font-medium">
                     Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
                   </p>
-                </div>
-
-                {/* Auto-Calculated Next Batch Highlight */}
-                <div className="bg-emerald-50 border border-emerald-200/90 rounded-xl p-3.5 text-xs flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">Incoming Batch (Auto-Calculated):</span>
-                    <p className="text-sm font-black text-emerald-950 mt-0.5">{newBatchName || `${newBatchYearInput} ${newBatchSem}`}</p>
-                  </div>
-                  <span className="px-2.5 py-1 bg-emerald-700 text-white font-black text-[10px] rounded-full uppercase tracking-wider shrink-0 shadow-xs">
-                    ⚡ Auto-Set
-                  </span>
                 </div>
                 
                 <div>

@@ -937,20 +937,21 @@ export async function downloadAttendanceMatrixPdf({
   const pageHeight = 210;
 
   const activeDays = daysArray.length > 0 ? daysArray : Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
-  const dayColWidth = 6.2; // 15 x 6.2 = 93mm
+  const dayColWidth = 6.4; // 15 x 6.4 = 96mm
 
   const cols = [
     { key: 'no', title: 'No.', w: 7, align: 'center' },
-    { key: 'studentId', title: 'Student ID', w: 18, align: 'center' },
-    { key: 'name', title: 'Student Name', w: 38, align: 'left' },
+    { key: 'studentId', title: 'Student ID', w: 20, align: 'center' },
+    { key: 'name', title: 'Student Name', w: 46, align: 'left' },
     { key: 'dept', title: 'Dept', w: 12, align: 'center' },
-    { key: 'sec', title: 'Section', w: 14, align: 'center' },
+    { key: 'sec', title: 'Section', w: 16, align: 'center' },
     ...activeDays.map((d, i) => ({ key: `day_${d}`, title: `D${i + 1}`, w: dayColWidth, align: 'center', rawDay: d })),
-    { key: 'present', title: 'Pres', w: 10, align: 'center' },
-    { key: 'absent', title: 'Abs', w: 10, align: 'center' },
-    { key: 'rate', title: 'Rate', w: 12, align: 'center' },
-    { key: 'status', title: 'Status', w: 45, align: 'left' }
+    { key: 'present', title: 'Pres', w: 12, align: 'center' },
+    { key: 'absent', title: 'Abs', w: 12, align: 'center' },
+    { key: 'status', title: 'Status', w: 60, align: 'left' }
   ];
+
+  const totalTableWidth = cols.reduce((sum, c) => sum + c.w, 0);
 
   function renderHeader() {
     if (chedLogo) {
@@ -978,7 +979,7 @@ export async function downloadAttendanceMatrixPdf({
 
     const tableTop = topMargin + 17;
     doc.setFillColor(226, 239, 218);
-    doc.rect(leftMargin, tableTop, 281, 7.5, 'FD');
+    doc.rect(leftMargin, tableTop, totalTableWidth, 7.5, 'FD');
 
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
@@ -1018,7 +1019,6 @@ export async function downloadAttendanceMatrixPdf({
       sec: st.gradeAndSection || st.section || '-',
       present: String(st.presentCount || 0),
       absent: String(st.absentCount || 0),
-      rate: `${st.rate}%`,
       status: st.isAtRisk ? 'WARNING (AT-RISK / 3+ ABSENCES)' : (st.absentCount === 0 ? 'GOOD STANDING' : `${st.absentCount} ABSENCES`)
     };
 

@@ -298,18 +298,18 @@ function InstructorDashboard() {
       {/* Main Content */}
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Hero Header - Unified CvSU Naic Aesthetics */}
-        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
-            <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
+        <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
+          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
+            <div className="flex items-center space-x-1.5 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
               </div>
 
@@ -318,11 +318,11 @@ function InstructorDashboard() {
                   <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
                   <span className="sm:hidden">{user?.department} Portal</span>
                 </h2>
-                <p className="text-emerald-200 text-[10px] xs:text-[11px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">Welcome, {user?.name || 'Instructor'} 👋</p>
+                <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">Welcome, {user?.name || 'Instructor'} 👋</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
               {/* Notification Container */}
               <div className="relative notification-container">
                 <button type="button"
@@ -779,15 +779,6 @@ function InstructorDashboard() {
                   {user?.department} Batch {archiveViewData.year} Archive Details
                 </h3>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormat(archiveViewData, null, user?.department || 'CWTS')}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title={`Download ${user?.department} CHED Form B Masterlist PDF`}
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download CHED Format (.pdf)</span>
-                  </button>
                   <button type="button" onClick={() => setShowArchiveDetails(false)} className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white">
                     <X className="w-5 h-5" />
                   </button>
