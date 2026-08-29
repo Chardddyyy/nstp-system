@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
+import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
@@ -226,75 +227,19 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
     }
   };
 
-  // Export Master Attendance Matrix to Excel (.xlsx)
-  const handleExportMasterExcel = () => {
+  // Export Master Attendance Matrix to PDF (.pdf)
+  const handleExportMasterPdf = async () => {
     if (studentMatrixList.length === 0) return;
-
-    const exportRows = [
-      ['CAVITE STATE UNIVERSITY - NAIC CAMPUS'],
-      ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-      [`OFFICIAL MASTER ATTENDANCE LEDGER (DAY 1 TO DAY 15) - ${selectedDept} DEPARTMENT`],
-      [`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`],
-      [],
-      [
-        'No.',
-        'Student ID',
-        'Full Legal Name',
-        'Department',
-        'Grade & Section',
-        ...DAYS_ARRAY,
-        'Total Present',
-        'Total Absences',
-        'Attendance Rate',
-        'Academic Status'
-      ]
-    ];
-
-    studentMatrixList.forEach((st, idx) => {
-      const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
-      const row = [
-        idx + 1,
-        st.studentId || 'N/A',
-        name,
-        st.department || selectedDept,
-        st.gradeAndSection,
-        ...DAYS_ARRAY.map(d => {
-          const s = st.dayStatuses[d];
-          if (s === 'Present') return 'PRESENT';
-          if (s === 'Late') return 'LATE';
-          if (s === 'Excused') return 'EXCUSED';
-          if (s === 'Incomplete') return 'INCOMPLETE';
-          if (s === 'Absent') return 'ABSENT';
-          return '-';
-        }),
-        st.presentCount,
-        st.absentCount,
-        `${st.rate}%`,
-        st.isAtRisk ? 'WARNING (AT-RISK / 3+ ABSENCES)' : (st.absentCount === 0 ? 'GOOD STANDING' : `${st.absentCount} ABSENCES`)
-      ];
-      exportRows.push(row);
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(exportRows);
-
-    // Apply column widths
-    ws['!cols'] = [
-      { wch: 6 },
-      { wch: 14 },
-      { wch: 28 },
-      { wch: 12 },
-      { wch: 14 },
-      ...DAYS_ARRAY.map(() => ({ wch: 8 })),
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 30 }
-    ];
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Attendance Matrix');
-    const fileName = `NSTP_Master_Attendance_Matrix_${selectedDept}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    try {
+      await downloadAttendanceMatrixPdf({
+        studentMatrixList,
+        selectedDept,
+        daysArray: DAYS_ARRAY
+      });
+    } catch (err) {
+      console.error('Failed to export master attendance PDF:', err);
+      alert('Failed to export attendance PDF. Please try again.');
+    }
   };
 
   if (!isOpen) return null;
@@ -430,16 +375,16 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             </div>
           </div>
 
-          {/* Export Master Excel */}
+          {/* Export Master PDF */}
           <button
             type="button"
-            onClick={handleExportMasterExcel}
+            onClick={handleExportMasterPdf}
             disabled={studentMatrixList.length === 0}
             className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
-            <span className="hidden xs:inline">Export Master Excel</span>
-            <span className="xs:hidden">Export Excel</span>
+            <Download className="w-3.5 h-3.5 text-emerald-200" />
+            <span className="hidden xs:inline">Export Master Ledger (.pdf)</span>
+            <span className="xs:hidden">Export (.pdf)</span>
           </button>
         </div>
 

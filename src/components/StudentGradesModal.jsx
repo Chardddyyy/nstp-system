@@ -5,7 +5,7 @@ import {
   Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
-import { downloadAnnualForm2APdf } from '../utils/chedPdfGenerator';
+import { downloadAnnualForm2APdf, downloadGradesSheetPdf } from '../utils/chedPdfGenerator';
 
 const GRADE_OPTIONS = [
   '',
@@ -326,68 +326,22 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   };
 
 
-  const handleExportExcel = () => {
-    const rows = filteredStudents.map((st, idx) => {
-      const sid = st.studentId || st.id;
-      const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
-      const g = gradesMap[sid] || {};
-
-      if (isAnnualView) {
-        return {
-          'No.': idx + 1,
-          'Student ID': st.studentId,
-          'Student Name': st.name || `${st.lastName || ''}, ${st.firstName || ''} ${st.middleName || ''}`.trim(),
-          'Department': st.department,
-          'Program': st.program || '',
-          'School Section': st.section || '',
-          'NSTP Section': st.nstp_section || '',
-          'Academic Year': selectedSchoolYear,
-          '1st Sem Grade': g1 || '',
-          '2nd Sem Grade': g2 || '',
-          'Annual Rating': finalRating !== '-' ? finalRating : '',
-          'Overall Remarks': overallRemarks
-        };
-      }
-
-      return {
-        'No.': idx + 1,
-        'Student ID': st.studentId,
-        'Student Name': st.name || `${st.lastName || ''}, ${st.firstName || ''} ${st.middleName || ''}`.trim(),
-        'Department': st.department,
-        'Program': st.program || '',
-        'School Section': st.section || '',
-        'NSTP Section': st.nstp_section || '',
-        'Semester': selectedSemester,
-        'Academic Year': selectedSchoolYear,
-        'Midterm Grade': g.midterm_grade || '',
-        'Final Grade': g.final_grade || '',
-        'Remarks': g.remarks || calculateRemarks(g.final_grade) || ''
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 6 },  // No.
-      { wch: 16 }, // Student ID
-      { wch: 28 }, // Student Name
-      { wch: 14 }, // Department
-      { wch: 14 }, // Program
-      { wch: 16 }, // School Section
-      { wch: 16 }, // NSTP Section
-      { wch: 18 }, // Semester / Academic Year
-      { wch: 16 }, // 1st Sem / Midterm Grade
-      { wch: 16 }, // 2nd Sem / Final Grade
-      { wch: 16 }, // Annual Rating
-      { wch: 20 }  // Overall Remarks
-    ];
-    worksheet['!rows'] = [{ hpt: 24 }];
-
-    const workbook = XLSX.utils.book_new();
-    const sheetLabel = isAnnualView ? 'Annual NSTP Grades' : 'Semester Grades';
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetLabel);
-    const deptStr = selectedDept !== 'All' ? selectedDept : 'All_Departments';
-    const filename = `CvSU_NSTP_Grades_${deptStr}_${selectedSemester.replace(/\s+/g, '_')}_${selectedSchoolYear}.xlsx`;
-    XLSX.writeFile(workbook, filename);
+  const handleExportGradesPdf = async () => {
+    try {
+      await downloadGradesSheetPdf({
+        students: filteredStudents,
+        selectedSchoolYear,
+        selectedSemester,
+        selectedDept,
+        gradesMap,
+        isAnnualView,
+        getAnnualStudentInfo,
+        currentUser
+      });
+    } catch (err) {
+      console.error('Failed to export grades PDF:', err);
+      alert('Failed to export grades PDF. Please try again.');
+    }
   };
 
   const handlePrint = () => {
@@ -572,7 +526,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             <span>
               {isAdmin ? (
                 <>
-                  <strong>Annual Batch Mode:</strong> Downloading <strong>OSDS-NSTP Form 2-A (.xlsx)</strong> automatically compiles the full school year including <strong>1st Sem Grade</strong>, <strong>2nd Sem Grade</strong>, and <strong>Final Rating</strong>.
+                  <strong>Annual Batch Mode:</strong> Downloading <strong>OSDS-NSTP Form 2-A (.pdf)</strong> automatically compiles the full school year including <strong>1st Sem Grade</strong>, <strong>2nd Sem Grade</strong>, and <strong>Final Rating</strong>.
                 </>
               ) : isAnnualView ? (
                 <>
@@ -744,14 +698,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 <span>OSDS-NSTP Form 2-A (.pdf)</span>
               </button>
 
-              {/* Export Standard Excel */}
+              {/* Export Standard PDF */}
               <button
                 type="button"
-                onClick={handleExportExcel}
+                onClick={handleExportGradesPdf}
                 className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-50 border border-emerald-300 rounded-xl shadow-xs cursor-pointer active:scale-95"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden xs:inline">{isAnnualView ? 'Annual Excel' : 'Semester Excel'}</span>
+                <Download className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="hidden xs:inline">{isAnnualView ? 'Annual Grades (.pdf)' : 'Semester Grades (.pdf)'}</span>
               </button>
 
               {/* Print Grade Sheet */}

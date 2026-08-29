@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 import { X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, FileSpreadsheet, Download, Calendar } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
+import { downloadDailyAttendancePdf } from '../utils/chedPdfGenerator';
 
 // Web Audio API Beep Generator (100% self-contained sound effect)
 function playScanBeep(success = true) {
@@ -325,8 +326,8 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
     }
   };
 
-  // 1-Click Excel Attendance Export (Consolidated 1 row per student)
-  const handleExportToExcel = () => {
+  // 1-Click PDF Attendance Export (Consolidated 1 row per student)
+  const handleExportToPdf = async () => {
     if (sessionLogs.length === 0) {
       alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
       return;
@@ -339,13 +340,13 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       if (!studentMap[sid]) {
         studentMap[sid] = {
           student_id: sid,
-          student_name: (log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`).trim().toUpperCase(),
+          name: (log.student_name || log.student?.name || `${log.student?.lastName || ''}, ${log.student?.firstName || ''}`).trim().toUpperCase(),
           department: log.department || log.student?.department || 'CWTS',
           section: log.section || log.student?.section || 'N/A',
           day: log.day || selectedDay,
           timeIn: 'N/A',
           timeOut: 'N/A',
-          date: log.date || new Date().toLocaleDateString()
+          status: 'PRESENT'
         };
       }
       if (log.scan_type === 'TIME_IN') {
@@ -355,54 +356,17 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       }
     });
 
-    const rows = [
-      ['CAVITE STATE UNIVERSITY - NAIC CAMPUS'],
-      ['NATIONAL SERVICE TRAINING PROGRAM (NSTP)'],
-      [`OFFICIAL ATTENDANCE LOG - ${selectedDay.toUpperCase()} (${activityName || 'General Session'})`],
-      [`Date: ${new Date().toLocaleDateString()} | Generated at: ${new Date().toLocaleTimeString()}`],
-      [], // blank line
-      ['No.', 'Student Number', 'Full Legal Name', 'Department', 'Section', 'Day (Day 1 - 15)', 'Status', 'Time In', 'Time Out', 'Date']
-    ];
-
     const uniqueStudents = Object.values(studentMap);
-    uniqueStudents.forEach((st, idx) => {
-      const isPresent = st.timeIn !== 'N/A' && st.timeOut !== 'N/A';
-      const status = isPresent ? 'PRESENT' : st.timeIn !== 'N/A' ? 'TIMED IN' : 'TIMED OUT';
-      rows.push([
-        idx + 1,
-        st.student_id,
-        st.student_name,
-        st.department,
-        st.section,
-        st.day,
-        status,
-        st.timeIn,
-        st.timeOut,
-        st.date
-      ]);
-    });
-
-    const worksheet = XLSX.utils.aoa_to_sheet(rows);
-
-    // Set column widths for clean readability
-    worksheet['!cols'] = [
-      { wch: 6 },  // No.
-      { wch: 18 }, // Student Number
-      { wch: 34 }, // Name
-      { wch: 14 }, // Department
-      { wch: 10 }, // Section
-      { wch: 16 }, // Day
-      { wch: 14 }, // Status
-      { wch: 14 }, // Time In
-      { wch: 14 }, // Time Out
-      { wch: 16 }  // Date
-    ];
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, selectedDay);
-
-    const fileName = `NSTP_Attendance_${selectedDay.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    try {
+      await downloadDailyAttendancePdf({
+        records: uniqueStudents,
+        selectedDay,
+        selectedDept: currentUser?.department || 'ALL'
+      });
+    } catch (err) {
+      console.error('Failed to export daily attendance PDF:', err);
+      alert('Failed to export attendance PDF. Please try again.');
+    }
   };
 
   if (!isOpen) return null;
@@ -419,7 +383,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black leading-tight">Live QR Attendance Scanner</h3>
-              <p className="text-xs text-emerald-200 font-medium">Automatic check-in and 1-click Excel recording (Day 1 - Day 15)</p>
+              <p className="text-xs text-emerald-200 font-medium">Automatic check-in and 1-click attendance recording (Day 1 - Day 15)</p>
             </div>
           </div>
 
@@ -661,16 +625,16 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
                 </button>
 
                 <div className="flex items-center gap-2">
-                  {/* Optional Excel Export Button */}
+                  {/* Export Attendance PDF Button */}
                   <button
                     type="button"
-                    onClick={handleExportToExcel}
+                    onClick={handleExportToPdf}
                     disabled={sessionLogs.length === 0}
                     className="px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-2xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                    title="Export as Excel File"
+                    title="Export as PDF File"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Export Excel</span>
+                    <span>Export Attendance (.pdf)</span>
                   </button>
 
                   {/* Primary Save Record Button */}
