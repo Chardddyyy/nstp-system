@@ -853,38 +853,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
             )}
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            {/* Export Grades Sheet: PDF & Excel */}
-            <div className="flex items-center gap-1 bg-emerald-50 p-0.5 rounded-xl border border-emerald-300">
-              <button
-                type="button"
-                onClick={handleExportGradesPdf}
-                title="Export Grades Sheet as PDF"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-100 rounded-lg shadow-2xs cursor-pointer active:scale-95"
-              >
-                <Download className="w-3 h-3 text-emerald-700" />
-                <span>PDF (.pdf)</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleExportGradesExcel}
-                title="Export Grades Sheet as Excel (.xlsx)"
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-100 rounded-lg shadow-2xs cursor-pointer active:scale-95"
-              >
-                <FileSpreadsheet className="w-3 h-3 text-emerald-700" />
-                <span>Excel (.xlsx)</span>
-              </button>
-            </div>
-
-            {/* Print */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-blue-900 bg-white hover:bg-blue-50 border border-blue-300 rounded-xl shadow-xs cursor-pointer active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5 text-blue-700" />
-              <span className="hidden xs:inline">Print</span>
-            </button>
-
             <button
               type="button"
               onClick={onClose}
