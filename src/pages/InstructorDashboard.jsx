@@ -586,16 +586,6 @@ function InstructorDashboard() {
                         <p className="text-[10px] text-gray-500 font-medium truncate">{student.studentId} • {student.program || 'NSTP'}</p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        student.status === 'Active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 
-                        student.status === 'Completed' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 
-                        'bg-gray-100 text-gray-700 border border-gray-200'
-                      }`}>
-                        {student.status || 'Active'}
-                      </span>
-                      <p className="text-[10px] text-gray-500 font-bold mt-0.5">{student.hours || 0} hrs</p>
-                    </div>
                   </div>
                 ))
               )}
