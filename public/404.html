@@ -8,10 +8,13 @@
       // https://github.com/rafgraph/spa-github-pages
       var l = window.location;
       var pathSegmentsToKeep = l.pathname.toLowerCase().startsWith('/nstp-system') ? 1 : 0;
+      var pathParts = l.pathname.split('/').filter(Boolean);
+      var baseSegment = pathSegmentsToKeep > 0 ? '/' + pathParts.slice(0, pathSegmentsToKeep).join('/') : '';
+      var routePath = pathParts.slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~');
       l.replace(
         l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        baseSegment + '/?/' +
+        routePath +
         (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash
       );

@@ -30,10 +30,12 @@
           }
         }
         // 2. If redirected by 404.html using /?/route
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
+        if (l.search && (l.search.startsWith('/?') || l.search[1] === '/')) {
+          var searchStr = l.search.startsWith('/?') ? l.search.slice(2) : l.search.slice(1);
+          var decoded = searchStr.split('&').map(function(s) { 
             return s.replace(/~and~/g, '&')
           }).join('?');
+          if (!decoded.startsWith('/')) decoded = '/' + decoded;
           var basePath = l.pathname.endsWith('/') ? l.pathname.slice(0, -1) : l.pathname;
           window.history.replaceState(null, null,
               basePath + decoded + l.hash

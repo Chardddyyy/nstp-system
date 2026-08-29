@@ -19,9 +19,10 @@ import LetterFormats from './pages/LetterFormats';
 import DigitalIdViewer from './pages/DigitalIdViewer';
 
 const BASE_PATH = (() => {
-  const pathname = window.location.pathname;
-  if (pathname.startsWith('/nstp-system/')) return '/nstp-system/';
-  return import.meta.env.BASE_URL || '/';
+  const pathname = window.location.pathname.toLowerCase();
+  if (pathname.startsWith('/nstp-system')) return '/nstp-system';
+  const envBase = import.meta.env.BASE_URL || '/';
+  return envBase === '/' ? '' : envBase.replace(/\/$/, '');
 })();
 
 // Auto-normalize GitHub Pages hash routes or direct ID query links before router starts
@@ -29,15 +30,16 @@ const BASE_PATH = (() => {
   try {
     const l = window.location;
     const hash = l.hash || '';
+    const basePathWithSlash = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : BASE_PATH + '/') : '/';
     if (hash.startsWith('#/digital-id') || hash.startsWith('#/id-card') || hash.startsWith('#/enrollment') || hash.startsWith('#/login')) {
       const hashContent = hash.slice(2);
       const [routePart, queryPart] = hashContent.split('?');
-      const target = `${BASE_PATH}${routePart}${queryPart ? '?' + queryPart : ''}`;
+      const target = `${basePathWithSlash}${routePart}${queryPart ? '?' + queryPart : ''}`;
       window.history.replaceState(null, null, target);
     } else if (l.search && (l.search.includes('view=digital-id') || l.search.includes('page=digital-id') || (l.search.includes('id=') && (l.search.includes('dept=') || l.search.includes('download='))))) {
       if (!l.pathname.includes('/digital-id')) {
         const cleanSearch = l.search.replace('view=digital-id&', '').replace('page=digital-id&', '');
-        window.history.replaceState(null, null, `${BASE_PATH}digital-id${cleanSearch}`);
+        window.history.replaceState(null, null, `${basePathWithSlash}digital-id${cleanSearch}`);
       }
     }
   } catch (_) {}
