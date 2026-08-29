@@ -20,7 +20,11 @@ export function initSocket() {
   }
 
   if (socket) {
-    socket.disconnect();
+    try {
+      socket.removeAllListeners();
+      socket.disconnect();
+    } catch (_) {}
+    socket = null;
   }
 
   socket = io(serverUrl, {
@@ -29,23 +33,33 @@ export function initSocket() {
     autoConnect: true,
     auth: { token: token ? `Bearer ${token}` : null },
     reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 3000,
-    timeout: 25000,
+    reconnectionAttempts: 15,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    randomizationFactor: 0.5,
+    timeout: 20000,
   });
 
   socket.on('connect', () => {
-    // Connected
+    // Successfully connected
   });
 
   socket.on('disconnect', (reason) => {
-    if (reason === 'io server disconnect') {
-      socket.connect();
+    if (reason === 'io server disconnect' && socket) {
+      setTimeout(() => {
+        if (socket && !socket.connected) {
+          socket.connect();
+        }
+      }, 2000);
     }
   });
 
   socket.on('connect_error', () => {
-    // Handled gracefully without noisy console errors
+    // Handled gracefully during server restarts or cold starts
+  });
+
+  socket.on('error', () => {
+    // Handled gracefully
   });
 
   return socket;
@@ -60,7 +74,11 @@ export function getSocket() {
 
 export function disconnectSocket() {
   if (socket) {
-    socket.disconnect();
+    try {
+      socket.removeAllListeners();
+      socket.disconnect();
+    } catch (_) {}
     socket = null;
   }
 }
+

@@ -122,7 +122,12 @@ function App() {
     const getVUrl = () => `${BASE_URL_WITH_SLASH}version.json?t=${Date.now()}`;
 
     const checkVersion = () => {
-      fetch(getVUrl(), { cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } })
+      if (typeof document !== 'undefined' && document.hidden) return;
+
+      fetch(getVUrl(), { 
+        cache: 'no-store', 
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' } 
+      })
         .then(res => {
           if (!res.ok) return null;
           return res.json();
@@ -157,7 +162,7 @@ function App() {
     };
 
     checkVersion();
-    const checkInterval = setInterval(checkVersion, 12000);
+    const checkInterval = setInterval(checkVersion, 30000);
     return () => clearInterval(checkInterval);
   }, []);
   const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
