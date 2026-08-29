@@ -22,7 +22,7 @@ const NSTP_SECTIONS = [
   'ROTC 1', 'ROTC 2', 'ROTC 3'
 ];
 
-export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser }) {
+export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser, onSaved }) {
   const isAdmin = currentUser?.role === 'admin';
   const canEditGrades = !isAdmin; // Only instructors encode grades
   const defaultDept = isAdmin ? 'All' : (currentUser?.department || 'CWTS');
@@ -272,6 +272,9 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
       setSaveSuccessMsg(`Grades successfully saved for ${gradesToSave.length} students!`);
       setTimeout(() => setSaveSuccessMsg(''), 4000);
+      try {
+        onSaved?.(gradesToSave);
+      } catch (_) {}
       loadGrades();
     } catch (err) {
       console.error('Failed to save grades:', err);

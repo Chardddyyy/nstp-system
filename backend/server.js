@@ -3406,18 +3406,22 @@ const handleGetGrades = async (req, res) => {
     const sec = nstpSection || nstp_section;
 
     let query = `
-      SELECT g.*, s.name AS student_name, s.firstName, s.lastName, s.middleName, s.program, s.year, s.section AS school_section, s.department AS student_dept
+      SELECT g.*, 
+             COALESCE(g.student_name, s.name) AS student_name, 
+             s.firstName, s.lastName, s.middleName, s.program, s.year, 
+             s.section AS school_section, 
+             COALESCE(s.department, g.department) AS student_dept
       FROM student_grades g
-      JOIN students s ON (g.studentId = s.studentId OR g.student_id = s.id)
+      LEFT JOIN students s ON (g.studentId = s.studentId OR (g.student_id > 0 AND g.student_id = s.id))
       WHERE 1=1
     `;
     const params = [];
 
     if (req.user.role !== 'admin') {
-      query += ' AND (g.department = ? OR s.department = ?)';
+      query += ' AND (UPPER(g.department) = UPPER(?) OR UPPER(COALESCE(s.department, g.department)) = UPPER(?))';
       params.push(req.user.department, req.user.department);
     } else if (department && department !== 'All') {
-      query += ' AND (g.department = ? OR s.department = ?)';
+      query += ' AND (UPPER(g.department) = UPPER(?) OR UPPER(COALESCE(s.department, g.department)) = UPPER(?))';
       params.push(department, department);
     }
 
@@ -3436,7 +3440,7 @@ const handleGetGrades = async (req, res) => {
       params.push(sec, sec);
     }
 
-    query += ' ORDER BY s.lastName ASC, s.firstName ASC';
+    query += ' ORDER BY g.school_year DESC, g.updated_at DESC, s.lastName ASC, s.firstName ASC';
 
     const [rows] = await pool.execute(query, params);
     res.json(rows);
@@ -3461,7 +3465,7 @@ const handleBatchSaveGrades = async (req, res) => {
 
     let savedCount = 0;
     for (const g of grades) {
-      const studentId = g.studentId || g.student_id_val;
+      const studentId = g.studentId || g.student_id_val || (g.student_id ? String(g.student_id) : '');
       const dbStudentId = g.student_id || g.id || 0;
       const dept = g.department || (req.user.role !== 'admin' ? req.user.department : 'CWTS');
       const semester = g.semester || '1st Semester';
@@ -3474,7 +3478,7 @@ const handleBatchSaveGrades = async (req, res) => {
 
       if (!studentId) continue;
 
-      if (req.user.role !== 'admin' && dept !== req.user.department) {
+      if (req.user.role !== 'admin' && String(dept).toUpperCase() !== String(req.user.department).toUpperCase()) {
         continue;
       }
 
@@ -3508,6 +3512,21 @@ const handleBatchSaveGrades = async (req, res) => {
           instructorName
         ]
       );
+
+      // Also mirror final grade to students table for instant cross-module visibility
+      try {
+        if (finalGrade) {
+          await pool.execute(
+            `UPDATE students 
+             SET final_grade = ?, remarks = ?, midterm_grade = COALESCE(?, midterm_grade) 
+             WHERE studentId = ? OR id = ?`,
+            [finalGrade, remarks, midtermGrade, String(studentId), dbStudentId]
+          );
+        }
+      } catch (stErr) {
+        console.warn('Sync grade to students table note:', stErr.message);
+      }
+
       savedCount++;
     }
 

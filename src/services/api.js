@@ -393,6 +393,32 @@ export async function saveBatchGrades(grades) {
       updatedMap.set(key, { ...g, updated_at: new Date().toISOString() });
     });
     localStorage.setItem('nstp_cached_grades', JSON.stringify(Array.from(updatedMap.values())));
+
+    // Also update cached students list so student.final_grade is immediately reflected
+    const cachedStudents = JSON.parse(localStorage.getItem('nstp_students') || '[]');
+    if (Array.isArray(cachedStudents) && cachedStudents.length > 0) {
+      const gradesByStudent = new Map();
+      grades.forEach(g => {
+        if (g.final_grade) {
+          gradesByStudent.set(String(g.studentId || g.student_id), g);
+        }
+      });
+      const updatedStudents = cachedStudents.map(st => {
+        const match = gradesByStudent.get(String(st.studentId)) || gradesByStudent.get(String(st.id));
+        if (match) {
+          return { ...st, final_grade: match.final_grade, remarks: match.remarks || st.remarks, midterm_grade: match.midterm_grade || st.midterm_grade };
+        }
+        return st;
+      });
+      localStorage.setItem('nstp_students', JSON.stringify(updatedStudents));
+    }
+  } catch (_) {}
+
+  // Dispatch custom browser event for instant UI reactive sync
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nstp:grades-updated', { detail: { grades } }));
+    }
   } catch (_) {}
 
   // Then attempt backend persistence

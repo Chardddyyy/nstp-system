@@ -100,36 +100,52 @@ function StudentManagement() {
   // Grades cache & mapping
   const [gradesMap, setGradesMap] = useState({});
 
+  const loadGradesData = useCallback(async () => {
+    try {
+      const records = await gradesAPI.getAll();
+      const map = {};
+      (records || []).forEach((r) => {
+        const sid = String(r.studentId || r.student_id || '').trim();
+        const sidVal = String(r.student_id_val || '').trim();
+        const dbId = r.id ? String(r.id) : '';
+        const entry = {
+          final_grade: r.final_grade,
+          midterm_grade: r.midterm_grade,
+          remarks: r.remarks,
+          semester: r.semester,
+          school_year: r.school_year
+        };
+        if (sid) {
+          if (!map[sid] || r.final_grade) map[sid] = entry;
+        }
+        if (sidVal) {
+          if (!map[sidVal] || r.final_grade) map[sidVal] = entry;
+        }
+        if (dbId) {
+          if (!map[dbId] || r.final_grade) map[dbId] = entry;
+        }
+      });
+      setGradesMap(map);
+    } catch (e) {
+      console.warn('Could not load grades in StudentManagement:', e);
+    }
+  }, []);
+
   useEffect(() => {
-    let isMounted = true;
-    const loadGrades = async () => {
-      try {
-        const records = await gradesAPI.getAll();
-        if (!isMounted) return;
-        const map = {};
-        (records || []).forEach((r) => {
-          const sid = String(r.student_id || r.studentId || '').trim();
-          if (sid) {
-            if (!map[sid]) {
-              map[sid] = r;
-            } else if (r.semester === '2nd Semester' || r.semester === 'Whole Academic Year' || r.final_grade) {
-              map[sid] = { ...map[sid], ...r };
-            }
-          }
-        });
-        setGradesMap(map);
-      } catch (e) {
-        console.warn('Could not load grades in StudentManagement:', e);
-      }
+    loadGradesData();
+    const handleGradesUpdated = () => {
+      loadGradesData();
+      try { refreshData?.(); } catch (_) {}
     };
-    loadGrades();
-    return () => { isMounted = false; };
-  }, [students, viewingArchive]);
+    window.addEventListener('nstp:grades-updated', handleGradesUpdated);
+    return () => window.removeEventListener('nstp:grades-updated', handleGradesUpdated);
+  }, [students, viewingArchive, loadGradesData, refreshData]);
 
   const getStudentGradeInfo = useCallback((student) => {
     if (!student) return { finalGrade: '', remarks: '', midtermGrade: '', nstp1Grade: '', nstp2Grade: '' };
-    const sid = String(student.studentId || student.id || '').trim();
-    const g = gradesMap[sid] || {};
+    const sid = String(student.studentId || '').trim();
+    const dbId = String(student.id || '').trim();
+    const g = (sid && gradesMap[sid]) || (dbId && gradesMap[dbId]) || {};
     const finalGrade = student.final_grade || g.final_grade || g.grade || student.grade || '';
     const midtermGrade = student.midterm_grade || g.midterm_grade || '';
     const nstp1Grade = student.nstp1_grade || g.nstp1_grade || '';
@@ -4022,7 +4038,15 @@ function StudentManagement() {
         {/* Student Semester Grades Encoding & Grading Sheet Modal */}
         <StudentGradesModal
           isOpen={showGradesModal}
-          onClose={() => setShowGradesModal(false)}
+          onClose={() => {
+            setShowGradesModal(false);
+            loadGradesData();
+            try { refreshData?.(); } catch (_) {}
+          }}
+          onSaved={() => {
+            loadGradesData();
+            try { refreshData?.(); } catch (_) {}
+          }}
           students={students}
           currentUser={user}
         />
