@@ -1,22 +1,89 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
-    <meta charset="utf-8">
-    <title>NSTP System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#166534" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NSTP System" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="icon" type="image/png" href="/nstp-system/cvsu.png" />
+    <link rel="apple-touch-icon" href="/nstp-system/icons/icon-192x192.png" />
+    <link rel="manifest" href="/nstp-system/manifest.json" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>NSTP Record & Report Management System - CvSU Naic</title>
     <script type="text/javascript">
-      // Single Page Apps for GitHub Pages
-      // https://github.com/rafgraph/spa-github-pages
-      var l = window.location;
-      var pathSegmentsToKeep = l.pathname.toLowerCase().startsWith('/nstp-system') ? 1 : 0;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // Ensure current window/tab can be reused by email OTP links without opening new tabs
+      window.name = "nstp_system_tab";
+      // Single Page Apps for GitHub Pages with Hash and Path Support
+      (function(l) {
+        // 1. If URL has hash route like /#/digital-id?id=... convert to path /digital-id?id=...
+        if (l.hash && l.hash.startsWith('#/')) {
+          var hashParts = l.hash.slice(2).split('?');
+          var route = hashParts[0];
+          var query = hashParts[1] || '';
+          var basePath = l.pathname.endsWith('/') ? l.pathname : l.pathname + '/';
+          if (route) {
+            window.history.replaceState(null, null, basePath + route + (query ? '?' + query : ''));
+          }
+        }
+        // 2. If redirected by 404.html using /?/route
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          var basePath = l.pathname.endsWith('/') ? l.pathname.slice(0, -1) : l.pathname;
+          window.history.replaceState(null, null,
+              basePath + decoded + l.hash
+          );
+        }
+      }(window.location));
+
+      // Automatically recover when a new deploy invalidates old cached chunk filenames
+      window.addEventListener('vite:preloadError', function(event) {
+        console.warn('Vite preload error (new deployment detected), refreshing...');
+        window.location.reload();
+      });
+
+      window.addEventListener('error', function(e) {
+        if (e && e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          var src = e.target.src || e.target.href || '';
+          if (src.includes('/assets/') && !sessionStorage.getItem('asset_retry_' + src)) {
+            sessionStorage.setItem('asset_retry_' + src, '1');
+            console.warn('Asset chunk 404 detected, auto-refreshing page...');
+            window.location.reload();
+          }
+        }
+      }, true);
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
+    <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
+    <script type="module" crossorigin src="/nstp-system/assets/index-CzG5UNSD.js"></script>
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-D8Co40v1.js">
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-BTUvRs5F.js">
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-qr-BThfL7Tz.js">
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-media-CzAtys5V.js">
+    <link rel="stylesheet" crossorigin href="/nstp-system/assets/index-XMeR8vOC.css">
   </head>
   <body>
+    <div id="root"></div> 
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        }).catch(function() {});
+        if (window.caches) {
+          caches.keys().then(function(names) {
+            for (let name of names) caches.delete(name);
+          }).catch(function() {});
+        }
+      }
+    </script>
   </body>
 </html>
