@@ -2,25 +2,70 @@ import jsPDF from 'jspdf';
 
 /**
  * Fetch and convert image into Base64 Data URL for jsPDF embedding
+ * Supports multiple candidate paths and fallbacks (canvas rendering + fetch blob)
  */
-async function getLogoDataUrl(filename) {
-  try {
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-    const fullPath = `${cleanBase}${filename.replace(/^\//, '')}`;
-    const response = await fetch(fullPath);
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch (err) {
-    console.warn(`Could not load logo (${filename}):`, err);
-    return null;
+async function getLogoDataUrl(filenames) {
+  const names = Array.isArray(filenames) ? filenames : [filenames];
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+
+  for (const name of names) {
+    const cleanName = String(name).replace(/^\//, '');
+    const candidateUrls = [
+      `${cleanBase}${cleanName}`,
+      `/${cleanName}`,
+      `./${cleanName}`,
+      `https://chardddyyy.github.io/nstp-system/${cleanName}`
+    ];
+
+    for (const url of candidateUrls) {
+      // 1. Try Image -> Canvas PNG encoder (most reliable across browsers & handles formatting)
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const img = new window.Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.naturalWidth || img.width || 120;
+              canvas.height = img.naturalHeight || img.height || 120;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              const res = canvas.toDataURL('image/png');
+              resolve(res);
+            } catch (canvasErr) {
+              reject(canvasErr);
+            }
+          };
+          img.onerror = () => reject(new Error(`Failed loading img: ${url}`));
+          img.src = url;
+        });
+
+        if (dataUrl && dataUrl.startsWith('data:image/png')) {
+          return dataUrl;
+        }
+      } catch (_) {}
+
+      // 2. Fallback: Fetch blob -> FileReader
+      try {
+        const response = await fetch(url);
+        if (response.ok) {
+          const blob = await response.blob();
+          const readerResult = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+          if (readerResult && typeof readerResult === 'string' && readerResult.startsWith('data:image/')) {
+            return readerResult;
+          }
+        }
+      } catch (_) {}
+    }
   }
+
+  return null;
 }
 
 /**
@@ -64,8 +109,8 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
     format: 'a4'
   });
 
-  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
-  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+  const chedLogo = await getLogoDataUrl(['ched-logo.png', 'ched_logo.png', 'ched.png']);
+  const cvsuLogo = await getLogoDataUrl(['cvsu.png', 'cvsu-logo.png', 'cvsunaiccampus.png']);
 
   const isSecondSem = String(yearStr).toLowerCase().includes('2nd');
   const formTitle = isSecondSem ? 'NSTP 2 ENROLLMENT LIST' : 'NSTP 1 ENROLLMENT LIST';
@@ -308,8 +353,8 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     format: 'a4'
   });
 
-  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
-  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+  const chedLogo = await getLogoDataUrl(['ched-logo.png', 'ched_logo.png', 'ched.png']);
+  const cvsuLogo = await getLogoDataUrl(['cvsu.png', 'cvsu-logo.png', 'cvsunaiccampus.png']);
 
   const leftMargin = 10;
   const topMargin = 10;
@@ -492,8 +537,8 @@ export async function downloadAnnualForm2APdf({
     format: 'a4'
   });
 
-  const chedLogo = await getLogoDataUrl('ched-logo.png') || await getLogoDataUrl('ched_logo.png');
-  const cvsuLogo = await getLogoDataUrl('cvsu.png') || await getLogoDataUrl('cvsu-logo.png');
+  const chedLogo = await getLogoDataUrl(['ched-logo.png', 'ched_logo.png', 'ched.png']);
+  const cvsuLogo = await getLogoDataUrl(['cvsu.png', 'cvsu-logo.png', 'cvsunaiccampus.png']);
 
   const deptLabel = selectedDept !== 'All' ? selectedDept : 'CWTS / LTS / ROTC';
   const leftMargin = 10;
