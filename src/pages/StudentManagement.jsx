@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
 // Client-side photo compression utility to prevent payload overflow & ensure instant loading on slow mobile connections
 const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80) => {
@@ -96,6 +96,57 @@ function StudentManagement() {
   const [batchNstpSection, setBatchNstpSection] = useState('CWTS 1');
   const [isBatchAssigning, setIsBatchAssigning] = useState(false);
   const [batchAssignFeedback, setBatchAssignFeedback] = useState('');
+
+  // Grades cache & mapping
+  const [gradesMap, setGradesMap] = useState({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadGrades = async () => {
+      try {
+        const records = await gradesAPI.getAll();
+        if (!isMounted) return;
+        const map = {};
+        (records || []).forEach((r) => {
+          const sid = String(r.student_id || r.studentId || '').trim();
+          if (sid) {
+            if (!map[sid]) {
+              map[sid] = r;
+            } else if (r.semester === '2nd Semester' || r.semester === 'Whole Academic Year' || r.final_grade) {
+              map[sid] = { ...map[sid], ...r };
+            }
+          }
+        });
+        setGradesMap(map);
+      } catch (e) {
+        console.warn('Could not load grades in StudentManagement:', e);
+      }
+    };
+    loadGrades();
+    return () => { isMounted = false; };
+  }, [students, viewingArchive]);
+
+  const getStudentGradeInfo = useCallback((student) => {
+    if (!student) return { finalGrade: '', remarks: '', midtermGrade: '', nstp1Grade: '', nstp2Grade: '' };
+    const sid = String(student.studentId || student.id || '').trim();
+    const g = gradesMap[sid] || {};
+    const finalGrade = student.final_grade || g.final_grade || g.grade || student.grade || '';
+    const midtermGrade = student.midterm_grade || g.midterm_grade || '';
+    const nstp1Grade = student.nstp1_grade || g.nstp1_grade || '';
+    const nstp2Grade = student.nstp2_grade || g.nstp2_grade || '';
+    let remarks = student.remarks || g.remarks || '';
+    if (!remarks && finalGrade) {
+      if (['INC', 'DRP', 'Conditional', 'Failed', 'Passed'].includes(finalGrade)) {
+        remarks = finalGrade === 'INC' ? 'Incomplete' : finalGrade === 'DRP' ? 'Dropped' : finalGrade;
+      } else {
+        const num = parseFloat(finalGrade);
+        if (!isNaN(num)) {
+          remarks = num <= 3.0 ? 'Passed' : num === 4.0 ? 'Conditional' : 'Failed';
+        }
+      }
+    }
+    return { finalGrade, remarks: remarks || (finalGrade ? 'Graded' : 'No Grade'), midtermGrade, nstp1Grade, nstp2Grade };
+  }, [gradesMap]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -703,11 +754,14 @@ function StudentManagement() {
       } else if (studentSortCol === 'program') {
         valA = a.program || a.course || '';
         valB = b.program || b.course || '';
+      } else if (studentSortCol === 'grade') {
+        valA = getStudentGradeInfo(a).finalGrade || '9.99';
+        valB = getStudentGradeInfo(b).finalGrade || '9.99';
       }
       const cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true });
       return studentSortDir === 'asc' ? cmp : -cmp;
     });
-  }, [filteredStudents, studentSortCol, studentSortDir]);
+  }, [filteredStudents, studentSortCol, studentSortDir, getStudentGradeInfo]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
@@ -1371,8 +1425,31 @@ function StudentManagement() {
                       {student.department}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pt-1 border-t border-gray-50 text-[11px] text-gray-500">
-                    <span>{student.program || 'No Program'} · {student.year || '1st Year'}</span>
+                  <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-gray-100 text-[11px] text-gray-500 flex-wrap gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{student.program || 'No Program'} · {student.year || '1st Year'}</span>
+                      {(() => {
+                        const { finalGrade, remarks } = getStudentGradeInfo(student);
+                        if (!finalGrade || finalGrade === '-') {
+                          return (
+                            <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold text-gray-400 bg-gray-100 border border-gray-200">
+                              No Grade
+                            </span>
+                          );
+                        }
+                        const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
+                        const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                        return (
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                            isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
+                            isFailed ? 'bg-rose-100 text-rose-950 border-rose-300' :
+                            'bg-amber-100 text-amber-950 border-amber-300'
+                          }`}>
+                            Grade: {finalGrade} ({remarks})
+                          </span>
+                        );
+                      })()}
+                    </div>
                     {isAdmin && (
                       <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -1534,6 +1611,24 @@ function StudentManagement() {
                       )}
                     </div>
                   </th>
+                  <th 
+                    onClick={() => !isSectioningMode && handleSortStudent('grade')}
+                    className={`px-4 py-3 text-center text-xs uppercase tracking-wider select-none transition-colors ${
+                      isSectioningMode
+                        ? 'cursor-default text-gray-500 font-semibold'
+                        : studentSortCol === 'grade'
+                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
+                        : 'font-semibold text-emerald-900 bg-emerald-50/70 hover:text-gray-900 hover:bg-emerald-100/60 cursor-pointer'
+                    }`}
+                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by NSTP Final Grade'}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>NSTP Grade</span>
+                      {!isSectioningMode && studentSortCol === 'grade' && (
+                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
+                      )}
+                    </div>
+                  </th>
                   {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
@@ -1592,6 +1687,42 @@ function StudentManagement() {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getDepartmentColor(student.department)}`}>
                           {student.department}
                         </span>
+                      </td>
+                      {/* NSTP Final Grade Column */}
+                      <td className="px-4 py-4 whitespace-nowrap text-center">
+                        {(() => {
+                          const { finalGrade, remarks } = getStudentGradeInfo(student);
+                          if (!finalGrade || finalGrade === '-') {
+                            return (
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 bg-gray-100 border border-gray-200">
+                                Pending
+                              </span>
+                            );
+                          }
+                          const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
+                          const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                          const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
+                          const isDrp = finalGrade === 'DRP' || remarks === 'Dropped';
+
+                          return (
+                            <div className="inline-flex flex-col items-center">
+                              <span className={`px-2.5 py-0.5 rounded-md font-black text-xs border shadow-2xs ${
+                                isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
+                                isFailed ? 'bg-rose-100 text-rose-950 border-rose-300' :
+                                isInc ? 'bg-amber-100 text-amber-950 border-amber-300' :
+                                isDrp ? 'bg-purple-100 text-purple-950 border-purple-300' :
+                                'bg-gray-100 text-gray-800 border-gray-200'
+                              }`}>
+                                {finalGrade}
+                              </span>
+                              <span className={`text-[9.5px] font-extrabold mt-0.5 ${
+                                isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600' : 'text-gray-500'
+                              }`}>
+                                {remarks}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       {isAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -2655,13 +2786,27 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Academic Information Section */}
+                {/* Academic Information Section & NSTP Grade Breakdown */}
                 <div className="bg-emerald-50/50 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/60 shadow-2xs">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                    <GraduationCap className="w-4 h-4 text-emerald-600" />
-                    Academic Information &amp; NSTP Track
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 flex items-center gap-2 uppercase tracking-wider">
+                      <GraduationCap className="w-4 h-4 text-emerald-600" />
+                      Academic Information &amp; NSTP Track
+                    </h4>
+                    {(() => {
+                      const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
+                      if (!finalGrade) return null;
+                      const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
+                      return (
+                        <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                          isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' : 'bg-rose-100 text-rose-950 border-rose-300'
+                        }`}>
+                          Rating: {finalGrade} ({remarks})
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.program || '-'}</span>
@@ -2681,6 +2826,20 @@ function StudentManagement() {
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Component</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{currentViewStudent.department || '-'}</span>
+                    </div>
+                    {/* Final Grade Card */}
+                    <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/40">
+                      <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">Final Grade</span>
+                      {(() => {
+                        const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
+                        if (!finalGrade) return <span className="text-xs text-gray-400 font-bold mt-0.5 block">Pending</span>;
+                        return (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="font-black text-xs sm:text-sm text-emerald-950">{finalGrade}</span>
+                            <span className="text-[9.5px] font-extrabold text-emerald-700">({remarks})</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
