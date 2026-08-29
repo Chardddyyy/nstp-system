@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { getPrimaryApiUrl, studentsAPI, gradesAPI } from '../services/api';
-import * as XLSX from 'xlsx';
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
+import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
@@ -377,7 +377,7 @@ function StudentManagement() {
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 
   // ── 1-Click Instant Download for Form A PDF (OSDS-NSTP Form: SUMMARY NUMBER OF ENROLLMENT AND GRADUATES OF NSTP) ──
-  const handleDirectDownloadFormA = async () => {
+  const handleDirectDownloadFormA = async (format = 'pdf') => {
     try {
       setIsDownloadingFormA(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
@@ -388,17 +388,21 @@ function StudentManagement() {
         return true;
       });
 
-      await downloadChedFormAPdf(activeBatchYear, targetStudents, dept);
+      if (format === 'excel') {
+        await downloadChedFormAExcel(activeBatchYear, targetStudents, dept);
+      } else {
+        await downloadChedFormAPdf(activeBatchYear, targetStudents, dept);
+      }
     } catch (err) {
       console.error('Direct download Form A error:', err);
-      alert('Failed to download Form A PDF. Please try again.');
+      alert('Failed to download Form A. Please try again.');
     } finally {
       setIsDownloadingFormA(false);
     }
   };
 
-  // ── Instant Download for Form B PDF (OSDS-NSTP Form 2-B: NSTP Enrollment List) ──
-  const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem) => {
+  // ── Instant Download for Form B (PDF or Excel) ──
+  const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem, format = 'pdf') => {
     try {
       setIsDownloadingFormB(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
@@ -409,10 +413,14 @@ function StudentManagement() {
         return true;
       });
 
-      await downloadChedFormBPdf(activeBatchYear, targetStudents, deptFilter);
+      if (format === 'excel') {
+        await downloadChedFormBExcel(activeBatchYear, targetStudents, deptFilter);
+      } else {
+        await downloadChedFormBPdf(activeBatchYear, targetStudents, deptFilter);
+      }
     } catch (err) {
       console.error('Direct download Form B error:', err);
-      alert('Failed to download Form B PDF. Please try again.');
+      alert('Failed to download Form B. Please try again.');
     } finally {
       setIsDownloadingFormB(false);
     }
@@ -1043,35 +1051,49 @@ function StudentManagement() {
               {/* Form A & Form B (Admin Only) */}
               {isAdmin && (
                 <>
-                  {/* Form A: Modal & 1-Click Download OSDS-NSTP Form A */}
-                  <button type="button"
-                    onClick={() => setShowFormAModal(true)}
-                    disabled={isDownloadingFormA}
-                    title="Download or Preview: Official OSDS-NSTP Form A (Annual Summary of Enrollment & Graduates)"
-                    className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
-                  >
-                    {isDownloadingFormA ? (
-                      <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
-                    ) : (
-                      <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                    )}
-                    <span>{isDownloadingFormA ? 'Downloading...' : 'Form A'}</span>
-                  </button>
+                  {/* Form A: PDF & Excel */}
+                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
+                    <button type="button"
+                      onClick={() => setShowFormAModal(true)}
+                      disabled={isDownloadingFormA}
+                      title="Download OSDS-NSTP Form A (PDF)"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      <Award className="w-3.5 h-3.5 text-emerald-950" />
+                      <span>Form A (PDF)</span>
+                    </button>
+                    <button type="button"
+                      onClick={() => handleDirectDownloadFormA('excel')}
+                      disabled={isDownloadingFormA}
+                      title="Download OSDS-NSTP Form A (Excel)"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-emerald-950 bg-white hover:bg-amber-100 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer border border-amber-300 disabled:opacity-50"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-800" />
+                      <span>(.xlsx)</span>
+                    </button>
+                  </div>
 
-                  {/* Form B: Modal & Download CHED Enrollment Masterlist */}
-                  <button type="button"
-                    onClick={() => setShowFormBModal(true)}
-                    disabled={isDownloadingFormB}
-                    title="Download or Preview: Official CHED Form B (Select All or specific department: CWTS, LTS, ROTC)"
-                    className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 font-black shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/60 whitespace-nowrap disabled:opacity-50"
-                  >
-                    {isDownloadingFormB ? (
-                      <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-emerald-950" />
-                    ) : (
-                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-950 shrink-0" />
-                    )}
-                    <span>{isDownloadingFormB ? 'Downloading...' : 'Form B'}</span>
-                  </button>
+                  {/* Form B: PDF & Excel */}
+                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
+                    <button type="button"
+                      onClick={() => setShowFormBModal(true)}
+                      disabled={isDownloadingFormB}
+                      title="Download CHED Form B (PDF)"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-950" />
+                      <span>Form B (PDF)</span>
+                    </button>
+                    <button type="button"
+                      onClick={() => handleDirectDownloadFormB(formBDept, formBSem, 'excel')}
+                      disabled={isDownloadingFormB}
+                      title="Download CHED Form B (Excel)"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-emerald-950 bg-white hover:bg-amber-100 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer border border-amber-300 disabled:opacity-50"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-800" />
+                      <span>(.xlsx)</span>
+                    </button>
+                  </div>
                 </>
               )}
 
@@ -3960,20 +3982,31 @@ function StudentManagement() {
                   <button
                     type="button"
                     onClick={() => setShowFormBModal(false)}
-                    className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      handleDirectDownloadFormB(formBDept, formBSem);
+                      handleDirectDownloadFormB(formBDept, formBSem, 'pdf');
                       setShowFormBModal(false);
                     }}
-                    className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
+                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDirectDownloadFormB(formBDept, formBSem, 'excel');
+                      setShowFormBModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Download Excel</span>
                   </button>
                 </div>
               </div>
@@ -4056,20 +4089,31 @@ function StudentManagement() {
                   <button
                     type="button"
                     onClick={() => setShowFormAModal(false)}
-                    className="px-4 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      handleDirectDownloadFormA();
+                      handleDirectDownloadFormA('pdf');
                       setShowFormAModal(false);
                     }}
-                    className="px-5 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5 border border-amber-500/60"
+                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDirectDownloadFormA('excel');
+                      setShowFormAModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Download Excel</span>
                   </button>
                 </div>
               </div>

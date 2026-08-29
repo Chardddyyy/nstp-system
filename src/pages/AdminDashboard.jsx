@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
-import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
+import { downloadChedFormat, downloadChedFormA, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
@@ -727,23 +727,33 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <p className="text-xs text-amber-800/80 font-medium">Historical records preserved for this academic batch. Click below to inspect modules:</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => downloadChedFormat(archiveViewData)}
-                  className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  title="Download CHED Form B Enrollment List PDF"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-950" />
-                  <span>Download CHED Format (.pdf)</span>
-                </button>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormat(archiveViewData)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-lg text-xs font-black transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
+                    title="Download CHED Form B Enrollment List PDF"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form B (PDF)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormBExcel(archiveViewData)}
+                    className="bg-white hover:bg-amber-100 text-emerald-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300"
+                    title="Download CHED Form B Enrollment List Excel"
+                  >
+                    <span>Excel (.xlsx)</span>
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowArchiveDetails(true)}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <History className="w-3.5 h-3.5" />
-                  <span>Batch Summary</span>
+                  <span>Summary</span>
                 </button>
                 <button
                   type="button"
@@ -2320,25 +2330,49 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <Archive className="w-5 h-5 mr-2 text-amber-300" />
                   Batch {archiveViewData.year} Archive Details
                 </h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormat(archiveViewData)}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title="Download Official CHED Form B Masterlist PDF"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download CHED Format (.pdf)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormA(archiveViewData)}
-                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 border border-emerald-700 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    title="Download CHED Form 2-A Summary Matrix PDF"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Form 2-A (.pdf)</span>
-                  </button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Form B: PDF & Excel */}
+                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
+                    <button
+                      type="button"
+                      onClick={() => downloadChedFormat(archiveViewData)}
+                      className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
+                      title="Download Official CHED Form B Masterlist PDF"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-950" />
+                      <span>Form B (PDF)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadChedFormBExcel(archiveViewData)}
+                      className="bg-white hover:bg-amber-100 text-emerald-950 px-2 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300"
+                      title="Download Official CHED Form B Masterlist Excel"
+                    >
+                      <span>(.xlsx)</span>
+                    </button>
+                  </div>
+
+                  {/* Form A: PDF & Excel */}
+                  <div className="flex items-center gap-1 bg-emerald-800/60 p-0.5 rounded-xl border border-emerald-700">
+                    <button
+                      type="button"
+                      onClick={() => downloadChedFormA(archiveViewData)}
+                      className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
+                      title="Download CHED Form 2-A Summary Matrix PDF"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Form A (PDF)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadChedFormAExcel(archiveViewData)}
+                      className="bg-emerald-950 hover:bg-emerald-900 text-amber-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-emerald-700"
+                      title="Download CHED Form 2-A Summary Matrix Excel"
+                    >
+                      <span>(.xlsx)</span>
+                    </button>
+                  </div>
+
                   <button type="button"
                     onClick={() => setShowArchiveDetails(false)}
                     className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white ml-1"

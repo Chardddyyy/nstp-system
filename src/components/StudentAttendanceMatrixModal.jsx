@@ -4,6 +4,7 @@ import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, U
 import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
+import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
 
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
@@ -242,6 +243,21 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
     }
   };
 
+  // Export Master Attendance Matrix to Excel (.xlsx)
+  const handleExportMasterExcel = async () => {
+    if (studentMatrixList.length === 0) return;
+    try {
+      await downloadAttendanceMatrixExcel({
+        studentMatrixList,
+        daysArray: DAYS_ARRAY,
+        selectedDept
+      });
+    } catch (err) {
+      console.error('Failed to export master attendance Excel:', err);
+      alert('Failed to export attendance Excel. Please try again.');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -375,17 +391,29 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
             </div>
           </div>
 
-          {/* Export Master PDF */}
-          <button
-            type="button"
-            onClick={handleExportMasterPdf}
-            disabled={studentMatrixList.length === 0}
-            className="px-2.5 sm:px-4 py-1.5 sm:py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-200" />
-            <span className="hidden xs:inline">Export Master Ledger (.pdf)</span>
-            <span className="xs:hidden">Export (.pdf)</span>
-          </button>
+          {/* Export Master PDF & Excel */}
+          <div className="flex items-center gap-1 bg-emerald-50 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-emerald-300">
+            <button
+              type="button"
+              onClick={handleExportMasterPdf}
+              disabled={studentMatrixList.length === 0}
+              className="px-2.5 sm:px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              title="Export Master Ledger as PDF"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-200" />
+              <span>PDF (.pdf)</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleExportMasterExcel}
+              disabled={studentMatrixList.length === 0}
+              className="px-2.5 sm:px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-900 font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-emerald-200"
+              title="Export Master Ledger as Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Excel (.xlsx)</span>
+            </button>
+          </div>
         </div>
 
         {/* Attendance Matrix Table */}

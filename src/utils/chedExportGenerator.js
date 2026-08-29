@@ -582,20 +582,307 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
   return workbook;
 }
 
-import { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf } from './chedPdfGenerator';
+import { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadAttendanceMatrixPdf, downloadDailyAttendancePdf } from './chedPdfGenerator';
 
-export { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf };
+export { downloadChedFormBPdf, downloadChedFormAPdf, downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadAttendanceMatrixPdf, downloadDailyAttendancePdf };
 
 /**
- * Trigger browser download of Form B as official print-ready PDF (CHED OSDS-NSTP Form 2-B)
+ * Helper to trigger file download in browser from ExcelJS Buffer
+ */
+export function saveExcelBuffer(buffer, fileName) {
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Trigger download of Form 2-B as Excel (.xlsx)
+ */
+export async function downloadChedFormBExcel(batchOrYear, studentList = null, dept = 'All') {
+  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2026-2027') : (batchOrYear || '2026-2027');
+  const students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
+  const workbook = await generateChedFormBWorkbook(students, year, dept);
+  const buffer = await workbook.xlsx.writeBuffer();
+  const cleanDept = dept && dept !== 'All' ? `_${dept}` : '';
+  saveExcelBuffer(buffer, `CHED_NSTP_Form_2-B${cleanDept}_${year.replace(/\s+/g, '_')}.xlsx`);
+}
+
+/**
+ * Trigger download of Form 2-A as Excel (.xlsx)
+ */
+export async function downloadChedFormAExcel(batchOrYear, studentList = null, dept = 'All') {
+  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2026-2027') : (batchOrYear || '2026-2027');
+  const students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
+  const workbook = await generateChedFormAWorkbook(students, year, dept);
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelBuffer(buffer, `OSDS_NSTP_Form_2-A_Summary_${year.replace(/\s+/g, '_')}.xlsx`);
+}
+
+/**
+ * Trigger download of Grades Sheet (Annual or Semester) as Excel (.xlsx)
+ */
+export async function downloadGradesSheetExcel({
+  students = [],
+  gradesMap = {},
+  isAnnualView = false,
+  selectedSchoolYear = '2026-2027',
+  selectedSemester = '1st Semester',
+  selectedDepartment = 'CWTS',
+  selectedSection = 'All',
+  getAnnualStudentInfo = null
+}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CvSU Naic NSTP System';
+  const worksheet = workbook.addWorksheet(isAnnualView ? 'Annual Grades' : 'Semester Grades');
+
+  const title = isAnnualView
+    ? `OFFICIAL NSTP ANNUAL GRADE MASTERLIST (A.Y. ${selectedSchoolYear})`
+    : `OFFICIAL NSTP GRADE ENCODING SHEET — ${selectedSemester.toUpperCase()} (A.Y. ${selectedSchoolYear})`;
+
+  worksheet.mergeCells('A1:H1');
+  worksheet.getCell('A1').value = 'CAVITE STATE UNIVERSITY - NAIC CAMPUS';
+  worksheet.getCell('A1').font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF064E3B' } };
+  worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A2:H2');
+  worksheet.getCell('A2').value = title;
+  worksheet.getCell('A2').font = { name: 'Arial', size: 10, bold: true };
+  worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A3:H3');
+  worksheet.getCell('A3').value = `Department: ${selectedDepartment} | Section: ${selectedSection} | Export Date: ${new Date().toLocaleDateString()}`;
+  worksheet.getCell('A3').font = { name: 'Arial', size: 9, italic: true };
+  worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+  const headerRow = worksheet.getRow(5);
+  if (isAnnualView) {
+    headerRow.values = ['No.', 'Student ID', 'Full Student Name', 'Track', 'Section', '1st Sem Grade', '2nd Sem Grade', 'Annual Final Rating', 'Remarks'];
+  } else {
+    headerRow.values = ['No.', 'Student ID', 'Full Student Name', 'Track', 'Section', 'Final Grade', 'Remarks', 'Status'];
+  }
+
+  headerRow.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF064E3B' }
+  };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  let rowNum = 6;
+  students.forEach((st, idx) => {
+    const sid = st.studentId || st.id;
+    const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
+    const row = worksheet.getRow(rowNum);
+
+    if (isAnnualView && getAnnualStudentInfo) {
+      const info = getAnnualStudentInfo(sid);
+      row.values = [
+        idx + 1,
+        st.studentId || 'N/A',
+        name,
+        st.department || selectedDepartment,
+        st.nstp_section || st.section || '-',
+        info.g1 || '-',
+        info.g2 || '-',
+        info.finalRating || '-',
+        info.overallRemarks || 'Pending'
+      ];
+    } else {
+      const g = gradesMap[sid] || {};
+      const finalGrade = g.final_grade || '-';
+      const remarks = g.remarks || (finalGrade && finalGrade !== '-' ? (Number(finalGrade) <= 3.0 ? 'Passed' : 'Failed') : 'Pending');
+      row.values = [
+        idx + 1,
+        st.studentId || 'N/A',
+        name,
+        st.department || selectedDepartment,
+        st.nstp_section || st.section || '-',
+        finalGrade,
+        remarks,
+        finalGrade && finalGrade !== '-' ? 'Graded' : 'Pending'
+      ];
+    }
+
+    row.font = { name: 'Arial', size: 9 };
+    row.alignment = { vertical: 'middle' };
+    rowNum++;
+  });
+
+  worksheet.columns = [
+    { width: 6 },
+    { width: 16 },
+    { width: 34 },
+    { width: 12 },
+    { width: 14 },
+    { width: 16 },
+    { width: 18 },
+    { width: 20 },
+    { width: 16 }
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const fileLabel = isAnnualView ? `NSTP_Annual_Grades_${selectedDepartment}` : `NSTP_Grades_${selectedSemester.replace(/\s+/g, '_')}_${selectedDepartment}`;
+  saveExcelBuffer(buffer, `${fileLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Trigger download of Master Attendance Matrix as Excel (.xlsx)
+ */
+export async function downloadAttendanceMatrixExcel({
+  studentMatrixList = [],
+  daysArray = [],
+  selectedDept = 'CWTS',
+  selectedSchoolYear = '2026-2027'
+}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CvSU Naic NSTP System';
+  const worksheet = workbook.addWorksheet('Attendance Matrix');
+
+  const activeDays = daysArray.length > 0 ? daysArray : Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
+
+  worksheet.mergeCells('A1:V1');
+  worksheet.getCell('A1').value = `OFFICIAL MASTER ATTENDANCE LEDGER (DAY 1 TO DAY 15) — ${selectedDept} TRACK`;
+  worksheet.getCell('A1').font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF064E3B' } };
+  worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  const headerRow = worksheet.getRow(4);
+  headerRow.values = [
+    'No.',
+    'Student ID',
+    'Student Name',
+    'Dept',
+    'Section',
+    ...activeDays.map((_, i) => `D${i + 1}`),
+    'Present',
+    'Absent',
+    'Status'
+  ];
+
+  headerRow.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF064E3B' }
+  };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  let rowNum = 5;
+  studentMatrixList.forEach((st, idx) => {
+    const row = worksheet.getRow(rowNum);
+    const dayChars = activeDays.map(d => {
+      const s = st.dayStatuses?.[d];
+      if (s === 'Present') return 'P';
+      if (s === 'Late') return 'L';
+      if (s === 'Excused') return 'E';
+      if (s === 'Absent') return 'A';
+      return '-';
+    });
+
+    row.values = [
+      idx + 1,
+      st.studentId || 'N/A',
+      (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase(),
+      st.department || selectedDept,
+      st.gradeAndSection || st.section || '-',
+      ...dayChars,
+      st.presentCount || 0,
+      st.absentCount || 0,
+      st.isAtRisk ? 'WARNING (AT-RISK / 3+ ABSENCES)' : (st.absentCount === 0 ? 'GOOD STANDING' : `${st.absentCount} ABSENCES`)
+    ];
+
+    row.font = { name: 'Arial', size: 9 };
+    rowNum++;
+  });
+
+  worksheet.columns = [
+    { width: 6 },
+    { width: 16 },
+    { width: 32 },
+    { width: 10 },
+    { width: 12 },
+    ...activeDays.map(() => ({ width: 5 })),
+    { width: 10 },
+    { width: 10 },
+    { width: 30 }
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelBuffer(buffer, `NSTP_Master_Attendance_Matrix_${selectedDept}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Trigger download of Daily Attendance Log as Excel (.xlsx)
+ */
+export async function downloadDailyAttendanceExcel({
+  records = [],
+  selectedDay = 'Day 1',
+  selectedDept = 'All'
+}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CvSU Naic NSTP System';
+  const worksheet = workbook.addWorksheet('Daily Attendance');
+
+  worksheet.mergeCells('A1:H1');
+  worksheet.getCell('A1').value = `DAILY ATTENDANCE LOG — ${selectedDay.toUpperCase()} (${selectedDept})`;
+  worksheet.getCell('A1').font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF064E3B' } };
+  worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  const headerRow = worksheet.getRow(3);
+  headerRow.values = ['No.', 'Student Number', 'Full Student Name', 'Track', 'Section', 'Time In', 'Time Out', 'Status'];
+  headerRow.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF064E3B' }
+  };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  let rowNum = 4;
+  records.forEach((r, idx) => {
+    const row = worksheet.getRow(rowNum);
+    row.values = [
+      idx + 1,
+      r.studentId || r.student_id || 'N/A',
+      (r.name || r.student_name || 'N/A').toUpperCase(),
+      r.department || r.nstp_dept || 'CWTS',
+      r.section || r.grade_section || '-',
+      r.timeIn || r.time_in || '-',
+      r.timeOut || r.time_out || '-',
+      r.status || 'Present'
+    ];
+    row.font = { name: 'Arial', size: 9 };
+    rowNum++;
+  });
+
+  worksheet.columns = [
+    { width: 6 },
+    { width: 18 },
+    { width: 34 },
+    { width: 12 },
+    { width: 14 },
+    { width: 16 },
+    { width: 16 },
+    { width: 18 }
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelBuffer(buffer, `NSTP_Daily_Attendance_${selectedDay.replace(/\s+/g, '_')}_${selectedDept}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
+ * Backward compatibility functions
  */
 export async function downloadChedFormat(batchOrYear, studentList = null, dept = 'All') {
   return downloadChedFormBPdf(batchOrYear, studentList, dept);
 }
 
-/**
- * Trigger browser download of Form A as official print-ready PDF (OSDS-NSTP Form 2-A Summary Matrix)
- */
 export async function downloadChedFormA(batchOrYear, studentList = null, dept = 'All') {
   return downloadChedFormAPdf(batchOrYear, studentList, dept);
 }

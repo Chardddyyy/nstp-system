@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
 import { downloadAnnualForm2APdf, downloadGradesSheetPdf } from '../utils/chedPdfGenerator';
+import { downloadGradesSheetExcel, downloadChedFormAExcel } from '../utils/chedExportGenerator';
 
 const GRADE_OPTIONS = [
   '',
@@ -309,15 +310,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
   };
 
-  // ── Official OSDS-NSTP Form 2-A PDF Generator (Whole Academic Year with 1st & 2nd Sem Grades) ──
+  // ── Official OSDS-NSTP Form 2-A PDF & Excel Generator ──
   const handleDownloadOSDSForm2A = async () => {
     try {
       await downloadAnnualForm2APdf({
         students: filteredStudents,
         selectedSchoolYear,
-        selectedDept,
-        getAnnualStudentInfo,
-        currentUser
+        selectedDepartment: selectedDept,
+        getAnnualStudentInfo
       });
     } catch (err) {
       console.error('Error generating Form 2-A PDF:', err);
@@ -325,22 +325,53 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     }
   };
 
+  const handleDownloadOSDSForm2AExcel = async () => {
+    try {
+      await downloadChedFormAExcel(
+        selectedSchoolYear,
+        filteredStudents,
+        selectedDept
+      );
+    } catch (err) {
+      console.error('Error generating Form 2-A Excel:', err);
+      alert('Failed to generate Form 2-A Excel. Please try again.');
+    }
+  };
 
+  // ── Standard Grades Sheet PDF & Excel Exports ──
   const handleExportGradesPdf = async () => {
     try {
       await downloadGradesSheetPdf({
         students: filteredStudents,
-        selectedSchoolYear,
-        selectedSemester,
-        selectedDept,
         gradesMap,
         isAnnualView,
-        getAnnualStudentInfo,
-        currentUser
+        selectedSchoolYear,
+        selectedSemester,
+        selectedDepartment: selectedDept,
+        selectedSection: selectedNstpSection,
+        getAnnualStudentInfo
       });
     } catch (err) {
-      console.error('Failed to export grades PDF:', err);
-      alert('Failed to export grades PDF. Please try again.');
+      console.error('Error exporting Grades PDF:', err);
+      alert('Failed to export Grades PDF. Please try again.');
+    }
+  };
+
+  const handleExportGradesExcel = async () => {
+    try {
+      await downloadGradesSheetExcel({
+        students: filteredStudents,
+        gradesMap,
+        isAnnualView,
+        selectedSchoolYear,
+        selectedSemester,
+        selectedDepartment: selectedDept,
+        selectedSection: selectedNstpSection,
+        getAnnualStudentInfo
+      });
+    } catch (err) {
+      console.error('Error exporting Grades Excel:', err);
+      alert('Failed to export Grades Excel. Please try again.');
     }
   };
 
@@ -687,28 +718,51 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 </div>
               )}
 
-              {/* Download OSDS-NSTP Form 2-A (.pdf) Button — Admin Only */}
+              {/* Download OSDS-NSTP Form 2-A (PDF & Excel) — Admin Only */}
               {isAdmin && (
-                <button
-                  type="button"
-                  onClick={handleDownloadOSDSForm2A}
-                  title="Download official OSDS-NSTP Form 2-A PDF for the entire Academic Year"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-xl shadow-xs hover:shadow-md cursor-pointer active:scale-95 border border-amber-500/60"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-950" />
-                  <span>OSDS-NSTP Form 2-A (.pdf)</span>
-                </button>
+                <div className="flex items-center gap-1 bg-amber-500/20 p-0.5 rounded-xl border border-amber-500/40">
+                  <button
+                    type="button"
+                    onClick={handleDownloadOSDSForm2A}
+                    title="Download official OSDS-NSTP Form 2-A PDF"
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 rounded-lg shadow-2xs cursor-pointer active:scale-95"
+                  >
+                    <Download className="w-3 h-3 text-emerald-950" />
+                    <span>Form 2-A (.pdf)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadOSDSForm2AExcel}
+                    title="Download official OSDS-NSTP Form 2-A Excel (.xlsx)"
+                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-black text-emerald-950 bg-white hover:bg-amber-100 rounded-lg shadow-2xs cursor-pointer active:scale-95 border border-amber-300"
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-emerald-800" />
+                    <span>(.xlsx)</span>
+                  </button>
+                </div>
               )}
 
-              {/* Export Standard PDF */}
-              <button
-                type="button"
-                onClick={handleExportGradesPdf}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-50 border border-emerald-300 rounded-xl shadow-xs cursor-pointer active:scale-95"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-700" />
-                <span className="hidden xs:inline">{isAnnualView ? 'Annual Grades (.pdf)' : 'Semester Grades (.pdf)'}</span>
-              </button>
+              {/* Export Grades Sheet: PDF & Excel */}
+              <div className="flex items-center gap-1 bg-emerald-50 p-0.5 rounded-xl border border-emerald-300">
+                <button
+                  type="button"
+                  onClick={handleExportGradesPdf}
+                  title="Export Grades Sheet as PDF"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-100 rounded-lg shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <Download className="w-3 h-3 text-emerald-700" />
+                  <span>{isAnnualView ? 'Annual PDF' : 'Grades PDF'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportGradesExcel}
+                  title="Export Grades Sheet as Excel (.xlsx)"
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-900 bg-white hover:bg-emerald-100 rounded-lg shadow-2xs cursor-pointer active:scale-95"
+                >
+                  <FileSpreadsheet className="w-3 h-3 text-emerald-700" />
+                  <span>Excel (.xlsx)</span>
+                </button>
+              </div>
 
               {/* Print Grade Sheet */}
               <button
@@ -717,7 +771,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-blue-900 bg-white hover:bg-blue-50 border border-blue-300 rounded-xl shadow-xs cursor-pointer active:scale-95"
               >
                 <Printer className="w-3.5 h-3.5 text-blue-700" />
-                <span className="hidden xs:inline">Print {isAnnualView ? 'Annual Sheet' : 'Sheet'}</span>
+                <span className="hidden xs:inline">Print {isAnnualView ? 'Annual' : ''}</span>
               </button>
 
               {/* Save All Button (Instructors Only in Single Semester Mode) */}
