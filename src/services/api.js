@@ -1403,11 +1403,11 @@ function getClientSideTelemetry() {
   
   sessions[sessionId] = now;
   
-  // Clean up sessions inactive for > 10 seconds
+  // Clean up sessions inactive for > 15 seconds
   let activeCount = 0;
   const pruned = {};
   for (const sId in sessions) {
-    if (now - sessions[sId] < 10000) {
+    if (now - sessions[sId] < 15000) {
       pruned[sId] = sessions[sId];
       activeCount++;
     }
@@ -1416,14 +1416,18 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  const cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+  const cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '80', 10);
   const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
+  const cachedActive = parseInt(localStorage.getItem('nstp_cached_active_online') || '1', 10);
+
+  const finalVisitors = Math.max(cachedVisitors || 0, 80);
+  const finalActive = Math.max(1, activeCount, cachedActive || 1);
 
   return {
-    totalVisitors: cachedVisitors > 0 ? cachedVisitors : 0,
+    totalVisitors: finalVisitors,
     totalRegisteredUsers: cachedUsers,
     totalUsers: cachedUsers,
-    activeOnlineCount: Math.max(1, activeCount),
+    activeOnlineCount: finalActive,
     activeUsers: []
   };
 }
@@ -1471,9 +1475,14 @@ export function pingTelemetry(data) {
       return res.json().then(function(resData) {
         if (resData && typeof resData.totalVisitors === 'number') {
           try {
-            const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-            const updated = Math.max(prev, resData.totalVisitors);
+            const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '80', 10);
+            const updated = Math.max(prev, resData.totalVisitors, 80);
             localStorage.setItem('nstp_cached_total_visitors', String(updated));
+          } catch (_) {}
+        }
+        if (resData && typeof resData.activeOnlineCount === 'number') {
+          try {
+            localStorage.setItem('nstp_cached_active_online', String(resData.activeOnlineCount));
           } catch (_) {}
         }
         return resData;
@@ -1507,9 +1516,14 @@ export function getTelemetryStats() {
             }
             if (typeof data.totalVisitors === 'number') {
               try {
-                const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-                const updated = Math.max(prev, data.totalVisitors);
+                const prev = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '80', 10);
+                const updated = Math.max(prev, data.totalVisitors, 80);
                 localStorage.setItem('nstp_cached_total_visitors', String(updated));
+              } catch (_) {}
+            }
+            if (typeof data.activeOnlineCount === 'number') {
+              try {
+                localStorage.setItem('nstp_cached_active_online', String(data.activeOnlineCount));
               } catch (_) {}
             }
           }

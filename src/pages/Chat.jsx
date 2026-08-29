@@ -2176,15 +2176,16 @@ function Chat() {
                 onScroll={handleScroll}
                 className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full"
               >
-                <div className="space-y-3 w-full max-w-full overflow-hidden">
-                  {currentMessages.map((message) => {
+                <div className="space-y-3 w-full max-w-full">
+                  {currentMessages.map((message, msgIdx) => {
                     const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
+                    const isNearBottom = msgIdx >= currentMessages.length - 2;
                     const deletedForEveryone = isMessageDeletedForEveryone(message);
                     const deletedForMe = isMessageDeletedForMe(message) || deletedForEveryone;
 
                     if (deletedForMe) {
                       return (
-                        <div key={message.id} className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} overflow-hidden max-w-full`}>
+                        <div key={message.id} className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full`}>
                           {/* Avatar always first in DOM — flex-row-reverse keeps it on the right for own messages */}
                           <div className="flex-shrink-0 self-end mb-1">
                             {isOwn ? (
@@ -2219,7 +2220,7 @@ function Chat() {
                       const callText = message.text || '';
                       const isJoin = callText.includes('joined the group');
                       return (
-                        <div key={message.id} className="flex justify-center my-1 max-w-full overflow-hidden">
+                        <div key={message.id} className="flex justify-center my-1 max-w-full">
                           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-medium shadow-xs truncate max-w-[90%]
                           ${isJoin
                               ? 'bg-blue-50 text-blue-600 border border-blue-200'
@@ -2240,7 +2241,7 @@ function Chat() {
                     return (
                       <div key={message.id}
                         data-is-own={isOwn}
-                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full relative my-1`}>
+                        className={`flex w-full items-end gap-1.5 sm:gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} max-w-full relative my-1 ${showMessageMenu === message.id ? 'z-40' : 'z-0'}`}>
                         {/* Avatar */}
                         <div className="flex-shrink-0 self-end mb-1">
                           {isOwn ? (
@@ -2452,14 +2453,14 @@ function Chat() {
 
                           {/* Message Options Menu */}
                           {showMessageMenu === message.id && (
-                            <div data-message-menu className={`absolute top-8 ${isOwn ? 'right-0 origin-top-right' : 'left-0 origin-top-left'} bg-white rounded-2xl shadow-2xl border border-gray-200 py-1.5 z-50 w-44 xs:w-48 max-w-[calc(100vw-36px)] animate-fade-in ring-1 ring-black/10`}>
+                            <div data-message-menu className={`absolute ${isNearBottom ? 'bottom-8 origin-bottom-right' : 'top-8 origin-top-right'} ${isOwn ? 'right-0' : 'left-0'} bg-white rounded-2xl shadow-2xl border border-gray-200 py-1.5 z-50 w-44 xs:w-48 max-w-[calc(100vw-36px)] animate-fade-in ring-1 ring-black/10`}>
                               {/* Emoji Reactions */}
-                              <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 bg-gray-50/80 rounded-t-xl">
+                              <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-gray-100 bg-gray-50/80 rounded-t-xl overflow-x-auto no-scrollbar">
                                 {EMOJI_LIST.map(emoji => (
                                   <button type="button"
                                     key={emoji}
                                     onClick={() => handleReaction(message.id, emoji)}
-                                    className="hover:scale-125 hover:bg-white active:scale-95 rounded-lg p-1 transition-all text-base cursor-pointer"
+                                    className="hover:scale-125 hover:bg-white active:scale-95 rounded-lg p-1 transition-all text-base cursor-pointer shrink-0"
                                     title={`React with ${emoji}`}
                                   >
                                     {emoji}
