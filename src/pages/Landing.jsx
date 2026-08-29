@@ -125,6 +125,7 @@ const FAQ_ITEMS = [
 ];
 
 function Landing() {
+  const [currentSlide, setCurrentSlide] = useState(0);
   const [openFaqs, setOpenFaqs] = useState(() => new Set([0]));
   const [faqSearch, setFaqSearch] = useState('');
   const [faqCategory, setFaqCategory] = useState('All');
