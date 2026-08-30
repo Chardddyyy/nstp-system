@@ -512,38 +512,33 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
 
     if (!targetDept) return;
 
-    // 1st Semester Enrollees: All enrolled students in the cohort/academic year
+    // 1st Semester Enrollees: All enrolled students in cohort
     statsMatrix.sem1[targetDept][genKey] += 1;
 
-    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || '').trim();
-    const g2Str = String(st.final_grade_2 || st.grade_sem2 || '').trim();
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester === '1st Semester' ? st.final_grade : '') || '').trim();
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
 
-    // 2nd Semester Enrollees: Student actively enrolled in 2nd semester
+    // 2nd Semester Enrollees: Active enrollment in 2nd semester
     const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
     const isSem2Enrolled = !isExplicitlyNoSem2;
 
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
-    }
 
-    // Passing Evaluation (1.00 to 3.00, or 'Passed')
-    const num1 = parseFloat(g1Str);
-    const num2 = parseFloat(g2Str);
+      // 2nd Sem Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
+      const num2 = parseFloat(g2Str);
+      const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+      const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || (st.status && st.status.toLowerCase().includes('graduat'));
 
-    const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
-    const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-
-    const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
-    const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
-
-    // Graduates: Only 2nd sem enrollees who passed BOTH semesters without any failing/INC/DRP mark
-    if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
-      statsMatrix.graduates[targetDept][genKey] += 1;
+      // Graduates: Kung ilan ang pumasa sa 2nd semester, iyon ang ilalagay sa graduates
+      if (isPassed2 && !isFailed2) {
+        statsMatrix.graduates[targetDept][genKey] += 1;
+      }
     }
   });
 
-  // Default Campus Row in Row 14 (or 15)
-  const dataRowIdx = 14;
+  // Campus Data Row in Row 12 (Contiguous after Row 11 Headers)
+  const dataRowIdx = 12;
   const dataRow = worksheet.getRow(dataRowIdx);
   dataRow.height = 22;
 
@@ -593,8 +588,31 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     };
   }
 
-  // 5. Signatories Footer
-  const sigRow = 17;
+  // Row 13: TOTAL SUMMARY ROW
+  const totalRowIdx = 13;
+  const totalRow = worksheet.getRow(totalRowIdx);
+  totalRow.height = 22;
+  totalRow.getCell(1).value = 'TOTAL';
+  totalRow.getCell(2).value = 'PUBLIC';
+
+  for (let c = 3; c <= 26; c++) {
+    totalRow.getCell(c).value = dataRow.getCell(c).value;
+    totalRow.getCell(c).font = { name: 'Arial', size: 9, bold: true };
+    totalRow.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' };
+    totalRow.getCell(c).border = thinBorder;
+    totalRow.getCell(c).fill = subHeaderFill;
+  }
+  totalRow.getCell(1).font = { name: 'Arial', size: 9, bold: true };
+  totalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+  totalRow.getCell(1).border = thinBorder;
+  totalRow.getCell(1).fill = subHeaderFill;
+  totalRow.getCell(2).font = { name: 'Arial', size: 9, bold: true };
+  totalRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
+  totalRow.getCell(2).border = thinBorder;
+  totalRow.getCell(2).fill = subHeaderFill;
+
+  // 5. Signatories Footer (Row 16)
+  const sigRow = 16;
   worksheet.getCell(`A${sigRow}`).value = 'Prepared by: NSTP Department Coordinator';
   worksheet.getCell(`A${sigRow}`).font = { name: 'Arial', size: 9, bold: true };
 

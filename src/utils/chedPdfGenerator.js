@@ -346,8 +346,8 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     // 1st Semester Enrollees: All enrolled students in cohort
     statsMatrix.sem1[targetDept][genKey] += 1;
 
-    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || '').trim();
-    const g2Str = String(st.final_grade_2 || st.grade_sem2 || '').trim();
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester === '1st Semester' ? st.final_grade : '') || '').trim();
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
 
     // 2nd Semester Enrollees: Active enrollment in 2nd semester
     const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
@@ -355,21 +355,16 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
 
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
-    }
 
-    // Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
-    const num1 = parseFloat(g1Str);
-    const num2 = parseFloat(g2Str);
+      // 2nd Sem Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
+      const num2 = parseFloat(g2Str);
+      const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+      const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || (st.status && st.status.toLowerCase().includes('graduat'));
 
-    const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
-    const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-
-    const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
-    const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
-
-    // Graduates: Only students who reached 2nd semester and got a passing grade (1.00 to 3.00) in 2nd semester (and 1st sem) without failing/INC/DRP
-    if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
-      statsMatrix.graduates[targetDept][genKey] += 1;
+      // Graduates: Kung ilan ang pumasa sa 2nd semester, iyon ang ilalagay sa graduates
+      if (isPassed2 && !isFailed2) {
+        statsMatrix.graduates[targetDept][genKey] += 1;
+      }
     }
   });
 
@@ -472,15 +467,15 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
 
   // Data Row
   const dataY = tableTop + 18;
-  const dataRowHeight = 9;
+  const dataRowHeight = 8;
 
   doc.rect(leftMargin, dataY, colW.hei, dataRowHeight);
   doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CAVITE STATE UNIVERSITY - NAIC', leftMargin + 2, dataY + 5.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('CAVITE STATE UNIVERSITY - NAIC', leftMargin + 2, dataY + 5.2);
 
   doc.rect(leftMargin + colW.hei, dataY, colW.class, dataRowHeight);
-  doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), dataY + 5.5, { align: 'center' });
+  doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), dataY + 5.2, { align: 'center' });
 
   // Render Numbers into Grid (ROTC, LTS, CWTS)
   const dataValues = [
@@ -505,17 +500,37 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
   const singleGenWidth = colW.block / 6;
   let startColX = leftMargin + colW.hei + colW.class;
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
 
   dataValues.forEach(val => {
     doc.rect(startColX, dataY, singleGenWidth, dataRowHeight);
-    doc.text(String(val), startColX + (singleGenWidth / 2), dataY + 5.5, { align: 'center' });
+    doc.text(String(val), startColX + (singleGenWidth / 2), dataY + 5.2, { align: 'center' });
     startColX += singleGenWidth;
   });
 
+  // Total Summary Row (Matching Excel Row 13)
+  const totalY = dataY + dataRowHeight;
+  doc.setFillColor(243, 244, 246);
+  doc.rect(leftMargin, totalY, totalTableWidth, dataRowHeight, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.rect(leftMargin, totalY, colW.hei, dataRowHeight);
+  doc.text('TOTAL', leftMargin + 2, totalY + 5.2);
+
+  doc.rect(leftMargin + colW.hei, totalY, colW.class, dataRowHeight);
+  doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), totalY + 5.2, { align: 'center' });
+
+  let totalColX = leftMargin + colW.hei + colW.class;
+  dataValues.forEach(val => {
+    doc.rect(totalColX, totalY, singleGenWidth, dataRowHeight);
+    doc.text(String(val), totalColX + (singleGenWidth / 2), totalY + 5.2, { align: 'center' });
+    totalColX += singleGenWidth;
+  });
+
   // Signatories
-  const sigY = dataY + dataRowHeight + 14;
+  const sigY = totalY + dataRowHeight + 14;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);

@@ -79,21 +79,16 @@ const OSDSNSTPForm = ({
 
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
-      }
 
-      // 4. Passing Evaluation (1.00 to 3.00, or 'Passed')
-      const num1 = parseFloat(g1Str);
-      const num2 = parseFloat(g2Str);
+        // 4. 2nd Sem Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
+        const num2 = parseFloat(g2Str);
+        const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+        const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || (st.status && st.status.toLowerCase().includes('graduat'));
 
-      const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
-      const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-
-      const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
-      const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
-
-      // 5. Graduates: Only 2nd sem enrollees who passed BOTH semesters without any failing/INC/DRP mark
-      if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
-        data.graduates[targetDept][genKey] += 1;
+        // 5. Graduates: Kung sino ang pumasa sa 2nd sem, iyon ang bilang sa graduates
+        if (isPassed2 && !isFailed2) {
+          data.graduates[targetDept][genKey] += 1;
+        }
       }
     });
 
