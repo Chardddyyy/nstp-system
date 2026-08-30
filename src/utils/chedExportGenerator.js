@@ -515,22 +515,29 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     // 1st Semester Enrollees: All enrolled students in the cohort/academic year
     statsMatrix.sem1[targetDept][genKey] += 1;
 
-    // 2nd Semester Enrollees
-    const isSem2Enrolled = st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.has_2nd_sem || !!st.final_grade_2 || st.status === 'graduated';
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || '').trim();
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || '').trim();
+
+    // 2nd Semester Enrollees: Student actively enrolled in 2nd semester
+    const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
+    const isSem2Enrolled = !isExplicitlyNoSem2;
+
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
     }
 
-    // Graduates: Only count if student passed with <= 3.0 in both semesters and no failing mark
-    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester?.includes('1st') ? st.final_grade : '') || '');
-    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.status === 'graduated' ? st.final_grade : '') || '');
-    const g1 = parseFloat(g1Str);
-    const g2 = parseFloat(g2Str);
-    const passed1 = (!isNaN(g1) && g1 <= 3.0 && g1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p' || (!g1 && g2 && g2 <= 3.0);
-    const passed2 = (!isNaN(g2) && g2 <= 3.0 && g2 >= 1.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p' || (st.status === 'graduated' && (!g2 || g2 <= 3.0));
-    const isFailedOrIncomplete = (g2 > 3.0) || (g1 > 3.0) || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP') || g2Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('FAIL');
+    // Passing Evaluation (1.00 to 3.00, or 'Passed')
+    const num1 = parseFloat(g1Str);
+    const num2 = parseFloat(g2Str);
 
-    if (isSem2Enrolled && passed1 && passed2 && !isFailedOrIncomplete) {
+    const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
+    const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+
+    const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
+    const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
+
+    // Graduates: Only 2nd sem enrollees who passed BOTH semesters without any failing/INC/DRP mark
+    if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
       statsMatrix.graduates[targetDept][genKey] += 1;
     }
   });

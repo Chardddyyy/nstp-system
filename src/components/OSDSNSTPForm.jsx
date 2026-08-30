@@ -50,50 +50,49 @@ const OSDSNSTPForm = ({
 
       if (!targetDept) return;
 
-      // 1st Sem Enrollee: All enrolled students in the cohort/academic year took 1st Sem (NSTP 1)
+      // 1. 1st Sem Enrollee: All cohort students who enrolled in 1st semester
       data.sem1[targetDept][genKey] += 1;
 
-      // Check grades for 1st Sem, 2nd Sem and Graduation
+      // 2. Check grades
       const sid = st.studentId || st.id;
       const semGrades = gradesMap[sid] || {};
 
-      // 1st Sem Grade: from gradesMap or student object
       const g1Str = String(
-        semGrades['1st Semester']?.final_grade ||
         st.final_grade_1 ||
         st.grade_sem1 ||
-        (st.semester === '1st Semester' ? st.final_grade : '') ||
+        semGrades['1st Semester']?.final_grade ||
         st.midterm_grade ||
         ''
-      );
+      ).trim();
 
-      // 2nd Sem Grade: from gradesMap or student object
       const g2Str = String(
-        semGrades['2nd Semester']?.final_grade ||
         st.final_grade_2 ||
         st.grade_sem2 ||
-        (st.semester === '2nd Semester' ? st.final_grade : '') ||
-        (st.final_grade && (st.status === 'graduated' || st.semester?.includes('2nd') || st.semester?.includes('Whole')) ? st.final_grade : '') ||
+        semGrades['2nd Semester']?.final_grade ||
+        (st.semester === '2nd Semester' && !st.final_grade_1 ? st.final_grade : '') ||
         ''
-      );
+      ).trim();
 
-      const num1 = parseFloat(g1Str);
-      const num2 = parseFloat(g2Str);
+      // 3. 2nd Sem Enrollee: Student actively enrolled in 2nd semester
+      const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
+      const isSem2Enrolled = !isExplicitlyNoSem2;
 
-      // Passing grade in Philippine grading system is 3.00 or better (1.00 to 3.00) or 'Passed'
-      const passed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p' || (!num1 && num2 && num2 <= 3.0);
-      const passed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p' || (st.status === 'graduated' && (!num2 || num2 <= 3.0));
-
-      const isFailedOrIncomplete = (num2 > 3.0) || (num1 > 3.0) || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP') || g2Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('FAIL');
-
-      // 2nd Sem Enrollee: count if student reached 2nd semester or whole year, or has a 2nd sem grade
-      const isSem2Enrolled = st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.has_2nd_sem || !!semGrades['2nd Semester'] || (g2Str && g2Str !== '-' && g2Str !== '') || st.status === 'graduated';
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
       }
 
-      // Graduates: ONLY students in 2nd semester who passed BOTH semesters with grade <= 3.00 and no failure/INC/DRP
-      if (isSem2Enrolled && passed1 && passed2 && !isFailedOrIncomplete) {
+      // 4. Passing Evaluation (1.00 to 3.00, or 'Passed')
+      const num1 = parseFloat(g1Str);
+      const num2 = parseFloat(g2Str);
+
+      const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
+      const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+
+      const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
+      const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
+
+      // 5. Graduates: Only 2nd sem enrollees who passed BOTH semesters without any failing/INC/DRP mark
+      if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
         data.graduates[targetDept][genKey] += 1;
       }
     });
