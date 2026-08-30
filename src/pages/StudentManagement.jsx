@@ -1096,19 +1096,10 @@ function StudentManagement() {
               </div>
               <div>
                 <h2 className="text-base font-black text-amber-950">Archived Batch: {archiveViewData.year}</h2>
-                <p className="text-xs text-amber-800 font-medium">Viewing historical student records ({sourceStudents.length} students). You can export the official CHED Masterlist below.</p>
+                <p className="text-xs text-amber-800 font-medium">Viewing historical student records ({sourceStudents.length} students).</p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => downloadChed(archiveViewData.year)}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-2 rounded-xl text-xs font-black transition-all shadow-sm flex items-center space-x-1.5 shrink-0 active:scale-95 cursor-pointer"
-                title="Download CHED Masterlist Excel for this archived batch"
-              >
-                <Download className="w-4 h-4" />
-                <span>Export CHED Masterlist</span>
-              </button>
               <button
                 type="button"
                 onClick={() => { setViewingArchive(false); setArchiveViewData(null); }}

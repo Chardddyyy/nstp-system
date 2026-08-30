@@ -2482,14 +2482,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             <th className="px-3 py-2.5 text-left">Name</th>
                             <th className="px-3 py-2.5 text-left">Program</th>
                             <th className="px-3 py-2.5 text-center">Track</th>
-                            <th className="px-3 py-2.5 text-center">1st Sem Grade</th>
-                            <th className="px-3 py-2.5 text-center">2nd Sem Grade</th>
                             <th className="px-3 py-2.5 text-center">Official Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {archiveViewData.studentData.map((student, idx) => {
-                            const g1 = student.final_grade_1 || student.grade_sem1 || '-';
                             const g2 = student.final_grade_2 || student.grade_sem2 || (student.semester === '2nd Semester' ? student.final_grade : '') || student.final_grade || '-';
                             const num2 = parseFloat(g2);
                             const isPass = !isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && g2 !== '5.00' && !String(g2).toUpperCase().includes('FAIL') && !String(g2).toUpperCase().includes('INC') && !String(g2).toUpperCase().includes('DRP');
@@ -2499,10 +2496,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                             return (
                               <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
-                                <td className="px-3 py-2 font-mono font-bold text-gray-700">{student.studentId}</td>
-                                <td className="px-3 py-2 font-semibold text-gray-900">{student.name}</td>
-                                <td className="px-3 py-2 text-gray-600">{student.program}</td>
-                                <td className="px-3 py-2 text-center">
+                                <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
+                                <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
+                                <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
+                                <td className="px-3 py-2.5 text-center">
                                   <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
                                     student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                                     student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
@@ -2512,28 +2509,26 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     {student.department}
                                   </span>
                                 </td>
-                                <td className="px-3 py-2 text-center font-bold text-gray-700">{g1}</td>
-                                <td className="px-3 py-2 text-center font-bold text-gray-700">{g2}</td>
-                                <td className="px-3 py-2 text-center">
+                                <td className="px-3 py-2.5 text-center">
                                   {isPass ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                      {g2} • GRADUATED
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                      GRADUATED
                                     </span>
                                   ) : isFail ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
-                                      5.00 • FAILED
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                      FAILED
                                     </span>
                                   ) : isInc ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                      INC • INCOMPLETE
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                      INCOMPLETE
                                     </span>
                                   ) : isDrp ? (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-800 border border-gray-300">
-                                      DRP • DROPPED
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-800 border border-gray-300">
+                                      DROPPED
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
-                                      {student.status || 'Active'}
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                      {String(student.status || 'Active').toUpperCase()}
                                     </span>
                                   )}
                                 </td>
