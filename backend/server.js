@@ -192,21 +192,31 @@ var enrollmentLimiter = rateLimit({
 });
 
 // ── In-memory login rate limiter ─────────────────────────────────────────────
-// Keyed by email (not IP) so one person's failed attempts don't lock out the
-// entire campus sharing a NAT IP address.  5 failures per email per 15 min.
+// Keyed by email. Locks account for 15 mins only after 10 consecutive FAILED attempts.
 var loginAttempts = new Map();
-function checkLoginRateLimit(email) {
+function isLoginRateLimited(email) {
+  var now = Date.now();
+  var key = String(email).toLowerCase().trim();
+  var entry = loginAttempts.get(key);
+  if (!entry) return false;
+  if (now > entry.resetAt) {
+    loginAttempts.delete(key);
+    return false;
+  }
+  return entry.count >= 10;
+}
+
+function recordFailedLogin(email) {
   var now = Date.now();
   var key = String(email).toLowerCase().trim();
   var entry = loginAttempts.get(key);
   if (!entry || now > entry.resetAt) {
     entry = { count: 0, resetAt: now + 15 * 60 * 1000 };
   }
-  if (entry.count >= 5) return false;
   entry.count++;
   loginAttempts.set(key, entry);
-  return true;
 }
+
 function resetLoginAttempts(email) {
   loginAttempts.delete(String(email).toLowerCase().trim());
 }
@@ -1280,8 +1290,8 @@ app.post('/api/auth/login', async function(req, res) {
   }
   var email = rawEmail.toLowerCase().trim();
 
-  if (!checkLoginRateLimit(email)) {
-    return res.status(429).json({ message: 'Too many failed attempts for this account. Try again in 15 minutes.' });
+  if (isLoginRateLimited(email)) {
+    return res.status(429).json({ message: 'Too many failed login attempts for this account. Try again in 15 minutes.' });
   }
 
   try {
@@ -1333,11 +1343,13 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     if (users.length === 0) {
+      recordFailedLogin(email);
       auditLog('login_failed', null, `email_not_found: ${email}`, ip);
       return res.status(401).json({ message: 'Invalid email address — Account not found' });
     }
 
     if (!passwordMatch) {
+      recordFailedLogin(email);
       auditLog('login_failed', null, `wrong_password: ${email}`, ip);
       return res.status(401).json({ message: 'Incorrect password — Please try again' });
     }
