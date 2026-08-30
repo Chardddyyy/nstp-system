@@ -5,7 +5,7 @@ import {
   Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar, Eye
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
-import { downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
+import { downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
 import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import OSDSNSTPForm from './OSDSNSTPForm';
 import OSDSNSTPForm2B from './OSDSNSTPForm2B';
@@ -154,36 +154,58 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     let finalRating = '-';
     let overallRemarks = 'Pending';
 
-    if (!isNaN(num1) && !isNaN(num2)) {
-      const avg = ((num1 + num2) / 2).toFixed(2);
-      finalRating = avg;
-      if (parseFloat(avg) <= 3.0) {
-        overallRemarks = 'Passed';
-      } else if (parseFloat(avg) === 4.0) {
-        overallRemarks = 'Conditional';
-      } else {
-        overallRemarks = 'Failed';
-      }
-    } else if (g1 && g2) {
-      if (g1 === 'DRP' || g2 === 'DRP') {
+    const isFail1 = num1 > 3.0 || g1 === '5.00' || g1.toUpperCase() === 'FAILED';
+    const isFail2 = num2 > 3.0 || g2 === '5.00' || g2.toUpperCase() === 'FAILED';
+    const isInc1 = g1.toUpperCase() === 'INC' || g1.toUpperCase() === 'INCOMPLETE';
+    const isInc2 = g2.toUpperCase() === 'INC' || g2.toUpperCase() === 'INCOMPLETE';
+    const isDrp1 = g1.toUpperCase() === 'DRP' || g1.toUpperCase() === 'DROPPED';
+    const isDrp2 = g2.toUpperCase() === 'DRP' || g2.toUpperCase() === 'DROPPED';
+
+    if (g1 && g2) {
+      if (isDrp1 || isDrp2) {
         finalRating = 'DRP';
         overallRemarks = 'Dropped';
-      } else if (g1 === 'INC' || g2 === 'INC') {
+      } else if (isFail1 || isFail2) {
+        finalRating = isFail2 ? (g2 || '5.00') : (g1 || '5.00');
+        overallRemarks = 'Failed';
+      } else if (isInc1 || isInc2) {
         finalRating = 'INC';
         overallRemarks = 'Incomplete';
-      } else if (g1 === '5.00' || g2 === '5.00' || g1 === 'Failed' || g2 === 'Failed') {
-        finalRating = '5.00';
-        overallRemarks = 'Failed';
+      } else if (!isNaN(num1) && !isNaN(num2) && num1 >= 1.0 && num1 <= 3.0 && num2 >= 1.0 && num2 <= 3.0) {
+        finalRating = ((num1 + num2) / 2).toFixed(2);
+        overallRemarks = 'Passed';
       } else {
-        finalRating = 'Passed';
+        finalRating = g2 || g1 || 'Passed';
         overallRemarks = 'Passed';
       }
     } else if (g1 && !g2) {
-      finalRating = g1;
-      overallRemarks = '1st Sem Only (Awaiting 2nd Sem)';
+      if (isFail1) {
+        finalRating = g1;
+        overallRemarks = 'Failed';
+      } else if (isInc1) {
+        finalRating = 'INC';
+        overallRemarks = 'Incomplete';
+      } else if (isDrp1) {
+        finalRating = 'DRP';
+        overallRemarks = 'Dropped';
+      } else {
+        finalRating = g1;
+        overallRemarks = '1st Sem Only (Awaiting 2nd Sem)';
+      }
     } else if (!g1 && g2) {
-      finalRating = g2;
-      overallRemarks = '2nd Sem Only (Missing 1st Sem)';
+      if (isFail2) {
+        finalRating = g2;
+        overallRemarks = 'Failed';
+      } else if (isInc2) {
+        finalRating = 'INC';
+        overallRemarks = 'Incomplete';
+      } else if (isDrp2) {
+        finalRating = 'DRP';
+        overallRemarks = 'Dropped';
+      } else {
+        finalRating = g2;
+        overallRemarks = '2nd Sem Only (Missing 1st Sem)';
+      }
     }
 
     return { g1, g2, m1, m2, finalRating, overallRemarks };
@@ -323,15 +345,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     });
   };
 
-  // ── Official OSDS-NSTP Form 2-A PDF & Excel Generator ──
+  // ── Official OSDS-NSTP Form 2-A PDF & Excel Generator (Summary Matrix) ──
   const handleDownloadOSDSForm2A = async () => {
     try {
-      await downloadAnnualForm2APdf({
-        students: filteredStudents,
+      await downloadChedFormAPdf(
         selectedSchoolYear,
-        selectedDepartment: selectedDept,
-        getAnnualStudentInfo
-      });
+        students,
+        selectedDept
+      );
     } catch (err) {
       console.error('Error generating Form 2-A PDF:', err);
       alert('Failed to generate Form 2-A PDF. Please try again.');
@@ -342,7 +363,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     try {
       await downloadChedFormAExcel(
         selectedSchoolYear,
-        filteredStudents,
+        students,
         selectedDept
       );
     } catch (err) {

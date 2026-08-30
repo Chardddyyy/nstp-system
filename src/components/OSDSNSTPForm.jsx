@@ -61,8 +61,23 @@ const OSDSNSTPForm = ({
         return;
       }
 
-      const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
+      const sid = String(st.studentId || st.student_id || st.id || '').trim();
+      const sem2GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_2nd Semester`] || gradesMap[sid]?.['2nd Semester'] || gradesMap[`${sid}_2nd`] || {}) : {};
+      const sem1GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_1st Semester`] || gradesMap[sid]?.['1st Semester'] || gradesMap[`${sid}_1st`] || {}) : {};
+
+      const g1Raw = st.final_grade_1 || st.grade_sem1 || sem1GradeObj.final_grade || sem1GradeObj.grade || (st.semester === '1st Semester' ? st.final_grade : '') || st.midterm_grade || '';
+      const g2Raw = st.final_grade_2 || st.grade_sem2 || sem2GradeObj.final_grade || sem2GradeObj.grade || (st.semester === '2nd Semester' ? st.final_grade : '') || '';
+
+      const g1Str = String(g1Raw).trim();
+      const g2Str = String(g2Raw).trim();
+
+      const num1 = parseFloat(g1Str);
+      const isFailed1 = num1 > 3.0 || g1Str.includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
+      const isPass1 = (!isNaN(num1) && num1 >= 1.0 && num1 <= 3.0 && !isFailed1) || g1Str.toLowerCase() === 'passed';
+
       const num2 = parseFloat(g2Str);
+      const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+      const isPass2 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && !isFailed2) || g2Str.toLowerCase() === 'passed';
 
       const has2ndSemFlag = st.has_2nd_sem !== false && st.has_2nd_sem !== 0;
       const isSem2Enrolled = has2ndSemFlag && Boolean(g2Str) && g2Str !== '-';
@@ -70,12 +85,8 @@ const OSDSNSTPForm = ({
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
 
-        // 2nd Sem Passing Evaluation (Grade MUST be strictly between 1.00 and 3.00, or 'Passed')
-        const isGrade1to3 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0) || g2Str.toLowerCase() === 'passed';
-        const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-
-        // Graduates: Tanging ang may markang 1.00 hanggang 3.00 lamang sa 2nd sem ang mabibilang sa graduates
-        if (isGrade1to3 && !isFailed2) {
+        // Graduates: Tanging ang may markang 1.00 hanggang 3.00 sa 2nd sem (at walang bagsak/INC/DRP) ang mabibilang sa graduates
+        if (isPass1 && isPass2 && !isFailed1 && !isFailed2) {
           data.graduates[targetDept][genKey] += 1;
         }
       }
