@@ -1752,11 +1752,6 @@ function StudentManagement() {
                               }`}>
                                 {remarks}
                               </span>
-                              {(grade1 || grade2) && (
-                                <span className="text-[8.5px] text-gray-400 font-bold mt-0.5 tracking-tight">
-                                  {grade1 ? `S1: ${grade1}` : ''}{grade1 && grade2 ? ' • ' : ''}{grade2 ? `S2: ${grade2}` : ''}
-                                </span>
-                              )}
                             </div>
                           );
                         })()}
