@@ -10,6 +10,7 @@ const manifestJson = path.join(distDir, 'manifest.json');
 const cvsuPng = path.join(distDir, 'cvsu.png');
 const cvsuLogoPng = path.join(distDir, 'cvsu-logo.png');
 const chedLogoPng = path.join(distDir, 'ched-logo.png');
+const cvsuCampusPng = path.join(distDir, 'cvsunaiccampus.png');
 const versionJson = path.join(distDir, 'version.json');
 
 if (fs.existsSync(indexHtml)) {
@@ -61,6 +62,9 @@ if (fs.existsSync(indexHtml)) {
     }
     if (fs.existsSync(chedLogoPng)) {
       fs.copyFileSync(chedLogoPng, path.join(routeDir, 'ched-logo.png'));
+    }
+    if (fs.existsSync(cvsuCampusPng)) {
+      fs.copyFileSync(cvsuCampusPng, path.join(routeDir, 'cvsunaiccampus.png'));
     }
   });
 
