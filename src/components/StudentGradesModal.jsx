@@ -1083,14 +1083,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     handleDownloadOSDSForm2A();
                     setShowFormAModal(false);
                   }}
-                  className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-950" />
                   <span>Download PDF</span>
@@ -1101,7 +1101,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                     handleDownloadOSDSForm2AExcel();
                     setShowFormAModal(false);
                   }}
-                  className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2.5 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
                   <span>Download Excel</span>
@@ -1175,14 +1175,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     downloadChedFormBPdf(selectedSchoolYear, students, formBDept, formBSem);
                     setShowFormBModal(false);
                   }}
-                  className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <Download className="w-3.5 h-3.5 text-emerald-950" />
                   <span>Download PDF</span>
@@ -1193,7 +1193,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                     downloadChedFormBExcel(selectedSchoolYear, students, formBDept, formBSem);
                     setShowFormBModal(false);
                   }}
-                  className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2.5 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
                   <span>Download Excel</span>

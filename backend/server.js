@@ -661,16 +661,18 @@ async function seedPastBatches() {
     const gradePool = [
       { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem (5.00)
       { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem
+      { g1: '5.00', g2: '',     r1: 'Failed', r2: '',       enrolledSem2: false },    // Bagsak sa 1st sem (5.00)
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem (INC)
       { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: '',     r1: 'Passed', r2: '', enrolledSem2: false },           // 1st sem lang nag-enroll (dropped before 2nd sem)
+      { g1: '2.00', g2: '',     r1: 'Passed', r2: '',       enrolledSem2: false },    // 1st sem lang nag-enroll
       { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped during 2nd sem
+      { g1: 'INC',  g2: '',     r1: 'Incomplete', r2: '',   enrolledSem2: false },    // Incomplete sa 1st sem (INC)
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped during 2nd sem (DRP)
       { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '5.00', g2: '',     r1: 'Failed', r2: '', enrolledSem2: false },           // Bagsak sa 1st sem at di nag-enroll ng 2nd sem
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem (5.00)
+      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed', enrolledSem2: true },     // Bagsak parehong semestre (5.00)
       { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
     ];
@@ -691,6 +693,14 @@ async function seedPastBatches() {
         const isEnrolled2 = gInfo.enrolledSem2;
         const isPassedBoth = isEnrolled2 && gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed';
         const is2ndSemOrYear = b.sem === '2nd Semester' || b.sem === 'Whole Academic Year';
+
+        const calcStatus = (!isEnrolled2 && gInfo.r1 === 'Failed') ? 'failed' :
+                           (!isEnrolled2 && gInfo.r1 === 'Incomplete') ? 'incomplete' :
+                           (!isEnrolled2) ? 'active' :
+                           isPassedBoth ? 'graduated' :
+                           (gInfo.r2 === 'Failed' || gInfo.r1 === 'Failed') ? 'failed' :
+                           (gInfo.r2 === 'Incomplete' || gInfo.r1 === 'Incomplete') ? 'incomplete' :
+                           (gInfo.r2 === 'Dropped') ? 'dropped' : 'active';
 
         return {
           id: parseInt(`${b.prefix}${idx + 1}`),
@@ -729,7 +739,7 @@ async function seedPastBatches() {
           semester: b.sem,
           schoolYear: b.sy,
           has_2nd_sem: isEnrolled2,
-          status: isPassedBoth ? 'graduated' : (!isEnrolled2 ? 'active' : gInfo.r2 === 'Failed' ? 'failed' : gInfo.r2 === 'Incomplete' ? 'incomplete' : 'active'),
+          status: calcStatus,
           final_grade_1: gInfo.g1,
           final_grade_2: isEnrolled2 ? gInfo.g2 : '',
           grade_sem1: gInfo.g1,
@@ -747,7 +757,7 @@ async function seedPastBatches() {
             INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
             VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_1, st.final_grade_1, (parseFloat(st.final_grade_1) <= 3.0 ? 'Passed' : 'Failed')]);
+          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_1, st.final_grade_1, (parseFloat(st.final_grade_1) <= 3.0 ? 'Passed' : st.final_grade_1 === 'INC' ? 'Incomplete' : 'Failed')]);
 
           if (st.has_2nd_sem && st.final_grade_2) {
             await pool.execute(`
@@ -845,15 +855,15 @@ async function seedActiveStudentGrades() {
       { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem
+      { g1: '5.00', g2: '',     r1: 'Failed', r2: '',       enrolledSem2: false },    // Bagsak sa 1st sem
       { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete
       { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: '',     r1: 'Passed', r2: '', enrolledSem2: false },           // 1st sem lang nag-enroll
+      { g1: 'INC',  g2: '',     r1: 'Incomplete', r2: '',   enrolledSem2: false },    // Incomplete sa 1st sem
       { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped sa 2nd sem
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped
       { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '5.00', g2: '',     r1: 'Failed', r2: '', enrolledSem2: false },           // Bagsak sa 1st sem
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak
       { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
     ];
