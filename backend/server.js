@@ -6708,7 +6708,6 @@ async function startServer() {
       ensureWebRTCColumns(),
       ensureUserColumns(),
       ensureStudentColumns(),
-      ensureStudentGradesTable(),
       ensureEnrollmentColumns(),
       ensureReportsDeptColumn(),
       ensureReportsBatchYear(),

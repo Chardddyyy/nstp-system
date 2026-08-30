@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { getPrimaryApiUrl, studentsAPI, gradesAPI } from '../services/api';
+import { studentsAPI, gradesAPI } from '../services/api';
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
@@ -469,7 +469,7 @@ function StudentManagement() {
   };
 
   // ── Instant Download for Form B (PDF or Excel) ──
-  const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem, format = 'pdf') => {
+  const handleDirectDownloadFormB = async (targetDept = formBDept, _targetSem = formBSem, format = 'pdf') => {
     try {
       setIsDownloadingFormB(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;

@@ -34,6 +34,8 @@ export default defineConfig([
       'no-empty': ['error', { allowEmptyCatch: true }],
       // React refresh — context/hook files in App.jsx are a known architecture choice
       'react-refresh/only-export-components': 'warn',
+      // React compiler / memoization preserves
+      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
 ])

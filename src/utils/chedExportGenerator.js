@@ -739,7 +739,7 @@ export async function downloadAttendanceMatrixExcel({
   studentMatrixList = [],
   daysArray = [],
   selectedDept = 'CWTS',
-  selectedSchoolYear = '2026-2027'
+  _selectedSchoolYear = '2026-2027'
 }) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'CvSU Naic NSTP System';
