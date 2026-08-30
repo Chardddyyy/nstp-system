@@ -374,7 +374,6 @@ function Login() {
               alt="CvSU Campus" 
               className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-emerald-950 via-emerald-950/70 to-transparent"></div>
 
             <div className="relative z-10">
               <span className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-amber-400/30 mb-4">
