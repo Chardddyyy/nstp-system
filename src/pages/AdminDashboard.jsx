@@ -2017,9 +2017,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       />
                     </div>
                   </div>
-                  <p className="text-[10.5px] text-emerald-800 font-medium">
-                    ⚡ Ang calendar view ay awtomatikong lilipat sa buwan na ito kapag tiningnan ang archive ng batch na ito.
-                  </p>
                 </div>
                 
                 <div>
@@ -2409,65 +2406,138 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               
               <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
                 {/* Archive Summary */}
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-amber-800 mb-3">Archive Summary</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <div className="bg-white rounded-lg p-3">
-                      <p className="text-lg sm:text-2xl font-bold text-blue-600">{archiveViewData.students || 0}</p>
-                      <p className="text-sm text-gray-600">Total Students</p>
+                {(() => {
+                  const stList = archiveViewData?.studentData || [];
+                  const totalStudents = stList.length || archiveViewData?.students || 0;
+                  const cwtsCount = stList.filter(s => (s.department || '').toUpperCase().includes('CWTS')).length;
+                  const ltsCount = stList.filter(s => (s.department || '').toUpperCase().includes('LTS')).length;
+                  const rotcCount = stList.filter(s => (s.department || '').toUpperCase().includes('ROTC')).length;
+
+                  // Graduates count per track (passing mark 1.00 to 3.00 in 2nd sem)
+                  const getPassCount = (track) => stList.filter(s => {
+                    if (!(s.department || '').toUpperCase().includes(track)) return false;
+                    const g = s.final_grade_2 || (s.semester === '2nd Semester' ? s.final_grade : '') || s.final_grade || '';
+                    const n = parseFloat(g);
+                    return !isNaN(n) && n >= 1.0 && n <= 3.0 && g !== '5.00' && !String(g).toUpperCase().includes('FAIL') && !String(g).toUpperCase().includes('INC') && !String(g).toUpperCase().includes('DRP');
+                  }).length;
+
+                  const totalGrads = getPassCount('ROTC') + getPassCount('CWTS') + getPassCount('LTS');
+
+                  return (
+                    <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div>
+                          <h4 className="text-sm font-black text-amber-950 uppercase tracking-wider">Archive Enrollees &amp; Graduates Summary</h4>
+                          <p className="text-[11px] text-amber-800 font-medium">Official demographic distribution and graduate counts</p>
+                        </div>
+                        <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-950 border border-amber-300">
+                          {archiveViewData?.year || 'Academic Year'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-blue-600">{totalStudents}</p>
+                          <p className="text-xs font-bold text-gray-700">Total Enrollees</p>
+                          <p className="text-[11px] text-emerald-700 font-extrabold mt-0.5">{totalGrads} Total Graduates</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600">{cwtsCount}</p>
+                          <p className="text-xs font-bold text-gray-700">CWTS Enrollees</p>
+                          <p className="text-[11px] text-emerald-700 font-extrabold mt-0.5">{getPassCount('CWTS')} Passed (Graduated)</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-purple-600">{ltsCount}</p>
+                          <p className="text-xs font-bold text-gray-700">LTS Enrollees</p>
+                          <p className="text-[11px] text-purple-700 font-extrabold mt-0.5">{getPassCount('LTS')} Passed (Graduated)</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-rose-600">{rotcCount}</p>
+                          <p className="text-xs font-bold text-gray-700">ROTC Enrollees</p>
+                          <p className="text-[11px] text-rose-700 font-extrabold mt-0.5">{getPassCount('ROTC')} Passed (Graduated)</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-white rounded-lg p-3">
-                      <p className="text-lg sm:text-2xl font-bold text-green-600">{archiveViewData.cwts || 0}</p>
-                      <p className="text-sm text-gray-600">CWTS</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-3">
-                      <p className="text-lg sm:text-2xl font-bold text-purple-600">{archiveViewData.lts || 0}</p>
-                      <p className="text-sm text-gray-600">LTS</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-3">
-                      <p className="text-lg sm:text-2xl font-bold text-red-600">{archiveViewData.rotc || 0}</p>
-                      <p className="text-sm text-gray-600">ROTC</p>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Student Information Section */}
                 <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center">
-                    <Users className="w-5 h-5 mr-2" />
-                    Student Information
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Users className="w-5 h-5 mr-2" />
+                      Student Information &amp; Official Grade Records
+                    </span>
+                    <span className="text-xs font-bold text-gray-500">
+                      {archiveViewData?.studentData?.length || 0} Students Listed
+                    </span>
                   </h4>
-                  {archiveViewData.studentData && archiveViewData.studentData.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-100">
+                  {archiveViewData?.studentData && archiveViewData.studentData.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full text-xs">
+                        <thead className="bg-emerald-950 text-white font-bold">
                           <tr>
-                            <th className="px-4 py-2 text-left">Student ID</th>
-                            <th className="px-4 py-2 text-left">Name</th>
-                            <th className="px-4 py-2 text-left">Program</th>
-                            <th className="px-4 py-2 text-left">Component</th>
-                            <th className="px-4 py-2 text-left">Status</th>
+                            <th className="px-3 py-2.5 text-left">Student ID</th>
+                            <th className="px-3 py-2.5 text-left">Name</th>
+                            <th className="px-3 py-2.5 text-left">Program</th>
+                            <th className="px-3 py-2.5 text-center">Track</th>
+                            <th className="px-3 py-2.5 text-center">1st Sem Grade</th>
+                            <th className="px-3 py-2.5 text-center">2nd Sem Grade</th>
+                            <th className="px-3 py-2.5 text-center">Official Status</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {archiveViewData.studentData.map((student, idx) => (
-                            <tr key={idx} className="border-b border-gray-100">
-                              <td className="px-4 py-2">{student.studentId}</td>
-                              <td className="px-4 py-2">{student.name}</td>
-                              <td className="px-4 py-2">{student.program}</td>
-                              <td className="px-4 py-2">
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  student.department === 'CWTS' ? 'bg-green-100 text-green-700' :
-                                  student.department === 'LTS' ? 'bg-purple-100 text-purple-700' :
-                                  student.department === 'ROTC' ? 'bg-red-100 text-red-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {student.department}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2">{student.status || 'Completed'}</td>
-                            </tr>
-                          ))}
+                        <tbody className="divide-y divide-gray-100">
+                          {archiveViewData.studentData.map((student, idx) => {
+                            const g1 = student.final_grade_1 || student.grade_sem1 || '-';
+                            const g2 = student.final_grade_2 || student.grade_sem2 || (student.semester === '2nd Semester' ? student.final_grade : '') || student.final_grade || '-';
+                            const num2 = parseFloat(g2);
+                            const isPass = !isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && g2 !== '5.00' && !String(g2).toUpperCase().includes('FAIL') && !String(g2).toUpperCase().includes('INC') && !String(g2).toUpperCase().includes('DRP');
+                            const isFail = g2 === '5.00' || String(g2).toUpperCase().includes('FAIL');
+                            const isInc = g2 === 'INC' || String(g2).toUpperCase().includes('INC');
+                            const isDrp = g2 === 'DRP' || String(g2).toUpperCase().includes('DRP');
+
+                            return (
+                              <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
+                                <td className="px-3 py-2 font-mono font-bold text-gray-700">{student.studentId}</td>
+                                <td className="px-3 py-2 font-semibold text-gray-900">{student.name}</td>
+                                <td className="px-3 py-2 text-gray-600">{student.program}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                                    student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                    student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                    student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {student.department}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center font-bold text-gray-700">{g1}</td>
+                                <td className="px-3 py-2 text-center font-bold text-gray-700">{g2}</td>
+                                <td className="px-3 py-2 text-center">
+                                  {isPass ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                      {g2} • GRADUATED
+                                    </span>
+                                  ) : isFail ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                      5.00 • FAILED
+                                    </span>
+                                  ) : isInc ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                      INC • INCOMPLETE
+                                    </span>
+                                  ) : isDrp ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-200 text-gray-800 border border-gray-300">
+                                      DRP • DROPPED
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
+                                      {student.status || 'Active'}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -2652,50 +2722,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               </div>
 
               {/* Action Buttons */}
-              <div className="sticky bottom-0 bg-white p-4 border-t flex flex-wrap gap-2 justify-between items-center">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowArchiveDetails(false);
-                      navigate('/admin/students');
-                    }}
-                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    👥 Students
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowArchiveDetails(false);
-                      navigate('/reports');
-                    }}
-                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    📑 Reports
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowArchiveDetails(false);
-                      navigate('/calendar');
-                    }}
-                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    📅 Calendar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowArchiveDetails(false);
-                      navigate('/letter-formats');
-                    }}
-                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                  >
-                    ✉️ Letter Formats
-                  </button>
-                </div>
-
+              <div className="sticky bottom-0 bg-white p-4 border-t flex flex-wrap gap-2 justify-end items-center">
                 <div className="flex gap-2">
                   <button
                     type="button"
