@@ -51,29 +51,50 @@ const OSDSNSTPForm = ({
       if (!targetDept) return;
 
       // 1st Sem Enrollee
-      data.sem1[targetDept][genKey] += 1;
+      const isSem1Enrolled = !st.semester || st.semester.includes('1st') || st.semester.includes('Whole') || !!st.final_grade_1 || !st.semester.includes('2nd');
+      if (isSem1Enrolled) {
+        data.sem1[targetDept][genKey] += 1;
+      }
 
-      // Check grades for 2nd Sem and Graduation
+      // Check grades for 1st Sem, 2nd Sem and Graduation
       const sid = st.studentId || st.id;
       const semGrades = gradesMap[sid] || {};
-      const g1Str = semGrades['1st Semester']?.final_grade || '';
-      const g2Str = semGrades['2nd Semester']?.final_grade || '';
+
+      // 1st Sem Grade: from gradesMap or student object
+      const g1Str = String(
+        semGrades['1st Semester']?.final_grade ||
+        st.final_grade_1 ||
+        st.grade_sem1 ||
+        (st.semester === '1st Semester' ? st.final_grade : '') ||
+        st.midterm_grade ||
+        ''
+      );
+
+      // 2nd Sem Grade: from gradesMap or student object
+      const g2Str = String(
+        semGrades['2nd Semester']?.final_grade ||
+        st.final_grade_2 ||
+        st.grade_sem2 ||
+        (st.semester === '2nd Semester' ? st.final_grade : '') ||
+        (st.final_grade && (st.status === 'graduated' || st.semester?.includes('2nd') || st.semester?.includes('Whole')) ? st.final_grade : '') ||
+        ''
+      );
 
       const num1 = parseFloat(g1Str);
       const num2 = parseFloat(g2Str);
 
       // Passing grade in Philippine grading system is 3.00 or better (1.00 to 3.00) or 'Passed'
-      const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
-      const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p';
+      const passed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
+      const passed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p' || (st.status === 'graduated' && (!num2 || num2 <= 3.0));
 
-      // 2nd Sem Enrollee: Only count if student is officially enrolled in 2nd semester or has a 2nd sem grade
-      const isSem2Enrolled = st.semester === '2nd Semester' || !!semGrades['2nd Semester'] || !!g2Str;
+      // 2nd Sem Enrollee: count if student is officially enrolled in 2nd semester or whole year, or has a 2nd sem grade
+      const isSem2Enrolled = st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.has_2nd_sem || !!semGrades['2nd Semester'] || (g2Str && g2Str !== '-') || st.status === 'graduated';
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
       }
 
       // Graduates: ONLY students who passed BOTH 1st Sem and 2nd Sem with grade <= 3.00
-      if (passed1 && passed2) {
+      if (passed1 && passed2 && isSem2Enrolled) {
         data.graduates[targetDept][genKey] += 1;
       }
     });

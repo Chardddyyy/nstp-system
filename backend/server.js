@@ -658,118 +658,161 @@ async function seedPastBatches() {
       { firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
     ];
 
+    const gradePool = [
+      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.50', g2: '1.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '1.50', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.00', g2: '1.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.00', g2: '1.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.75', g2: '2.50', r1: 'Passed', r2: 'Passed' },
+      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.25', g2: '1.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // INC sa 2nd sem
+      { g1: '2.25', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // DRP sa 2nd sem
+      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
+    ];
+
     const batches = [
-      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023 },
-      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023 },
+      { year: '2024-2025', sy: '2024-2025', sem: 'Whole Academic Year', prefix: '20240', list: rawStudents2024 },
       { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024 },
       { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024 },
+      { year: '2023-2024', sy: '2023-2024', sem: 'Whole Academic Year', prefix: '20230', list: rawStudents2023 },
+      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023 },
+      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023 },
     ];
 
     for (const b of batches) {
-      const [existing] = await pool.execute('SELECT id FROM archived_years WHERE year = ?', [b.year]);
-      if (existing.length === 0) {
-        const studentData = b.list.map((s, idx) => {
-          const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
-          return {
-            id: parseInt(`${b.prefix}${idx + 1}`),
-            studentId: sid,
-            firstName: s.firstName,
-            lastName: s.lastName,
-            middleName: s.middleName,
-            suffix: '',
-            name: `${s.lastName}, ${s.firstName} ${s.middleName}`,
-            email: `${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}@cvsu.edu.ph`,
-            contactNumber: `0917${String(1000000 + idx * 37).slice(0, 7)}`,
-            facebookAccount: `facebook.com/${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}`,
-            department: s.dept,
-            program: s.prog,
-            yearLevel: '1st Year',
-            year: '1st Year',
-            section: s.schoolSec,
-            nstp_section: s.nstpSec,
-            sex: s.sex,
-            gender: s.sex,
-            birthMonth: '08',
-            birthDay: String((idx % 28) + 1).padStart(2, '0'),
-            birthYear: b.sy.startsWith('2023') ? '2004' : '2005',
-            age: '19',
-            civilStatus: 'Single',
-            registeredVoter: idx % 3 === 0 ? 'Yes' : 'No',
-            bloodType: ['O+', 'A+', 'B+', 'AB+'][idx % 4],
-            height: `${160 + (idx % 20)}`,
-            weight: `${52 + (idx % 25)}`,
-            street: `Brgy. ${s.brgy}`,
-            municipality: 'Naic',
-            province: 'Cavite',
-            address: `Brgy. ${s.brgy}, Naic, Cavite`,
-            emergencyContact: `Maria ${s.lastName}`,
-            emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
-            semester: b.sem,
-            schoolYear: b.sy,
-            status: b.sem === '2nd Semester' ? 'graduated' : 'active',
-            midterm_grade: ['1.25', '1.50', '1.75', '1.00', '1.50'][idx % 5],
-            final_grade: ['1.25', '1.25', '1.50', '1.00', '1.50'][idx % 5],
-            remarks: 'Passed'
-          };
-        });
+      const studentData = b.list.map((s, idx) => {
+        const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
+        const gInfo = gradePool[idx % gradePool.length];
+        const isPassedBoth = gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed';
+        const is2ndSemOrYear = b.sem === '2nd Semester' || b.sem === 'Whole Academic Year';
 
-        const reportData = [
-          { 
-            id: 1, 
-            title: `NSTP ${b.sem === '1st Semester' ? '1 Community Orientation & Needs Assessment' : '2 Culminating Community Engagement Report'} (${b.year})`, 
-            department: 'CWTS', 
-            description: `Official comprehensive documentation and field accomplishment report for NSTP CWTS activities during ${b.year}.`,
-            status: 'Approved', 
-            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15` : `${b.sy.split('-')[1]}-04-15`,
-            instructor: 'CWTS Instructor',
-            instructor_name: 'CWTS Instructor',
-            submissions: [
-              { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
-            ]
-          },
-          { 
-            id: 2, 
-            title: `Literacy Tutorial & Reading Outreach Milestone Report (${b.year})`, 
-            department: 'LTS', 
-            description: `Diagnostic assessments, remedial reading tutorials, and learning kit distribution report for ${b.year}.`,
-            status: 'Approved', 
-            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16` : `${b.sy.split('-')[1]}-04-16`,
-            instructor: 'LTS Instructor',
-            instructor_name: 'LTS Instructor',
-            submissions: [
-              { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
-            ]
-          },
-          { 
-            id: 3, 
-            title: `Annual ROTC Tactical Briefing, Review & Muster (${b.year})`, 
-            department: 'ROTC', 
-            description: `Troop formation muster, military tactics evaluation, and pass-in-review accomplishment for ${b.year}.`,
-            status: 'Approved', 
-            submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17` : `${b.sy.split('-')[1]}-04-17`,
-            instructor: 'ROTC Instructor',
-            instructor_name: 'ROTC Instructor',
-            submissions: [
-              { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
-            ]
-          }
-        ];
+        return {
+          id: parseInt(`${b.prefix}${idx + 1}`),
+          studentId: sid,
+          firstName: s.firstName,
+          lastName: s.lastName,
+          middleName: s.middleName,
+          suffix: '',
+          name: `${s.lastName}, ${s.firstName} ${s.middleName}`,
+          email: `${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}@cvsu.edu.ph`,
+          contactNumber: `0917${String(1000000 + idx * 37).slice(0, 7)}`,
+          facebookAccount: `facebook.com/${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}`,
+          department: s.dept,
+          program: s.prog,
+          yearLevel: '1st Year',
+          year: '1st Year',
+          section: s.schoolSec,
+          nstp_section: s.nstpSec,
+          sex: s.sex,
+          gender: s.sex,
+          birthMonth: '08',
+          birthDay: String((idx % 28) + 1).padStart(2, '0'),
+          birthYear: b.sy.startsWith('2023') ? '2004' : '2005',
+          age: '19',
+          civilStatus: 'Single',
+          registeredVoter: idx % 3 === 0 ? 'Yes' : 'No',
+          bloodType: ['O+', 'A+', 'B+', 'AB+'][idx % 4],
+          height: `${160 + (idx % 20)}`,
+          weight: `${52 + (idx % 25)}`,
+          street: `Brgy. ${s.brgy}`,
+          municipality: 'Naic',
+          province: 'Cavite',
+          address: `Brgy. ${s.brgy}, Naic, Cavite`,
+          emergencyContact: `Maria ${s.lastName}`,
+          emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
+          semester: b.sem,
+          schoolYear: b.sy,
+          status: isPassedBoth ? 'graduated' : (gInfo.r2 === 'Failed' ? 'failed' : gInfo.r2 === 'Incomplete' ? 'incomplete' : 'active'),
+          final_grade_1: gInfo.g1,
+          final_grade_2: gInfo.g2,
+          grade_sem1: gInfo.g1,
+          grade_sem2: gInfo.g2,
+          midterm_grade: gInfo.g1,
+          final_grade: is2ndSemOrYear ? gInfo.g2 : gInfo.g1,
+          remarks: is2ndSemOrYear ? gInfo.r2 : gInfo.r1
+        };
+      });
 
-        const letterData = [
-          { id: 'letter-1', title: 'Barangay Immersion & Community Service Request Letter', department: 'CWTS', description: 'Official formal institutional endorsement for CWTS community immersion projects.' },
-          { id: 'letter-2', title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement', department: 'LTS', description: 'Formal request for student-led reading tutorials and literacy clinic sessions.' },
-          { id: 'letter-3', title: 'ROTC Field Training Exercise & Range Facility Request', department: 'ROTC', description: 'Endorsement to Armed Forces training command for tactical exercises.' },
-          { id: 'letter-4', title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form', department: 'All', description: 'Institutional waiver required for all off-campus community and training engagements.' },
-          { id: 'letter-5', title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement', department: 'All', description: 'CHED submission document certifying graduates and requesting assigned national serial numbers.' }
-        ];
+      // Insert grades into student_grades table so active grade queries also find them
+      for (const st of studentData) {
+        try {
+          await pool.execute(`
+            INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+            VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_1, st.final_grade_1, (parseFloat(st.final_grade_1) <= 3.0 ? 'Passed' : 'Failed')]);
 
-        const archivePayload = JSON.stringify({ studentData, reportData, letterData, students: studentData.length, reports: reportData.length });
-        await pool.execute(
-          'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = VALUES(students), reports = VALUES(reports), data = VALUES(data)',
-          [b.year, studentData.length, reportData.length, archivePayload]
-        );
-        console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
+          await pool.execute(`
+            INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+            VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_2, st.final_grade_2, (parseFloat(st.final_grade_2) <= 3.0 ? 'Passed' : st.final_grade_2 === 'INC' ? 'Incomplete' : st.final_grade_2 === 'DRP' ? 'Dropped' : 'Failed')]);
+        } catch (_) {}
       }
+
+      const reportData = [
+        { 
+          id: 1, 
+          title: `NSTP ${b.sem === '1st Semester' ? '1 Community Orientation & Needs Assessment' : '2 Culminating Community Engagement Report'} (${b.year})`, 
+          department: 'CWTS', 
+          description: `Official comprehensive documentation and field accomplishment report for NSTP CWTS activities during ${b.year}.`,
+          status: 'Approved', 
+          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15` : `${b.sy.split('-')[1]}-04-15`,
+          instructor: 'CWTS Instructor',
+          instructor_name: 'CWTS Instructor',
+          submissions: [
+            { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
+          ]
+        },
+        { 
+          id: 2, 
+          title: `Literacy Tutorial & Reading Outreach Milestone Report (${b.year})`, 
+          department: 'LTS', 
+          description: `Diagnostic assessments, remedial reading tutorials, and learning kit distribution report for ${b.year}.`,
+          status: 'Approved', 
+          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16` : `${b.sy.split('-')[1]}-04-16`,
+          instructor: 'LTS Instructor',
+          instructor_name: 'LTS Instructor',
+          submissions: [
+            { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
+          ]
+        },
+        { 
+          id: 3, 
+          title: `Annual ROTC Tactical Briefing, Review & Muster (${b.year})`, 
+          department: 'ROTC', 
+          description: `Troop formation muster, military tactics evaluation, and pass-in-review accomplishment for ${b.year}.`,
+          status: 'Approved', 
+          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17` : `${b.sy.split('-')[1]}-04-17`,
+          instructor: 'ROTC Instructor',
+          instructor_name: 'ROTC Instructor',
+          submissions: [
+            { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
+          ]
+        }
+      ];
+
+      const letterData = [
+        { id: 'letter-1', title: 'Barangay Immersion & Community Service Request Letter', department: 'CWTS', description: 'Official formal institutional endorsement for CWTS community immersion projects.' },
+        { id: 'letter-2', title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement', department: 'LTS', description: 'Formal request for student-led reading tutorials and literacy clinic sessions.' },
+        { id: 'letter-3', title: 'ROTC Field Training Exercise & Range Facility Request', department: 'ROTC', description: 'Endorsement to Armed Forces training command for tactical exercises.' },
+        { id: 'letter-4', title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form', department: 'All', description: 'Institutional waiver required for all off-campus community and training engagements.' },
+        { id: 'letter-5', title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement', department: 'All', description: 'CHED submission document certifying graduates and requesting assigned national serial numbers.' }
+      ];
+
+      const archivePayload = JSON.stringify({ studentData, reportData, letterData, students: studentData.length, reports: reportData.length });
+      await pool.execute(
+        'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = VALUES(students), reports = VALUES(reports), data = VALUES(data)',
+        [b.year, studentData.length, reportData.length, archivePayload]
+      );
+      console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
     }
   } catch (err) {
     console.warn('Past batches seed notice:', err.message);

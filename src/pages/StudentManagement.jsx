@@ -450,7 +450,11 @@ function StudentManagement() {
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
       const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
 
-      const targetStudents = (students || []).filter((st) => {
+      const baseList = (viewingArchive && Array.isArray(archiveViewData?.studentData) && archiveViewData.studentData.length > 0)
+        ? archiveViewData.studentData
+        : (students || []);
+
+      const targetStudents = baseList.filter((st) => {
         if (dept !== 'All' && st.department !== dept) return false;
         return true;
       });
@@ -469,14 +473,19 @@ function StudentManagement() {
   };
 
   // ── Instant Download for Form B (PDF or Excel) ──
-  const handleDirectDownloadFormB = async (targetDept = formBDept, _targetSem = formBSem, format = 'pdf') => {
+  const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem, format = 'pdf') => {
     try {
       setIsDownloadingFormB(true);
       const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
       const deptFilter = targetDept || 'All';
 
-      const targetStudents = (students || []).filter((st) => {
+      const baseList = (viewingArchive && Array.isArray(archiveViewData?.studentData) && archiveViewData.studentData.length > 0)
+        ? archiveViewData.studentData
+        : (students || []);
+
+      const targetStudents = baseList.filter((st) => {
         if (deptFilter !== 'All' && st.department !== deptFilter) return false;
+        if (targetSem && targetSem !== 'All' && st.semester && st.semester !== targetSem && st.semester !== 'Whole Academic Year') return false;
         return true;
       });
 
@@ -4374,7 +4383,8 @@ function StudentManagement() {
                   classification="PUBLIC"
                   region="4A - CALABARZON"
                   address="Bucana Malaki, Naic, Cavite"
-                  students={students}
+                  students={(viewingArchive && Array.isArray(archiveViewData?.studentData) && archiveViewData.studentData.length > 0) ? archiveViewData.studentData : students}
+                  gradesMap={gradesMap}
                 />
               </div>
             </div>

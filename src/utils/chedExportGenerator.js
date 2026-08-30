@@ -513,21 +513,26 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     if (!targetDept) return;
 
     // 1st Semester Enrollees
-    statsMatrix.sem1[targetDept][genKey] += 1;
+    const isSem1Enrolled = !st.semester || st.semester.includes('1st') || st.semester.includes('Whole') || !!st.final_grade_1 || !st.semester.includes('2nd');
+    if (isSem1Enrolled) {
+      statsMatrix.sem1[targetDept][genKey] += 1;
+    }
 
-    // 2nd Semester Enrollees: Only count if student is enrolled in 2nd semester
-    const isSem2Enrolled = st.semester === '2nd Semester' || st.has_2nd_sem || !!st.final_grade_2;
+    // 2nd Semester Enrollees
+    const isSem2Enrolled = st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.has_2nd_sem || !!st.final_grade_2 || st.status === 'graduated';
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
     }
 
     // Graduates: Only count if student passed with <= 3.0 in both semesters
-    const g1 = parseFloat(st.final_grade_1 || st.final_grade);
-    const g2 = parseFloat(st.final_grade_2);
-    const passed1 = (!isNaN(g1) && g1 <= 3.0) || String(st.final_grade_1 || '').toLowerCase() === 'passed';
-    const passed2 = (!isNaN(g2) && g2 <= 3.0) || String(st.final_grade_2 || '').toLowerCase() === 'passed';
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester?.includes('1st') ? st.final_grade : '') || '');
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.status === 'graduated' ? st.final_grade : '') || '');
+    const g1 = parseFloat(g1Str);
+    const g2 = parseFloat(g2Str);
+    const passed1 = (!isNaN(g1) && g1 <= 3.0 && g1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
+    const passed2 = (!isNaN(g2) && g2 <= 3.0 && g2 >= 1.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p' || (st.status === 'graduated' && (!g2 || g2 <= 3.0));
 
-    if (passed1 && passed2) {
+    if (passed1 && passed2 && isSem2Enrolled) {
       statsMatrix.graduates[targetDept][genKey] += 1;
     }
   });
