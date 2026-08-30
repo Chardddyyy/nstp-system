@@ -887,10 +887,6 @@ async function seedActiveStudentGrades() {
     console.warn('Active student grades seed notice:', err.message);
   }
 }
-  } catch (err) {
-    console.warn('Past batches seed notice:', err.message);
-  }
-}
 
 // ── Audit log ─────────────────────────────────────────────────────────────────
 async function ensureAuditLogs() {
