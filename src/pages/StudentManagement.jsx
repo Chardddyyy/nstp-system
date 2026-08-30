@@ -108,6 +108,7 @@ function StudentManagement() {
         const sid = String(r.studentId || r.student_id || '').trim();
         const sidVal = String(r.student_id_val || '').trim();
         const dbId = r.id ? String(r.id) : '';
+        const sem = String(r.semester || '').trim();
         const entry = {
           final_grade: r.final_grade,
           midterm_grade: r.midterm_grade,
@@ -115,14 +116,18 @@ function StudentManagement() {
           semester: r.semester,
           school_year: r.school_year
         };
+
         if (sid) {
           if (!map[sid] || r.final_grade) map[sid] = entry;
+          if (sem) map[`${sid}_${sem}`] = entry;
         }
         if (sidVal) {
           if (!map[sidVal] || r.final_grade) map[sidVal] = entry;
+          if (sem) map[`${sidVal}_${sem}`] = entry;
         }
         if (dbId) {
           if (!map[dbId] || r.final_grade) map[dbId] = entry;
+          if (sem) map[`${dbId}_${sem}`] = entry;
         }
       });
       setGradesMap(map);
@@ -142,15 +147,39 @@ function StudentManagement() {
   }, [students, viewingArchive, loadGradesData, refreshData]);
 
   const getStudentGradeInfo = useCallback((student) => {
-    if (!student) return { finalGrade: '', remarks: '', midtermGrade: '', nstp1Grade: '', nstp2Grade: '' };
+    if (!student) return { finalGrade: '', remarks: '', midtermGrade: '', nstp1Grade: '', nstp2Grade: '', grade1: '', grade2: '' };
     const sid = String(student.studentId || '').trim();
     const dbId = String(student.id || '').trim();
     const g = (sid && gradesMap[sid]) || (dbId && gradesMap[dbId]) || {};
-    const finalGrade = student.final_grade || g.final_grade || g.grade || student.grade || '';
-    const midtermGrade = student.midterm_grade || g.midterm_grade || '';
-    const nstp1Grade = student.nstp1_grade || g.nstp1_grade || '';
-    const nstp2Grade = student.nstp2_grade || g.nstp2_grade || '';
-    let remarks = student.remarks || g.remarks || '';
+    const g1Entry = (sid && gradesMap[`${sid}_1st Semester`]) || {};
+    const g2Entry = (sid && gradesMap[`${sid}_2nd Semester`]) || {};
+
+    const grade1 = String(student.final_grade_1 || student.grade_sem1 || g1Entry.final_grade || (g.semester === '1st Semester' ? g.final_grade : '') || '').trim();
+    const grade2 = String(student.final_grade_2 || student.grade_sem2 || g2Entry.final_grade || (g.semester === '2nd Semester' ? g.final_grade : '') || '').trim();
+
+    let finalGrade = String(student.final_grade || g.final_grade || student.grade || '').trim();
+    let remarks = String(student.remarks || g.remarks || '').trim();
+
+    // If both semester grades are available, compute true composite status
+    if (grade1 || grade2) {
+      if (grade2 === '5.00' || grade1 === '5.00') {
+        finalGrade = grade2 === '5.00' ? '5.00' : (grade1 === '5.00' ? '5.00' : finalGrade);
+        remarks = 'Failed';
+      } else if (grade2 === 'INC' || grade1 === 'INC') {
+        finalGrade = grade2 === 'INC' ? 'INC' : (grade1 === 'INC' ? 'INC' : finalGrade);
+        remarks = 'Incomplete';
+      } else if (grade2 === 'DRP' || grade1 === 'DRP') {
+        finalGrade = 'DRP';
+        remarks = 'Dropped';
+      } else if (grade2 && parseFloat(grade2) <= 3.0) {
+        finalGrade = grade2;
+        remarks = 'Passed';
+      } else if (grade1 && parseFloat(grade1) <= 3.0) {
+        finalGrade = grade1;
+        remarks = 'Passed';
+      }
+    }
+
     if (!remarks && finalGrade) {
       if (['INC', 'DRP', 'Conditional', 'Failed', 'Passed'].includes(finalGrade)) {
         remarks = finalGrade === 'INC' ? 'Incomplete' : finalGrade === 'DRP' ? 'Dropped' : finalGrade;
@@ -161,7 +190,16 @@ function StudentManagement() {
         }
       }
     }
-    return { finalGrade, remarks: remarks || (finalGrade ? 'Graded' : 'No Grade'), midtermGrade, nstp1Grade, nstp2Grade };
+
+    return {
+      finalGrade,
+      remarks: remarks || (finalGrade ? 'Graded' : 'No Grade'),
+      midtermGrade: student.midterm_grade || g.midterm_grade || '',
+      nstp1Grade: grade1,
+      nstp2Grade: grade2,
+      grade1,
+      grade2
+    };
   }, [gradesMap]);
   
   // Pagination state
@@ -1694,7 +1732,7 @@ function StudentManagement() {
                       {/* NSTP Final Grade Column */}
                       <td className="px-4 py-4 whitespace-nowrap text-center">
                         {(() => {
-                          const { finalGrade, remarks } = getStudentGradeInfo(student);
+                          const { finalGrade, remarks, grade1, grade2 } = getStudentGradeInfo(student);
                           if (!finalGrade || finalGrade === '-') {
                             return (
                               <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 bg-gray-100 border border-gray-200">
@@ -1702,8 +1740,8 @@ function StudentManagement() {
                               </span>
                             );
                           }
-                          const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
-                          const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                          const isPassed = remarks === 'Passed' || (Number(finalGrade) <= 3.0 && Number(finalGrade) >= 1.0);
+                          const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0 || finalGrade === '5.00';
                           const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
                           const isDrp = finalGrade === 'DRP' || remarks === 'Dropped';
 
@@ -1719,10 +1757,15 @@ function StudentManagement() {
                                 {finalGrade}
                               </span>
                               <span className={`text-[9.5px] font-extrabold mt-0.5 ${
-                                isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600' : 'text-gray-500'
+                                isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600 font-black' : isInc ? 'text-amber-700 font-black' : 'text-gray-500'
                               }`}>
                                 {remarks}
                               </span>
+                              {(grade1 || grade2) && (
+                                <span className="text-[8.5px] text-gray-400 font-bold mt-0.5 tracking-tight">
+                                  {grade1 ? `S1: ${grade1}` : ''}{grade1 && grade2 ? ' • ' : ''}{grade2 ? `S2: ${grade2}` : ''}
+                                </span>
+                              )}
                             </div>
                           );
                         })()}
@@ -2799,24 +2842,24 @@ function StudentManagement() {
                     {(() => {
                       const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
                       if (!finalGrade) return null;
-                      const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
-                      const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                      const isPassed = remarks === 'Passed' || (Number(finalGrade) <= 3.0 && Number(finalGrade) >= 1.0);
+                      const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0 || finalGrade === '5.00';
                       const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
                       const isDrp = finalGrade === 'DRP' || remarks === 'Dropped';
                       return (
                         <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
                           isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
-                          isFailed ? 'bg-rose-100 text-rose-950 border-rose-300' :
-                          isInc ? 'bg-amber-100 text-amber-950 border-amber-300' :
+                          isFailed ? 'bg-rose-100 text-rose-950 border-rose-300 font-black' :
+                          isInc ? 'bg-amber-100 text-amber-950 border-amber-300 font-black' :
                           isDrp ? 'bg-purple-100 text-purple-950 border-purple-300' :
                           'bg-gray-100 text-gray-900 border-gray-200'
                         }`}>
-                          Rating: {finalGrade} ({remarks})
+                          Overall Rating: {finalGrade} ({remarks})
                         </span>
                       );
                     })()}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 mb-3">
                     <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
                       <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
                       <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.program || '-'}</span>
@@ -2839,12 +2882,12 @@ function StudentManagement() {
                     </div>
                     {/* Final Grade Card */}
                     <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/40">
-                      <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">Final Grade</span>
+                      <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">Cumulative Rating</span>
                       {(() => {
                         const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
                         if (!finalGrade) return <span className="text-xs text-gray-400 font-bold mt-0.5 block">Pending</span>;
-                        const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
-                        const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                        const isPassed = remarks === 'Passed' || (Number(finalGrade) <= 3.0 && Number(finalGrade) >= 1.0);
+                        const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0 || finalGrade === '5.00';
                         const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
                         return (
                           <div className="flex items-center gap-1 mt-0.5">
@@ -2857,6 +2900,60 @@ function StudentManagement() {
                           </div>
                         );
                       })()}
+                    </div>
+                  </div>
+
+                  {/* Dedicated Semester Breakdown Roster */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-emerald-200/50">
+                    <div className="bg-white/90 p-2.5 rounded-xl border border-emerald-200/60 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">NSTP 1 (1st Sem Grade)</span>
+                        <span className="text-xs font-bold text-gray-500">First Semester Mark</span>
+                      </div>
+                      <div>
+                        {(() => {
+                          const g1 = getStudentGradeInfo(currentViewStudent).grade1;
+                          if (!g1) return <span className="text-xs text-gray-400 font-bold">No Grade</span>;
+                          const isPass = parseFloat(g1) <= 3.0 && parseFloat(g1) >= 1.0;
+                          const isFail = g1 === '5.00' || parseFloat(g1) >= 4.0;
+                          return (
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-black border ${
+                              isPass ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
+                              isFail ? 'bg-rose-100 text-rose-950 border-rose-300' :
+                              'bg-amber-100 text-amber-950 border-amber-300'
+                            }`}>
+                              {g1} {isPass ? '(Passed)' : isFail ? '(Failed)' : '(INC)'}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    <div className="bg-white/90 p-2.5 rounded-xl border border-emerald-200/60 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block">NSTP 2 (2nd Sem Grade)</span>
+                        <span className="text-xs font-bold text-gray-500">Second Semester Mark</span>
+                      </div>
+                      <div>
+                        {(() => {
+                          const g2 = getStudentGradeInfo(currentViewStudent).grade2;
+                          if (!g2) return <span className="text-xs text-gray-400 font-bold">Not Enrolled / Pending</span>;
+                          const isPass = parseFloat(g2) <= 3.0 && parseFloat(g2) >= 1.0;
+                          const isFail = g2 === '5.00' || parseFloat(g2) >= 4.0;
+                          const isInc = g2 === 'INC';
+                          const isDrp = g2 === 'DRP';
+                          return (
+                            <span className={`px-2 py-0.5 rounded-md text-xs font-black border ${
+                              isPass ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
+                              isFail ? 'bg-rose-100 text-rose-950 border-rose-300' :
+                              isInc ? 'bg-amber-100 text-amber-950 border-amber-300' :
+                              isDrp ? 'bg-purple-100 text-purple-950 border-purple-300' :
+                              'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>
+                              {g2} {isPass ? '(Passed)' : isFail ? '(Failed)' : isInc ? '(INC)' : isDrp ? '(Dropped)' : ''}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4032,7 +4129,7 @@ function StudentManagement() {
         <StudentAttendanceMatrixModal
           isOpen={showAttendanceMatrix}
           onClose={() => setShowAttendanceMatrix(false)}
-          students={students}
+          students={sourceStudents}
           currentUser={user}
         />
 
@@ -4048,7 +4145,7 @@ function StudentManagement() {
             loadGradesData();
             try { refreshData?.(); } catch (_) {}
           }}
-          students={students}
+          students={sourceStudents}
           currentUser={user}
         />
 

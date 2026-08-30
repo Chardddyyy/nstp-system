@@ -2941,7 +2941,57 @@ const handleGetStudents = async (req, res) => {
         [req.user.department]
       );
     }
-    res.json(students);
+
+    // Attach latest grades from student_grades
+    const [grades] = await pool.execute('SELECT * FROM student_grades ORDER BY id ASC').catch(() => [[]]);
+    const gradesBySid = {};
+    const gradesByDbId = {};
+
+    (grades || []).forEach(g => {
+      const sid = String(g.studentId || '').trim();
+      const dbId = String(g.student_id || '').trim();
+      const sem = String(g.semester || '').trim();
+
+      if (sid) {
+        if (!gradesBySid[sid]) gradesBySid[sid] = {};
+        gradesBySid[sid][sem] = g;
+      }
+      if (dbId) {
+        if (!gradesByDbId[dbId]) gradesByDbId[dbId] = {};
+        gradesByDbId[dbId][sem] = g;
+      }
+    });
+
+    const enriched = (students || []).map(st => {
+      const sid = String(st.studentId || '').trim();
+      const dbId = String(st.id || '').trim();
+      const stGrades = gradesBySid[sid] || gradesByDbId[dbId] || {};
+
+      const g1 = stGrades['1st Semester']?.final_grade || '';
+      const g2 = stGrades['2nd Semester']?.final_grade || '';
+      const r1 = stGrades['1st Semester']?.remarks || (g1 ? (parseFloat(g1) <= 3.0 ? 'Passed' : g1 === 'INC' ? 'Incomplete' : 'Failed') : '');
+      const r2 = stGrades['2nd Semester']?.remarks || (g2 ? (parseFloat(g2) <= 3.0 ? 'Passed' : g2 === 'INC' ? 'Incomplete' : 'Failed') : '');
+
+      const has2ndSem = Boolean(stGrades['2nd Semester'] || g2);
+      const is2ndSem = String(st.semester || '').includes('2nd');
+
+      let finalGrade = is2ndSem ? (g2 || g1) : (g2 ? (g2 === '5.00' || g1 === '5.00' ? '5.00' : (g2 === 'INC' || g1 === 'INC' ? 'INC' : g2)) : g1);
+      let remarks = is2ndSem ? (r2 || r1) : (g2 ? (r2 === 'Failed' || r1 === 'Failed' ? 'Failed' : (r2 === 'Incomplete' || r1 === 'Incomplete' ? 'Incomplete' : r2)) : r1);
+
+      return {
+        ...st,
+        final_grade_1: g1,
+        final_grade_2: g2,
+        grade_sem1: g1,
+        grade_sem2: g2,
+        midterm_grade: stGrades['1st Semester']?.midterm_grade || g1,
+        final_grade: finalGrade,
+        remarks: remarks || (finalGrade ? (parseFloat(finalGrade) <= 3.0 ? 'Passed' : 'Failed') : ''),
+        has_2nd_sem: has2ndSem
+      };
+    });
+
+    res.json(enriched);
   } catch (error) {
     console.error('Get students error:', error.message);
     try {
