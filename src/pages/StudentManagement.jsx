@@ -4135,50 +4135,29 @@ function StudentManagement() {
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
+                    handleDirectDownloadFormB(formBDept, formBSem, 'pdf');
                     setShowFormBModal(false);
-                    setShowFormBPreview(true);
                   }}
-                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Preview / Print</span>
+                  <Download className="w-3.5 h-3.5 text-emerald-950" />
+                  <span>Download PDF</span>
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowFormBModal(false)}
-                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectDownloadFormB(formBDept, formBSem, 'pdf');
-                      setShowFormBModal(false);
-                    }}
-                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectDownloadFormB(formBDept, formBSem, 'excel');
-                      setShowFormBModal(false);
-                    }}
-                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
-                    <span>Download Excel</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDirectDownloadFormB(formBDept, formBSem, 'excel');
+                    setShowFormBModal(false);
+                  }}
+                  className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Download Excel</span>
+                </button>
               </div>
             </div>
           </div>
@@ -4242,50 +4221,29 @@ function StudentManagement() {
               </div>
 
               {/* Footer */}
-              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
+                    handleDirectDownloadFormA('pdf');
                     setShowFormAModal(false);
-                    setShowFormAPreview(true);
                   }}
-                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Preview / Print</span>
+                  <Download className="w-3.5 h-3.5 text-emerald-950" />
+                  <span>Download PDF</span>
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowFormAModal(false)}
-                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectDownloadFormA('pdf');
-                      setShowFormAModal(false);
-                    }}
-                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Download PDF</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleDirectDownloadFormA('excel');
-                      setShowFormAModal(false);
-                    }}
-                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
-                    <span>Download Excel</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDirectDownloadFormA('excel');
+                    setShowFormAModal(false);
+                  }}
+                  className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Download Excel</span>
+                </button>
               </div>
             </div>
           </div>
