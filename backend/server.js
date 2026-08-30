@@ -129,18 +129,29 @@ app.use(function(req, res, next) {
   next();
 });
 
-// ── CORS: Permissive for dev and GitHub Pages production with full preflight ──
-var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,https://chardddyyy.github.io')
+// ── CORS: Strict Origin Whitelist for Production & Development ───────────────
+var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,https://chardddyyy.github.io')
   .split(',').map(s => s.trim());
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // Server-to-server or direct curl/health-check
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin)) return true;
+  if (/^https:\/\/.*\.github\.io$/.test(origin)) return true;
+  return false;
+}
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin) {
+  if (origin && isAllowedOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With');
   if (req.method === 'OPTIONS') {
@@ -150,7 +161,13 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With'],
@@ -2439,11 +2456,11 @@ app.get('/api/students/:id/download-id-pdf', handleDownloadIdPdf);
 app.get('/api/students/download-id-pdf', handleDownloadIdPdf);
 app.get('/download-id-pdf', handleDownloadIdPdf);
 
-// Diagnostic test endpoint to test email delivery in real-time
-app.get('/api/auth/test-email', async (req, res) => {
-  var target = req.query.email || 'richardbelen99@gmail.com';
+// Diagnostic test endpoint to test email delivery in real-time (Admin Only)
+app.get('/api/auth/test-email', authenticateToken, requireAdmin, async (req, res) => {
+  var target = req.query.email || req.user.email || 'richardbelen99@gmail.com';
   var testOtp = '123456';
-  var result = await sendPasswordResetEmail(target, testOtp, 'Test User');
+  var result = await sendPasswordResetEmail(target, testOtp, req.user.name || 'Admin');
   res.json({
     target: target,
     result: result
@@ -2665,8 +2682,8 @@ const handleResetPassword = async (req, res) => {
     try {
       await pool.execute(
         `UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL 
-         WHERE LOWER(TRIM(email)) = ? OR LOWER(TRIM(name)) = ?`,
-        [hashedPassword, cleanEmail, cleanEmail]
+         WHERE LOWER(TRIM(email)) = ?`,
+        [hashedPassword, cleanEmail]
       );
 
       if (dbResetId) {
@@ -6357,12 +6374,9 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
   }
 });
 
-// POST archive batch (admin and instructors can snapshot)
-app.post('/api/archives', authenticateToken, async (req, res) => {
+// POST archive batch (admin only)
+app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'instructor') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
 
     const { year, next_batch, nextBatch, newBatchYear, letterTemplates } = req.body;
     const archiveYear = String(year || req.body.batch_name || req.body.batchName || new Date().getFullYear()).trim();

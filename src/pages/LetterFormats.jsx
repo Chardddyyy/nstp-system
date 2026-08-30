@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
 import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
+import xss from 'xss';
 
 const DEFAULT_TEMPLATES = [
   {
@@ -566,7 +567,7 @@ export default function LetterFormats() {
                   <img src={viewingFile.data} alt={viewingFile.name} className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
                 ) : viewingFile.rawTemplate ? (
                   <div className="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-md border border-gray-200 text-left overflow-y-auto max-h-[60vh]">
-                    <div dangerouslySetInnerHTML={{ __html: generateOfficialLetterHTML(viewingFile.rawTemplate, viewingFile.batchYear || '2024-2025') }} />
+                    <div dangerouslySetInnerHTML={{ __html: xss(generateOfficialLetterHTML(viewingFile.rawTemplate, viewingFile.batchYear || '2024-2025')) }} />
                     <div className="mt-6 pt-4 border-t flex justify-end">
                       <button
                         type="button"
