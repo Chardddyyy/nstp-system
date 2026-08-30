@@ -15,7 +15,7 @@ export function initSocket() {
   const serverUrl = getSocketServerUrl();
   const token = localStorage.getItem('nstp_token');
 
-  if (socket && socket.connected) {
+  if (socket && (socket.connected || socket.connecting || socket.active)) {
     return socket;
   }
 
@@ -28,13 +28,13 @@ export function initSocket() {
   }
 
   socket = io(serverUrl, {
-    transports: ['polling', 'websocket'],
+    transports: ['websocket', 'polling'],
     upgrade: true,
     autoConnect: true,
     auth: { token: token ? `Bearer ${token}` : null },
     reconnection: true,
-    reconnectionAttempts: 15,
-    reconnectionDelay: 2000,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2500,
     reconnectionDelayMax: 10000,
     randomizationFactor: 0.5,
     timeout: 20000,

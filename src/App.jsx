@@ -324,7 +324,7 @@ function App() {
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
     };
-  }, [user, pushNotification]);
+  }, [user?.id, user?.role, user?.department, pushNotification]);
 
   function resetRealtimeBaseline() {
     baselineReady.current = false;

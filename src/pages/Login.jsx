@@ -401,7 +401,7 @@ function Login() {
                   data-lpignore="true"
                   className="w-full pl-9 pr-3 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="admin@cvsu.edu.ph"
-                  autoComplete="off"
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -425,7 +425,7 @@ function Login() {
                   data-lpignore="true"
                   className="w-full pl-9 pr-9 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="••••••••••••"
-                  autoComplete="off"
+                  autoComplete="current-password"
                   required
                 />
                 <button
@@ -608,16 +608,6 @@ function Login() {
                     </div>
                   </div>
 
-                  {forgotSuccess && (
-                    <div className="mb-3.5 bg-emerald-50 border-2 border-emerald-300 text-emerald-900 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-fade-in">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <strong className="block text-emerald-950 font-extrabold mb-0.5">Code Detected</strong>
-                        <span>{forgotSuccess}</span>
-                      </div>
-                    </div>
-                  )}
-
                   {forgotError && (
                     <div className="mb-3.5 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">
                       <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -714,6 +704,17 @@ function Login() {
                   )}
 
                   <form onSubmit={handleConfirmReset} className="space-y-3.5">
+                    {/* Hidden username input for WCAG/DOM password form accessibility */}
+                    <input
+                      type="text"
+                      name="username"
+                      value={forgotEmail}
+                      autoComplete="username"
+                      style={{ display: 'none' }}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      readOnly
+                    />
                     <div>
                       <label htmlFor="forgot-new-password" className="block text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                         New Password
