@@ -369,12 +369,6 @@ function Login() {
         <div className="max-w-4xl w-full bg-white/95 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 text-gray-900 grid lg:grid-cols-12 overflow-hidden my-auto max-h-[calc(100vh-80px)]">
           {/* Left Decorative Hero Panel (Desktop) */}
           <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 text-white p-8 flex-col justify-between relative overflow-hidden">
-            <img 
-              src={`${import.meta.env.BASE_URL}cvsunaiccampus.png`} 
-              alt="CvSU Campus" 
-              className="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-overlay"
-            />
-
             <div className="relative z-10">
               <span className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-amber-400/30 mb-4">
                 <Shield className="w-3.5 h-3.5" />
