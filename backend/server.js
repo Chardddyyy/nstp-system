@@ -659,36 +659,37 @@ async function seedPastBatches() {
     ];
 
     const gradePool = [
-      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
-      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // Incomplete
-      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
-      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // Dropped
-      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '4.00', g2: '5.00', r1: 'Conditional', r2: 'Failed' }, // Conditional / Bagsak
-      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem
+      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem
+      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: '',     r1: 'Passed', r2: '', enrolledSem2: false },           // 1st sem lang nag-enroll (dropped before 2nd sem)
+      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped during 2nd sem
+      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '5.00', g2: '',     r1: 'Failed', r2: '', enrolledSem2: false },           // Bagsak sa 1st sem at di nag-enroll ng 2nd sem
+      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
     ];
 
     const batches = [
       { year: '2024-2025', sy: '2024-2025', sem: 'Whole Academic Year', prefix: '20240', list: rawStudents2024, startMonth: '2024-08', endMonth: '2025-05' },
       { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024, startMonth: '2024-08', endMonth: '2024-12' },
-      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024, startMonth: '2025-01', endMonth: '2025-05' },
+      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2025-01', endMonth: '2025-05' },
       { year: '2023-2024', sy: '2023-2024', sem: 'Whole Academic Year', prefix: '20230', list: rawStudents2023, startMonth: '2023-08', endMonth: '2024-05' },
       { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023, startMonth: '2023-08', endMonth: '2023-12' },
-      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023, startMonth: '2024-01', endMonth: '2024-05' },
+      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2024-01', endMonth: '2024-05' },
     ];
 
     for (const b of batches) {
       const studentData = b.list.map((s, idx) => {
         const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
         const gInfo = gradePool[idx % gradePool.length];
-        const isPassedBoth = gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed';
+        const isEnrolled2 = gInfo.enrolledSem2;
+        const isPassedBoth = isEnrolled2 && gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed';
         const is2ndSemOrYear = b.sem === '2nd Semester' || b.sem === 'Whole Academic Year';
 
         return {
@@ -727,14 +728,15 @@ async function seedPastBatches() {
           emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
           semester: b.sem,
           schoolYear: b.sy,
-          status: isPassedBoth ? 'graduated' : (gInfo.r2 === 'Failed' ? 'failed' : gInfo.r2 === 'Incomplete' ? 'incomplete' : 'active'),
+          has_2nd_sem: isEnrolled2,
+          status: isPassedBoth ? 'graduated' : (!isEnrolled2 ? 'active' : gInfo.r2 === 'Failed' ? 'failed' : gInfo.r2 === 'Incomplete' ? 'incomplete' : 'active'),
           final_grade_1: gInfo.g1,
-          final_grade_2: gInfo.g2,
+          final_grade_2: isEnrolled2 ? gInfo.g2 : '',
           grade_sem1: gInfo.g1,
-          grade_sem2: gInfo.g2,
+          grade_sem2: isEnrolled2 ? gInfo.g2 : '',
           midterm_grade: gInfo.g1,
-          final_grade: is2ndSemOrYear ? gInfo.g2 : gInfo.g1,
-          remarks: is2ndSemOrYear ? gInfo.r2 : gInfo.r1
+          final_grade: is2ndSemOrYear ? (isEnrolled2 ? gInfo.g2 : gInfo.g1) : gInfo.g1,
+          remarks: is2ndSemOrYear ? (isEnrolled2 ? gInfo.r2 : gInfo.r1) : gInfo.r1
         };
       });
 
@@ -747,11 +749,13 @@ async function seedPastBatches() {
             ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
           `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_1, st.final_grade_1, (parseFloat(st.final_grade_1) <= 3.0 ? 'Passed' : 'Failed')]);
 
-          await pool.execute(`
-            INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-            VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_2, st.final_grade_2, (parseFloat(st.final_grade_2) <= 3.0 ? 'Passed' : st.final_grade_2 === 'INC' ? 'Incomplete' : st.final_grade_2 === 'DRP' ? 'Dropped' : 'Failed')]);
+          if (st.has_2nd_sem && st.final_grade_2) {
+            await pool.execute(`
+              INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+              VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+            `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_2, st.final_grade_2, (parseFloat(st.final_grade_2) <= 3.0 ? 'Passed' : st.final_grade_2 === 'INC' ? 'Incomplete' : st.final_grade_2 === 'DRP' ? 'Dropped' : 'Failed')]);
+          }
         } catch (_) {}
       }
 
@@ -838,49 +842,56 @@ async function seedActiveStudentGrades() {
     if (!activeStudents || activeStudents.length === 0) return;
 
     const activeGradePool = [
-      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
-      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // Incomplete
-      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
-      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // Dropped
-      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '4.00', g2: '5.00', r1: 'Conditional', r2: 'Failed' }, // Conditional / Bagsak
-      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem
+      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem
+      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: '',     r1: 'Passed', r2: '', enrolledSem2: false },           // 1st sem lang nag-enroll
+      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped sa 2nd sem
+      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '5.00', g2: '',     r1: 'Failed', r2: '', enrolledSem2: false },           // Bagsak sa 1st sem
+      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
+      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
     ];
 
     for (let idx = 0; idx < activeStudents.length; idx++) {
       const st = activeStudents[idx];
       const gInfo = activeGradePool[idx % activeGradePool.length];
+      const isEnrolled2 = gInfo.enrolledSem2;
       const sy = st.schoolYear || '2025-2026';
       const sem = st.semester || '1st Semester';
 
-      // Seed 1st sem grade
+      // Seed 1st sem grade for all active students
       await pool.execute(`
         INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
         VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
       `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g1, gInfo.g1, gInfo.r1]).catch(() => {});
 
-      // Seed 2nd sem grade
-      await pool.execute(`
-        INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-        VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-      `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g2, gInfo.g2, gInfo.r2]).catch(() => {});
+      // Seed 2nd sem grade only if student is enrolled in 2nd sem
+      if (isEnrolled2) {
+        await pool.execute(`
+          INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+          VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+        `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g2, gInfo.g2, gInfo.r2]).catch(() => {});
+      } else {
+        await pool.execute(`
+          DELETE FROM student_grades WHERE student_id = ? AND semester = '2nd Semester'
+        `, [st.id]).catch(() => {});
+      }
 
       // Also sync student table grades
       const is2nd = sem.includes('2nd');
-      const finalG = is2nd ? gInfo.g2 : gInfo.g1;
-      const rem = is2nd ? gInfo.r2 : gInfo.r1;
+      const finalG = is2nd ? (isEnrolled2 ? gInfo.g2 : gInfo.g1) : gInfo.g1;
+      const rem = is2nd ? (isEnrolled2 ? gInfo.r2 : gInfo.r1) : gInfo.r1;
       await pool.execute(`
-        UPDATE students SET midterm_grade = ?, final_grade = ?, remarks = ? WHERE id = ?
-      `, [gInfo.g1, finalG, rem, st.id]).catch(() => {});
+        UPDATE students SET midterm_grade = ?, final_grade = ?, remarks = ?, has_2nd_sem = ? WHERE id = ?
+      `, [gInfo.g1, finalG, rem, isEnrolled2 ? 1 : 0, st.id]).catch(() => {});
     }
     console.log(`Seeded realistic grades (with mix of Passed & Failed) for ${activeStudents.length} active students.`);
   } catch (err) {

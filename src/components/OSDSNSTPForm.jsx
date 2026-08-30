@@ -191,12 +191,12 @@ const OSDSNSTPForm = ({
             </tr>
             {/* Header Row 3 */}
             <tr>
-              {/* Loop for ROTC, CWTS, LTS in 3 Semesters + Graduates */}
+              {/* Loop for ROTC, LTS, CWTS in 3 Semesters + Graduates */}
               {[...Array(4)].map((_, i) => (
                 <React.Fragment key={`component-${i}`}>
                   <th className="border border-black p-1 font-bold">ROTC</th>
-                  <th className="border border-black p-1 font-bold">CWTS</th>
                   <th className="border border-black p-1 font-bold">LTS</th>
+                  <th className="border border-black p-1 font-bold">CWTS</th>
                 </React.Fragment>
               ))}
             </tr>
@@ -218,37 +218,37 @@ const OSDSNSTPForm = ({
               <td className="border border-black p-2 text-left font-black text-emerald-950">{campusName}</td>
               <td className="border border-black p-2 font-bold">{classification}</td>
               
-              {/* 1st Sem: ROTC M/F, CWTS M/F, LTS M/F */}
+              {/* 1st Sem: ROTC M/F, LTS M/F, CWTS M/F */}
               <td className="border border-black p-1.5">{computedStats.sem1.ROTC.m}</td>
               <td className="border border-black p-1.5">{computedStats.sem1.ROTC.f}</td>
-              <td className="border border-black p-1.5">{computedStats.sem1.CWTS.m}</td>
-              <td className="border border-black p-1.5">{computedStats.sem1.CWTS.f}</td>
               <td className="border border-black p-1.5">{computedStats.sem1.LTS.m}</td>
               <td className="border border-black p-1.5">{computedStats.sem1.LTS.f}</td>
+              <td className="border border-black p-1.5">{computedStats.sem1.CWTS.m}</td>
+              <td className="border border-black p-1.5">{computedStats.sem1.CWTS.f}</td>
 
-              {/* 2nd Sem: ROTC M/F, CWTS M/F, LTS M/F */}
+              {/* 2nd Sem: ROTC M/F, LTS M/F, CWTS M/F */}
               <td className="border border-black p-1.5">{computedStats.sem2.ROTC.m}</td>
               <td className="border border-black p-1.5">{computedStats.sem2.ROTC.f}</td>
-              <td className="border border-black p-1.5">{computedStats.sem2.CWTS.m}</td>
-              <td className="border border-black p-1.5">{computedStats.sem2.CWTS.f}</td>
               <td className="border border-black p-1.5">{computedStats.sem2.LTS.m}</td>
               <td className="border border-black p-1.5">{computedStats.sem2.LTS.f}</td>
+              <td className="border border-black p-1.5">{computedStats.sem2.CWTS.m}</td>
+              <td className="border border-black p-1.5">{computedStats.sem2.CWTS.f}</td>
 
-              {/* Summer: ROTC M/F, CWTS M/F, LTS M/F */}
+              {/* Summer: ROTC M/F, LTS M/F, CWTS M/F */}
               <td className="border border-black p-1.5">{computedStats.summer.ROTC.m}</td>
               <td className="border border-black p-1.5">{computedStats.summer.ROTC.f}</td>
-              <td className="border border-black p-1.5">{computedStats.summer.CWTS.m}</td>
-              <td className="border border-black p-1.5">{computedStats.summer.CWTS.f}</td>
               <td className="border border-black p-1.5">{computedStats.summer.LTS.m}</td>
               <td className="border border-black p-1.5">{computedStats.summer.LTS.f}</td>
+              <td className="border border-black p-1.5">{computedStats.summer.CWTS.m}</td>
+              <td className="border border-black p-1.5">{computedStats.summer.CWTS.f}</td>
 
-              {/* Graduates: ROTC M/F, CWTS M/F, LTS M/F */}
+              {/* Graduates: ROTC M/F, LTS M/F, CWTS M/F */}
               <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.ROTC.m}</td>
               <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.ROTC.f}</td>
-              <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.CWTS.m}</td>
-              <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.CWTS.f}</td>
               <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.LTS.m}</td>
               <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.LTS.f}</td>
+              <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.CWTS.m}</td>
+              <td className="border border-black p-1.5 font-bold bg-amber-50/40 text-amber-950">{computedStats.graduates.CWTS.f}</td>
             </tr>
           </tbody>
         </table>

@@ -462,16 +462,16 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
   worksheet.mergeCells('U9:Z9');
   worksheet.getCell('U9').value = '';
 
-  // Row 10: Tracks (ROTC, CWTS, LTS)
+  // Row 10: Tracks (ROTC, LTS, CWTS)
   [3, 9, 15, 21].forEach((semStart) => {
     worksheet.mergeCells(10, semStart, 10, semStart + 1);
     worksheet.getCell(10, semStart).value = 'ROTC';
 
     worksheet.mergeCells(10, semStart + 2, 10, semStart + 3);
-    worksheet.getCell(10, semStart + 2).value = 'CWTS';
+    worksheet.getCell(10, semStart + 2).value = 'LTS';
 
     worksheet.mergeCells(10, semStart + 4, 10, semStart + 5);
-    worksheet.getCell(10, semStart + 4).value = 'LTS';
+    worksheet.getCell(10, semStart + 4).value = 'CWTS';
   });
 
   // Row 11: Gender (M, F)
@@ -495,10 +495,10 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
 
   // 4. Calculate Aggregate Statistics
   const statsMatrix = {
-    sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    summer: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    graduates: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } }
+    sem1: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    sem2: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    summer: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    graduates: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } }
   };
 
   (students || []).forEach((st) => {
@@ -507,8 +507,8 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     const deptRaw = (st.department || '').toUpperCase();
     let targetDept = null;
     if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
-    else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
     else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+    else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
 
     if (!targetDept) return;
 
@@ -543,37 +543,37 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
   dataRow.getCell(1).value = 'CAVITE STATE UNIVERSITY - NAIC';
   dataRow.getCell(2).value = 'PUBLIC';
 
-  // 1st Sem
+  // 1st Sem: ROTC M/F, LTS M/F, CWTS M/F
   dataRow.getCell(3).value = statsMatrix.sem1.ROTC.m;
   dataRow.getCell(4).value = statsMatrix.sem1.ROTC.f;
-  dataRow.getCell(5).value = statsMatrix.sem1.CWTS.m;
-  dataRow.getCell(6).value = statsMatrix.sem1.CWTS.f;
-  dataRow.getCell(7).value = statsMatrix.sem1.LTS.m;
-  dataRow.getCell(8).value = statsMatrix.sem1.LTS.f;
+  dataRow.getCell(5).value = statsMatrix.sem1.LTS.m;
+  dataRow.getCell(6).value = statsMatrix.sem1.LTS.f;
+  dataRow.getCell(7).value = statsMatrix.sem1.CWTS.m;
+  dataRow.getCell(8).value = statsMatrix.sem1.CWTS.f;
 
-  // 2nd Sem
+  // 2nd Sem: ROTC M/F, LTS M/F, CWTS M/F
   dataRow.getCell(9).value = statsMatrix.sem2.ROTC.m;
   dataRow.getCell(10).value = statsMatrix.sem2.ROTC.f;
-  dataRow.getCell(11).value = statsMatrix.sem2.CWTS.m;
-  dataRow.getCell(12).value = statsMatrix.sem2.CWTS.f;
-  dataRow.getCell(13).value = statsMatrix.sem2.LTS.m;
-  dataRow.getCell(14).value = statsMatrix.sem2.LTS.f;
+  dataRow.getCell(11).value = statsMatrix.sem2.LTS.m;
+  dataRow.getCell(12).value = statsMatrix.sem2.LTS.f;
+  dataRow.getCell(13).value = statsMatrix.sem2.CWTS.m;
+  dataRow.getCell(14).value = statsMatrix.sem2.CWTS.f;
 
-  // Summer
+  // Summer: ROTC M/F, LTS M/F, CWTS M/F
   dataRow.getCell(15).value = statsMatrix.summer.ROTC.m;
   dataRow.getCell(16).value = statsMatrix.summer.ROTC.f;
-  dataRow.getCell(17).value = statsMatrix.summer.CWTS.m;
-  dataRow.getCell(18).value = statsMatrix.summer.CWTS.f;
-  dataRow.getCell(19).value = statsMatrix.summer.LTS.m;
-  dataRow.getCell(20).value = statsMatrix.summer.LTS.f;
+  dataRow.getCell(17).value = statsMatrix.summer.LTS.m;
+  dataRow.getCell(18).value = statsMatrix.summer.LTS.f;
+  dataRow.getCell(19).value = statsMatrix.summer.CWTS.m;
+  dataRow.getCell(20).value = statsMatrix.summer.CWTS.f;
 
-  // Graduates
+  // Graduates: ROTC M/F, LTS M/F, CWTS M/F
   dataRow.getCell(21).value = statsMatrix.graduates.ROTC.m;
   dataRow.getCell(22).value = statsMatrix.graduates.ROTC.f;
-  dataRow.getCell(23).value = statsMatrix.graduates.CWTS.m;
-  dataRow.getCell(24).value = statsMatrix.graduates.CWTS.f;
-  dataRow.getCell(25).value = statsMatrix.graduates.LTS.m;
-  dataRow.getCell(26).value = statsMatrix.graduates.LTS.f;
+  dataRow.getCell(23).value = statsMatrix.graduates.LTS.m;
+  dataRow.getCell(24).value = statsMatrix.graduates.LTS.f;
+  dataRow.getCell(25).value = statsMatrix.graduates.CWTS.m;
+  dataRow.getCell(26).value = statsMatrix.graduates.CWTS.f;
 
   // Apply Borders & Styling to Data Row
   for (let c = 1; c <= 26; c++) {
