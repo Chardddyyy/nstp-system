@@ -660,30 +660,28 @@ async function seedPastBatches() {
 
     const gradePool = [
       { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.50', g2: '1.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '1.50', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.00', g2: '1.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.00', g2: '1.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
+      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // Incomplete
       { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
       { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '2.75', g2: '2.50', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // Dropped
       { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed' },
       { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.25', g2: '1.75', r1: 'Passed', r2: 'Passed' },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // INC sa 2nd sem
-      { g1: '2.25', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // DRP sa 2nd sem
-      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
+      { g1: '4.00', g2: '5.00', r1: 'Conditional', r2: 'Failed' }, // Conditional / Bagsak
+      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed' },
     ];
 
     const batches = [
-      { year: '2024-2025', sy: '2024-2025', sem: 'Whole Academic Year', prefix: '20240', list: rawStudents2024 },
-      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024 },
-      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024 },
-      { year: '2023-2024', sy: '2023-2024', sem: 'Whole Academic Year', prefix: '20230', list: rawStudents2023 },
-      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023 },
-      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023 },
+      { year: '2024-2025', sy: '2024-2025', sem: 'Whole Academic Year', prefix: '20240', list: rawStudents2024, startMonth: '2024-08', endMonth: '2025-05' },
+      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024, startMonth: '2024-08', endMonth: '2024-12' },
+      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024, startMonth: '2025-01', endMonth: '2025-05' },
+      { year: '2023-2024', sy: '2023-2024', sem: 'Whole Academic Year', prefix: '20230', list: rawStudents2023, startMonth: '2023-08', endMonth: '2024-05' },
+      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023, startMonth: '2023-08', endMonth: '2023-12' },
+      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023, startMonth: '2024-01', endMonth: '2024-05' },
     ];
 
     for (const b of batches) {
@@ -807,13 +805,88 @@ async function seedPastBatches() {
         { id: 'letter-5', title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement', department: 'All', description: 'CHED submission document certifying graduates and requesting assigned national serial numbers.' }
       ];
 
-      const archivePayload = JSON.stringify({ studentData, reportData, letterData, students: studentData.length, reports: reportData.length });
+      const archivePayload = JSON.stringify({ 
+        studentData, 
+        reportData, 
+        letterData, 
+        students: studentData.length, 
+        reports: reportData.length,
+        start_month: b.startMonth,
+        end_month: b.endMonth,
+        startMonth: b.startMonth,
+        endMonth: b.endMonth
+      });
+
       await pool.execute(
         'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = VALUES(students), reports = VALUES(reports), data = VALUES(data)',
         [b.year, studentData.length, reportData.length, archivePayload]
       );
       console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
     }
+
+    // Also seed realistic mixed grades for current/active students
+    await seedActiveStudentGrades();
+  } catch (err) {
+    console.warn('Past batches seed notice:', err.message);
+  }
+}
+
+// ── Seed realistic grades for active students in `students` table ───────────
+async function seedActiveStudentGrades() {
+  try {
+    const [activeStudents] = await pool.execute("SELECT * FROM students WHERE status != 'Inactive' LIMIT 100").catch(() => [[]]);
+    if (!activeStudents || activeStudents.length === 0) return;
+
+    const activeGradePool = [
+      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed' },     // Bagsak sa 2nd sem
+      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete' }, // Incomplete
+      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed' },     // Bagsak both sems
+      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped' },    // Dropped
+      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '1.75', g2: '3.00', r1: 'Passed', r2: 'Passed' },
+      { g1: '4.00', g2: '5.00', r1: 'Conditional', r2: 'Failed' }, // Conditional / Bagsak
+      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed' },
+      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed' },
+    ];
+
+    for (let idx = 0; idx < activeStudents.length; idx++) {
+      const st = activeStudents[idx];
+      const gInfo = activeGradePool[idx % activeGradePool.length];
+      const sy = st.schoolYear || '2025-2026';
+      const sem = st.semester || '1st Semester';
+
+      // Seed 1st sem grade
+      await pool.execute(`
+        INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+        VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+      `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g1, gInfo.g1, gInfo.r1]).catch(() => {});
+
+      // Seed 2nd sem grade
+      await pool.execute(`
+        INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
+        VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
+      `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g2, gInfo.g2, gInfo.r2]).catch(() => {});
+
+      // Also sync student table grades
+      const is2nd = sem.includes('2nd');
+      const finalG = is2nd ? gInfo.g2 : gInfo.g1;
+      const rem = is2nd ? gInfo.r2 : gInfo.r1;
+      await pool.execute(`
+        UPDATE students SET midterm_grade = ?, final_grade = ?, remarks = ? WHERE id = ?
+      `, [gInfo.g1, finalG, rem, st.id]).catch(() => {});
+    }
+    console.log(`Seeded realistic grades (with mix of Passed & Failed) for ${activeStudents.length} active students.`);
+  } catch (err) {
+    console.warn('Active student grades seed notice:', err.message);
+  }
+}
   } catch (err) {
     console.warn('Past batches seed notice:', err.message);
   }

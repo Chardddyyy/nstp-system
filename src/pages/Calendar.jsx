@@ -78,15 +78,27 @@ function Calendar() {
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
 
-  // When in archive mode, jump the calendar to the appropriate academic semester
+  // When in archive mode, jump the calendar to the batch's start month (or academic semester)
   useEffect(() => {
     let timer = setTimeout(() => {
-      if (viewingArchive && archiveViewData?.year) {
-        const yr = archiveViewData.year;
-        if (yr.includes('2023-2024')) {
-          setCurrentDate(yr.includes('1st Semester') ? new Date(2023, 9, 15) : new Date(2024, 3, 15));
-        } else if (yr.includes('2024-2025')) {
-          setCurrentDate(yr.includes('1st Semester') ? new Date(2024, 9, 15) : new Date(2025, 3, 15));
+      if (viewingArchive && archiveViewData) {
+        const startMonthStr = archiveViewData.start_month || archiveViewData.startMonth || archiveViewData.data?.start_month || archiveViewData.data?.startMonth;
+        if (startMonthStr && typeof startMonthStr === 'string' && startMonthStr.includes('-')) {
+          const [sYr, sMo] = startMonthStr.split('-').map(Number);
+          if (!isNaN(sYr) && !isNaN(sMo) && sMo >= 1 && sMo <= 12) {
+            setCurrentDate(new Date(sYr, sMo - 1, 15));
+            return;
+          }
+        }
+
+        const yr = String(archiveViewData.year || '');
+        const match = yr.match(/(\d{4})/);
+        const baseYear = match ? parseInt(match[1], 10) : 2024;
+        const is2ndSem = yr.includes('2nd');
+        if (is2ndSem) {
+          setCurrentDate(new Date(baseYear + 1, 0, 15)); // January
+        } else {
+          setCurrentDate(new Date(baseYear, 7, 15)); // August
         }
       } else if (!viewingArchive) {
         setCurrentDate(new Date());

@@ -283,6 +283,8 @@ function AdminDashboard() {
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
   const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');
+  const [newBatchStartMonth, setNewBatchStartMonth] = useState('2025-08');
+  const [newBatchEndMonth, setNewBatchEndMonth] = useState('2025-12');
   const [photoViewer, setPhotoViewer] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
@@ -580,10 +582,18 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       await archivesAPI.create({
         year: String(currentBatch || 'Previous Batch'),
         next_batch: targetNewBatch,
+        start_month: newBatchStartMonth,
+        end_month: newBatchEndMonth,
+        startMonth: newBatchStartMonth,
+        endMonth: newBatchEndMonth,
         data: {
           cwts: stats.cwtsStudents,
           lts: stats.ltsStudents,
-          rotc: stats.rotcStudents
+          rotc: stats.rotcStudents,
+          start_month: newBatchStartMonth,
+          end_month: newBatchEndMonth,
+          startMonth: newBatchStartMonth,
+          endMonth: newBatchEndMonth
         }
       });
 
@@ -1872,7 +1882,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...safeArchivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
+                    {[...safeArchivedYears].sort((a, b) => {
+                      const getSortKey = (item) => {
+                        const str = String(item?.year || item || '');
+                        const matchYear = str.match(/(\d{4})/);
+                        const startYear = matchYear ? parseInt(matchYear[1], 10) : 0;
+                        let semRank = 0;
+                        if (str.includes('1st')) semRank = 1;
+                        else if (str.includes('2nd')) semRank = 2;
+                        else if (str.includes('Summer')) semRank = 3;
+                        return { startYear, semRank };
+                      };
+                      const kA = getSortKey(a);
+                      const kB = getSortKey(b);
+                      if (kA.startYear !== kB.startYear) return kB.startYear - kA.startYear;
+                      return kA.semRank - kB.semRank;
+                    }).map((year) => (
                       <div
                         key={year.year}
                         className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
@@ -1880,13 +1905,18 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         <div className="flex items-center space-x-3.5">
                           <div>
                             <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
                                 {year.students} Students
                               </span>
                               <span className="text-[11px] font-bold text-gray-500">
                                 • {year.reports} Reports
                               </span>
+                              {(year.start_month || year.data?.start_month) && (year.end_month || year.data?.end_month) && (
+                                <span className="text-[10px] font-bold text-emerald-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300/60">
+                                  📅 {year.start_month || year.data?.start_month} to {year.end_month || year.data?.end_month}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1954,6 +1984,41 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <p className="text-amber-900 font-bold mb-1">📦 Current Batch Archiving Notice</p>
                   <p className="text-amber-800 font-medium">
                     Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
+                  </p>
+                </div>
+
+                {/* Academic Batch Calendar Date Span */}
+                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3.5 space-y-2.5">
+                  <p className="text-emerald-950 font-black text-xs flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Batch Academic Calendar Span (Start &amp; End Month)</span>
+                  </p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">
+                        Start Month
+                      </label>
+                      <input
+                        type="month"
+                        value={newBatchStartMonth}
+                        onChange={(e) => setNewBatchStartMonth(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-bold text-gray-800 focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">
+                        End Month
+                      </label>
+                      <input
+                        type="month"
+                        value={newBatchEndMonth}
+                        onChange={(e) => setNewBatchEndMonth(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-bold text-gray-800 focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10.5px] text-emerald-800 font-medium">
+                    ⚡ Ang calendar view ay awtomatikong lilipat sa buwan na ito kapag tiningnan ang archive ng batch na ito.
                   </p>
                 </div>
                 
