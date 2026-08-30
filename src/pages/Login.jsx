@@ -364,175 +364,123 @@ function Login() {
         </div>
       </header>
 
-      {/* Main Content Area - Scaled & Non-Scrollable */}
-      <main className="flex-1 flex items-center justify-center p-2.5 sm:p-6 overflow-hidden relative z-10">
-        <div className="max-w-4xl w-full bg-white/95 rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 text-gray-900 grid lg:grid-cols-12 overflow-hidden my-auto max-h-[calc(100vh-80px)]">
-          {/* Left Decorative Hero Panel (Desktop) */}
-          <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 text-white p-8 flex-col justify-between relative overflow-hidden">
-            <div className="relative z-10">
-              <span className="inline-flex items-center gap-1.5 bg-amber-400/20 text-amber-300 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-amber-400/30 mb-4">
-                <Shield className="w-3.5 h-3.5" />
-                Portal Access
-              </span>
-              <h2 className="text-2xl font-black tracking-tight text-white mb-2 leading-tight">
-                CvSU Naic NSTP System
-              </h2>
-              <p className="text-emerald-200 text-xs leading-relaxed">
-                Secure management portal for ROTC, CWTS, and LTS faculty coordinators and administrators.
-              </p>
+      {/* Main Content Area - Clean Centered Login Card */}
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 overflow-hidden relative z-10">
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto max-h-[calc(100vh-80px)] p-5 sm:p-7">
+          <div className="text-center mb-4 sm:mb-6">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
-
-            <div className="relative z-10 space-y-3 pt-6 border-t border-emerald-800/80">
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100">
-                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Online Enrollment System</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100">
-                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Real-time Messaging &amp; Chat</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100">
-                <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Academic &amp; Event Calendar</span>
-              </div>
-
-              <div className="pt-2 text-[11px] text-amber-300/90 font-bold">
-                Core Values: Truth • Integrity • Excellence • Service
-              </div>
-            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
+            <p className="text-gray-500 text-[11px] sm:text-xs mt-1">Sign in with your official CvSU faculty or admin credentials</p>
           </div>
 
-          {/* Right Form Card (Scaled down for Mobile & Static) */}
-          <div className="lg:col-span-7 p-3.5 sm:p-7 flex flex-col justify-center">
-            {/* Mobile Decorative Hero Header Banner */}
-            <div className="lg:hidden bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-xl p-2.5 mb-2.5 border border-emerald-800/60 shadow-sm flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 bg-white rounded-lg p-0.5 flex items-center justify-center shrink-0 shadow-xs border border-emerald-700">
-                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-xs font-black text-white truncate">CvSU Naic NSTP Portal</h3>
-                  <p className="text-[9px] text-emerald-200 truncate font-medium">Faculty &amp; Admin Portal</p>
-                </div>
+          <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2 animate-shake">
+                <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
+                <span>{error}</span>
               </div>
-              <span className="bg-amber-400/20 text-amber-300 text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">
-                Secure Access
-              </span>
+            )}
+
+            <div>
+              <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  className="w-full pl-9 pr-3 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  placeholder="admin@cvsu.edu.ph"
+                  autoComplete="off"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="text-center sm:text-left mb-2.5 sm:mb-5">
-              <h2 className="text-base sm:text-2xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
-              <p className="text-gray-500 text-[10px] sm:text-xs mt-0.5">Sign in with your official CvSU faculty or admin credentials</p>
+            <div>
+              <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  className="w-full pl-9 pr-9 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  placeholder="••••••••••••"
+                  autoComplete="off"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotEmail(email.trim());
+                    setForgotStep(1);
+                    setForgotOtp('');
+                    setForgotNewPassword('');
+                    setForgotConfirmPassword('');
+                    setForgotError('');
+                    setShowForgotPassword(true);
+                  }}
+                  className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Forgot Password?</span>
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-3 sm:space-y-4">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2 animate-shake">
-                  <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
-                  <span>{error}</span>
-                </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-emerald-950 border-t-transparent rounded-full animate-spin"></div>
+                  <span>{loadingText}</span>
+                </>
+              ) : (
+                <span>Sign In to Portal →</span>
               )}
+            </button>
+          </form>
 
-              <div>
-                <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                    inputMode="email"
-                    className="w-full pl-9 pr-3 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                    placeholder="e.g. admin@cvsu.edu.ph"
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    name="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                    className="w-full pl-9 pr-9 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                    placeholder="••••••••••••"
-                    autoComplete="off"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <div className="flex justify-end mt-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotEmail(email.trim());
-                      setForgotStep(1);
-                      setForgotOtp('');
-                      setForgotNewPassword('');
-                      setForgotConfirmPassword('');
-                      setForgotError('');
-                      setShowForgotPassword(true);
-                    }}
-                    className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95"
-                  >
-                    <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Forgot Password?</span>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-emerald-950"></div>
-                    <span>{loadingText}</span>
-                  </>
-                ) : (
-                  <span>Sign In to Portal →</span>
-                )}
-              </button>
-            </form>
-
-            <div className="mt-2.5 pt-2.5 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10px] sm:text-xs">
-              <span className="text-gray-500">Incoming Student?</span>
-              <Link 
-                to="/enrollment" 
-                className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
-              >
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>Online Enrollment Application &rarr;</span>
-              </Link>
-            </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10px] sm:text-xs">
+            <span className="text-gray-500">Incoming Student?</span>
+            <Link 
+              to="/enrollment" 
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
+            >
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              <span>Online Enrollment &rarr;</span>
+            </Link>
           </div>
         </div>
       </main>
