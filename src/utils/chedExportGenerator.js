@@ -512,9 +512,24 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
 
     if (!targetDept) return;
 
+    // 1st Semester Enrollees
     statsMatrix.sem1[targetDept][genKey] += 1;
-    statsMatrix.sem2[targetDept][genKey] += 1;
-    statsMatrix.graduates[targetDept][genKey] += 1;
+
+    // 2nd Semester Enrollees: Only count if student is enrolled in 2nd semester
+    const isSem2Enrolled = st.semester === '2nd Semester' || st.has_2nd_sem || !!st.final_grade_2;
+    if (isSem2Enrolled) {
+      statsMatrix.sem2[targetDept][genKey] += 1;
+    }
+
+    // Graduates: Only count if student passed with <= 3.0 in both semesters
+    const g1 = parseFloat(st.final_grade_1 || st.final_grade);
+    const g2 = parseFloat(st.final_grade_2);
+    const passed1 = (!isNaN(g1) && g1 <= 3.0) || String(st.final_grade_1 || '').toLowerCase() === 'passed';
+    const passed2 = (!isNaN(g2) && g2 <= 3.0) || String(st.final_grade_2 || '').toLowerCase() === 'passed';
+
+    if (passed1 && passed2) {
+      statsMatrix.graduates[targetDept][genKey] += 1;
+    }
   });
 
   // Default Campus Row in Row 14 (or 15)

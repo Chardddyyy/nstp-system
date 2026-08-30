@@ -62,17 +62,17 @@ const OSDSNSTPForm = ({
       const num1 = parseFloat(g1Str);
       const num2 = parseFloat(g2Str);
 
+      // Passing grade in Philippine grading system is 3.00 or better (1.00 to 3.00) or 'Passed'
       const passed1 = (!isNaN(num1) && num1 <= 3.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
       const passed2 = (!isNaN(num2) && num2 <= 3.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p';
 
-      if (g2Str) {
-        data.sem2[targetDept][genKey] += 1;
-      } else {
-        // Assume active batch student enrolled in year-long course
+      // 2nd Sem Enrollee: Only count if student is officially enrolled in 2nd semester or has a 2nd sem grade
+      const isSem2Enrolled = st.semester === '2nd Semester' || !!semGrades['2nd Semester'] || !!g2Str;
+      if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
       }
 
-      // Graduates: Passed BOTH 1st Sem and 2nd Sem
+      // Graduates: ONLY students who passed BOTH 1st Sem and 2nd Sem with grade <= 3.00
       if (passed1 && passed2) {
         data.graduates[targetDept][genKey] += 1;
       }

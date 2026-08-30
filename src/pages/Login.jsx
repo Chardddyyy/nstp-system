@@ -376,13 +376,6 @@ function Login() {
           </div>
 
           <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-xl text-[11px] font-bold flex items-center gap-2 animate-shake">
-                <span className="w-2 h-2 rounded-full bg-red-600 shrink-0"></span>
-                <span>{error}</span>
-              </div>
-            )}
-
             <div>
               <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                 Email Address
@@ -408,9 +401,17 @@ function Login() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700">
+                  Password
+                </label>
+                {error && (
+                  <span className="text-[10px] sm:text-[11px] font-bold text-red-600 animate-fade-in flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
+                    {error}
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input

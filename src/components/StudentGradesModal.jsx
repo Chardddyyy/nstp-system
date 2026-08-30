@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import {
   X, Search, FileSpreadsheet, CheckCircle, Clock, AlertTriangle,
-  Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar
+  Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar, Eye
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
-import { downloadAnnualForm2APdf, downloadGradesSheetPdf } from '../utils/chedPdfGenerator';
-import { downloadGradesSheetExcel, downloadChedFormAExcel } from '../utils/chedExportGenerator';
+import { downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
+import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import OSDSNSTPForm from './OSDSNSTPForm';
+import OSDSNSTPForm2B from './OSDSNSTPForm2B';
 
 const GRADE_OPTIONS = [
   '',
@@ -33,6 +35,14 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const [selectedSchoolYear, setSelectedSchoolYear] = useState('2026-2027');
   const [selectedNstpSection, setSelectedNstpSection] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Form A & Form B Export Modals & Full Screen Previews
+  const [showFormAModal, setShowFormAModal] = useState(false);
+  const [showFormBModal, setShowFormBModal] = useState(false);
+  const [showFormAPreview, setShowFormAPreview] = useState(false);
+  const [showFormBPreview, setShowFormBPreview] = useState(false);
+  const [formBDept, setFormBDept] = useState(defaultDept);
+  const [formBSem, setFormBSem] = useState(selectedSemester === '2nd Semester' ? '2nd Semester' : '1st Semester');
 
   // allSemGradesMap: { [studentId]: { '1st Semester': { midterm, final, remarks }, '2nd Semester': {...} } }
   const [allSemGradesMap, setAllSemGradesMap] = useState({});
@@ -694,56 +704,28 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               </div>
             )}
 
-            {/* Official CHED & OSDS Downloads */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* OSDS Form 2-A (Annual Batch Form) */}
+            {/* Official CHED & OSDS Downloads (Clean Form A & Form B buttons) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Form A Button */}
               <button
                 type="button"
-                onClick={handleDownloadOSDSForm2A}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-xl border border-emerald-300 transition-colors cursor-pointer"
-                title="Download Official OSDS-NSTP Form 2-A PDF"
+                onClick={() => setShowFormAModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-xl border border-emerald-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                title="Open Official OSDS-NSTP Form A Export Options"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-800" />
-                <span>OSDS Form 2-A (PDF)</span>
+                <Award className="w-3.5 h-3.5 text-emerald-800" />
+                <span>Form A</span>
               </button>
 
+              {/* Form B Button */}
               <button
                 type="button"
-                onClick={handleDownloadOSDSForm2AExcel}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black text-teal-900 bg-teal-100 hover:bg-teal-200 rounded-xl border border-teal-300 transition-colors cursor-pointer"
-                title="Download Official Form 2-A Summary Excel"
+                onClick={() => setShowFormBModal(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-teal-900 bg-teal-100 hover:bg-teal-200 rounded-xl border border-teal-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                title="Open Official OSDS-NSTP Form B Export Options"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-teal-800" />
-                <span>Form 2-A (Excel)</span>
-              </button>
-
-              {/* Standard Grades Sheet PDF & Excel */}
-              <button
-                type="button"
-                onClick={handleExportGradesPdf}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 text-gray-600" />
-                <span>Grades PDF</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportGradesExcel}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-green-700" />
-                <span>Grades Excel</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
-                title="Print Grades Sheet"
-              >
-                <Printer className="w-3.5 h-3.5 text-gray-700" />
-                <span>Print</span>
+                <span>Form B</span>
               </button>
             </div>
           </div>
@@ -806,13 +788,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                             <span className="font-bold text-emerald-800">{st.department}</span>
                             <span className="hidden sm:inline">• {st.program || '1st Year'}</span>
                           </div>
-                        </td>
-
-                        {/* School Section */}
-                        <td className="p-2.5 sm:p-3 hidden md:table-cell">
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-gray-100 text-gray-800 font-bold text-[11px]">
-                            {st.section || 'None'}
-                          </span>
                         </td>
 
                         {/* NSTP Section */}
@@ -1050,6 +1025,324 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
           </div>
         </div>
 
+        {/* ── FORM A EXPORT MODAL ───────────────────────── */}
+        {showFormAModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-emerald-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800/60 shadow-md">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400/20 rounded-2xl p-2 flex items-center justify-center border border-amber-400/40">
+                    <Award className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                      Export OSDS-NSTP Form A
+                    </h3>
+                    <p className="text-[11px] text-emerald-300 font-medium">
+                      Summary Number of Enrollment and Graduates of NSTP
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFormAModal(false)}
+                  className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                  Generates the official 4-tier demographic matrix combining 1st Semester enrollees, 2nd Semester enrollees, and official Graduates who passed their semester grades.
+                </p>
+
+                {/* Institutional Details Preview */}
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-[11px] sm:text-xs text-emerald-950 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Name of HEI:</span>
+                    <span className="font-extrabold text-emerald-900">Cavite State University - Naic</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Classification:</span>
+                    <span className="font-extrabold text-emerald-900">PUBLIC</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Region:</span>
+                    <span className="font-extrabold text-emerald-900">4A - CALABARZON</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-gray-500">Academic Year:</span>
+                    <span className="font-black text-amber-800">
+                      {selectedSchoolYear}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFormAModal(false);
+                    setShowFormAPreview(true);
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Preview / Print</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormAModal(false)}
+                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDownloadOSDSForm2A();
+                      setShowFormAModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDownloadOSDSForm2AExcel();
+                      setShowFormAModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Download Excel</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FORM B EXPORT MODAL ───────────────────────── */}
+        {showFormBModal && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-emerald-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800/60 shadow-md">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400/20 rounded-2xl p-2 flex items-center justify-center border border-amber-400/40">
+                    <FileSpreadsheet className="w-6 h-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                      Export OSDS-NSTP Form B
+                    </h3>
+                    <p className="text-[11px] text-emerald-300 font-medium">
+                      Official Student Directory &amp; Enrollment List
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFormBModal(false)}
+                  className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                {/* NSTP Component Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    NSTP Components / Department
+                  </label>
+                  <select
+                    value={formBDept}
+                    onChange={(e) => setFormBDept(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none cursor-pointer"
+                  >
+                    <option value="All">All Departments (CWTS, LTS, ROTC)</option>
+                    <option value="CWTS">CWTS Only (Civic Welfare Training Service)</option>
+                    <option value="LTS">LTS Only (Literacy Training Service)</option>
+                    <option value="ROTC">ROTC Only (Reserve Officers Training Corps)</option>
+                  </select>
+                </div>
+
+                {/* Semester Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                    Semester
+                  </label>
+                  <select
+                    value={formBSem}
+                    onChange={(e) => setFormBSem(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-600 outline-none cursor-pointer"
+                  >
+                    <option value="1st Semester">1st Semester</option>
+                    <option value="2nd Semester">2nd Semester</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFormBModal(false);
+                    setShowFormBPreview(true);
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold bg-white text-emerald-900 border border-emerald-300 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Preview / Print</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormBModal(false)}
+                    className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      downloadChedFormBPdf(selectedSchoolYear, students, formBDept, formBSem);
+                      setShowFormBModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      downloadChedFormBExcel(selectedSchoolYear, students, formBDept, formBSem);
+                      setShowFormBModal(false);
+                    }}
+                    className="px-4 py-2 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+                    <span>Download Excel</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FULL SCREEN PRINTABLE PREVIEW: FORM A ───────────────────────── */}
+        {showFormAPreview && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/90 backdrop-blur-md flex flex-col p-2 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full mx-auto my-auto overflow-hidden flex flex-col max-h-[92vh]">
+              <div className="bg-emerald-950 text-white px-5 py-3.5 flex items-center justify-between shrink-0 border-b border-emerald-800">
+                <div className="flex items-center space-x-2">
+                  <Award className="w-5 h-5 text-amber-400" />
+                  <span className="font-bold text-sm">OSDS-NSTP Form A Preview — Summary of Enrollment &amp; Graduates</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadOSDSForm2A()}
+                    className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormAPreview(false)}
+                    className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer ml-2"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white">
+                <OSDSNSTPForm
+                  academicYear={selectedSchoolYear}
+                  campusName="Cavite State University - Naic"
+                  classification="PUBLIC"
+                  region="4A - CALABARZON"
+                  students={students}
+                  gradesMap={allSemGradesMap}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── FULL SCREEN PRINTABLE PREVIEW: FORM B ───────────────────────── */}
+        {showFormBPreview && (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/90 backdrop-blur-md flex flex-col p-2 sm:p-6">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full mx-auto my-auto overflow-hidden flex flex-col max-h-[92vh]">
+              <div className="bg-emerald-950 text-white px-5 py-3.5 flex items-center justify-between shrink-0 border-b border-emerald-800">
+                <div className="flex items-center space-x-2">
+                  <FileSpreadsheet className="w-5 h-5 text-amber-400" />
+                  <span className="font-bold text-sm">CHED NSTP Form B Preview — {formBDept === 'All' ? 'All Departments' : formBDept}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-1.5 text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormBPdf(selectedSchoolYear, students, formBDept, formBSem)}
+                    className="px-3.5 py-1.5 text-xs font-black bg-amber-400 hover:bg-amber-500 text-emerald-950 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormBPreview(false)}
+                    className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer ml-2"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-white">
+                <OSDSNSTPForm2B
+                  academicYear={selectedSchoolYear}
+                  semester={formBSem}
+                  heiName="Cavite State University - Naic"
+                  address="Bucana Malaki, Naic, Cavite"
+                  region="4A - CALABARZON"
+                  nstpComponents={formBDept === 'All' ? 'CWTS / ROTC / LTS' : formBDept}
+                  students={(students || []).filter((s) => formBDept === 'All' || s.department === formBDept)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
