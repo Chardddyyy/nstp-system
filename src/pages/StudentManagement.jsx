@@ -2800,9 +2800,16 @@ function StudentManagement() {
                       const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
                       if (!finalGrade) return null;
                       const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
+                      const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                      const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
+                      const isDrp = finalGrade === 'DRP' || remarks === 'Dropped';
                       return (
                         <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
-                          isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' : 'bg-rose-100 text-rose-950 border-rose-300'
+                          isPassed ? 'bg-emerald-100 text-emerald-950 border-emerald-300' :
+                          isFailed ? 'bg-rose-100 text-rose-950 border-rose-300' :
+                          isInc ? 'bg-amber-100 text-amber-950 border-amber-300' :
+                          isDrp ? 'bg-purple-100 text-purple-950 border-purple-300' :
+                          'bg-gray-100 text-gray-900 border-gray-200'
                         }`}>
                           Rating: {finalGrade} ({remarks})
                         </span>
@@ -2836,10 +2843,17 @@ function StudentManagement() {
                       {(() => {
                         const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
                         if (!finalGrade) return <span className="text-xs text-gray-400 font-bold mt-0.5 block">Pending</span>;
+                        const isPassed = remarks === 'Passed' || Number(finalGrade) <= 3.0;
+                        const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0;
+                        const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
                         return (
                           <div className="flex items-center gap-1 mt-0.5">
-                            <span className="font-black text-xs sm:text-sm text-emerald-950">{finalGrade}</span>
-                            <span className="text-[9.5px] font-extrabold text-emerald-700">({remarks})</span>
+                            <span className={`font-black text-xs sm:text-sm ${
+                              isPassed ? 'text-emerald-950' : isFailed ? 'text-rose-700' : isInc ? 'text-amber-700' : 'text-gray-900'
+                            }`}>{finalGrade}</span>
+                            <span className={`text-[9.5px] font-extrabold ${
+                              isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600' : isInc ? 'text-amber-600' : 'text-gray-600'
+                            }`}>({remarks})</span>
                           </div>
                         );
                       })()}
