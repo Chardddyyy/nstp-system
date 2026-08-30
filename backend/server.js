@@ -5214,8 +5214,17 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     } = req.body;
 
     const finalIdPhoto = id_photo_2x2 || uploadedPhoto || null;
-    const finalRegPhoto = registrationPhoto || reg_form || finalIdPhoto;
-    const resolved2x2 = finalIdPhoto || finalRegPhoto;
+    const finalRegPhoto = registrationPhoto || reg_form || null;
+
+    if (!finalRegPhoto) {
+      return res.status(400).json({ message: 'Certificate of Registration (COR / RegForm) is required. Please attach your official CvSU COR file.' });
+    }
+
+    if (!finalIdPhoto) {
+      return res.status(400).json({ message: 'Official 2x2 ID Picture is required. Please attach your 2x2 ID photo (white background).' });
+    }
+
+    const resolved2x2 = finalIdPhoto;
 
     // Anti-Troll Security: Rate Limit by IP Address (Max 4 submissions per 15 minutes)
     const clientIp = String(req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
