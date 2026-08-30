@@ -727,25 +727,15 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormat(archiveViewData)}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-lg text-xs font-black transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
-                    title="Download CHED Form B Enrollment List PDF"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Form B (PDF)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormBExcel(archiveViewData)}
-                    className="bg-white hover:bg-amber-100 text-emerald-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300"
-                    title="Download CHED Form B Enrollment List Excel"
-                  >
-                    <span>Excel (.xlsx)</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => downloadChedFormat(archiveViewData)}
+                  className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
+                  title="Export CHED Form B Enrollment List"
+                >
+                  <Download className="w-3.5 h-3.5 text-emerald-950" />
+                  <span>Form B</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowArchiveDetails(true)}
@@ -2330,47 +2320,27 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   Batch {archiveViewData.year} Archive Details
                 </h3>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Form B: PDF & Excel */}
-                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
-                    <button
-                      type="button"
-                      onClick={() => downloadChedFormat(archiveViewData)}
-                      className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-2.5 py-1.5 rounded-lg text-xs font-black transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
-                      title="Download Official CHED Form B Masterlist PDF"
-                    >
-                      <Download className="w-3.5 h-3.5 text-emerald-950" />
-                      <span>Form B (PDF)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadChedFormBExcel(archiveViewData)}
-                      className="bg-white hover:bg-amber-100 text-emerald-950 px-2 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-amber-300"
-                      title="Download Official CHED Form B Masterlist Excel"
-                    >
-                      <span>(.xlsx)</span>
-                    </button>
-                  </div>
+                  {/* Form B Button */}
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormat(archiveViewData)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
+                    title="Export Official CHED Form B Masterlist"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form B</span>
+                  </button>
 
-                  {/* Form A: PDF & Excel */}
-                  <div className="flex items-center gap-1 bg-emerald-800/60 p-0.5 rounded-xl border border-emerald-700">
-                    <button
-                      type="button"
-                      onClick={() => downloadChedFormA(archiveViewData)}
-                      className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
-                      title="Download CHED Form 2-A Summary Matrix PDF"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Form A (PDF)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadChedFormAExcel(archiveViewData)}
-                      className="bg-emerald-950 hover:bg-emerald-900 text-amber-200 px-2 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95 border border-emerald-700"
-                      title="Download CHED Form 2-A Summary Matrix Excel"
-                    >
-                      <span>(.xlsx)</span>
-                    </button>
-                  </div>
+                  {/* Form A Button */}
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormA(archiveViewData)}
+                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-emerald-700"
+                    title="Export CHED Form 2-A Summary Matrix"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Form A</span>
+                  </button>
 
                   <button type="button"
                     onClick={() => setShowArchiveDetails(false)}

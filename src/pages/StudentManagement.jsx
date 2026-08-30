@@ -1121,49 +1121,27 @@ function StudentManagement() {
               {/* Form A & Form B (Admin Only) */}
               {isAdmin && (
                 <>
-                  {/* Form A: PDF & Excel */}
-                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
-                    <button type="button"
-                      onClick={() => setShowFormAModal(true)}
-                      disabled={isDownloadingFormA}
-                      title="Download OSDS-NSTP Form A (PDF)"
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      <Award className="w-3.5 h-3.5 text-emerald-950" />
-                      <span>Form A (PDF)</span>
-                    </button>
-                    <button type="button"
-                      onClick={() => handleDirectDownloadFormA('excel')}
-                      disabled={isDownloadingFormA}
-                      title="Download OSDS-NSTP Form A (Excel)"
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-emerald-950 bg-white hover:bg-amber-100 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer border border-amber-300 disabled:opacity-50"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-800" />
-                      <span>(.xlsx)</span>
-                    </button>
-                  </div>
+                  {/* Form A Button */}
+                  <button type="button"
+                    onClick={() => setShowFormAModal(true)}
+                    disabled={isDownloadingFormA}
+                    title="Export OSDS-NSTP Form A"
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50 transition-all active:scale-95 border border-amber-500/50"
+                  >
+                    <Award className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form A</span>
+                  </button>
 
-                  {/* Form B: PDF & Excel */}
-                  <div className="flex items-center gap-1 bg-amber-400/20 p-0.5 rounded-xl border border-amber-400/40">
-                    <button type="button"
-                      onClick={() => setShowFormBModal(true)}
-                      disabled={isDownloadingFormB}
-                      title="Download CHED Form B (PDF)"
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-950" />
-                      <span>Form B (PDF)</span>
-                    </button>
-                    <button type="button"
-                      onClick={() => handleDirectDownloadFormB(formBDept, formBSem, 'excel')}
-                      disabled={isDownloadingFormB}
-                      title="Download CHED Form B (Excel)"
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-emerald-950 bg-white hover:bg-amber-100 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer border border-amber-300 disabled:opacity-50"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-800" />
-                      <span>(.xlsx)</span>
-                    </button>
-                  </div>
+                  {/* Form B Button */}
+                  <button type="button"
+                    onClick={() => setShowFormBModal(true)}
+                    disabled={isDownloadingFormB}
+                    title="Export CHED Form B"
+                    className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-emerald-950 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 font-black shadow-2xs text-[11px] sm:text-xs cursor-pointer disabled:opacity-50 transition-all active:scale-95 border border-amber-500/50"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form B</span>
+                  </button>
                 </>
               )}
 
