@@ -332,6 +332,8 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     graduates: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } }
   };
 
+  const isOnly1stSemBatch = String(yearStr).includes('1st Sem');
+
   (students || []).forEach((st) => {
     const sexRaw = (st.sex || st.gender || 'Male').toUpperCase();
     const genKey = sexRaw.startsWith('F') ? 'f' : 'm';
@@ -346,23 +348,26 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     // 1st Semester Enrollees: All enrolled students in cohort
     statsMatrix.sem1[targetDept][genKey] += 1;
 
-    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester === '1st Semester' ? st.final_grade : '') || '').trim();
-    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
+    if (isOnly1stSemBatch) {
+      // If purely 1st semester batch, 2nd sem and graduates are not yet applicable (0)
+      return;
+    }
 
-    // 2nd Semester Enrollees: Active enrollment in 2nd semester
-    const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
-    const isSem2Enrolled = !isExplicitlyNoSem2;
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
+    const num2 = parseFloat(g2Str);
+
+    const has2ndSemFlag = st.has_2nd_sem !== false && st.has_2nd_sem !== 0;
+    const isSem2Enrolled = has2ndSemFlag && Boolean(g2Str) && g2Str !== '-';
 
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
 
-      // 2nd Sem Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
-      const num2 = parseFloat(g2Str);
-      const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-      const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || (st.status && st.status.toLowerCase().includes('graduat'));
+      // 2nd Sem Passing Evaluation (Grade MUST be strictly between 1.00 and 3.00, or 'Passed')
+      const isGrade1to3 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0) || g2Str.toLowerCase() === 'passed';
+      const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
 
-      // Graduates: Kung ilan ang pumasa sa 2nd semester, iyon ang ilalagay sa graduates
-      if (isPassed2 && !isFailed2) {
+      // Graduates: Tanging ang may markang 1.00 hanggang 3.00 lamang sa 2nd sem ang mabibilang sa graduates
+      if (isGrade1to3 && !isFailed2) {
         statsMatrix.graduates[targetDept][genKey] += 1;
       }
     }

@@ -37,63 +37,52 @@ const OSDSNSTPForm = ({
       }
     };
 
-    (students || []).forEach((st) => {
-      const deptRaw = (st.department || '').toUpperCase().trim();
-      const sexRaw = (st.sex || st.gender || '').toLowerCase().trim();
-      const isFemale = sexRaw.startsWith('f') || sexRaw === 'female';
-      const genKey = isFemale ? 'f' : 'm';
+    const isOnly1stSemBatch = String(academicYear || '').includes('1st Sem');
 
+    (students || []).forEach((st) => {
+      // 1. Identify Component (ROTC, LTS, CWTS)
+      const deptRaw = (st.department || '').toUpperCase();
       let targetDept = null;
       if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
-      else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
       else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+      else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
 
       if (!targetDept) return;
 
-      // 1. 1st Sem Enrollee: All cohort students who enrolled in 1st semester
+      // 2. Identify Gender (Male / Female)
+      const sexRaw = (st.sex || st.gender || 'Male').toUpperCase();
+      const genKey = sexRaw.startsWith('F') ? 'f' : 'm';
+
+      // 1st Sem Enrollees: All enrolled students in cohort
       data.sem1[targetDept][genKey] += 1;
 
-      // 2. Check grades
-      const sid = st.studentId || st.id;
-      const semGrades = gradesMap[sid] || {};
+      if (isOnly1stSemBatch) {
+        // If purely 1st semester batch, 2nd sem and graduates are not yet applicable (0)
+        return;
+      }
 
-      const g1Str = String(
-        st.final_grade_1 ||
-        st.grade_sem1 ||
-        semGrades['1st Semester']?.final_grade ||
-        st.midterm_grade ||
-        ''
-      ).trim();
+      const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.has_2nd_sem ? st.final_grade : '') || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
+      const num2 = parseFloat(g2Str);
 
-      const g2Str = String(
-        st.final_grade_2 ||
-        st.grade_sem2 ||
-        semGrades['2nd Semester']?.final_grade ||
-        (st.semester === '2nd Semester' && !st.final_grade_1 ? st.final_grade : '') ||
-        ''
-      ).trim();
-
-      // 3. 2nd Sem Enrollee: Student actively enrolled in 2nd semester
-      const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
-      const isSem2Enrolled = !isExplicitlyNoSem2;
+      const has2ndSemFlag = st.has_2nd_sem !== false && st.has_2nd_sem !== 0;
+      const isSem2Enrolled = has2ndSemFlag && Boolean(g2Str) && g2Str !== '-';
 
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
 
-        // 4. 2nd Sem Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
-        const num2 = parseFloat(g2Str);
-        const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-        const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed' || (st.status && st.status.toLowerCase().includes('graduat'));
+        // 2nd Sem Passing Evaluation (Grade MUST be strictly between 1.00 and 3.00, or 'Passed')
+        const isGrade1to3 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0) || g2Str.toLowerCase() === 'passed';
+        const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
 
-        // 5. Graduates: Kung sino ang pumasa sa 2nd sem, iyon ang bilang sa graduates
-        if (isPassed2 && !isFailed2) {
+        // Graduates: Tanging ang may markang 1.00 hanggang 3.00 lamang sa 2nd sem ang mabibilang sa graduates
+        if (isGrade1to3 && !isFailed2) {
           data.graduates[targetDept][genKey] += 1;
         }
       }
     });
 
     return data;
-  }, [students, gradesMap, statsData]);
+  }, [students, gradesMap, statsData, academicYear]);
 
   const baseUrl = import.meta.env.BASE_URL || '/';
   const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
