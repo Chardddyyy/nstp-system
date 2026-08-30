@@ -28,16 +28,16 @@ export function initSocket() {
   }
 
   socket = io(serverUrl, {
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     upgrade: true,
     autoConnect: true,
     auth: { token: token ? `Bearer ${token}` : null },
     reconnection: true,
-    reconnectionAttempts: 10,
-    reconnectionDelay: 2500,
+    reconnectionAttempts: 15,
+    reconnectionDelay: 2000,
     reconnectionDelayMax: 10000,
     randomizationFactor: 0.5,
-    timeout: 20000,
+    timeout: 30000,
   });
 
   socket.on('connect', () => {

@@ -729,15 +729,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => downloadChedFormat(archiveViewData)}
-                  className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
-                  title="Export CHED Form B Enrollment List"
-                >
-                  <Download className="w-3.5 h-3.5 text-emerald-950" />
-                  <span>Form B</span>
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowArchiveDetails(true)}
                   className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >

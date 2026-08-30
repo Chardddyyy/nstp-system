@@ -512,11 +512,8 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
 
     if (!targetDept) return;
 
-    // 1st Semester Enrollees
-    const isSem1Enrolled = !st.semester || st.semester.includes('1st') || st.semester.includes('Whole') || !!st.final_grade_1 || !st.semester.includes('2nd');
-    if (isSem1Enrolled) {
-      statsMatrix.sem1[targetDept][genKey] += 1;
-    }
+    // 1st Semester Enrollees: All enrolled students in the cohort/academic year
+    statsMatrix.sem1[targetDept][genKey] += 1;
 
     // 2nd Semester Enrollees
     const isSem2Enrolled = st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.has_2nd_sem || !!st.final_grade_2 || st.status === 'graduated';
@@ -524,15 +521,16 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
       statsMatrix.sem2[targetDept][genKey] += 1;
     }
 
-    // Graduates: Only count if student passed with <= 3.0 in both semesters
+    // Graduates: Only count if student passed with <= 3.0 in both semesters and no failing mark
     const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || (st.semester?.includes('1st') ? st.final_grade : '') || '');
     const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.semester?.includes('2nd') || st.semester?.includes('Whole') || st.status === 'graduated' ? st.final_grade : '') || '');
     const g1 = parseFloat(g1Str);
     const g2 = parseFloat(g2Str);
-    const passed1 = (!isNaN(g1) && g1 <= 3.0 && g1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p';
+    const passed1 = (!isNaN(g1) && g1 <= 3.0 && g1 >= 1.0) || g1Str.toLowerCase() === 'passed' || g1Str.toLowerCase() === 'p' || (!g1 && g2 && g2 <= 3.0);
     const passed2 = (!isNaN(g2) && g2 <= 3.0 && g2 >= 1.0) || g2Str.toLowerCase() === 'passed' || g2Str.toLowerCase() === 'p' || (st.status === 'graduated' && (!g2 || g2 <= 3.0));
+    const isFailedOrIncomplete = (g2 > 3.0) || (g1 > 3.0) || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP') || g2Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('FAIL');
 
-    if (passed1 && passed2 && isSem2Enrolled) {
+    if (isSem2Enrolled && passed1 && passed2 && !isFailedOrIncomplete) {
       statsMatrix.graduates[targetDept][genKey] += 1;
     }
   });
