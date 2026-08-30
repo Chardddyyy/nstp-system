@@ -326,10 +326,10 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
   }
 
   const statsMatrix = {
-    sem1: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    sem2: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    summer: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } },
-    graduates: { ROTC: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 }, LTS: { m: 0, f: 0 } }
+    sem1: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    sem2: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    summer: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } },
+    graduates: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } }
   };
 
   (students || []).forEach((st) => {
@@ -338,13 +338,39 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     const deptRaw = (st.department || '').toUpperCase();
     let targetDept = null;
     if (deptRaw.includes('ROTC')) targetDept = 'ROTC';
-    else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
     else if (deptRaw.includes('LTS')) targetDept = 'LTS';
+    else if (deptRaw.includes('CWTS')) targetDept = 'CWTS';
 
     if (!targetDept) return;
+
+    // 1st Semester Enrollees: All enrolled students in cohort
     statsMatrix.sem1[targetDept][genKey] += 1;
-    statsMatrix.sem2[targetDept][genKey] += 1;
-    statsMatrix.graduates[targetDept][genKey] += 1;
+
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || st.midterm_grade || '').trim();
+    const g2Str = String(st.final_grade_2 || st.grade_sem2 || '').trim();
+
+    // 2nd Semester Enrollees: Active enrollment in 2nd semester
+    const isExplicitlyNoSem2 = st.has_2nd_sem === false || st.has_2nd_sem === 0 || g2Str === '-' || (g2Str === '' && !st.status?.includes('graduat'));
+    const isSem2Enrolled = !isExplicitlyNoSem2;
+
+    if (isSem2Enrolled) {
+      statsMatrix.sem2[targetDept][genKey] += 1;
+    }
+
+    // Passing Evaluation (Grade 1.00 to 3.00, or 'Passed')
+    const num1 = parseFloat(g1Str);
+    const num2 = parseFloat(g2Str);
+
+    const isFailed1 = num1 > 3.0 || g1Str.toUpperCase().includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
+    const isFailed2 = num2 > 3.0 || g2Str.toUpperCase().includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
+
+    const isPassed1 = (!isNaN(num1) && num1 <= 3.0 && num1 >= 1.0) || g1Str.toLowerCase() === 'passed';
+    const isPassed2 = (!isNaN(num2) && num2 <= 3.0 && num2 >= 1.0) || g2Str.toLowerCase() === 'passed';
+
+    // Graduates: Only students who reached 2nd semester and got a passing grade (1.00 to 3.00) in 2nd semester (and 1st sem) without failing/INC/DRP
+    if (isSem2Enrolled && isPassed1 && isPassed2 && !isFailed1 && !isFailed2) {
+      statsMatrix.graduates[targetDept][genKey] += 1;
+    }
   });
 
   const doc = new jsPDF({
@@ -427,9 +453,9 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     doc.rect(p.x, tableTop, colW.block, 6);
     doc.text(p.title, p.x + (colW.block / 2), tableTop + 4.2, { align: 'center' });
 
-    // Level 2 Subheaders: ROTC, CWTS, LTS
+    // Level 2 Subheaders: ROTC, LTS, CWTS
     const compW = colW.block / 3;
-    const comps = ['ROTC', 'CWTS', 'LTS'];
+    const comps = ['ROTC', 'LTS', 'CWTS'];
     comps.forEach((c, idx) => {
       const cx = p.x + (idx * compW);
       doc.rect(cx, tableTop + 6, compW, 6);
@@ -456,24 +482,24 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
   doc.rect(leftMargin + colW.hei, dataY, colW.class, dataRowHeight);
   doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), dataY + 5.5, { align: 'center' });
 
-  // Render Numbers into Grid
+  // Render Numbers into Grid (ROTC, LTS, CWTS)
   const dataValues = [
     // 1st Sem
     statsMatrix.sem1.ROTC.m, statsMatrix.sem1.ROTC.f,
-    statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
     statsMatrix.sem1.LTS.m, statsMatrix.sem1.LTS.f,
+    statsMatrix.sem1.CWTS.m, statsMatrix.sem1.CWTS.f,
     // 2nd Sem
     statsMatrix.sem2.ROTC.m, statsMatrix.sem2.ROTC.f,
-    statsMatrix.sem2.CWTS.m, statsMatrix.sem2.CWTS.f,
     statsMatrix.sem2.LTS.m, statsMatrix.sem2.LTS.f,
+    statsMatrix.sem2.CWTS.m, statsMatrix.sem2.CWTS.f,
     // Summer
     statsMatrix.summer.ROTC.m, statsMatrix.summer.ROTC.f,
-    statsMatrix.summer.CWTS.m, statsMatrix.summer.CWTS.f,
     statsMatrix.summer.LTS.m, statsMatrix.summer.LTS.f,
+    statsMatrix.summer.CWTS.m, statsMatrix.summer.CWTS.f,
     // Graduates
     statsMatrix.graduates.ROTC.m, statsMatrix.graduates.ROTC.f,
-    statsMatrix.graduates.CWTS.m, statsMatrix.graduates.CWTS.f,
-    statsMatrix.graduates.LTS.m, statsMatrix.graduates.LTS.f
+    statsMatrix.graduates.LTS.m, statsMatrix.graduates.LTS.f,
+    statsMatrix.graduates.CWTS.m, statsMatrix.graduates.CWTS.f
   ];
 
   const singleGenWidth = colW.block / 6;
