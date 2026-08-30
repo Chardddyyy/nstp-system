@@ -41,7 +41,7 @@ function playScanBeep(success = true) {
 
 const ATTENDANCE_DAYS = Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
 
-export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _currentDepartment = 'All' }) {
+export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'All', currentUser = null }) {
   const [selectedDay, setSelectedDay] = useState('Day 1');
   const [activityName, setActivityName] = useState('NSTP Field Activity');
   const [scanType, setScanType] = useState('TIME_IN'); // 'TIME_IN' | 'TIME_OUT'
@@ -337,7 +337,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       await downloadDailyAttendancePdf({
         records: sessionLogs,
         selectedDay,
-        selectedDept: currentUser?.department || 'All'
+        selectedDept: currentUser?.department || currentDepartment || 'All'
       });
     } catch (err) {
       console.error('Failed to export daily attendance PDF:', err);
@@ -352,7 +352,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _cu
       await downloadDailyAttendanceExcel({
         records: sessionLogs,
         selectedDay,
-        selectedDept: currentUser?.department || 'All'
+        selectedDept: currentUser?.department || currentDepartment || 'All'
       });
     } catch (err) {
       console.error('Failed to export daily attendance Excel:', err);

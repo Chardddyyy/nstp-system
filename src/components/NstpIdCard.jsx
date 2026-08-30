@@ -26,7 +26,6 @@ export function NstpIdCard({ student }) {
     : formatGradeAndSection(student);
   const emergencyName = student.emergencyContact || student.emergencyName || 'Emergency Contact';
   const emergencyContact = student.emergencyNumber || student.contactNumber || '09000000000';
-  const bloodType = student.bloodType || 'O+';
 
   useEffect(() => {
     let isMounted = true;

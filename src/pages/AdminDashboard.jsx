@@ -280,7 +280,6 @@ function AdminDashboard() {
   const [confirmText, setConfirmText] = useState('');
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
-  const [designatedSection, setDesignatedSection] = useState('A');
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
   const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');

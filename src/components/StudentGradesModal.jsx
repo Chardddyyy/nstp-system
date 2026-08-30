@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import {
   X, Search, FileSpreadsheet, CheckCircle, Clock, AlertTriangle,
@@ -46,7 +46,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const isAnnualView = selectedSemester === 'Whole Academic Year';
 
   // Load existing grades from backend for the entire school year
-  const loadGrades = async () => {
+  const loadGrades = useCallback(async () => {
     try {
       setLoading(true);
       const records = await gradesAPI.getAll({
@@ -92,13 +92,13 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedSchoolYear, selectedDept, selectedNstpSection, selectedSemester]);
 
   useEffect(() => {
     if (isOpen) {
       loadGrades();
     }
-  }, [isOpen, selectedSemester, selectedSchoolYear, selectedDept, selectedNstpSection]);
+  }, [isOpen, loadGrades]);
 
   // Compute remarks automatically based on Final Grade
   const calculateRemarks = (finalGrade) => {
@@ -581,7 +581,173 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
           </div>
         </div>
 
+        {/* Toolbar & Filters */}
+        <div className="p-3 sm:p-4 bg-gray-50 border-b border-gray-200/80 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Term / Semester Selector */}
+              <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                <BookOpen className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="text-[11px] font-bold text-gray-500 uppercase">Term:</span>
+                <select
+                  value={selectedSemester}
+                  onChange={(e) => setSelectedSemester(e.target.value)}
+                  className="text-xs font-black text-emerald-950 bg-transparent border-0 focus:ring-0 cursor-pointer outline-hidden pr-2"
+                >
+                  <option value="Whole Academic Year">Whole Academic Year (Annual Form 2-A)</option>
+                  <option value="1st Semester">1st Semester (NSTP 1)</option>
+                  <option value="2nd Semester">2nd Semester (NSTP 2)</option>
+                </select>
+              </div>
 
+              {/* Department / Track (Admin Only) */}
+              {isAdmin && (
+                <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                  <Filter className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span className="text-[11px] font-bold text-gray-500 uppercase">Track:</span>
+                  <select
+                    value={selectedDept}
+                    onChange={(e) => setSelectedDept(e.target.value)}
+                    className="text-xs font-black text-emerald-950 bg-transparent border-0 focus:ring-0 cursor-pointer outline-hidden pr-2"
+                  >
+                    <option value="All">All Tracks (CWTS, LTS, ROTC)</option>
+                    <option value="CWTS">CWTS</option>
+                    <option value="LTS">LTS</option>
+                    <option value="ROTC">ROTC</option>
+                  </select>
+                </div>
+              )}
+
+              {/* School Year Selector */}
+              <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="text-[11px] font-bold text-gray-500 uppercase">A.Y.:</span>
+                <select
+                  value={selectedSchoolYear}
+                  onChange={(e) => setSelectedSchoolYear(e.target.value)}
+                  className="text-xs font-black text-emerald-950 bg-transparent border-0 focus:ring-0 cursor-pointer outline-hidden pr-2"
+                >
+                  <option value="2026-2027">2026-2027</option>
+                  <option value="2025-2026">2025-2026</option>
+                  <option value="2024-2025">2024-2025</option>
+                  <option value="2023-2024">2023-2024</option>
+                </select>
+              </div>
+
+              {/* NSTP Section Selector */}
+              <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                <span className="text-[11px] font-bold text-gray-500 uppercase">NSTP Sec:</span>
+                <select
+                  value={selectedNstpSection}
+                  onChange={(e) => setSelectedNstpSection(e.target.value)}
+                  className="text-xs font-black text-emerald-950 bg-transparent border-0 focus:ring-0 cursor-pointer outline-hidden pr-2"
+                >
+                  <option value="All">All Sections</option>
+                  {NSTP_SECTIONS.map((sec) => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search student or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-hidden font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Action Row: Batch Quick-Fill + Official Exports */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200">
+            {/* Quick Fill (Instructor Only) */}
+            {canEditGrades && !isAnnualView ? (
+              <div className="flex items-center gap-2 bg-emerald-50/80 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                <span className="text-[11px] font-bold text-emerald-950">Quick-Fill Unfilled:</span>
+                <select
+                  value={batchFillGrade}
+                  onChange={(e) => setBatchFillGrade(e.target.value)}
+                  className="text-xs font-black text-emerald-900 bg-white border border-emerald-300 rounded-lg px-2 py-0.5"
+                >
+                  {GRADE_OPTIONS.filter(Boolean).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleBatchFillUnfilled}
+                  className="px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-2xs cursor-pointer transition-colors"
+                >
+                  Apply to Unfilled
+                </button>
+              </div>
+            ) : (
+              <div className="text-[11px] font-bold text-gray-500 flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Showing official records for <strong>{selectedSemester}</strong></span>
+              </div>
+            )}
+
+            {/* Official CHED & OSDS Downloads */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* OSDS Form 2-A (Annual Batch Form) */}
+              <button
+                type="button"
+                onClick={handleDownloadOSDSForm2A}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-xl border border-emerald-300 transition-colors cursor-pointer"
+                title="Download Official OSDS-NSTP Form 2-A PDF"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-800" />
+                <span>OSDS Form 2-A (PDF)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadOSDSForm2AExcel}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-black text-teal-900 bg-teal-100 hover:bg-teal-200 rounded-xl border border-teal-300 transition-colors cursor-pointer"
+                title="Download Official Form 2-A Summary Excel"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-teal-800" />
+                <span>Form 2-A (Excel)</span>
+              </button>
+
+              {/* Standard Grades Sheet PDF & Excel */}
+              <button
+                type="button"
+                onClick={handleExportGradesPdf}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-gray-600" />
+                <span>Grades PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportGradesExcel}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-green-700" />
+                <span>Grades Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-800 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-colors cursor-pointer"
+                title="Print Grades Sheet"
+              >
+                <Printer className="w-3.5 h-3.5 text-gray-700" />
+                <span>Print</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Grades Table Area */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-4">

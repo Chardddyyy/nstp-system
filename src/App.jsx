@@ -759,7 +759,7 @@ function App() {
     }
   }
 
-  async function login(email, password, forceLogin = true) {
+  async function login(email, password, _forceLogin = true) {
     try {
       let response = await authAPI.login(email, password, true);
       if (response && response.warning && response.activeSession && !response.token) {
