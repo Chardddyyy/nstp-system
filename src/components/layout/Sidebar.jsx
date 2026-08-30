@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw
+  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock
 } from 'lucide-react';
 
 const DEPT_COLORS = {
@@ -46,8 +46,8 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
     }`;
   }
 
-  function liveOnlyNavClass() {
-    return 'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors opacity-45 cursor-not-allowed text-emerald-200/50';
+  function lockedNavClass() {
+    return 'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors opacity-45 cursor-not-allowed bg-black/15 text-gray-300/70 border border-white/5 select-none';
   }
 
   return (
@@ -161,32 +161,64 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
             {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
-          <button type="button" onClick={() => go('/letter-formats')} className={navClass('/letter-formats')}>
+          {/* Letter Formats — Locked in Archive Mode, accessible only in Current Batch */}
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) go('/letter-formats'); }}
+            disabled={viewingArchive}
+            title={viewingArchive ? 'Letter Formats is locked in Archive Mode (Current Batch only)' : 'Letter Formats & Templates'}
+            className={viewingArchive ? lockedNavClass() : navClass('/letter-formats')}
+          >
             <div className="flex items-center space-x-3">
               <FileCheck className="w-5 h-5" />
               <span>Letter Formats</span>
             </div>
-            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
+            {viewingArchive && (
+              <span className="flex items-center gap-1 text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-black border border-rose-500/30">
+                <Lock className="w-2.5 h-2.5" />
+                <span>Locked</span>
+              </span>
+            )}
           </button>
 
+          {/* Messages — Locked in Archive Mode, accessible only in Current Batch */}
           <button
             type="button"
             onClick={() => { if (!viewingArchive) go('/chat'); }}
             disabled={viewingArchive}
-            className={viewingArchive ? liveOnlyNavClass() : navClass('/chat')}
+            title={viewingArchive ? 'Messages is locked in Archive Mode (Current Batch only)' : 'Messages & Chat'}
+            className={viewingArchive ? lockedNavClass() : navClass('/chat')}
           >
             <div className="flex items-center space-x-3">
               <MessageSquare className="w-5 h-5" />
               <span>Messages</span>
             </div>
-            {viewingArchive && <span className="text-[9px] bg-white/10 text-emerald-200 px-1.5 py-0.5 rounded font-bold">Live Only</span>}
+            {viewingArchive && (
+              <span className="flex items-center gap-1 text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-black border border-rose-500/30">
+                <Lock className="w-2.5 h-2.5" />
+                <span>Locked</span>
+              </span>
+            )}
           </button>
 
-          <button type="button" onClick={() => go('/profile')} className={navClass('/profile')}>
+          {/* Profile — Locked in Archive Mode, accessible only in Current Batch */}
+          <button
+            type="button"
+            onClick={() => { if (!viewingArchive) go('/profile'); }}
+            disabled={viewingArchive}
+            title={viewingArchive ? 'Profile is locked in Archive Mode (Current Batch only)' : 'User Profile'}
+            className={viewingArchive ? lockedNavClass() : navClass('/profile')}
+          >
             <div className="flex items-center space-x-3">
               <User className="w-5 h-5" />
               <span>Profile</span>
             </div>
+            {viewingArchive && (
+              <span className="flex items-center gap-1 text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-black border border-rose-500/30">
+                <Lock className="w-2.5 h-2.5" />
+                <span>Locked</span>
+              </span>
+            )}
           </button>
         </div>
 
