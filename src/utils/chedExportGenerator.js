@@ -592,31 +592,8 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     };
   }
 
-  // Row 13: TOTAL SUMMARY ROW
-  const totalRowIdx = 13;
-  const totalRow = worksheet.getRow(totalRowIdx);
-  totalRow.height = 22;
-  totalRow.getCell(1).value = 'TOTAL';
-  totalRow.getCell(2).value = 'PUBLIC';
-
-  for (let c = 3; c <= 26; c++) {
-    totalRow.getCell(c).value = dataRow.getCell(c).value;
-    totalRow.getCell(c).font = { name: 'Arial', size: 9, bold: true };
-    totalRow.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' };
-    totalRow.getCell(c).border = thinBorder;
-    totalRow.getCell(c).fill = subHeaderFill;
-  }
-  totalRow.getCell(1).font = { name: 'Arial', size: 9, bold: true };
-  totalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  totalRow.getCell(1).border = thinBorder;
-  totalRow.getCell(1).fill = subHeaderFill;
-  totalRow.getCell(2).font = { name: 'Arial', size: 9, bold: true };
-  totalRow.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
-  totalRow.getCell(2).border = thinBorder;
-  totalRow.getCell(2).fill = subHeaderFill;
-
-  // 5. Signatories Footer (Row 16)
-  const sigRow = 16;
+  // 5. Signatories Footer (Row 15)
+  const sigRow = 15;
   worksheet.getCell(`A${sigRow}`).value = 'Prepared by: NSTP Department Coordinator';
   worksheet.getCell(`A${sigRow}`).font = { name: 'Arial', size: 9, bold: true };
 

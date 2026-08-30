@@ -78,34 +78,49 @@ function Calendar() {
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
 
+  // Batch academic date boundaries for archive mode
+  const batchRange = useMemo(() => {
+    if (!viewingArchive || !archiveViewData) return null;
+    let startStr = archiveViewData.start_month || archiveViewData.startMonth || archiveViewData.data?.start_month || archiveViewData.data?.startMonth;
+    let endStr = archiveViewData.end_month || archiveViewData.endMonth || archiveViewData.data?.end_month || archiveViewData.data?.endMonth;
+
+    if (!startStr || !endStr) {
+      const yr = String(archiveViewData.year || '');
+      const match = yr.match(/(\d{4})/);
+      const baseYear = match ? parseInt(match[1], 10) : 2024;
+      if (yr.includes('1st Sem')) {
+        startStr = `${baseYear}-08`;
+        endStr = `${baseYear}-12`;
+      } else if (yr.includes('2nd Sem')) {
+        startStr = `${baseYear + 1}-01`;
+        endStr = `${baseYear + 1}-05`;
+      } else {
+        startStr = `${baseYear}-08`;
+        endStr = `${baseYear + 1}-05`;
+      }
+    }
+
+    const [sY, sM] = startStr.split('-').map(Number);
+    const [eY, eM] = endStr.split('-').map(Number);
+    return {
+      minDate: new Date(sY, sM - 1, 1),
+      maxDate: new Date(eY, eM - 1, 1),
+      startLabel: new Date(sY, sM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      endLabel: new Date(eY, eM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    };
+  }, [viewingArchive, archiveViewData]);
+
   // When in archive mode, jump the calendar to the batch's start month (or academic semester)
   useEffect(() => {
     let timer = setTimeout(() => {
-      if (viewingArchive && archiveViewData) {
-        const startMonthStr = archiveViewData.start_month || archiveViewData.startMonth || archiveViewData.data?.start_month || archiveViewData.data?.startMonth;
-        if (startMonthStr && typeof startMonthStr === 'string' && startMonthStr.includes('-')) {
-          const [sYr, sMo] = startMonthStr.split('-').map(Number);
-          if (!isNaN(sYr) && !isNaN(sMo) && sMo >= 1 && sMo <= 12) {
-            setCurrentDate(new Date(sYr, sMo - 1, 15));
-            return;
-          }
-        }
-
-        const yr = String(archiveViewData.year || '');
-        const match = yr.match(/(\d{4})/);
-        const baseYear = match ? parseInt(match[1], 10) : 2024;
-        const is2ndSem = yr.includes('2nd');
-        if (is2ndSem) {
-          setCurrentDate(new Date(baseYear + 1, 0, 15)); // January
-        } else {
-          setCurrentDate(new Date(baseYear, 7, 15)); // August
-        }
+      if (viewingArchive && batchRange) {
+        setCurrentDate(new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 15));
       } else if (!viewingArchive) {
         setCurrentDate(new Date());
       }
     }, 0);
     return () => clearTimeout(timer);
-  }, [viewingArchive, archiveViewData]);
+  }, [viewingArchive, batchRange]);
 
   const handleLogout = async () => {
     await logout();
@@ -389,8 +404,38 @@ function Calendar() {
     localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
   };
 
+  const canPrev = useMemo(() => {
+    if (!batchRange) return true;
+    const prev = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    return prev >= batchRange.minDate;
+  }, [batchRange, currentDate]);
+
+  const canNext = useMemo(() => {
+    if (!batchRange) return true;
+    const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    return next <= batchRange.maxDate;
+  }, [batchRange, currentDate]);
+
   const changeMonth = (direction) => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
+    const target = new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1);
+    if (batchRange) {
+      if (direction < 0 && target < batchRange.minDate) return;
+      if (direction > 0 && target > batchRange.maxDate) return;
+    }
+    setCurrentDate(target);
+  };
+
+  const handleGoToBatchToday = () => {
+    if (!batchRange) {
+      setCurrentDate(new Date());
+      return;
+    }
+    const today = new Date();
+    if (today >= batchRange.minDate && today <= batchRange.maxDate) {
+      setCurrentDate(today);
+    } else {
+      setCurrentDate(new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 15));
+    }
   };
 
   // Category Badge Styler
@@ -505,15 +550,22 @@ function Calendar() {
 
         {/* Viewing Archive Banner */}
         {viewingArchive && archiveViewData && (
-          <div className="flex-shrink-0 bg-amber-500 text-emerald-950 px-4 py-2 rounded-2xl flex items-center justify-between shadow-md mb-3 font-bold text-xs sm:text-sm">
+          <div className="flex-shrink-0 bg-gradient-to-r from-amber-400 to-amber-500 text-emerald-950 px-4 py-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-md mb-3 font-bold text-xs sm:text-sm border border-amber-500">
             <div className="flex items-center space-x-2">
               <History className="w-4 h-4 text-emerald-950 shrink-0" />
-              <span>Viewing Archived Batch Calendar: <strong>Batch {archiveViewData.year}</strong></span>
+              <span>
+                Viewing Archived Batch Calendar: <strong>Batch {archiveViewData.year}</strong>
+                {batchRange && (
+                  <span className="ml-2 px-2 py-0.5 bg-emerald-950 text-amber-300 rounded-lg text-[10.5px] font-black uppercase tracking-wider">
+                    {batchRange.startLabel} – {batchRange.endLabel}
+                  </span>
+                )}
+              </span>
             </div>
             <button
               type="button"
               onClick={() => setViewingArchive(false)}
-              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0"
+              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0 shadow-xs"
             >
               Exit Archive
             </button>
@@ -525,31 +577,48 @@ function Calendar() {
           <div className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
             <div className="flex-shrink-0 flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-base sm:text-lg font-black text-slate-900">
-                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900">
+                    {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h2>
+                  {viewingArchive && batchRange && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-200 rounded-md">
+                      Batch Span: {batchRange.startLabel} – {batchRange.endLabel}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
-                  Click on any day with events to view complete details
+                  {viewingArchive ? 'Calendar navigation locked within this batch academic period' : 'Click on any day with events to view complete details'}
                 </p>
               </div>
               <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button type="button"
                   onClick={() => changeMonth(-1)}
-                  className="p-1.5 hover:bg-white text-slate-700 rounded-lg transition-colors cursor-pointer"
-                  title="Previous Month"
+                  disabled={!canPrev}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    canPrev
+                      ? 'hover:bg-white text-slate-700 cursor-pointer'
+                      : 'text-slate-300 cursor-not-allowed opacity-40'
+                  }`}
+                  title={canPrev ? 'Previous Month' : 'Start of Batch Reached'}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button type="button"
-                  onClick={() => setCurrentDate(new Date())}
+                  onClick={handleGoToBatchToday}
                   className="px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-white rounded-lg transition-colors cursor-pointer"
                 >
-                  Today
+                  {viewingArchive ? 'Start Month' : 'Today'}
                 </button>
                 <button type="button"
                   onClick={() => changeMonth(1)}
-                  className="p-1.5 hover:bg-white text-slate-700 rounded-lg transition-colors cursor-pointer"
-                  title="Next Month"
+                  disabled={!canNext}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    canNext
+                      ? 'hover:bg-white text-slate-700 cursor-pointer'
+                      : 'text-slate-300 cursor-not-allowed opacity-40'
+                  }`}
+                  title={canNext ? 'Next Month' : 'End of Batch Reached'}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>

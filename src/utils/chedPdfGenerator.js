@@ -538,28 +538,8 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     startColX += singleGenWidth;
   });
 
-  // Total Summary Row (Matching Excel Row 13)
-  const totalY = dataY + dataRowHeight;
-  doc.setFillColor(243, 244, 246);
-  doc.rect(leftMargin, totalY, totalTableWidth, dataRowHeight, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.rect(leftMargin, totalY, colW.hei, dataRowHeight);
-  doc.text('TOTAL', leftMargin + 2, totalY + 5.2);
-
-  doc.rect(leftMargin + colW.hei, totalY, colW.class, dataRowHeight);
-  doc.text('PUBLIC', leftMargin + colW.hei + (colW.class / 2), totalY + 5.2, { align: 'center' });
-
-  let totalColX = leftMargin + colW.hei + colW.class;
-  dataValues.forEach(val => {
-    doc.rect(totalColX, totalY, singleGenWidth, dataRowHeight);
-    doc.text(String(val), totalColX + (singleGenWidth / 2), totalY + 5.2, { align: 'center' });
-    totalColX += singleGenWidth;
-  });
-
   // Signatories
-  const sigY = totalY + dataRowHeight + 14;
+  const sigY = dataY + dataRowHeight + 14;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);

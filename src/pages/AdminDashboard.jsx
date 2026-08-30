@@ -568,6 +568,21 @@ function getConsecutiveBatchDetails(currentBatchStr) {
     setNewBatchYearInput(next.academicYear);
     setNewBatchSem(next.semester);
     setNewBatchName(next.fullBatchName);
+
+    // Compute automatic start and end month based on current batch being archived
+    const cur = String(currentBatch || '');
+    const match = cur.match(/(\d{4})/);
+    const baseYear = match ? parseInt(match[1], 10) : new Date().getFullYear();
+    if (cur.includes('1st Sem')) {
+      setNewBatchStartMonth(`${baseYear}-08`);
+      setNewBatchEndMonth(`${baseYear}-12`);
+    } else if (cur.includes('2nd Sem')) {
+      setNewBatchStartMonth(`${baseYear + 1}-01`);
+      setNewBatchEndMonth(`${baseYear + 1}-05`);
+    } else {
+      setNewBatchStartMonth(`${baseYear}-08`);
+      setNewBatchEndMonth(`${baseYear + 1}-05`);
+    }
   };
   
   const confirmNewBatch = async () => {
@@ -1987,35 +2002,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </p>
                 </div>
 
-                {/* Academic Batch Calendar Date Span */}
-                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3.5 space-y-2.5">
+                {/* Academic Batch Calendar Date Span - Automatic */}
+                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3.5 space-y-1.5">
                   <p className="text-emerald-950 font-black text-xs flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Batch Academic Calendar Span (Start &amp; End Month)</span>
+                    <span>Automatic Batch Calendar Span</span>
                   </p>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-white border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between text-xs">
                     <div>
-                      <label className="block text-[10.5px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">
-                        Start Month
-                      </label>
-                      <input
-                        type="month"
-                        value={newBatchStartMonth}
-                        onChange={(e) => setNewBatchStartMonth(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-bold text-gray-800 focus:ring-2 focus:ring-emerald-500"
-                      />
+                      <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Recorded Academic Period</span>
+                      <span className="font-extrabold text-emerald-950">
+                        {newBatchStartMonth ? new Date(newBatchStartMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'August'} – {newBatchEndMonth ? new Date(newBatchEndMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'May'}
+                      </span>
                     </div>
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-emerald-900 mb-1 uppercase tracking-wider">
-                        End Month
-                      </label>
-                      <input
-                        type="month"
-                        value={newBatchEndMonth}
-                        onChange={(e) => setNewBatchEndMonth(e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-bold text-gray-800 focus:ring-2 focus:ring-emerald-500"
-                      />
-                    </div>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded text-[10px] font-black">
+                      Auto-Set
+                    </span>
                   </div>
                 </div>
                 
