@@ -522,13 +522,7 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
       return;
     }
 
-    const g1Str = String(st.final_grade_1 || st.grade_sem1 || (st.semester === '1st Semester' ? st.final_grade : '') || st.midterm_grade || '').trim();
     const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
-
-    const num1 = parseFloat(g1Str);
-    const isFailed1 = num1 > 3.0 || g1Str.includes('5.0') || g1Str.toUpperCase().includes('FAIL') || g1Str.toUpperCase().includes('INC') || g1Str.toUpperCase().includes('DRP');
-    const isPass1 = (!isNaN(num1) && num1 >= 1.0 && num1 <= 3.0 && !isFailed1) || g1Str.toLowerCase() === 'passed';
-
     const num2 = parseFloat(g2Str);
     const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
     const isPass2 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && !isFailed2) || g2Str.toLowerCase() === 'passed';
@@ -539,8 +533,8 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
 
-      // Graduates: Tanging ang may markang 1.00 hanggang 3.00 sa 2nd sem (at walang bagsak/INC/DRP) ang mabibilang sa graduates
-      if (isPass1 && isPass2 && !isFailed1 && !isFailed2) {
+      // Graduates: Nakabase LAMANG sa 2nd semester grade (1.00 hanggang 3.00 lamang, bawal ang 5.00/INC/DRP)
+      if (isPass2 && !isFailed2) {
         statsMatrix.graduates[targetDept][genKey] += 1;
       }
     }
