@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { gradesAPI } from '../services/api';
 
 /**
  * Fetch and convert image into Base64 Data URL for jsPDF embedding
@@ -323,6 +324,31 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
   } else if (batchOrYear && typeof batchOrYear === 'object') {
     yearStr = batchOrYear.year || '2025-2026';
     students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
+  }
+
+  // Enrich with latest database grades if not already embedded
+  const needsGrades = students.some(s => s.final_grade_1 === undefined && s.final_grade_2 === undefined);
+  if (needsGrades) {
+    try {
+      const records = await gradesAPI.getAll();
+      const gMap = {};
+      (records || []).forEach(r => {
+        const sid = String(r.studentId || r.student_id || '').trim();
+        const sem = String(r.semester || '').trim();
+        if (sid && sem) gMap[`${sid}_${sem}`] = r.final_grade;
+      });
+      students = students.map(s => {
+        const sid = String(s.studentId || s.student_id || s.id || '').trim();
+        const g1 = s.final_grade_1 || gMap[`${sid}_1st Semester`] || (s.semester === '1st Semester' ? s.final_grade : '');
+        const g2 = s.final_grade_2 || gMap[`${sid}_2nd Semester`] || (s.semester === '2nd Semester' ? s.final_grade : '');
+        return {
+          ...s,
+          final_grade_1: g1,
+          final_grade_2: g2,
+          has_2nd_sem: s.has_2nd_sem !== undefined ? s.has_2nd_sem : Boolean(g2 && g2 !== '-')
+        };
+      });
+    } catch (_) {}
   }
 
   const statsMatrix = {

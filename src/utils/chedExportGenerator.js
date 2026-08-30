@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { gradesAPI } from '../services/api';
 
 /**
  * Fetch and convert local or URL image into Base64 for ExcelJS embedding
@@ -664,7 +665,33 @@ export async function downloadChedFormBExcel(batchOrYear, studentList = null, de
  */
 export async function downloadChedFormAExcel(batchOrYear, studentList = null, dept = 'All') {
   let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2026-2027') : (batchOrYear || '2026-2027');
-  const students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
+  let students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
+
+  // Enrich with latest database grades if not already embedded
+  const needsGrades = students.some(s => s.final_grade_1 === undefined && s.final_grade_2 === undefined);
+  if (needsGrades) {
+    try {
+      const records = await gradesAPI.getAll();
+      const gMap = {};
+      (records || []).forEach(r => {
+        const sid = String(r.studentId || r.student_id || '').trim();
+        const sem = String(r.semester || '').trim();
+        if (sid && sem) gMap[`${sid}_${sem}`] = r.final_grade;
+      });
+      students = students.map(s => {
+        const sid = String(s.studentId || s.student_id || s.id || '').trim();
+        const g1 = s.final_grade_1 || gMap[`${sid}_1st Semester`] || (s.semester === '1st Semester' ? s.final_grade : '');
+        const g2 = s.final_grade_2 || gMap[`${sid}_2nd Semester`] || (s.semester === '2nd Semester' ? s.final_grade : '');
+        return {
+          ...s,
+          final_grade_1: g1,
+          final_grade_2: g2,
+          has_2nd_sem: s.has_2nd_sem !== undefined ? s.has_2nd_sem : Boolean(g2 && g2 !== '-')
+        };
+      });
+    } catch (_) {}
+  }
+
   const workbook = await generateChedFormAWorkbook(students, year, dept);
   const buffer = await workbook.xlsx.writeBuffer();
   saveExcelBuffer(buffer, `OSDS_NSTP_Form_2-A_Summary_${year.replace(/\s+/g, '_')}.xlsx`);
