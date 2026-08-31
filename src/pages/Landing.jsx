@@ -268,14 +268,14 @@ function Landing() {
 
   // Real-time Telemetry & Active Online Users state
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 80;
+    let cachedVisitors = 0;
     let cachedUsers = 0;
     try {
-      cachedVisitors = Math.max(80, parseInt(localStorage.getItem('nstp_cached_total_visitors') || '80', 10));
+      cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
       cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
     } catch (_) {}
     return {
-      totalVisitors: cachedVisitors,
+      totalVisitors: cachedVisitors > 0 ? cachedVisitors : 1,
       totalUsers: cachedUsers,
       totalRegisteredUsers: cachedUsers,
       activeOnlineCount: 1,
@@ -294,7 +294,9 @@ function Landing() {
         const stats = await getTelemetryStats();
         if (stats && isMounted) {
           setTelemetry(prev => {
-            const nextVisitors = Math.max(prev.totalVisitors || 80, stats.totalVisitors || 80, 80);
+            const nextVisitors = typeof stats.totalVisitors === 'number' && stats.totalVisitors > 0
+              ? stats.totalVisitors
+              : (prev.totalVisitors || 1);
             const nextActive = stats.activeOnlineCount !== undefined ? Math.max(1, stats.activeOnlineCount) : (prev.activeOnlineCount || 1);
             const nextUsers = Math.max(prev.totalUsers || 0, stats.totalUsers || 0, stats.totalRegisteredUsers || 0);
             return {
