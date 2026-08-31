@@ -55,7 +55,7 @@ const DEFAULT_TEMPLATES = [
 ];
 
 export default function LetterFormats() {
-  const { user, logout, viewingArchive, archiveViewData, setViewingArchive } = useAuth();
+  const { user, logout, viewingArchive, archiveViewData, setViewingArchive, showToast } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -89,7 +89,7 @@ export default function LetterFormats() {
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size exceeds 10MB limit');
+      showToast('File size exceeds 10MB limit.', 'warning');
       return;
     }
 
@@ -108,12 +108,13 @@ export default function LetterFormats() {
   const handleSaveTemplate = (e) => {
     e.preventDefault();
     if (!title.trim()) {
+      showToast('Please enter a template title.', 'warning');
       return;
     }
 
     const finalFile = attachedFile || (editingTemplate ? editingTemplate.file : null);
     if (!finalFile) {
-      alert('Please attach an official document / file (PDF, Word, Image)');
+      showToast('Please attach an official template document (PDF, Word, or Image).', 'warning');
       return;
     }
 
@@ -131,6 +132,7 @@ export default function LetterFormats() {
         file: finalFile,
         updatedAt: new Date().toISOString()
       } : t);
+      showToast('Template updated successfully!', 'success');
     } else {
       const newT = {
         id: Date.now().toString(),
@@ -142,6 +144,7 @@ export default function LetterFormats() {
         createdAt: new Date().toISOString()
       };
       updated = [newT, ...templates];
+      showToast('New letter template saved successfully!', 'success');
     }
 
     setTemplates(updated);
@@ -222,10 +225,10 @@ export default function LetterFormats() {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">

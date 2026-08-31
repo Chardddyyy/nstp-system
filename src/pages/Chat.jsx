@@ -9,7 +9,7 @@ import {
   Play, Menu, ArrowLeft, MicOff,
   Volume2, VolumeX, MessageSquare, Plus,
   FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, History, Info, Clock, Check, Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -83,11 +83,11 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
 };
 
 function Chat() {
-  const { user, logout, allUsers, conversations, messages, sendMessage, getUserConversations,
+  const { user, logout, allUsers, students, conversations, messages, sendMessage, getUserConversations,
     editMessage, deleteMessage, addReaction, clearMessages, deleteConversation, startConversation,
     _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
     setMessages,
-    pendingAnsweredCall, setPendingAnsweredCall } = useAuth();
+    pendingAnsweredCall, setPendingAnsweredCall, showToast } = useAuth();
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
 
@@ -107,6 +107,56 @@ function Chat() {
   const [showConversations, setShowConversations] = useState(true);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const attachMenuRef = useRef(null);
+
+  // Message Reaction Details Modal State ({ message, activeEmoji })
+  const [viewingReactionModal, setViewingReactionModal] = useState(null);
+  // Message Edit History Modal State (message object)
+  const [selectedEditHistoryMessage, setSelectedEditHistoryMessage] = useState(null);
+
+  // User detail resolver for reactions and chat sender badges
+  const getUserDetails = useCallback((userId) => {
+    if (!userId) return { name: 'Unknown User', role: 'user', avatar: null, isSelf: false };
+    if (user && (String(user.id) === String(userId) || Number(user.id) === Number(userId))) {
+      return { 
+        name: user.name || (user.firstName ? `${user.firstName} ${user.lastName}` : 'You'), 
+        role: user.role || 'admin', 
+        avatar: user.profilePicture || user.avatar,
+        isSelf: true
+      };
+    }
+    const foundUser = (allUsers || []).find(u => String(u.id) === String(userId) || Number(u.id) === Number(userId));
+    if (foundUser) {
+      return {
+        name: foundUser.name || (foundUser.firstName ? `${foundUser.firstName} ${foundUser.lastName}` : 'User'),
+        role: foundUser.role || 'user',
+        avatar: foundUser.profilePicture || foundUser.avatar,
+        isSelf: false
+      };
+    }
+    const foundStudent = (students || []).find(s => String(s.id) === String(userId) || String(s.studentId) === String(userId));
+    if (foundStudent) {
+      return {
+        name: `${foundStudent.firstName || ''} ${foundStudent.lastName || ''}`.trim() || foundStudent.name || 'Student',
+        role: 'student',
+        avatar: foundStudent.photo || foundStudent.id_photo_2x2 || foundStudent.avatar,
+        isSelf: false
+      };
+    }
+    return { name: `User #${userId}`, role: 'user', avatar: null, isSelf: false };
+  }, [user, allUsers, students]);
+
+  // Reaction users readable summary for tooltips (e.g. "Juan Dela Cruz, Maria Santos, and You")
+  const getReactionUsersSummary = useCallback((userIdList) => {
+    if (!userIdList || !userIdList.length) return '';
+    const names = userIdList.map(uId => {
+      const details = getUserDetails(uId);
+      return details.isSelf ? 'You' : details.name;
+    });
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+    if (names.length === 3) return `${names[0]}, ${names[1]}, and ${names[2]}`;
+    return `${names.slice(0, 2).join(', ')}, and ${names.length - 2} other${names.length - 2 > 1 ? 's' : ''}`;
+  }, [getUserDetails]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -400,7 +450,7 @@ function Chat() {
       setCameraStream(stream);
       setShowCameraModal(true);
     } catch (err) {
-      alert('Could not access camera. Please allow camera access.');
+      showToast('Could not access camera. Please allow camera permissions in your browser.', 'error');
       console.error('Error accessing camera:', err);
     }
   };
@@ -1231,7 +1281,20 @@ function Chat() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const chatMenuRef = useRef(null);
   const emojiPickerRef = useRef(null);
-  const emojiList = ['😊', '👍', '❤️', '😂', '🎉', '👏', '🔥', '✅', '🙏', '😎', '🤔', '👋', '🌟', '💪', '✨', '🎵', '📸', '🎁', '🍕', '☕', '🌈', '🌺', '🌞', '💯', '🆗', '🎊', '🎈', '🎀', '🎄', '🎃', '🎅', '🤶', '🦃', '🐰', '🐣', '🌸', '🌼', '🌻', '🌹', '🌷', '🌱', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🦋', '🐛', '🐝', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🐘', '🦛', '🐪', '🐫', '🦙', '🦒', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'];
+  const emojiList = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', 
+    '🫠', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', 
+    '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', 
+    '🫣', '🤫', '🤔', '🫡', '🤐', '🤨', '😐', '😑', '😶', '🫥', 
+    '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', 
+    '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', 
+    '😵', '😵‍💫', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', 
+    '🫤', '😟', '🙁', '☹️', '😮', '😯', '😲', '😳', '🥺', '🥹', 
+    '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', 
+    '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', 
+    '👿', '💀', '☠️', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖',
+    '💩', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'
+  ];
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -1934,10 +1997,11 @@ function Chat() {
                 <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                   <button type="button"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSidebarOpen(!sidebarOpen); }}
-                    className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer"
+                    className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 rounded-xl text-emerald-200 hover:text-white flex-shrink-0 touch-manipulation cursor-pointer active:scale-95 shadow-xs"
                     title="Toggle menu"
+                    aria-label="Toggle menu"
                   >
-                    <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <Menu className="w-5 h-5" />
                   </button>
 
                   <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -2548,8 +2612,8 @@ function Chat() {
                             )}
                           </div>
 
-                          {/* Time outside bubble */}
-                          <div className={`text-[10px] mt-0.5 ${isOwn ? 'text-right mr-1 text-gray-400' : 'ml-1 text-gray-400'}`}>
+                          {/* Time outside bubble & Edit History Trigger */}
+                          <div className={`text-[10px] mt-0.5 flex items-center gap-1.5 ${isOwn ? 'justify-end mr-1 text-gray-400' : 'justify-start ml-1 text-gray-400'}`}>
                             {(() => {
                               const messageTime = message.created_at ? formatDate(message.created_at) :
                                 message.timestamp ? formatDate(message.timestamp) :
@@ -2557,26 +2621,48 @@ function Chat() {
                               return (
                                 <>
                                   <span>{messageTime}</span>
-                                  {Boolean(message.edited) && <span className="ml-1">(edited)</span>}
+                                  {Boolean(message.edited) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedEditHistoryMessage(message)}
+                                      className="inline-flex items-center gap-1 text-[9.5px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded-md transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-95 group/editbtn"
+                                      title="Click to view edit history and see what was changed"
+                                    >
+                                      <span>(edited)</span>
+                                      <History className="w-2.5 h-2.5 text-emerald-600 group-hover/editbtn:rotate-[-45deg] transition-transform" />
+                                    </button>
+                                  )}
                                 </>
                               );
                             })()}
                           </div>
 
-                          {/* Reactions */}
+                          {/* Reactions with Tooltip & Who Reacted Modal Trigger */}
                           {message.reactions && Object.keys(message.reactions).length > 0 && (
-                            <div className={`flex gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                              {Object.entries(message.reactions).map(([emoji, users]) => (
-                                users.length > 0 && (
-                                  <button type="button"
+                            <div className={`flex flex-wrap items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                              {Object.entries(message.reactions).map(([emoji, users]) => {
+                                const userList = Array.isArray(users) ? users : [];
+                                if (userList.length === 0) return null;
+                                const isReactedByMe = userList.some(uId => String(uId) === String(user?.id) || Number(uId) === Number(user?.id));
+                                const summaryText = getReactionUsersSummary(userList);
+
+                                return (
+                                  <button
+                                    type="button"
                                     key={emoji}
-                                    onClick={() => handleReaction(message.id, emoji)}
-                                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${users.includes(user?.id) ? 'bg-emerald-600 text-white' : 'bg-gray-200'}`}
+                                    onClick={() => setViewingReactionModal({ message, activeEmoji: emoji })}
+                                    title={`${emoji} Reacted by: ${summaryText} (Click to see who reacted)`}
+                                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full transition-all cursor-pointer shadow-2xs active:scale-95 group/rx border ${
+                                      isReactedByMe
+                                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white border-emerald-600 shadow-emerald-700/20'
+                                        : 'bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-900 border-gray-200 hover:border-emerald-300'
+                                    }`}
                                   >
-                                    {emoji} {users.length}
+                                    <span className="group-hover/rx:scale-125 transition-transform">{emoji}</span>
+                                    <span>{userList.length}</span>
                                   </button>
-                                )
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
 
@@ -3686,18 +3772,356 @@ function Chat() {
                 <div className="flex justify-end space-x-2 sm:space-x-3">
                   <button type="button"
                     onClick={() => setShowConfirmModal(false)}
-                    className="px-3 py-2 sm:px-4 sm:py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm sm:text-base touch-manipulation"
+                    className="px-3 py-2 sm:px-4 sm:py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm sm:text-base touch-manipulation cursor-pointer"
                   >
                     {confirmModalData.cancelText}
                   </button>
                   <button type="button"
                     onClick={confirmModalData.onConfirm}
-                    className={`px-3 py-2 sm:px-4 sm:py-2 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation ${confirmModalData.isDanger
+                    className={`px-3 py-2 sm:px-4 sm:py-2 text-white rounded-lg transition-colors text-sm sm:text-base touch-manipulation cursor-pointer ${confirmModalData.isDanger
                         ? 'bg-red-500 hover:bg-red-600'
                         : 'bg-green-600 hover:bg-green-700'
                       }`}
                   >
                     {confirmModalData.confirmText}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reaction Details Modal (Who Reacted) */}
+          {viewingReactionModal && (
+            <div 
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 p-3.5 sm:p-4 animate-fade-in"
+              onClick={() => setViewingReactionModal(null)}
+            >
+              <div 
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col border border-emerald-100 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-5 flex items-center justify-between shadow-sm shrink-0">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                      <Smile className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black tracking-tight">Message Reactions</h3>
+                      <p className="text-emerald-200 text-xs font-medium">See everyone who reacted to this message</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingReactionModal(null)}
+                    className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Emoji Tabs */}
+                {(() => {
+                  const currentReactions = viewingReactionModal.message?.reactions || {};
+                  const allReactionEntries = Object.entries(currentReactions).filter(([_, uList]) => (uList || []).length > 0);
+                  const totalReactionCount = allReactionEntries.reduce((acc, [_, uList]) => acc + uList.length, 0);
+
+                  return (
+                    <>
+                      <div className="px-4 pt-3 pb-2 border-b border-gray-100 bg-gray-50/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setViewingReactionModal(prev => ({ ...prev, activeEmoji: 'ALL' }))}
+                          className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            viewingReactionModal.activeEmoji === 'ALL' || !viewingReactionModal.activeEmoji
+                              ? 'bg-emerald-700 text-white shadow-xs'
+                              : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-200'
+                          }`}
+                        >
+                          <span>All</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                            viewingReactionModal.activeEmoji === 'ALL' || !viewingReactionModal.activeEmoji
+                              ? 'bg-emerald-900/60 text-white'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>{totalReactionCount}</span>
+                        </button>
+
+                        {allReactionEntries.map(([emoji, uList]) => (
+                          <button
+                            type="button"
+                            key={emoji}
+                            onClick={() => setViewingReactionModal(prev => ({ ...prev, activeEmoji: emoji }))}
+                            className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                              viewingReactionModal.activeEmoji === emoji
+                                ? 'bg-emerald-700 text-white shadow-xs'
+                                : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-200'
+                            }`}
+                          >
+                            <span>{emoji}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                              viewingReactionModal.activeEmoji === emoji
+                                ? 'bg-emerald-900/60 text-white'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>{uList.length}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Reacted Users List */}
+                      <div className="p-4 overflow-y-auto max-h-[50vh] space-y-2.5 divide-y divide-gray-100">
+                        {(() => {
+                          let usersToShow = [];
+                          if (!viewingReactionModal.activeEmoji || viewingReactionModal.activeEmoji === 'ALL') {
+                            allReactionEntries.forEach(([emoji, uList]) => {
+                              uList.forEach(uId => {
+                                usersToShow.push({ userId: uId, emoji });
+                              });
+                            });
+                          } else {
+                            const uList = currentReactions[viewingReactionModal.activeEmoji] || [];
+                            uList.forEach(uId => {
+                              usersToShow.push({ userId: uId, emoji: viewingReactionModal.activeEmoji });
+                            });
+                          }
+
+                          if (usersToShow.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-gray-400">
+                                <Smile className="w-8 h-8 mx-auto mb-2 opacity-40 text-gray-400" />
+                                <p className="text-xs font-semibold">No reactions found</p>
+                              </div>
+                            );
+                          }
+
+                          return usersToShow.map((item, idx) => {
+                            const details = getUserDetails(item.userId);
+                            const isMe = details.isSelf;
+
+                            return (
+                              <div key={`${item.userId}-${item.emoji}-${idx}`} className="flex items-center justify-between pt-2.5 first:pt-0">
+                                <div className="flex items-center space-x-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                                    {details.avatar ? (
+                                      <img src={getAvatarSrc(details.avatar)} alt={details.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white font-bold text-sm">
+                                        {(details.name || 'U').charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-xs font-bold text-gray-900 truncate">
+                                        {details.name}
+                                      </p>
+                                      {isMe && (
+                                        <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-md">
+                                          You
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500 capitalize">
+                                      {details.role || 'Participant'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-lg bg-gray-50 border border-gray-200/80 px-2 py-0.5 rounded-xl shadow-2xs">
+                                    {item.emoji}
+                                  </span>
+                                  {isMe && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleReaction(viewingReactionModal.message.id, item.emoji);
+                                        setViewingReactionModal(null);
+                                      }}
+                                      className="text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                                      title="Remove your reaction"
+                                    >
+                                      Remove
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Modal Footer */}
+                <div className="p-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-1">
+                    {EMOJI_LIST.map(emoji => (
+                      <button
+                        type="button"
+                        key={emoji}
+                        onClick={() => {
+                          handleReaction(viewingReactionModal.message.id, emoji);
+                          setViewingReactionModal(null);
+                        }}
+                        className="hover:scale-125 p-1 rounded-lg transition-all text-base cursor-pointer"
+                        title={`React with ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setViewingReactionModal(null)}
+                    className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-extrabold text-xs rounded-xl transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Message Edit History Modal */}
+          {selectedEditHistoryMessage && (
+            <div 
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 p-3.5 sm:p-4 animate-fade-in"
+              onClick={() => setSelectedEditHistoryMessage(null)}
+            >
+              <div 
+                className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col border border-emerald-100 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-5 flex items-center justify-between shadow-sm shrink-0">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
+                      <History className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black tracking-tight">Message Edit History</h3>
+                      <p className="text-emerald-200 text-xs font-medium">See original text and what was modified</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEditHistoryMessage(null)}
+                    className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Body: Versions Comparison */}
+                <div className="p-4 sm:p-5 overflow-y-auto space-y-4 max-h-[60vh]">
+                  {/* Sender Info Banner */}
+                  {(() => {
+                    const senderDetails = getUserDetails(selectedEditHistoryMessage.sender_id);
+                    const isOwnMsg = Number(selectedEditHistoryMessage.sender_id) === Number(user?.id) || String(selectedEditHistoryMessage.sender_id) === String(user?.id);
+                    const originalTime = selectedEditHistoryMessage.created_at ? formatDate(selectedEditHistoryMessage.created_at) :
+                      selectedEditHistoryMessage.timestamp ? formatDate(selectedEditHistoryMessage.timestamp) :
+                        selectedEditHistoryMessage.time || 'Original';
+
+                    let historyItems = [];
+                    try {
+                      const raw = selectedEditHistoryMessage.edit_history || selectedEditHistoryMessage.editHistory;
+                      historyItems = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+                    } catch (_) {
+                      historyItems = [];
+                    }
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                          <div className="flex items-center space-x-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                              {(senderDetails.name || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-gray-900">
+                                {senderDetails.name} {isOwnMsg && '(You)'}
+                              </p>
+                              <p className="text-[10px] text-gray-500">
+                                Sent at {originalTime}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                            {historyItems.length + 1} Version{historyItems.length > 0 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {/* Current / Latest Version Card */}
+                        <div className="bg-emerald-50/70 rounded-2xl p-4 border-2 border-emerald-400 space-y-2 relative shadow-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-emerald-800 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                              <Check className="w-3 h-3" />
+                              Current Version (Latest)
+                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-800">
+                              Active in chat
+                            </span>
+                          </div>
+                          <div className="bg-white rounded-xl p-3 border border-emerald-200 text-xs sm:text-sm text-gray-900 font-medium whitespace-pre-wrap break-words leading-relaxed shadow-2xs">
+                            {selectedEditHistoryMessage.text || selectedEditHistoryMessage.content || '[empty message]'}
+                          </div>
+                        </div>
+
+                        {/* Previous History Versions */}
+                        {historyItems.length > 0 ? (
+                          <div className="space-y-3 pt-2">
+                            <h4 className="text-xs font-extrabold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-gray-500" />
+                              Previous Edits &amp; Original Message
+                            </h4>
+
+                            {historyItems.map((item, idx) => {
+                              const isFirstOriginal = idx === 0;
+                              const editTimeStr = item.edited_at ? formatDate(item.edited_at) : `Edit #${idx + 1}`;
+
+                              return (
+                                <div key={idx} className="bg-gray-50/90 rounded-2xl p-3.5 border border-gray-200/90 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                      isFirstOriginal
+                                        ? 'bg-amber-100 text-amber-900 border border-amber-300 font-black'
+                                        : 'bg-gray-200 text-gray-800'
+                                    }`}>
+                                      {isFirstOriginal ? '⭐ 1. Original Text (Before First Edit)' : `Version ${idx + 1}`}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500 font-medium">
+                                      {editTimeStr}
+                                    </span>
+                                  </div>
+                                  <div className="bg-white rounded-xl p-3 border border-gray-200 text-xs sm:text-sm text-gray-700 whitespace-pre-wrap break-words leading-relaxed">
+                                    {item.text || '[empty text]'}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 text-center space-y-1">
+                            <p className="text-xs font-bold text-gray-700">This message has been edited.</p>
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                              Original version was updated prior to edit history snapshot. All further edits to this message will record exact historical versions step-by-step.
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-end shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEditHistoryMessage(null)}
+                    className="px-4 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition-colors cursor-pointer shadow-xs"
+                  >
+                    Close History
                   </button>
                 </div>
               </div>

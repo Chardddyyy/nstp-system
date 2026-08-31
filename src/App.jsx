@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket } from './services/socket';
@@ -246,6 +247,15 @@ function App() {
     setToasts(prev => prev.filter(t => t.id !== toastId));
   }, []);
 
+  const showToast = useCallback((message, type = 'info', title = null) => {
+    const defaultTitle = type === 'success' ? 'Success' : type === 'error' ? 'Notice' : type === 'warning' ? 'Warning' : 'Information';
+    pushNotification({
+      title: title || defaultTitle,
+      message: typeof message === 'string' ? message : (message?.message || 'Operation notification'),
+      type
+    });
+  }, [pushNotification]);
+
   // ── Real-Time WebSockets (Socket.io) Instant Dispatcher ────────────────────
   useEffect(() => {
     if (!user) {
@@ -324,7 +334,7 @@ function App() {
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
     };
-  }, [user?.id, user?.role, user?.department, pushNotification]);
+  }, [user, pushNotification]);
 
   function resetRealtimeBaseline() {
     baselineReady.current = false;
@@ -900,9 +910,47 @@ function App() {
   }
 
   async function editMessageFunc(conversationId, messageId, newText) {
-    const updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
-    updateMessageInState(conversationId, messageId, m => ({ ...m, text: newText, edited: 1 }));
-    return updated;
+    let prevHistory = [];
+    const currentList = messages[conversationId] || [];
+    const targetMsg = currentList.find(m => m.id === messageId);
+    if (targetMsg) {
+      try {
+        const raw = targetMsg.edit_history || targetMsg.editHistory;
+        prevHistory = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? [...raw] : []);
+      } catch (_) { prevHistory = []; }
+      const oldText = targetMsg.text || targetMsg.content || '';
+      if (oldText && oldText !== newText) {
+        prevHistory.push({
+          text: oldText,
+          edited_at: new Date().toISOString()
+        });
+      }
+    }
+    
+    // 1. Optimistically update local message state immediately
+    updateMessageInState(conversationId, messageId, m => ({ 
+      ...m, 
+      text: newText, 
+      content: newText, 
+      edited: 1,
+      edit_history: prevHistory,
+      editHistory: prevHistory
+    }));
+
+    try {
+      const updated = await conversationsAPI.editMessage(conversationId, messageId, newText);
+      if (updated) {
+        updateMessageInState(conversationId, messageId, m => ({
+          ...m,
+          ...updated,
+          edit_history: updated.edit_history || prevHistory,
+          editHistory: updated.edit_history || prevHistory
+        }));
+      }
+      return updated;
+    } catch (err) {
+      console.error('API editMessage error:', err);
+    }
   }
 
   async function deleteMessageFunc(conversationId, messageId, forEveryone = false) {
@@ -1091,7 +1139,7 @@ function App() {
     approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
     loading, refreshData: loadAllData, refreshLiveData,
     notifications, setNotifications, pushNotification,
-    toasts, dismissToast,
+    toasts, dismissToast, showToast,
     incomingCall, outgoingCallStatus,
     pendingAnsweredCall, setPendingAnsweredCall,
     registerOutgoingCall, clearOutgoingCall,
@@ -1101,6 +1149,43 @@ function App() {
   return (
     <AuthContext.Provider value={contextValue}>
       <BrowserRouter basename={BASE_PATH}>
+        {/* Global Floating Toast Notifications Container */}
+        <div className="fixed top-4 right-4 z-[99999] flex flex-col gap-2.5 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto flex items-start gap-3 p-3.5 sm:p-4 rounded-2xl shadow-2xl backdrop-blur-xl border transition-all duration-300 transform animate-in slide-in-from-top-3 fade-in ${
+                toast.type === 'success'
+                  ? 'bg-emerald-950/95 border-emerald-500/50 text-white shadow-emerald-950/40'
+                  : toast.type === 'error'
+                  ? 'bg-rose-950/95 border-rose-500/50 text-white shadow-rose-950/40'
+                  : toast.type === 'warning'
+                  ? 'bg-amber-950/95 border-amber-500/50 text-white shadow-amber-950/40'
+                  : 'bg-slate-950/95 border-slate-700/60 text-white shadow-slate-950/40'
+              }`}
+            >
+              <div className="shrink-0 mt-0.5">
+                {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
+                {toast.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400" />}
+                {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400" />}
+                {(!toast.type || toast.type === 'info' || toast.type === 'system') && <Info className="w-5 h-5 text-blue-400" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs sm:text-sm font-black text-white leading-tight">{toast.title}</h4>
+                <p className="text-[11px] sm:text-xs text-gray-200/90 leading-snug mt-0.5">{toast.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => dismissToast(toast.id)}
+                className="shrink-0 p-1 text-gray-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-xs mx-auto">

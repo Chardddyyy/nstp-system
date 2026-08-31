@@ -20,79 +20,32 @@ Sa pamamagitan ng platapormang ito, natuldukan ang mga sumusunod na tradisyunal 
 
 ---
 
-### 📊 One-Click Excel Export (Automated Report Generation)
-Ang automated report generation ng sistema ay idinisenyo upang mag-produce ng **Commission on Higher Education (CHED) Standard OSDS-NSTP Form A (Summary Matrix)** at **Form B (Student Masterlist by Track & Section)**.
+### 📊 One-Click Excel & PDF Export (Automated Report Generation)
+Ang automated report generation ng sistema ay idinisenyo upang mag-produce ng **Commission on Higher Education (CHED) Standard OSDS-NSTP Form 2-A (Summary Matrix)** at **Form 2-B (Student Masterlist by Track & Section)**.
 
-Gumagamit ang system ng Python na may **openpyxl** at **pandas** para sa pag-proseso ng datos at direktang pag-inject sa official spreadsheet templates (`scripts/generate_nstp_reports.py`, `scripts/generate_form_a_openpyxl.py`, `scripts/generate_form_b_openpyxl.py`).
+Gumagamit ang system ng modernong JavaScript engines (**ExcelJS**, **SheetJS/xlsx**, at **jsPDF**) para sa agarang pag-proseso at pag-download ng official spreadsheets at vector PDF documents nang direkta sa browser at server (`src/utils/chedExportGenerator.js`, `src/utils/chedPdfGenerator.js`, `backend/routes/studentRoutes.js`).
 
 #### Paano Gumagana ang Export Pipeline:
-1. **Data Ingestion:** Kinukuha ng system ang mga aktibo at aprubadong estudyante mula sa MySQL database (o frontend JSON payload).
-2. **Template Loading:** Binubuksan ng script ang official CHED blank template (`OSDS-NSTP-Form-2-A.xlsx` o `OSDS-NSTP-Form-2-B.xlsx`).
+1. **Data Ingestion:** Kinukuha ng system ang mga aktibo at aprubadong estudyante mula sa MySQL database.
+2. **Dynamic Spreadsheet Compilation:** Binubuo ng JavaScript engine ang official CHED template na may exact multi-cell headers, department groupings, at formal institutional typography.
 3. **Row Expansion & Value Insertion:** Kusa nitong pinupunan ang mga linya simula sa header boundary, pinapanatili ang formula summaries, at inilalapat ang formatting.
-4. **Print Optimization & Auto-fit:** Nilalapatan ng text-wrapping, center-alignment sa numerics, at standard thin borders ang bawat cell bago i-save bilang bagong `.xlsx` file.
-
----
+4. **Print Optimization & Auto-fit:** Nilalapatan ng text-wrapping, center-alignment sa numerics, A4 landscape print setup, at standard borders ang bawat cell bago i-export bilang `.xlsx` o `.pdf` file.
 
 ### 📐 Spreadsheet Formatting Logic & Settings (Print-Ready Output)
-Upang masiguradong handa na agad i-print sa **A4 Landscape** o **Legal** paper ang Excel nang walang putol na columns o magulong formatting, ginagamit ang mga sumusunod na specific code logic:
+Upang masiguradong handa na agad i-print sa **A4 Landscape** o **Legal** paper ang Excel nang walang putol na columns o magulong formatting, ginagamit ang mga sumusunod na print setup sa JavaScript (`src/utils/chedExportGenerator.js`):
 
-```python
-import openpyxl
-from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
-from openpyxl.worksheet.properties import WorksheetProperties, PageSetupProperties
-from openpyxl.utils import get_column_letter
-
-def enforce_print_setup(ws):
-    """
-    Tinitiyak na ang Excel worksheet ay naka-set sa Landscape A4
-    at naka-fit sa 1 page wide (fitToWidth = 1).
-    """
-    if ws.sheet_properties is None:
-        ws.sheet_properties = WorksheetProperties()
-    if ws.sheet_properties.pageSetUpPr is None:
-        ws.sheet_properties.pageSetUpPr = PageSetupProperties()
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-
-    # Orientation at Paper Size (9 = A4 Paper)
-    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
-    ws.page_setup.paperSize = ws.PAPERSIZE_A4
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0  # 0 allows automatic multi-page vertical flow
-
-    # Margins (sa pulgada) para sa maximum print coverage
-    ws.page_margins.left = 0.25
-    ws.page_margins.right = 0.25
-    ws.page_margins.top = 0.5
-    ws.page_margins.bottom = 0.5
-
-def apply_cell_styling_and_autofit(ws, start_row, end_row):
-    """
-    Inilalapat ang text wrapping, borderlines, at dynamic auto-fitting
-    ng column widths base sa haba ng text content.
-    """
-    thin_side = Side(border_style="thin", color="000000")
-    cell_border = Border(top=thin_side, left=thin_side, right=thin_side, bottom=thin_side)
-    
-    # 1. Pag-apply ng Borders at Text Wrapping sa Rows
-    for row in ws.iter_rows(min_row=start_row, max_row=end_row, min_col=1, max_col=ws.max_column):
-        for cell in row:
-            cell.border = cell_border
-            # Pag-center kung student number, sex, o contact, left-align naman kung pangalan
-            if cell.column in [1, 5, 6, 8, 10]:  # No., Sex, Birthday, Contact
-                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            else:
-                cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-
-    # 2. Dynamic Auto-Fitting ng Column Widths
-    for col in ws.columns:
-        max_len = 0
-        col_letter = get_column_letter(col[0].column)
-        for cell in col:
-            val = str(cell.value or '')
-            if cell.row >= start_row and val:
-                max_len = max(max_len, len(val))
-        # Magdagdag ng padding para hindi maging masikip
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 11)
+```javascript
+// Pure JavaScript Print Setup & Auto-Fit Engine (ExcelJS / SheetJS)
+function applyPrintSetup(worksheet) {
+  worksheet.pageSetup = {
+    orientation: 'landscape',
+    paperSize: 9, // A4 Standard
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0 // Automatic vertical multi-page flow
+  };
+  worksheet.views = [{ showGridLines: true }];
+}
 ```
 
 ---

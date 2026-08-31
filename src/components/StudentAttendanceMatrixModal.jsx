@@ -5,11 +5,13 @@ import { attendanceAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
+import { useAuth } from '../context/AuthContext';
 
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
 
 export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], currentUser }) {
+  const { showToast } = useAuth();
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,11 +220,12 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(filtered));
       setAttendanceRecords(filtered);
       window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      showToast('Attendance status updated successfully!', 'success');
 
       setEditingCell(null);
     } catch (err) {
       console.error('Failed to update attendance cell:', err);
-      alert('Error updating attendance record. Please try again.');
+      showToast('Error updating attendance record. Please try again.', 'error');
     } finally {
       setSavingEdit(false);
     }
@@ -239,7 +242,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       });
     } catch (err) {
       console.error('Failed to export master attendance PDF:', err);
-      alert('Failed to export attendance PDF. Please try again.');
+      showToast('Failed to export attendance PDF. Please try again.', 'error');
     }
   };
 
@@ -254,7 +257,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       });
     } catch (err) {
       console.error('Failed to export master attendance Excel:', err);
-      alert('Failed to export attendance Excel. Please try again.');
+      showToast('Failed to export attendance Excel. Please try again.', 'error');
     }
   };
 

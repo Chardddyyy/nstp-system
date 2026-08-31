@@ -6,7 +6,7 @@ import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../
 import { analyzeDocumentFile } from '../utils/documentValidation';
 
 function Enrollment() {
-  const { submitEnrollment } = useAuth();
+  const { submitEnrollment, showToast: authShowToast } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -317,8 +317,8 @@ function Enrollment() {
   };
 
   const showToast = (message, type = 'error') => {
-    if (type === 'error') {
-      alert(message);
+    if (authShowToast) {
+      authShowToast(message, type);
     }
   };
 
@@ -911,10 +911,10 @@ function Enrollment() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-8">
+            <form onSubmit={handleSubmit} onKeyDown={(e) => e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && e.preventDefault()} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-6 sm:space-y-8">
               {/* Step 1: Personal Information */}
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <User className="w-4 h-4" />
                   </div>
@@ -1438,8 +1438,8 @@ function Enrollment() {
               </div>
 
               {/* Step 2: Academic Information */}
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <GraduationCap className="w-4 h-4" />
                   </div>
@@ -1516,8 +1516,8 @@ function Enrollment() {
               </div>
 
               {/* Step 3: Select NSTP Component Track */}
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <Award className="w-4 h-4" />
                   </div>
@@ -1587,8 +1587,8 @@ function Enrollment() {
               </div>
 
               {/* Step 4: Emergency Contact Information (Kept strictly to Emergency Contact Person & Number) */}
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-gray-200/80">
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <Heart className="w-4 h-4" />
                   </div>
@@ -1662,7 +1662,8 @@ function Enrollment() {
                 </div>
               </div>
 
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+              {/* Step 5: Certificate of Registration */}
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <FileCheck className="w-4 h-4" />
@@ -1810,7 +1811,7 @@ function Enrollment() {
               </div>
 
               {/* Step 6: Official 2x2 ID Picture Attachment */}
-              <div className="bg-gray-50/70 rounded-3xl p-6 sm:p-8 border border-gray-100/90 shadow-2xs">
+              <div className="bg-gray-50/70 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100/90 shadow-2xs">
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200/80">
                   <div className="w-9 h-9 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">
                     <Camera className="w-4 h-4" />
@@ -1959,8 +1960,8 @@ function Enrollment() {
                         autoPlay
                         className="w-full h-full object-cover enrollment-camera-video"
                         style={{ 
-                          transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
-                          WebkitTransform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                          transform: 'none',
+                          WebkitTransform: 'none'
                         }}
                       />
                       
@@ -2066,13 +2067,20 @@ function Enrollment() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-4 px-8 rounded-2xl text-base sm:text-lg font-black transition-all shadow-xl active:scale-95 cursor-pointer ${
+                className={`w-full py-4 px-8 rounded-2xl text-base sm:text-lg font-black transition-all shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
                   isSubmitting
                     ? 'bg-amber-400/60 text-emerald-950/70 cursor-wait'
                     : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20 hover:shadow-2xl hover:-translate-y-0.5'
                 }`}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-emerald-950/40 border-t-emerald-950 rounded-full animate-spin"></div>
+                    <span>Processing Enrollment Submission...</span>
+                  </>
+                ) : (
+                  <span>Submit NSTP Enrollment Application</span>
+                )}
               </button>
             </form>
           </div>

@@ -39,7 +39,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
 
   function navClass(path) {
     const active = location.pathname === path;
-    return `w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer ${
+    return `w-full min-h-[46px] flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer select-none ${
       active 
         ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 font-black shadow-md shadow-amber-950/30' 
         : 'text-emerald-100/90 hover:bg-emerald-800/60 hover:text-white font-semibold hover:translate-x-1'
@@ -47,7 +47,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
   }
 
   function lockedNavClass() {
-    return 'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors opacity-45 cursor-not-allowed bg-black/15 text-gray-300/70 border border-white/5 select-none';
+    return 'w-full min-h-[46px] flex items-center justify-between px-4 py-3 rounded-xl transition-colors opacity-45 cursor-not-allowed bg-black/15 text-gray-300/70 border border-white/5 select-none';
   }
 
   return (
@@ -55,29 +55,36 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
       {/* Overlay - clicking outside sidebar closes it on all screen sizes */}
       {open && (
         <div
-          className="fixed inset-0 bg-emerald-950/60 backdrop-blur-xs z-40"
+          className="fixed inset-0 bg-emerald-950/70 backdrop-blur-xs z-40 transition-opacity duration-300"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
-      <aside className={`fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-r border-emerald-800/50 z-50 transition-transform duration-300 ease-in-out flex flex-col ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-full w-72 sm:w-80 md:w-64 lg:w-72 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-r border-emerald-800/50 z-50 transition-transform duration-300 ease-in-out flex flex-col ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Header */}
-        <div className="p-5 border-b border-emerald-800/60 shrink-0">
+        <div className="p-4 sm:p-5 border-b border-emerald-800/60 shrink-0">
           {isAdmin ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-11 h-11 rounded-2xl bg-white p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700/60">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700/60">
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-110" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="font-black text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
-                  <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5">
+                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <span className="inline-block text-[9px] sm:text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5">
                     Admin Portal
                   </span>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer">
-                <X className="w-5 h-5" />
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-emerald-800/80 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                title="Close Navigation Menu"
+                aria-label="Close Navigation Menu"
+              >
+                <X className="w-6 h-6" />
               </button>
             </div>
           ) : (
@@ -87,14 +94,20 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                   <Shield className={`w-5 h-5 ${colors.text}`} />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="font-black text-xs leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
-                  <span className="inline-block text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
+                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <span className="inline-block text-[9px] sm:text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
                     {user?.department} Instructor
                   </span>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="lg:hidden p-1.5 hover:bg-emerald-800 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer">
-                <X className="w-5 h-5" />
+              <button 
+                type="button" 
+                onClick={onClose} 
+                className="p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-emerald-800/80 rounded-xl text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                title="Close Navigation Menu"
+                aria-label="Close Navigation Menu"
+              >
+                <X className="w-6 h-6" />
               </button>
             </div>
           )}
@@ -225,7 +238,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
         {/* Logout Footer */}
         <div className="p-4 border-t border-emerald-800/60 bg-emerald-950/40 shrink-0">
           <button type="button" onClick={onLogout}
-            className="w-full flex items-center justify-center space-x-3 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
+            className="w-full min-h-[48px] flex items-center justify-center space-x-3 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

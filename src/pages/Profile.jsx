@@ -16,13 +16,14 @@ const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e'
 import { AVATAR_OPTIONS, getAvatarSrc } from '../utils/avatars';
 
 function Profile() {
-  const { user, logout, updateUser, changePassword } = useAuth();
+  const { user, logout, updateUser, changePassword, showToast } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [instructorToDelete, setInstructorToDelete] = useState(null);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -71,7 +72,7 @@ function Profile() {
       setCapturedImage(null);
       setShowEditor(false);
     } catch {
-      alert('Camera access denied. Please allow camera in browser settings.');
+      showToast('Camera access denied. Please allow camera in browser settings.', 'error');
     }
   };
 
@@ -246,8 +247,9 @@ function Profile() {
       });
       setIsEditing(false);
       setShowAvatarSelector(false);
+      showToast('Profile updated successfully!', 'success');
     } catch (_error) {
-      alert('Failed to save profile. Please try again.');
+      showToast('Failed to save profile. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -351,11 +353,11 @@ function Profile() {
 
   const handleUpdateInstructor = async () => {
     if (!editInstructorForm.name.trim() || !editInstructorForm.email.trim()) {
-      alert('Name and email are required.');
+      showToast('Name and email are required.', 'warning');
       return;
     }
     if (editInstructorForm.newPassword && editInstructorForm.newPassword.length < 6) {
-      alert('New password must be at least 6 characters.');
+      showToast('New password must be at least 6 characters.', 'warning');
       return;
     }
     setIsSavingInstructor(true);
@@ -370,8 +372,9 @@ function Profile() {
       setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
       setShowEditInstructorModal(false);
       setEditingInstructor(null);
+      showToast('Faculty member details updated.', 'success');
     } catch (error) {
-      alert(error?.message || 'Failed to update instructor.');
+      showToast(error?.message || 'Failed to update instructor.', 'error');
     } finally {
       setIsSavingInstructor(false);
     }
@@ -386,15 +389,15 @@ function Profile() {
 
   const handleAddInstructor = async () => {
     if (!instructorForm.name.trim() || !instructorForm.email.trim() || !instructorForm.password) {
-      alert('Name, email, and password are required.');
+      showToast('Name, email, and password are required.', 'warning');
       return;
     }
     if (instructorForm.password !== instructorForm.confirmPassword) {
-      alert('Passwords do not match.');
+      showToast('Passwords do not match.', 'warning');
       return;
     }
     if (instructorForm.password.length < 6) {
-      alert('Password must be at least 6 characters.');
+      showToast('Password must be at least 6 characters.', 'warning');
       return;
     }
     setIsAddingInstructor(true);
@@ -411,15 +414,21 @@ function Profile() {
       getAllInstructorsGroup().catch(() => {});
       setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
+      showToast('Faculty account created successfully!', 'success');
     } catch (error) {
-      alert(error?.message || 'Failed to add instructor.');
+      showToast(error?.message || 'Failed to add instructor.', 'error');
     } finally {
       setIsAddingInstructor(false);
     }
   };
 
-  const handleDeleteInstructor = async (id, name) => {
-    if (!window.confirm(`Delete instructor "${name}"? This cannot be undone.`)) return;
+  const handleDeleteInstructor = (id, name) => {
+    setInstructorToDelete({ id, name });
+  };
+
+  const confirmDeleteInstructor = async () => {
+    if (!instructorToDelete) return;
+    const { id, name } = instructorToDelete;
     setDeletingInstructorId(id);
     try {
       await usersAPI.delete(id);
@@ -428,9 +437,10 @@ function Profile() {
         const stored = JSON.parse(localStorage.getItem('nstp_users') || '[]');
         localStorage.setItem('nstp_users', JSON.stringify(stored.filter(u => u.id !== id)));
       } catch (_) {}
-      alert(`Instructor "${name}" deleted successfully.`);
+      showToast(`Instructor "${name}" deleted successfully.`, 'info');
+      setInstructorToDelete(null);
     } catch (error) {
-      alert(error?.message || 'Failed to delete instructor.');
+      showToast(error?.message || 'Failed to delete instructor.', 'error');
     } finally {
       setDeletingInstructorId(null);
     }
@@ -438,20 +448,20 @@ function Profile() {
 
   const handlePasswordChange = async () => {
     if (formData.newPassword !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      showToast('Passwords do not match!', 'warning');
       return;
     }
     if (formData.newPassword.length < 8) {
-      alert('Password must be at least 8 characters!');
+      showToast('Password must be at least 8 characters!', 'warning');
       return;
     }
     setIsChangingPassword(true);
     try {
       await changePassword(formData.newPassword);
-      alert('Password changed successfully!');
+      showToast('Password changed successfully!', 'success');
       setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (_error) {
-      alert('Failed to change password. Please try again.');
+      showToast('Failed to change password. Please try again.', 'error');
     } finally {
       setIsChangingPassword(false);
     }
@@ -485,10 +495,10 @@ function Profile() {
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -1149,7 +1159,7 @@ function Profile() {
                   playsInline
                   muted
                   className="w-full max-h-[60vh] object-cover"
-                  style={{ transform: 'scaleX(1)' }}
+                  style={{ transform: 'none', WebkitTransform: 'none' }}
                 />
                 <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-6">
                   <button type="button"
@@ -1301,6 +1311,37 @@ function Profile() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Instructor Deletion */}
+      {instructorToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 text-center">
+            <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-600">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-black text-gray-900 mb-2">Delete Faculty Member?</h3>
+            <p className="text-xs text-gray-500 mb-6">
+              Are you sure you want to delete instructor <strong>"{instructorToDelete.name}"</strong>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setInstructorToDelete(null)}
+                className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteInstructor}
+                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

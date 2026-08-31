@@ -49,7 +49,7 @@ const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80)
 };
 
 function StudentManagement() {
-  const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch } = useAuth();
+  const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch, showToast } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdmin = user?.role === 'admin';
@@ -293,7 +293,7 @@ function StudentManagement() {
       }, 250);
     } catch (err) {
       console.warn('Live camera access failed or fallback needed:', err);
-      alert('Camera access failed or permission denied. Please allow camera access in your browser or use the Upload Photo button.');
+      showToast('Camera access failed or permission denied. Please check camera permissions or upload a photo.', 'error');
     }
   };
 
@@ -504,7 +504,7 @@ function StudentManagement() {
       }
     } catch (err) {
       console.error('Direct download Form A error:', err);
-      alert('Failed to download Form A. Please try again.');
+      showToast('Failed to download Form A. Please try again.', 'error');
     } finally {
       setIsDownloadingFormA(false);
     }
@@ -534,7 +534,7 @@ function StudentManagement() {
       }
     } catch (err) {
       console.error('Direct download Form B error:', err);
-      alert('Failed to download Form B. Please try again.');
+      showToast('Failed to download Form B. Please try again.', 'error');
     } finally {
       setIsDownloadingFormB(false);
     }
@@ -612,7 +612,7 @@ function StudentManagement() {
       setShowExportModal(false);
     } catch (err) {
       console.error('CHED export failed:', err);
-      alert('CHED export failed. Please try again.');
+      showToast('CHED export failed. Please try again.', 'error');
     }
   };
 
@@ -637,31 +637,31 @@ function StudentManagement() {
     for (const field of requiredFields) {
       const val = formData[field];
       if (!val || val.toString().trim() === '') {
-        alert(`"${fieldLabels[field] || field}" is required. Please fill it in before saving.`);
+        showToast(`"${fieldLabels[field] || field}" is required. Please fill it in before saving.`, 'warning');
         return;
       }
     }
     if (!formData.registrationPhoto && !formData.photo) {
-      alert('Official 2x2 ID Photo (White Background, White Shirt) is required.');
+      showToast('Official 2x2 ID Photo (White Background, White Shirt) is required.', 'warning');
       return;
     }
     const idLen = formData.studentId.replace(/\D/g, '').length;
     if (idLen !== 9) {
-      alert(`Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.`);
+      showToast(`Student ID must be exactly 9 digits — you entered ${idLen} digit${idLen !== 1 ? 's' : ''}.`, 'warning');
       return;
     }
     const contactLen = formData.contactNumber.replace(/\D/g, '');
     if (contactLen.length !== 11) {
-      alert(`Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.`);
+      showToast(`Contact Number must be exactly 11 digits — you entered ${contactLen.length} digit${contactLen.length !== 1 ? 's' : ''}.`, 'warning');
       return;
     }
     const emerLen = formData.emergencyNumber.replace(/\D/g, '');
     if (emerLen.length !== 11) {
-      alert(`Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.`);
+      showToast(`Emergency Contact Number must be exactly 11 digits — you entered ${emerLen.length} digit${emerLen.length !== 1 ? 's' : ''}.`, 'warning');
       return;
     }
     if (!formData.email.includes('@')) {
-      alert('Email address must contain "@" — e.g. student@cvsu.edu.ph.');
+      showToast('Email address must contain "@" — e.g. student@cvsu.edu.ph.', 'warning');
       return;
     }
 
@@ -714,7 +714,7 @@ function StudentManagement() {
           const msg = raw.toLowerCase().includes('already exists')
             ? `Student ID "${formData.studentId}" is already taken. Check the student list or use a different ID.`
             : raw || 'Failed to add student. Please try again.';
-          alert(msg);
+          showToast(msg, 'error');
         } finally {
           setIsAddingStudent(false);
         }
@@ -891,7 +891,7 @@ function StudentManagement() {
       const msg = raw.toLowerCase().includes('already exists')
         ? `Student ID "${formData.studentId}" is already taken. Use a different ID.`
         : raw || 'Failed to update student. Please try again.';
-      alert(msg);
+      showToast(msg, 'error');
     } finally {
       setIsEditingStudent(false);
     }
@@ -904,17 +904,17 @@ function StudentManagement() {
     const sKey = student.id || student.studentId;
     const studentEmail = (student.email || '').trim();
     if (!studentEmail || !studentEmail.includes('@')) {
-      alert(`Cannot send Digital ID: ${student.name || 'Student'} does not have a valid email address on file.`);
+      showToast(`Cannot send Digital ID: ${student.name || 'Student'} does not have a valid email address on file.`, 'warning');
       return;
     }
 
     try {
       setSendingIdFor(sKey);
       await studentsAPI.sendDigitalId(student);
-      alert(`✅ Official Digital ID successfully sent to ${studentEmail}!`);
+      showToast(`Official Digital ID successfully sent to ${studentEmail}!`, 'success');
     } catch (err) {
       console.error('Failed to send digital ID:', err);
-      alert(`Failed to send Digital ID: ${err.message || 'Network error'}`);
+      showToast(`Failed to send Digital ID: ${err.message || 'Network error'}`, 'error');
     } finally {
       setSendingIdFor(null);
     }
@@ -1141,10 +1141,10 @@ function StudentManagement() {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -1201,8 +1201,8 @@ function StudentManagement() {
                   }`}
                 >
                   <Layers className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${isSectioningMode ? 'text-amber-300' : 'text-emerald-300'}`} />
-                  <span className="hidden xs:inline">{isSectioningMode ? 'Done Sectioning' : 'Separate Student Section'}</span>
-                  <span className="xs:hidden">{isSectioningMode ? 'Done' : 'Separate Section'}</span>
+                  <span className="hidden sm:inline">{isSectioningMode ? 'Done Sectioning' : 'Separate Student Section'}</span>
+                  <span className="sm:hidden">{isSectioningMode ? 'Done' : 'Sectioning'}</span>
                 </button>
               )}
 
@@ -1214,8 +1214,8 @@ function StudentManagement() {
                   className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
                 >
                   <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                  <span className="hidden xs:inline">Encode Grades</span>
-                  <span className="xs:hidden">Grades</span>
+                  <span className="hidden sm:inline">Encode Grades</span>
+                  <span className="sm:hidden">Grades</span>
                 </button>
               )}
 
@@ -1227,8 +1227,8 @@ function StudentManagement() {
                   className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-blue-500/50 whitespace-nowrap"
                 >
                   <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200 shrink-0" />
-                  <span className="hidden xs:inline">Attendance &amp; Absences</span>
-                  <span className="xs:hidden">Attendance</span>
+                  <span className="hidden sm:inline">Attendance &amp; Absences</span>
+                  <span className="sm:hidden">Attendance</span>
                 </button>
               )}
 
@@ -1237,7 +1237,7 @@ function StudentManagement() {
                   onClick={() => !viewingArchive && setShowAddModal(true)}
                   disabled={viewingArchive}
                   title={viewingArchive ? 'Exit archive view to add students' : ''}
-                  className={`col-span-2 sm:col-span-1 flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800'}`}
+                  className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800'}`}
                 >
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span>Add Student</span>
@@ -1723,7 +1723,7 @@ function StudentManagement() {
                       {/* NSTP Final Grade Column */}
                       <td className="px-4 py-4 whitespace-nowrap text-center">
                         {(() => {
-                          const { finalGrade, remarks, grade1, grade2 } = getStudentGradeInfo(student);
+                          const { finalGrade, remarks } = getStudentGradeInfo(student);
                           if (!finalGrade || finalGrade === '-') {
                             return (
                               <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 bg-gray-100 border border-gray-200">
@@ -2046,9 +2046,9 @@ function StudentManagement() {
 
         {/* Add Student Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setShowAddModal(false)}>
             <div 
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === 'Tab') {
@@ -2081,16 +2081,16 @@ function StudentManagement() {
               </div>
 
               {/* Form Body - Synchronized with Enrollment.jsx */}
-              <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
                 
                 {/* 1. Personal & Address Identification */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
                     <User className="w-4 h-4 text-emerald-700" />
-                    1. Personal Information & Address
+                    1. Personal Information &amp; Address
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     <div>
                       <label htmlFor="add-last-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
@@ -2100,7 +2100,7 @@ function StudentManagement() {
                         value={formData.lastName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Dela Cruz"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2113,7 +2113,7 @@ function StudentManagement() {
                         value={formData.firstName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Juan"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2126,7 +2126,7 @@ function StudentManagement() {
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Santos (Optional)"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       />
                     </div>
                     <div>
@@ -2136,7 +2136,7 @@ function StudentManagement() {
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium cursor-pointer"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                       >
                         <option value="">None / (No Suffix)</option>
                         <option value="Jr.">Jr. (Junior)</option>
@@ -2149,7 +2149,7 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-student-id" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
@@ -2159,7 +2159,7 @@ function StudentManagement() {
                         value={formData.studentId || ''}
                         onChange={handleFormFieldChange}
                         maxLength={9}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         placeholder="202400001"
                         required
                       />
@@ -2172,7 +2172,7 @@ function StudentManagement() {
                         name="email"
                         value={formData.email || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         placeholder="student@cvsu.edu.ph"
                         required
                       />
@@ -2188,12 +2188,12 @@ function StudentManagement() {
                       value={formData.street || ''}
                       onChange={handleFormFieldChange}
                       placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                       <input
@@ -2203,7 +2203,7 @@ function StudentManagement() {
                         value={formData.municipality || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Naic"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2216,7 +2216,7 @@ function StudentManagement() {
                         value={formData.province || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Cavite"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2224,13 +2224,13 @@ function StudentManagement() {
                 </div>
 
                 {/* 2. Academic Information */}
-                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
                     <GraduationCap className="w-4 h-4 text-emerald-700" />
-                    2. Academic Information
+                    2. Academic Information &amp; Section
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                     <div>
                       <label htmlFor="add-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
@@ -2238,10 +2238,10 @@ function StudentManagement() {
                         name="program"
                         value={formData.program || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Program</option>
+                        <option value="">Select Program</option>
                         <option value="BSIT">BSIT</option>
                         <option value="BSCS">BSCS</option>
                         <option value="BSFAS">BSFAS</option>
@@ -2260,9 +2260,25 @@ function StudentManagement() {
                         placeholder="e.g. 1-A, 1-1, 1-B"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs uppercase"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm uppercase"
                         required
                       />
+                    </div>
+                    <div>
+                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
+                      <select
+                        id="add-department"
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Track *</option>
+                        <option value="CWTS">CWTS (Civic Welfare)</option>
+                        <option value="LTS">LTS (Literacy Training)</option>
+                        <option value="ROTC">ROTC (Military Science)</option>
+                      </select>
                     </div>
                     <div>
                       <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
@@ -2271,7 +2287,7 @@ function StudentManagement() {
                         name="nstp_section"
                         value={formData.nstp_section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
                       >
                         <option value="">Unassigned</option>
                         <option value="CWTS 1">CWTS 1</option>
@@ -2290,12 +2306,11 @@ function StudentManagement() {
                       <select
                         id="add-year-level"
                         name="yearLevel"
-                        value={formData.yearLevel || formData.year || ''}
+                        value={formData.yearLevel || formData.year || '1st Year'}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Year</option>
                         <option value="1st Year">1st Year</option>
                         <option value="2nd Year">2nd Year</option>
                         <option value="3rd Year">3rd Year</option>
@@ -2303,19 +2318,16 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track *</label>
+                      <label htmlFor="add-semester" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester *</label>
                       <select
-                        id="add-department"
-                        name="department"
-                        value={formData.department || ''}
+                        id="add-semester"
+                        name="semester"
+                        value={formData.semester || '1st Semester'}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                       >
-                        <option value="">Select Department *</option>
-                        <option value="CWTS">CWTS</option>
-                        <option value="LTS">LTS</option>
-                        <option value="ROTC">ROTC</option>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
                       </select>
                     </div>
                   </div>
@@ -2329,7 +2341,7 @@ function StudentManagement() {
                   </h4>
                   
                   {/* Birth Date */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3.5">
                     <div>
                       <label htmlFor="add-birth-month" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
                       <input
@@ -2339,7 +2351,7 @@ function StudentManagement() {
                         value={formData.birthMonth || ''}
                         onChange={handleFormFieldChange}
                         placeholder="1-12"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2352,7 +2364,7 @@ function StudentManagement() {
                         value={formData.birthDay || ''}
                         onChange={handleFormFieldChange}
                         placeholder="1-31"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2365,34 +2377,34 @@ function StudentManagement() {
                         value={formData.birthYear || ''}
                         onChange={handleFormFieldChange}
                         placeholder="YYYY"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
                   </div>
 
                   {/* Age, Civil Status, Sex, Registered Voter */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                     <div>
-                      <label htmlFor="add-age" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Age *</label>
+                      <label htmlFor="add-age" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Age *</label>
                       <input
                         type="text"
                         id="add-age"
                         name="age"
                         readOnly
-                        placeholder="Auto-computed"
+                        placeholder="Auto"
                         value={formData.age || ''}
-                        className="w-full h-10 px-3 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
+                        className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs sm:text-sm cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label htmlFor="add-civil-status" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Civil Status *</label>
+                      <label htmlFor="add-civil-status" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Civil Status *</label>
                       <select
                         id="add-civil-status"
                         name="civilStatus"
                         value={formData.civilStatus || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="">Status *</option>
@@ -2403,13 +2415,13 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-sex" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Sex *</label>
+                      <label htmlFor="add-sex" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Sex *</label>
                       <select
                         id="add-sex"
                         name="sex"
                         value={formData.sex || formData.gender || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="">Sex *</option>
@@ -2418,24 +2430,24 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-registered-voter" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 whitespace-nowrap">Registered Voter *</label>
+                      <label htmlFor="add-registered-voter" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Voter? *</label>
                       <select
                         id="add-registered-voter"
                         name="registeredVoter"
                         value={formData.registeredVoter || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Voter Status *</option>
-                        <option value="Yes">Yes (Registered Voter)</option>
-                        <option value="No">No (Not Registered)</option>
+                        <option value="">Voter *</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Height & Weight with units */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-height" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Height *</span>
@@ -2454,7 +2466,7 @@ function StudentManagement() {
                             const cmVal = convertToCm(raw, heightUnit);
                             setFormData({...formData, height: cmVal});
                           }}
-                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                           required
                         />
                         <select
@@ -2467,7 +2479,7 @@ function StudentManagement() {
                             const cmVal = convertToCm(heightInput, newUnit);
                             setFormData({...formData, height: cmVal});
                           }}
-                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                          className="px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                         >
                           <option value="cm">cm</option>
                           <option value="ft">ft / in</option>
@@ -2494,7 +2506,7 @@ function StudentManagement() {
                             const kgVal = convertToKg(raw, weightUnit);
                             setFormData({...formData, weight: kgVal});
                           }}
-                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                           required
                         />
                         <select
@@ -2507,7 +2519,7 @@ function StudentManagement() {
                             const kgVal = convertToKg(weightInput, newUnit);
                             setFormData({...formData, weight: kgVal});
                           }}
-                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                          className="px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                         >
                           <option value="kg">kg</option>
                           <option value="lbs">lbs</option>
@@ -2517,7 +2529,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Blood Type & Contact Number */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-blood-type" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
@@ -2525,7 +2537,7 @@ function StudentManagement() {
                         name="bloodType"
                         value={formData.bloodType || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="">Select Blood Type *</option>
@@ -2555,7 +2567,7 @@ function StudentManagement() {
                           if (!e.target.value) setFormData(prev => ({ ...prev, contactNumber: '09' }));
                         }}
                         placeholder="09123456789"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -2571,12 +2583,12 @@ function StudentManagement() {
                       value={formData.facebookAccount || ''}
                       onChange={handleFormFieldChange}
                       placeholder="https://facebook.com/username"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       required
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
@@ -2585,7 +2597,7 @@ function StudentManagement() {
                         name="emergencyContact"
                         value={formData.emergencyContact || formData.emergencyName || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         placeholder="Parent/Guardian Name"
                         required
                       />
@@ -2599,7 +2611,7 @@ function StudentManagement() {
                         value={formData.emergencyNumber || ''}
                         onChange={handleFormFieldChange}
                         maxLength={11}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         placeholder="09123456789"
                         required
                       />
@@ -3259,9 +3271,9 @@ function StudentManagement() {
           </div>
         )}
         {showEditModal && (
-          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
             <div 
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === 'Tab') {
@@ -3294,7 +3306,7 @@ function StudentManagement() {
               </div>
 
               {/* Form Body - Synchronized with Enrollment.jsx & Add Student Modal */}
-              <div className="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
                 
                 {/* 1. Personal & Address Identification */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
@@ -3303,7 +3315,7 @@ function StudentManagement() {
                     1. Personal Information &amp; Address
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                     <div>
                       <label htmlFor="edit-last-name" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Last Name *</label>
                       <input
@@ -3313,7 +3325,7 @@ function StudentManagement() {
                         value={formData.lastName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Dela Cruz"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3326,7 +3338,7 @@ function StudentManagement() {
                         value={formData.firstName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Juan"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3339,7 +3351,7 @@ function StudentManagement() {
                         value={formData.middleName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Reyes"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       />
                     </div>
                     <div>
@@ -3349,7 +3361,7 @@ function StudentManagement() {
                         name="suffix"
                         value={formData.suffix || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium cursor-pointer"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                       >
                         <option value="">None / (No Suffix)</option>
                         <option value="Jr.">Jr. (Junior)</option>
@@ -3362,7 +3374,7 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="edit-student-id" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Student ID (9 digits) *</label>
                       <input
@@ -3373,7 +3385,7 @@ function StudentManagement() {
                         onChange={handleFormFieldChange}
                         maxLength={9}
                         placeholder="202612345"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3386,26 +3398,27 @@ function StudentManagement() {
                         value={formData.email || ''}
                         onChange={handleFormFieldChange}
                         placeholder="student@cvsu.edu.ph"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label htmlFor="edit-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
-                      <input
-                        type="text"
-                        id="edit-street"
-                        name="street"
-                        value={formData.street || ''}
-                        onChange={handleFormFieldChange}
-                        placeholder="Brgy. Bucana"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
-                        required
-                      />
-                    </div>
+                  <div>
+                    <label htmlFor="edit-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <input
+                      type="text"
+                      id="edit-street"
+                      name="street"
+                      value={formData.street || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="Brgy. Bucana"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="edit-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
                       <input
@@ -3415,7 +3428,7 @@ function StudentManagement() {
                         value={formData.municipality || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Naic"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3428,7 +3441,7 @@ function StudentManagement() {
                         value={formData.province || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Cavite"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3442,7 +3455,7 @@ function StudentManagement() {
                     2. Academic Details &amp; Section
                   </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                     <div>
                       <label htmlFor="edit-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
                       <select
@@ -3450,7 +3463,7 @@ function StudentManagement() {
                         name="program"
                         value={formData.program || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="">Select Program</option>
@@ -3472,9 +3485,25 @@ function StudentManagement() {
                         placeholder="e.g. 1-A, 1-1, 1-B"
                         value={formData.section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs uppercase"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm uppercase"
                         required
                       />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
+                      <select
+                        id="edit-department"
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Track *</option>
+                        <option value="CWTS">CWTS (Civic Welfare)</option>
+                        <option value="LTS">LTS (Literacy Training)</option>
+                        <option value="ROTC">ROTC (Military Science)</option>
+                      </select>
                     </div>
                     <div>
                       <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
@@ -3483,7 +3512,7 @@ function StudentManagement() {
                         name="nstp_section"
                         value={formData.nstp_section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs text-emerald-950"
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
                       >
                         <option value="">Unassigned</option>
                         <option value="CWTS 1">CWTS 1</option>
@@ -3504,7 +3533,7 @@ function StudentManagement() {
                         name="yearLevel"
                         value={formData.yearLevel || formData.year || '1st Year'}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="1st Year">1st Year</option>
@@ -3514,19 +3543,16 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track *</label>
+                      <label htmlFor="edit-semester" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester *</label>
                       <select
-                        id="edit-department"
-                        name="department"
-                        value={formData.department || ''}
+                        id="edit-semester"
+                        name="semester"
+                        value={formData.semester || '1st Semester'}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
-                        required
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                       >
-                        <option value="">Select Department *</option>
-                        <option value="CWTS">CWTS</option>
-                        <option value="LTS">LTS</option>
-                        <option value="ROTC">ROTC</option>
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
                       </select>
                     </div>
                   </div>
@@ -3540,7 +3566,7 @@ function StudentManagement() {
                   </h4>
                   
                   {/* Birth Date */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-3.5">
                     <div>
                       <label htmlFor="edit-birth-month" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Birth Month *</label>
                       <input
@@ -3550,7 +3576,7 @@ function StudentManagement() {
                         value={formData.birthMonth || ''}
                         onChange={handleFormFieldChange}
                         placeholder="1-12"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3563,7 +3589,7 @@ function StudentManagement() {
                         value={formData.birthDay || ''}
                         onChange={handleFormFieldChange}
                         placeholder="1-31"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3576,27 +3602,24 @@ function StudentManagement() {
                         value={formData.birthYear || ''}
                         onChange={handleFormFieldChange}
                         placeholder="YYYY"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
                   </div>
 
                   {/* Age, Civil Status, Sex, Registered Voter */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                     <div>
-                      <label htmlFor="edit-age" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
-                        <span>Age *</span>
-                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">Auto</span>
-                      </label>
+                      <label htmlFor="edit-age" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Age *</label>
                       <input
                         type="text"
                         id="edit-age"
                         name="age"
                         readOnly
-                        placeholder="Auto-computed"
+                        placeholder="Auto"
                         value={formData.age || ''}
-                        className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs cursor-not-allowed"
+                        className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl outline-none font-bold text-emerald-950 text-xs sm:text-sm cursor-not-allowed"
                       />
                     </div>
                     <div>
@@ -3606,10 +3629,10 @@ function StudentManagement() {
                         name="civilStatus"
                         value={formData.civilStatus || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Select Status *</option>
+                        <option value="">Status *</option>
                         <option value="Single">Single</option>
                         <option value="Married">Married</option>
                         <option value="Divorced">Divorced</option>
@@ -3623,33 +3646,33 @@ function StudentManagement() {
                         name="sex"
                         value={formData.sex || formData.gender || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Select Sex *</option>
+                        <option value="">Sex *</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-registered-voter" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Registered Voter? *</label>
+                      <label htmlFor="edit-registered-voter" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Voter? *</label>
                       <select
                         id="edit-registered-voter"
                         name="registeredVoter"
                         value={formData.registeredVoter || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
-                        <option value="">Voter Status *</option>
-                        <option value="Yes">Yes (Registered Voter)</option>
-                        <option value="No">No (Not Registered)</option>
+                        <option value="">Voter *</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Height & Weight with units */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="edit-height" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
                         <span>Height *</span>
@@ -3668,7 +3691,7 @@ function StudentManagement() {
                             const cmVal = convertToCm(raw, heightUnit);
                             setFormData(prev => ({ ...prev, height: cmVal }));
                           }}
-                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                           required
                         />
                         <select
@@ -3681,7 +3704,7 @@ function StudentManagement() {
                             const cmVal = convertToCm(heightInput, newUnit);
                             setFormData(prev => ({ ...prev, height: cmVal }));
                           }}
-                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                          className="px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                         >
                           <option value="cm">cm</option>
                           <option value="ft">ft / in</option>
@@ -3708,7 +3731,7 @@ function StudentManagement() {
                             const kgVal = convertToKg(raw, weightUnit);
                             setFormData(prev => ({ ...prev, weight: kgVal }));
                           }}
-                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                          className="flex-1 min-w-0 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                           required
                         />
                         <select
@@ -3721,7 +3744,7 @@ function StudentManagement() {
                             const kgVal = convertToKg(weightInput, newUnit);
                             setFormData(prev => ({ ...prev, weight: kgVal }));
                           }}
-                          className="px-2.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
+                          className="px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-200"
                         >
                           <option value="kg">kg</option>
                           <option value="lbs">lbs</option>
@@ -3731,7 +3754,7 @@ function StudentManagement() {
                   </div>
 
                   {/* Blood Type & Contact Number */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="edit-blood-type" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Blood Type *</label>
                       <select
@@ -3739,7 +3762,7 @@ function StudentManagement() {
                         name="bloodType"
                         value={formData.bloodType || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
                         required
                       >
                         <option value="">Select Blood Type *</option>
@@ -3769,7 +3792,7 @@ function StudentManagement() {
                           if (!e.target.value) setFormData(prev => ({ ...prev, contactNumber: '09' }));
                         }}
                         placeholder="09123456789"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3785,13 +3808,13 @@ function StudentManagement() {
                       value={formData.facebookAccount || ''}
                       onChange={handleFormFieldChange}
                       placeholder="https://facebook.com/username"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       required
                     />
                   </div>
 
                   {/* Emergency Contact Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-gray-200/60">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-gray-200/60">
                     <div>
                       <label htmlFor="edit-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
@@ -3801,7 +3824,7 @@ function StudentManagement() {
                         value={formData.emergencyContact || formData.emergencyName || ''}
                         onChange={handleFormFieldChange}
                         placeholder="Parent or Guardian Name"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -3817,7 +3840,7 @@ function StudentManagement() {
                           if (!e.target.value) setFormData(prev => ({ ...prev, emergencyNumber: '09' }));
                         }}
                         placeholder="09123456789"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                         required
                       />
                     </div>
@@ -4001,8 +4024,8 @@ function StudentManagement() {
                   muted
                   className="w-full h-full object-cover"
                   style={{
-                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
-                    WebkitTransform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                    transform: 'none',
+                    WebkitTransform: 'none'
                   }}
                 />
                 

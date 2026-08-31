@@ -1,10 +1,11 @@
-name: Deploy to GitHub Pages
+name: Production CI/CD Pipeline & GitHub Pages Deployment
 
 on:
   push:
     branches:
       - main
       - master
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,39 +17,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  validate-and-build:
+    name: Lint, Test & Build (Frontend & Backend)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20 LTS with NPM Cache
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install Frontend Dependencies
         run: npm ci
 
-      - name: Build project
+      - name: Verify Backend Module Syntax
+        run: |
+          cd backend
+          npm ci
+          node --check server.js
+          node --check routes/index.js
+          node --check middleware/errorHandler.js
+
+      - name: Build Frontend Application
         run: npm run build
 
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-
-      - name: Upload artifact to GitHub Pages
+      - name: Upload Artifact to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
-  deploy:
-    needs: build
+  deploy-github-pages:
+    name: Deploy to GitHub Pages
+    needs: validate-and-build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -57,3 +62,21 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-render:
+    name: Trigger Render Backend Deployment Hook
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Trigger Render Deploy Hook (If Configured)
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Triggering Render deployment webhook..."
+            curl -s -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
+            echo "Render deployment hook triggered successfully."
+          else
+            echo "RENDER_DEPLOY_HOOK_URL secret not set. Skipping webhook trigger."
+          fi

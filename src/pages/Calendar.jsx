@@ -10,6 +10,21 @@ import Sidebar from '../components/layout/Sidebar';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
 const PHILIPPINE_HOLIDAYS = [
+  // 2023
+  { date: '2023-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-01-22', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-04-06', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-04-07', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-04-08', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-04-10', title: 'Araw ng Kagitingan (Observed)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-08-28', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+
   // 2024
   { date: '2024-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-02-10', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -53,7 +68,22 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2026-08-31', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2026-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' }
+  { date: '2026-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+
+  // 2027
+  { date: '2027-01-01', title: "New Year's Day", type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-02-06', title: 'Chinese New Year', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-02-25', title: 'EDSA People Power Revolution Anniversary', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-03-25', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-03-26', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-03-27', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-08-30', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-11-30', title: 'Bonifacio Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-12-25', title: 'Christmas Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-12-30', title: 'Rizal Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' }
 ];
 
 function Calendar() {
@@ -479,10 +509,10 @@ function Calendar() {
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -719,9 +749,9 @@ function Calendar() {
               <div>
                 <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-emerald-700" />
-                  <span>Annual Events Summary &amp; Whole Year Schedule</span>
+                  <span>{viewingArchive && archiveViewData?.year ? `Archived Events Summary — Batch ${archiveViewData.year}` : 'Annual Events Summary & Whole Year Schedule'}</span>
                   <span className="text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300">
-                    A.Y. 2026-2027
+                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : 'A.Y. 2026-2027'}
                   </span>
                 </h2>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">

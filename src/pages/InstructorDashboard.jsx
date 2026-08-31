@@ -23,7 +23,8 @@ function InstructorDashboard() {
     messages = {}, 
     notifications = [], 
     setNotifications,
-    currentBatch = '2026-2027 1st Semester'
+    currentBatch = '2026-2027 1st Semester',
+    showToast
   } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -89,9 +90,10 @@ function InstructorDashboard() {
     }
   };
 
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+
   const handleArchiveDepartmentBatch = async () => {
     const currYear = new Date().getFullYear();
-    if (!window.confirm(`Archive ${user?.department || 'Department'} snapshot for Batch Year ${currYear}?`)) return;
     setIsArchiving(true);
     try {
       let letterTemplates = [];
@@ -101,8 +103,10 @@ function InstructorDashboard() {
       } catch {}
       await archivesAPI.archiveBatch(currYear, { letterTemplates });
       loadArchivedYears();
+      setShowArchiveConfirm(false);
+      showToast(`Batch "${currYear}" archived successfully!`, 'success');
     } catch (err) {
-      alert(err.message || 'Failed to archive batch');
+      showToast(err.message || 'Failed to archive batch', 'error');
     } finally {
       setIsArchiving(false);
     }
@@ -302,10 +306,10 @@ function InstructorDashboard() {
             <div className="flex items-center space-x-1.5 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -696,7 +700,7 @@ function InstructorDashboard() {
                   <span className="text-xs font-bold text-gray-600">Archived Academic Batches</span>
                   <button
                     type="button"
-                    onClick={handleArchiveDepartmentBatch}
+                    onClick={() => setShowArchiveConfirm(true)}
                     disabled={isArchiving}
                     className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer disabled:opacity-50"
                   >
@@ -915,13 +919,46 @@ function InstructorDashboard() {
           currentDepartment={user?.department || 'CWTS'}
         />
 
-        {/* Student Attendance & Absences Matrix Modal */}
-        <StudentAttendanceMatrixModal
-          isOpen={showAttendanceMatrix}
-          onClose={() => setShowAttendanceMatrix(false)}
-          students={students}
-          currentUser={user}
-        />
+        {/* 15-Day Attendance Matrix Modal */}
+        {showAttendanceMatrix && (
+          <StudentAttendanceMatrixModal
+            isOpen={showAttendanceMatrix}
+            onClose={() => setShowAttendanceMatrix(false)}
+            currentDepartment={user?.department || 'CWTS'}
+          />
+        )}
+
+        {/* Confirmation Modal for Department Batch Archiving */}
+        {showArchiveConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 text-center">
+              <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-700">
+                <Archive className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900 mb-2">Archive Department Batch?</h3>
+              <p className="text-xs text-gray-500 mb-6">
+                Create an official archive snapshot of {user?.department || 'Department'} student records and reports for Batch Year {new Date().getFullYear()}?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isArchiving}
+                  onClick={handleArchiveDepartmentBatch}
+                  className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-emerald-700/30 cursor-pointer"
+                >
+                  {isArchiving ? 'Archiving...' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

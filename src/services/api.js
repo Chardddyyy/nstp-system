@@ -707,7 +707,15 @@ export const DEFAULT_PAST_BATCHES = [
     year: '2023-2024 1st Semester',
     students: 24,
     reports: 3,
+    start_month: '2023-08',
+    end_month: '2023-12',
+    startMonth: '2023-08',
+    endMonth: '2023-12',
     data: {
+      start_month: '2023-08',
+      end_month: '2023-12',
+      startMonth: '2023-08',
+      endMonth: '2023-12',
       studentData: RAW_STUDENTS_2023.map(s => ({ ...s, semester: '1st Semester', status: 'active' })),
       reportData: [
         { 
@@ -758,7 +766,15 @@ export const DEFAULT_PAST_BATCHES = [
     year: '2023-2024 2nd Semester',
     students: 24,
     reports: 3,
+    start_month: '2024-01',
+    end_month: '2024-05',
+    startMonth: '2024-01',
+    endMonth: '2024-05',
     data: {
+      start_month: '2024-01',
+      end_month: '2024-05',
+      startMonth: '2024-01',
+      endMonth: '2024-05',
       studentData: RAW_STUDENTS_2023.map(s => ({ ...s, semester: '2nd Semester', status: 'graduated' })),
       reportData: [
         { 
@@ -809,7 +825,15 @@ export const DEFAULT_PAST_BATCHES = [
     year: '2024-2025 1st Semester',
     students: 26,
     reports: 3,
+    start_month: '2024-08',
+    end_month: '2024-12',
+    startMonth: '2024-08',
+    endMonth: '2024-12',
     data: {
+      start_month: '2024-08',
+      end_month: '2024-12',
+      startMonth: '2024-08',
+      endMonth: '2024-12',
       studentData: RAW_STUDENTS_2024.map(s => ({ ...s, semester: '1st Semester', status: 'active' })),
       reportData: [
         { 
@@ -860,7 +884,15 @@ export const DEFAULT_PAST_BATCHES = [
     year: '2024-2025 2nd Semester',
     students: 26,
     reports: 3,
+    start_month: '2025-01',
+    end_month: '2025-05',
+    startMonth: '2025-01',
+    endMonth: '2025-05',
     data: {
+      start_month: '2025-01',
+      end_month: '2025-05',
+      startMonth: '2025-01',
+      endMonth: '2025-05',
       studentData: RAW_STUDENTS_2024.map(s => ({ ...s, semester: '2nd Semester', final_grade: s.final_grade_2 || s.final_grade_1 })),
       reportData: [
         { 

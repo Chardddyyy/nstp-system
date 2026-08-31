@@ -5,13 +5,14 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
+  HeartPulse, Phone, Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
-import { downloadChedFormat, downloadChedFormA, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
@@ -188,7 +189,8 @@ function AdminDashboard() {
     viewingArchive, 
     archiveViewData, 
     setViewingArchive, 
-    setArchiveViewData 
+    setArchiveViewData,
+    showToast
   } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -278,8 +280,8 @@ function AdminDashboard() {
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [enrollmentReviewTab, setEnrollmentReviewTab] = useState('all'); // 'all' | 'docs' | 'demographic' | 'academic'
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
   const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');
@@ -321,8 +323,8 @@ function AdminDashboard() {
   };
 
   const showNotif = (type, message) => {
-    if (type === 'error') {
-      alert(message);
+    if (showToast) {
+      showToast(message, type);
     }
   };
 
@@ -779,10 +781,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             <div className="flex items-center space-x-1.5 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
               
               <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -1507,19 +1509,19 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button"
                             onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                            className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
                           >
-                            <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            <CheckCircle className="w-4 h-4" /> Approve
                           </button>
                           <button type="button"
                             onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
-                            className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1"
+                            className="flex-1 min-h-[44px] bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
                           >
-                            <X className="w-3.5 h-3.5" /> Decline
+                            <X className="w-4 h-4" /> Decline
                           </button>
                           <button type="button"
                             onClick={() => setSelectedEnrollment(enrollment)}
-                            className="px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                            className="px-4 min-h-[44px] bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl text-xs font-bold transition-colors active:scale-95 cursor-pointer"
                           >
                             View
                           </button>
@@ -2001,25 +2003,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
                   </p>
                 </div>
-
-                {/* Academic Batch Calendar Date Span - Automatic */}
-                <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3.5 space-y-1.5">
-                  <p className="text-emerald-950 font-black text-xs flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Automatic Batch Calendar Span</span>
-                  </p>
-                  <div className="bg-white border border-emerald-200 rounded-lg p-2.5 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Recorded Academic Period</span>
-                      <span className="font-extrabold text-emerald-950">
-                        {newBatchStartMonth ? new Date(newBatchStartMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'August'} – {newBatchEndMonth ? new Date(newBatchEndMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'May'}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded text-[10px] font-black">
-                      Auto-Set
-                    </span>
-                  </div>
-                </div>
                 
                 <div>
                   <label htmlFor="confirm-batch" className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -2075,204 +2058,259 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </button>
               </div>
 
+              {/* Inspection Sub-Tabs Navigation */}
+              <div className="flex items-center border-b border-gray-200 bg-gray-50/90 px-3 py-1.5 gap-1.5 overflow-x-auto shrink-0 select-none">
+                {[
+                  { id: 'all', label: 'All Details', icon: '📋' },
+                  { id: 'docs', label: 'Photos & COR', icon: '📄' },
+                  { id: 'demographic', label: 'Demographic & Health', icon: '🏥' },
+                  { id: 'academic', label: 'Personal & Academic', icon: '👤' },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setEnrollmentReviewTab(tab.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                      enrollmentReviewTab === tab.id
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'text-gray-600 hover:text-emerald-950 hover:bg-gray-200/70'
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
               {/* Scrollable body */}
               <div className="flex-1 overflow-y-auto overscroll-contain">
 
-                {/* Official 2x2 ID Portrait Photo Preview */}
-                <div className="p-3.5 border-b border-gray-200 bg-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-emerald-700" /> Official 2x2 ID Portrait Photo
-                    </p>
-                    {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) && (
-                      <button
-                        type="button"
-                        onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
-                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        🔍 Expand 2x2 Fullscreen
-                      </button>
-                    )}
-                  </div>
+                {/* 1. DOCUMENTS SECTION: 2x2 ID Photo & Submitted COR */}
+                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'docs') && (
+                  <>
+                    {/* Official 2x2 ID Portrait Photo Preview */}
+                    <div className="p-3.5 border-b border-gray-200 bg-white">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <User className="w-4 h-4 text-emerald-700" /> Official 2x2 ID Portrait Photo
+                        </p>
+                        {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) && (
+                          <button
+                            type="button"
+                            onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                            className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            🔍 Expand 2x2 Fullscreen
+                          </button>
+                        )}
+                      </div>
 
-                  <div className="flex items-center gap-3.5 bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80">
-                    <div 
-                      className="w-20 h-24 bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
-                      onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
-                      title="Click to expand 2x2 ID Photo"
-                    >
-                      {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) ? (
-                        <>
-                          <img 
-                            src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
-                            alt="2x2 ID Photo" 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                            🔍 View
+                      <div className="flex items-center gap-3.5 bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80">
+                        <div 
+                          className="w-20 h-24 bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
+                          onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
+                          title="Click to expand 2x2 ID Photo"
+                        >
+                          {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) ? (
+                            <>
+                              <img 
+                                src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
+                                alt="2x2 ID Photo" 
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                                🔍 View
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-[10px] text-center p-1 font-bold">
+                              <User className="w-6 h-6 mb-1 opacity-50" />
+                              No Photo
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-full mb-1">
+                            <CheckCircle className="w-3 h-3 text-emerald-600" /> Official Portrait ID
+                          </span>
+                          <h4 className="text-xs font-black text-gray-900 truncate">
+                            {selectedEnrollment.fullName || selectedEnrollment.student_name || 'Student 2x2 Photo'}
+                          </h4>
+                          <p className="text-[11px] text-gray-500 mt-0.5">Click thumbnail to inspect full size 2x2 portrait photo</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
+                    <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">
+                      {(() => {
+                        const audit = getRegformAuditStatus(selectedEnrollment, regformAudits);
+                        if (audit.isSuspicious) {
+                          return (
+                            <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-2.5 shadow-sm">
+                              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>
+                                <p className="text-[11.5px] text-amber-800 font-medium mt-0.5 leading-relaxed">{audit.reason}</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form
+                        </p>
+                        {(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form) && (
+                          <button
+                            type="button"
+                            onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form)}
+                            className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            🔍 Expand Fullscreen
+                          </button>
+                        )}
+                      </div>
+
+                      <RegistrationDocumentPreview
+                        documentUrl={selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form}
+                        onExpand={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form)}
+                        isFullscreen={false}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* 2. DEMOGRAPHIC & HEALTH SECTION */}
+                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'demographic') && (
+                  <div className="p-3.5 border-b border-gray-200 bg-white space-y-4">
+                    <div>
+                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <HeartPulse className="w-4 h-4 text-rose-600" /> Demographic &amp; Health Profile
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          ['Birth Date', (() => {
+                            const b = selectedEnrollment.birthDate || selectedEnrollment.birth_date;
+                            if (b) {
+                              try {
+                                const d = new Date(b);
+                                if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
+                              } catch (_) {}
+                            }
+                            if (selectedEnrollment.birthYear && selectedEnrollment.birthMonth && selectedEnrollment.birthDay) {
+                              try {
+                                const d = new Date(`${selectedEnrollment.birthYear}-${String(selectedEnrollment.birthMonth).padStart(2, '0')}-${String(selectedEnrollment.birthDay).padStart(2, '0')}`);
+                                if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
+                              } catch (_) {}
+                            }
+                            return b || '—';
+                          })()],
+                          ['Age', selectedEnrollment.age ? `${selectedEnrollment.age} yrs old` : '—'],
+                          ['Sex / Gender', selectedEnrollment.sex || selectedEnrollment.gender || '—'],
+                          ['Civil Status', selectedEnrollment.civilStatus || selectedEnrollment.civil_status || '—'],
+                          ['Registered Voter', selectedEnrollment.registeredVoter || selectedEnrollment.registered_voter || selectedEnrollment.isVoter || '—'],
+                          ['Blood Type', selectedEnrollment.bloodType || selectedEnrollment.blood_type || '—'],
+                          ['Height', selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—'],
+                          ['Weight', selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—'],
+                        ].map(([label, val]) => (
+                          <div key={label} className="bg-emerald-50/60 rounded-xl p-2.5 border border-emerald-100/90 shadow-2xs">
+                            <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider mb-0.5">{label}</p>
+                            <p className="text-xs font-black text-gray-900">{val || '—'}</p>
                           </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 text-[10px] text-center p-1 font-bold">
-                          <User className="w-6 h-6 mb-1 opacity-50" />
-                          No Photo
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase px-2 py-0.5 rounded-full mb-1">
-                        <CheckCircle className="w-3 h-3 text-emerald-600" /> Official Portrait ID
-                      </span>
-                      <h4 className="text-xs font-black text-gray-900 truncate">
-                        {selectedEnrollment.fullName || 'Student 2x2 Photo'}
-                      </h4>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Click thumbnail to inspect full size 2x2 portrait photo</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Registration Form / Photo Document — Instant Inline Visual Preview */}
-                <div className="p-3.5 border-b border-gray-200 bg-emerald-50/40">
-                  {(() => {
-                    const audit = getRegformAuditStatus(selectedEnrollment, regformAudits);
-                    if (audit.isSuspicious) {
-                      return (
-                        <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-2.5 shadow-sm">
-                          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>
-                            <p className="text-[11.5px] text-amber-800 font-medium mt-0.5 leading-relaxed">{audit.reason}</p>
+                    {/* Emergency Contact */}
+                    <div>
+                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-emerald-700" /> Emergency Contact Details
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          ['Contact Person', selectedEnrollment.emergencyContact || selectedEnrollment.emergency_contact || selectedEnrollment.emergencyName || '—'],
+                          ['Emergency No.', selectedEnrollment.emergencyNumber || selectedEnrollment.emergency_number || selectedEnrollment.emergencyContactNumber || '—'],
+                        ].map(([label, val]) => (
+                          <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+                            <p className="text-xs font-black text-gray-900">{val || '—'}</p>
                           </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form
-                    </p>
-                    {(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) && (
-                      <button
-                        type="button"
-                        onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
-                        className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        🔍 Expand Fullscreen
-                      </button>
-                    )}
-                  </div>
-
-                  <RegistrationDocumentPreview
-                    documentUrl={selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto}
-                    onExpand={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
-                    isFullscreen={false}
-                  />
-                </div>
-
-                {/* Details — label/value rows, comprehensive */}
-                <div className="p-3.5 space-y-4">
-
-                  {/* Personal */}
-                  <div>
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
-                    </p>
-                    <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
-                      {[
-                        ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
-                        ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
-                        ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
-                        ['Middle Name', selectedEnrollment.middleName || '—'],
-                        ['Suffix', selectedEnrollment.suffix || '—'],
-                        ['Student ID', selectedEnrollment.studentId],
-                        ['Email', selectedEnrollment.email],
-                        ['Contact No.', selectedEnrollment.contactNumber],
-                        ['Facebook', selectedEnrollment.facebookAccount || '—'],
-                      ].map(([label, val]) => (
-                        <div key={label} className="flex justify-between items-start gap-3 text-xs">
-                          <span className="text-gray-500 font-bold flex-shrink-0 w-24">{label}</span>
-                          <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Address Breakdown */}
-                  <div>
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Address Details</p>
-                    <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
-                      {[
-                        ['Complete Address', selectedEnrollment.address || selectedEnrollment.homeAddress || '—'],
-                        ['Street / Barangay', selectedEnrollment.street || '—'],
-                        ['Municipality / City', selectedEnrollment.municipality || '—'],
-                        ['Province', selectedEnrollment.province || '—'],
-                      ].map(([label, val]) => (
-                        <div key={label} className="flex justify-between items-start gap-3 text-xs">
-                          <span className="text-gray-500 font-bold flex-shrink-0 w-28">{label}</span>
-                          <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
-                        </div>
-                      ))}
+                {/* 3. PERSONAL & ACADEMIC SECTION */}
+                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (
+                  <div className="p-3.5 space-y-4 bg-white">
+                    {/* Personal Information */}
+                    <div>
+                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
+                      </p>
+                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
+                        {[
+                          ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
+                          ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
+                          ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
+                          ['Middle Name', selectedEnrollment.middleName || '—'],
+                          ['Suffix', selectedEnrollment.suffix || '—'],
+                          ['Student ID', selectedEnrollment.studentId || selectedEnrollment.student_id],
+                          ['Email', selectedEnrollment.email],
+                          ['Contact No.', selectedEnrollment.contactNumber || selectedEnrollment.contact_number],
+                          ['Facebook', selectedEnrollment.facebookAccount || selectedEnrollment.facebook_account || selectedEnrollment.facebook || '—'],
+                        ].map(([label, val]) => (
+                          <div key={label} className="flex justify-between items-start gap-3 text-xs">
+                            <span className="text-gray-500 font-bold flex-shrink-0 w-24">{label}</span>
+                            <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Address Breakdown */}
+                    <div>
+                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Address Details</p>
+                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
+                        {[
+                          ['Complete Address', selectedEnrollment.address || selectedEnrollment.homeAddress || '—'],
+                          ['Street / Barangay', selectedEnrollment.street || '—'],
+                          ['Municipality / City', selectedEnrollment.municipality || '—'],
+                          ['Province', selectedEnrollment.province || '—'],
+                        ].map(([label, val]) => (
+                          <div key={label} className="flex justify-between items-start gap-3 text-xs">
+                            <span className="text-gray-500 font-bold flex-shrink-0 w-28">{label}</span>
+                            <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Academic */}
+                    <div>
+                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Academic Information</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          ['Degree Program', selectedEnrollment.program || selectedEnrollment.course],
+                          ['Section', selectedEnrollment.section || '—'],
+                          ['Year Level', selectedEnrollment.yearLevel || selectedEnrollment.year_level || selectedEnrollment.year],
+                          ['NSTP Track', selectedEnrollment.nstpComponent || selectedEnrollment.nstp_component || selectedEnrollment.department],
+                        ].map(([label, val]) => (
+                          <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
+                            <p className="text-xs font-black text-emerald-950">{val || '—'}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Academic */}
-                  <div>
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Academic Information</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        ['Degree Program', selectedEnrollment.program || selectedEnrollment.course],
-                        ['Section', selectedEnrollment.section || '—'],
-                        ['Year Level', selectedEnrollment.yearLevel || selectedEnrollment.year],
-                        ['NSTP Track', selectedEnrollment.nstpComponent || selectedEnrollment.department],
-                      ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-                          <p className="text-xs font-black text-emerald-950">{val || '—'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Demographic & Health */}
-                  <div>
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Demographic &amp; Health</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        ['Birth Date', selectedEnrollment.birthDate ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(selectedEnrollment.birthDate)) : '—'],
-                        ['Age', selectedEnrollment.age ? `${selectedEnrollment.age} yrs old` : '—'],
-                        ['Sex / Gender', selectedEnrollment.sex || selectedEnrollment.gender || '—'],
-                        ['Civil Status', selectedEnrollment.civilStatus || '—'],
-                        ['Registered Voter', selectedEnrollment.registeredVoter || selectedEnrollment.isVoter || '—'],
-                        ['Height', selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—'],
-                        ['Weight', selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—'],
-                        ['Blood Type', selectedEnrollment.bloodType || '—'],
-                      ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-                          <p className="text-xs font-black text-gray-900">{val || '—'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Emergency Contact */}
-                  <div>
-                    <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Emergency Contact Person</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        ['Contact Person', selectedEnrollment.emergencyContact || selectedEnrollment.emergencyName || '—'],
-                        ['Emergency No.', selectedEnrollment.emergencyNumber || '—'],
-                      ].map(([label, val]) => (
-                        <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-                          <p className="text-xs font-black text-gray-900">{val || '—'}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Submission Status & Timestamp */}
+                {/* Submission Status & Timestamp Footer */}
+                <div className="p-3.5 pt-0">
                   <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
                     <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-black uppercase text-[10px] tracking-wider">
                       Status: {selectedEnrollment.status || 'Pending'}
@@ -2282,6 +2320,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     </span>
                   </div>
                 </div>
+
               </div>
 
               {/* Sticky action buttons */}

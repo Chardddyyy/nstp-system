@@ -337,7 +337,7 @@ function Login() {
   };
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative">
+    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-y-auto">
       {/* Background Decorative Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -365,8 +365,8 @@ function Login() {
       </header>
 
       {/* Main Content Area - Clean Centered Login Card */}
-      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 overflow-hidden relative z-10">
-        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto max-h-[calc(100vh-80px)] p-5 sm:p-7">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 my-auto">
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-5 sm:p-7">
           <div className="text-center mb-4 sm:mb-6">
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -377,11 +377,11 @@ function Login() {
 
           <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
             <div>
-              <label htmlFor="email" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
                   id="email"
@@ -392,7 +392,7 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full pl-9 pr-3 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  className="w-full min-h-[46px] pl-10 pr-3 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="admin@cvsu.edu.ph"
                   autoComplete="username"
                   required
@@ -402,18 +402,18 @@ function Login() {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700">
+                <label htmlFor="password" className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700">
                   Password
                 </label>
                 {error && (
-                  <span className="text-[10px] sm:text-[11px] font-bold text-red-600 animate-fade-in flex items-center gap-1">
+                  <span className="text-[11px] sm:text-xs font-bold text-red-600 animate-fade-in flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
                     {error}
                   </span>
                 )}
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
@@ -424,7 +424,7 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full pl-9 pr-9 py-2 text-[11px] sm:text-xs bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  className="w-full min-h-[46px] pl-10 pr-10 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="••••••••••••"
                   autoComplete="current-password"
                   required
@@ -432,9 +432,9 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
+                  className="absolute right-2.5 top-1/2 transform -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               <div className="flex justify-end mt-1.5">
@@ -449,7 +449,7 @@ function Login() {
                     setForgotError('');
                     setShowForgotPassword(true);
                   }}
-                  className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95"
+                  className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95 py-1"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-blue-600" />
                   <span>Forgot Password?</span>
@@ -460,7 +460,7 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full min-h-[48px] mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -473,11 +473,11 @@ function Login() {
             </button>
           </form>
 
-          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10px] sm:text-xs">
+          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
               to="/enrollment" 
-              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline py-1"
             >
               <Sparkles className="w-3 h-3 text-amber-500" />
               <span>Online Enrollment &rarr;</span>
@@ -608,6 +608,16 @@ function Login() {
                       <strong className="block text-emerald-950 font-black text-xs sm:text-sm mt-0.5 break-all">{forgotEmail}</strong>
                     </div>
                   </div>
+
+                  {forgotSuccess && (
+                    <div className="mb-3.5 bg-emerald-50 border-2 border-emerald-300 text-emerald-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <strong className="block text-emerald-900 font-extrabold mb-0.5">Success</strong>
+                        <span>{forgotSuccess}</span>
+                      </div>
+                    </div>
+                  )}
 
                   {forgotError && (
                     <div className="mb-3.5 bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-2xl text-xs font-semibold flex items-start gap-2.5 shadow-sm animate-shake">

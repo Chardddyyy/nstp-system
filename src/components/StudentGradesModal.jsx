@@ -5,8 +5,9 @@ import {
   Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar, Eye
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
-import { downloadAnnualForm2APdf, downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
+import { downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
 import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { useAuth } from '../context/AuthContext';
 import OSDSNSTPForm from './OSDSNSTPForm';
 import OSDSNSTPForm2B from './OSDSNSTPForm2B';
 
@@ -25,6 +26,7 @@ const NSTP_SECTIONS = [
 ];
 
 export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser, onSaved }) {
+  const { showToast } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
   const canEditGrades = !isAdmin; // Only instructors encode grades
   const defaultDept = isAdmin ? 'All' : (currentUser?.department || 'CWTS');
@@ -262,11 +264,11 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
   const handleSaveAll = async () => {
     if (!canEditGrades) {
-      alert('Only Instructors are authorized to encode and save student grades.');
+      showToast('Only Instructors are authorized to encode and save student grades.', 'warning');
       return;
     }
     if (isAnnualView) {
-      alert('Please select "1st Semester" or "2nd Semester" from the dropdown to save semester grades.');
+      showToast('Please select "1st Semester" or "2nd Semester" from the dropdown to save semester grades.', 'warning');
       return;
     }
 
@@ -303,6 +305,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       });
 
       setSaveSuccessMsg(`Grades successfully saved for ${gradesToSave.length} students!`);
+      showToast(`Grades successfully saved for ${gradesToSave.length} students!`, 'success');
       setTimeout(() => setSaveSuccessMsg(''), 4000);
       try {
         onSaved?.(gradesToSave);
@@ -310,7 +313,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       loadGrades();
     } catch (err) {
       console.error('Failed to save grades:', err);
-      alert('Failed to save grades. Please try again.');
+      showToast('Failed to save grades. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
@@ -319,18 +322,19 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const handleBatchFillUnfilled = () => {
     if (!canEditGrades) return;
     if (isAnnualView) {
-      alert('Please select a specific semester (1st Sem / 2nd Sem) to quick-fill grades.');
+      showToast('Please select a specific semester (1st Sem / 2nd Sem) to quick-fill grades.', 'warning');
       return;
     }
     if (!batchFillGrade) return;
-    if (!window.confirm(`Fill all unfilled final grades with "${batchFillGrade}" for displayed students in ${selectedSemester}?`)) return;
 
     setGradesMap((prev) => {
       const next = { ...prev };
+      let fillCount = 0;
       filteredStudents.forEach((st) => {
         const sid = st.studentId || st.id;
         const current = next[sid] || { midterm_grade: '', final_grade: '', remarks: '' };
         if (!current.final_grade) {
+          fillCount++;
           next[sid] = {
             ...current,
             midterm_grade: current.midterm_grade || batchFillGrade,
@@ -341,6 +345,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
           };
         }
       });
+      showToast(`Filled ${fillCount} unfilled student grades with "${batchFillGrade}". Click Save to finalize.`, 'info');
       return next;
     });
   };
@@ -355,7 +360,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       );
     } catch (err) {
       console.error('Error generating Form 2-A PDF:', err);
-      alert('Failed to generate Form 2-A PDF. Please try again.');
+      showToast('Failed to generate Form 2-A PDF. Please try again.', 'error');
     }
   };
 
@@ -368,7 +373,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       );
     } catch (err) {
       console.error('Error generating Form 2-A Excel:', err);
-      alert('Failed to generate Form 2-A Excel. Please try again.');
+      showToast('Failed to generate Form 2-A Excel. Please try again.', 'error');
     }
   };
 
@@ -387,7 +392,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       });
     } catch (err) {
       console.error('Error exporting Grades PDF:', err);
-      alert('Failed to export Grades PDF. Please try again.');
+      showToast('Failed to export Grades PDF. Please try again.', 'error');
     }
   };
 
@@ -405,7 +410,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       });
     } catch (err) {
       console.error('Error exporting Grades Excel:', err);
-      alert('Failed to export Grades Excel. Please try again.');
+      showToast('Failed to export Grades Excel. Please try again.', 'error');
     }
   };
 
@@ -725,8 +730,41 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               </div>
             )}
 
-            {/* Official CHED & OSDS Downloads (Clean Form A & Form B buttons) */}
+            {/* Official CHED & OSDS Downloads (Clean Form A & Form B buttons) + Grade Sheet Exports */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Export Grade Sheet PDF */}
+              <button
+                type="button"
+                onClick={handleExportGradesPdf}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                title="Export current section grades as PDF"
+              >
+                <Download className="w-3.5 h-3.5 text-gray-600" />
+                <span>Export PDF</span>
+              </button>
+
+              {/* Export Grade Sheet Excel */}
+              <button
+                type="button"
+                onClick={handleExportGradesExcel}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                title="Export current section grades as Excel"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Export Excel</span>
+              </button>
+
+              {/* Print Grade Sheet */}
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-100 rounded-xl border border-gray-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                title="Print current grades roster"
+              >
+                <Printer className="w-3.5 h-3.5 text-gray-600" />
+                <span>Print</span>
+              </button>
+
               {/* Form A Button */}
               <button
                 type="button"

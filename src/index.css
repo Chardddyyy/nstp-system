@@ -19,15 +19,44 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   overscroll-behavior-y: none;
+}
+
+/* Mobile-First Input Font Zoom Fix: Prevents iOS/Android auto-zoom on field focus */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile Touch Target Standards (44x44px minimum) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive Table Wrapper for Seamless Mobile Touch-Scrolling */
+.table-responsive-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 #root {
@@ -225,7 +254,8 @@ input:focus, select:focus, textarea:focus {
 #qr-reader-video-box video,
 #qr-reader-video-box canvas,
 video.camera-stream,
-.enrollment-camera-video {
+.enrollment-camera-video,
+video {
   transform: none !important;
   -webkit-transform: none !important;
 }

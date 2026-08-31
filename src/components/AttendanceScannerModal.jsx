@@ -5,6 +5,7 @@ import { X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, FileSpreadsheet
 import { attendanceAPI } from '../services/api';
 import { downloadDailyAttendancePdf } from '../utils/chedPdfGenerator';
 import { downloadDailyAttendanceExcel } from '../utils/chedExportGenerator';
+import { useAuth } from '../context/AuthContext';
 
 // Web Audio API Beep Generator (100% self-contained sound effect)
 function playScanBeep(success = true) {
@@ -42,6 +43,7 @@ function playScanBeep(success = true) {
 const ATTENDANCE_DAYS = Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
 
 export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'All', currentUser = null }) {
+  const { showToast } = useAuth();
   const [selectedDay, setSelectedDay] = useState('Day 1');
   const [activityName, setActivityName] = useState('NSTP Field Activity');
   const [scanType, setScanType] = useState('TIME_IN'); // 'TIME_IN' | 'TIME_OUT'
@@ -224,7 +226,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'A
   // Save Record into Attendance Tracker and Database
   const handleSaveRecord = async () => {
     if (sessionLogs.length === 0) {
-      alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
+      showToast('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.', 'warning');
       return;
     }
 
@@ -316,21 +318,17 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'A
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
-      let msg = `✅ Na-save sa database ang attendance para sa ${selectedDay}:\n• ${fullyPresentCount} Present (kumpleto ang Time In at Time Out)\n`;
-      if (incompleteCount > 0) {
-        msg += `• ${incompleteCount} Timed In (kailangan pang mag-Time Out para maging Present).`;
-      }
-      alert(msg);
+      showToast(`Na-save ang attendance (${fullyPresentCount} Present, ${incompleteCount} Timed In) para sa ${selectedDay}!`, 'success');
     } catch (err) {
       console.error('Error saving record:', err);
-      alert('Failed to save record. Please try again.');
+      showToast('Failed to save record. Please try again.', 'error');
     }
   };
 
   // 1-Click PDF Attendance Export
   const handleExportToPdf = async () => {
     if (sessionLogs.length === 0) {
-      alert('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.');
+      showToast('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.', 'warning');
       return;
     }
     try {
@@ -341,7 +339,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'A
       });
     } catch (err) {
       console.error('Failed to export daily attendance PDF:', err);
-      alert('Failed to export attendance PDF. Please try again.');
+      showToast('Failed to export attendance PDF. Please try again.', 'error');
     }
   };
 
@@ -356,7 +354,7 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'A
       });
     } catch (err) {
       console.error('Failed to export daily attendance Excel:', err);
-      alert('Failed to export attendance Excel. Please try again.');
+      showToast('Failed to export attendance Excel. Please try again.', 'error');
     }
   };
 

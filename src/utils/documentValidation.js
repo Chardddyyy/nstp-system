@@ -41,10 +41,6 @@ export function analyzeDocumentFile(fileOrDataUrl) {
         const height = img.naturalHeight || img.height;
         const aspectRatio = width / (height || 1);
 
-        // Standard paper documents (Letter/A4 portrait) have aspect ratio ~0.65 to 0.82
-        // Square selfies / 2x2 photos have aspect ratio ~0.90 to 1.15
-        const isSquareOrPortraitPhotoRatio = aspectRatio >= 0.88 && aspectRatio <= 1.15;
-
         // Perform canvas pixel sample analysis for document paper texture (high white/light background ratio)
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -80,14 +76,31 @@ export function analyzeDocumentFile(fileOrDataUrl) {
         const lightRatio = lightPixelCount / (totalSampled || 1);
         const saturationRatio = highSaturationCount / (totalSampled || 1);
 
-        // If square ratio or not standard paper aspect, and low light background ratio
-        if (isSquareOrPortraitPhotoRatio || lightRatio < 0.40 || saturationRatio > 0.45) {
-          return resolve({
-            isDocument: false,
-            isSuspicious: true,
-            badgeLabel: '⚠️ Not a RegForm',
-            reason: 'The uploaded file appears to be a selfie, portrait photo, or non-document image rather than a printed Certificate of Registration (COR).'
-          });
+        // Standard paper documents (Letter/A4 portrait ~0.65 to 0.84, landscape ~1.22 to 1.60)
+        // Square selfies / 2x2 portrait photos have aspect ratio ~0.86 to 1.16
+        const isSquarePhotoRatio = aspectRatio >= 0.86 && aspectRatio <= 1.16;
+
+        // If square ratio (like 2x2 ID portrait or selfie):
+        if (isSquarePhotoRatio) {
+          // Square photos with non-paper color variance or typical selfie framing
+          if (saturationRatio > 0.25 || lightRatio < 0.65) {
+            return resolve({
+              isDocument: false,
+              isSuspicious: true,
+              badgeLabel: '⚠️ Not a RegForm',
+              reason: 'The uploaded file appears to be a 2x2 portrait photo, selfie, or square image rather than a printed Certificate of Registration (COR).'
+            });
+          }
+        } else {
+          // For rectangular document aspect ratios: only flag if strongly non-document (very dark or heavily saturated image)
+          if (lightRatio < 0.18 && saturationRatio > 0.55) {
+            return resolve({
+              isDocument: false,
+              isSuspicious: true,
+              badgeLabel: '⚠️ Check Document',
+              reason: 'The uploaded file appears too dark or colorful for a printed paper Certificate of Registration (COR).'
+            });
+          }
         }
 
         resolve({ isDocument: true, isSuspicious: false, reason: 'Valid document characteristics' });

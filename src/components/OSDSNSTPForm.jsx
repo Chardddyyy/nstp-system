@@ -68,12 +68,8 @@ const OSDSNSTPForm = ({
 
       const sid = String(st.studentId || st.student_id || st.id || '').trim();
       const sem2GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_2nd Semester`] || gradesMap[sid]?.['2nd Semester'] || gradesMap[`${sid}_2nd`] || {}) : {};
-      const sem1GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_1st Semester`] || gradesMap[sid]?.['1st Semester'] || gradesMap[`${sid}_1st`] || {}) : {};
 
-      const g1Raw = st.final_grade_1 || st.grade_sem1 || sem1GradeObj.final_grade || sem1GradeObj.grade || (st.semester === '1st Semester' ? st.final_grade : '') || st.midterm_grade || '';
       const g2Raw = st.final_grade_2 || st.grade_sem2 || sem2GradeObj.final_grade || sem2GradeObj.grade || (st.semester === '2nd Semester' ? st.final_grade : '') || '';
-
-      const g1Str = String(g1Raw).trim();
       const g2Str = String(g2Raw).trim();
 
       const num2 = parseFloat(g2Str);

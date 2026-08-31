@@ -10,7 +10,7 @@ import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useMemo, useEffect } from 'react';
 
 function Reports() {
-  const { user, logout, reports, addReport, updateReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, reports, addReport, updateReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, showToast } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
@@ -22,6 +22,7 @@ function Reports() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [reportToDelete, setReportToDelete] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -92,7 +93,7 @@ function Reports() {
     if (createForm.dueDate) {
       const todayStr = getTodayLocalStr();
       if (createForm.dueDate < todayStr) {
-        alert('Due date cannot be in the past. Please select today or a future date.');
+        showToast('Due date cannot be in the past. Please select today or a future date.', 'warning');
         return;
       }
     }
@@ -115,15 +116,17 @@ function Reports() {
     try {
       if (editingReport) {
         await updateReport(editingReport.id, reportData);
+        showToast('Report assignment updated successfully!', 'success');
       } else {
         await addReport(reportData);
+        showToast('Report assignment created and published!', 'success');
       }
       setShowCreateModal(false);
       setEditingReport(null);
       setCurrentPage(1);
       setCreateForm({ title: '', description: '', department: 'All', dueDate: '', referenceFile: null });
     } catch (_error) {
-      alert(_error?.message || 'Failed to save report assignment. Please try again.');
+      showToast(_error?.message || 'Failed to save report assignment. Please try again.', 'error');
     } finally {
       setIsCreatingReport(false);
     }
@@ -134,7 +137,7 @@ function Reports() {
   // Instructor submits their report
   const handleSubmitReport = async () => {
     if (!submitForm.content.trim() && !submitForm.attachment) {
-      alert('Please enter report content or attach a file!');
+      showToast('Please enter accomplishment notes or attach a file.', 'warning');
       return;
     }
 
@@ -150,11 +153,12 @@ function Reports() {
     setIsSubmittingReport(true);
     try {
       await submitReport(selectedReport.id, submission);
+      showToast('Report accomplishment submitted successfully!', 'success');
       setShowSubmitModal(false);
       setSubmitForm({ content: '', attachment: null });
       setSelectedReport(null);
     } catch (_error) {
-      alert('Failed to submit report. Please try again.');
+      showToast('Failed to submit report. Please try again.', 'error');
     } finally {
       setIsSubmittingReport(false);
     }
@@ -193,15 +197,22 @@ function Reports() {
         ...prev,
         comments: [...(prev.comments || []), saved]
       }));
+      showToast('Comment posted.', 'info');
     } catch {
-      alert('Failed to post comment.');
+      showToast('Failed to post comment.', 'error');
     }
   };
 
   // Admin deletes report assignment
   const handleDeleteReport = (reportId) => {
-    if (confirm('Are you sure you want to delete this report assignment?')) {
-      deleteReport(reportId);
+    setReportToDelete(reportId);
+  };
+
+  const confirmDeleteReport = () => {
+    if (reportToDelete) {
+      deleteReport(reportToDelete);
+      showToast('Report assignment removed.', 'info');
+      setReportToDelete(null);
     }
   };
 
@@ -313,10 +324,10 @@ function Reports() {
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 w-full sm:w-auto">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 sm:p-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer"
+                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
-                <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Menu className="w-5 h-5" />
               </button>
 
               <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -970,6 +981,37 @@ function Reports() {
                     <Send className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Confirmation Modal for Deleting Report */}
+        {reportToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 text-center transform scale-100 transition-all">
+              <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-600">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-gray-900 mb-2">Delete Report Assignment?</h3>
+              <p className="text-xs text-gray-500 mb-6">
+                This action will permanently delete this report assignment and all instructor submissions attached to it.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setReportToDelete(null)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteReport}
+                  className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 cursor-pointer"
+                >
+                  Delete Report
+                </button>
               </div>
             </div>
           </div>
