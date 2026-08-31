@@ -502,7 +502,12 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
     graduates: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } }
   };
 
-  const isOnly1stSemBatch = String(batchYear).includes('1st Sem');
+  const yearStrLower = String(batchYear || '').toLowerCase();
+  const is1stSemExplicit = yearStrLower.includes('1st') || yearStrLower.includes('first');
+  const is2ndSemExplicit = yearStrLower.includes('2nd') || yearStrLower.includes('second');
+  const isAnnualExplicit = yearStrLower.includes('annual') || yearStrLower.includes('whole') || yearStrLower.includes('full');
+
+  const isOnly1stSemBatch = is1stSemExplicit || (!is2ndSemExplicit && !isAnnualExplicit && (students || []).every(st => !st.final_grade_2 && (!st.semester || st.semester === '1st Semester')));
 
   (students || []).forEach((st) => {
     const sexRaw = (st.sex || st.gender || 'Male').toUpperCase();

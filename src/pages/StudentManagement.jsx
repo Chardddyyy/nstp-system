@@ -49,7 +49,7 @@ const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80)
 };
 
 function StudentManagement() {
-  const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdmin = user?.role === 'admin';
@@ -477,7 +477,7 @@ function StudentManagement() {
   const [exportDept, setExportDept] = useState('All');
   const [exportCourse, setExportCourse] = useState('All');
   const [exportSem, setExportSem] = useState('1st Semester');
-  const [exportAcadYear, setExportAcadYear] = useState('2026-2027');
+  const [exportAcadYear, setExportAcadYear] = useState(currentBatch || '2026-2027 1st Semester');
   const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 
@@ -485,7 +485,7 @@ function StudentManagement() {
   const handleDirectDownloadFormA = async (format = 'pdf') => {
     try {
       setIsDownloadingFormA(true);
-      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
+      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : (currentBatch || exportAcadYear);
       const dept = isAdmin ? 'All' : (user?.department || 'CWTS');
 
       const baseList = (viewingArchive && Array.isArray(archiveViewData?.studentData) && archiveViewData.studentData.length > 0)
@@ -514,7 +514,7 @@ function StudentManagement() {
   const handleDirectDownloadFormB = async (targetDept = formBDept, targetSem = formBSem, format = 'pdf') => {
     try {
       setIsDownloadingFormB(true);
-      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : exportAcadYear;
+      const activeBatchYear = viewingArchive ? (archiveViewData?.year || exportAcadYear) : (currentBatch || exportAcadYear);
       const deptFilter = targetDept || 'All';
 
       const baseList = (viewingArchive && Array.isArray(archiveViewData?.studentData) && archiveViewData.studentData.length > 0)

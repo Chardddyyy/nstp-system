@@ -37,7 +37,12 @@ const OSDSNSTPForm = ({
       }
     };
 
-    const isOnly1stSemBatch = String(academicYear || '').includes('1st Sem');
+    const yearStrLower = String(academicYear || '').toLowerCase();
+    const is1stSemExplicit = yearStrLower.includes('1st') || yearStrLower.includes('first');
+    const is2ndSemExplicit = yearStrLower.includes('2nd') || yearStrLower.includes('second');
+    const isAnnualExplicit = yearStrLower.includes('annual') || yearStrLower.includes('whole') || yearStrLower.includes('full');
+
+    const isOnly1stSemBatch = is1stSemExplicit || (!is2ndSemExplicit && !isAnnualExplicit && (students || []).every(st => !st.final_grade_2 && (!st.semester || st.semester === '1st Semester')));
 
     (students || []).forEach((st) => {
       // 1. Identify Component (ROTC, LTS, CWTS)

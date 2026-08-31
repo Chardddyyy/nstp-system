@@ -89,14 +89,14 @@ function fitText(doc, text, maxWidth) {
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept = 'All') {
-  let yearStr = '2025-2026';
+  let yearStr = '2026-2027';
   let students = [];
 
   if (typeof batchOrYear === 'string') {
     yearStr = batchOrYear;
     students = studentList || [];
   } else if (batchOrYear && typeof batchOrYear === 'object') {
-    yearStr = batchOrYear.year || '2025-2026';
+    yearStr = batchOrYear.year || '2026-2027';
     students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
   }
 
@@ -113,24 +113,24 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
   const chedLogo = await getLogoDataUrl(['ched-logo.png', 'ched_logo.png', 'ched.png']);
   const cvsuLogo = await getLogoDataUrl(['cvsu.png', 'cvsu-logo.png', 'cvsunaiccampus.png']);
 
-  const isSecondSem = String(yearStr).toLowerCase().includes('2nd');
+  const isSecondSem = String(yearStr).toLowerCase().includes('2nd') || String(yearStr).toLowerCase().includes('second');
   const formTitle = isSecondSem ? 'NSTP 2 ENROLLMENT LIST' : 'NSTP 1 ENROLLMENT LIST';
   const deptLabel = dept === 'All' ? 'CWTS / ROTC / LTS' : dept;
 
   const cols = [
-    { key: 'no', title: 'No.', w: 8, align: 'center' },
-    { key: 'studentId', title: 'Student No.', w: 22, align: 'center' },
-    { key: 'lastName', title: 'Surname', w: 24, align: 'left' },
-    { key: 'firstName', title: 'First Name', w: 24, align: 'left' },
-    { key: 'middleName', title: 'Middle Name', w: 22, align: 'left' },
-    { key: 'program', title: 'Program', w: 16, align: 'center' },
-    { key: 'sex', title: 'Sex', w: 9, align: 'center' },
-    { key: 'birthDate', title: 'Birthdate', w: 18, align: 'center' },
-    { key: 'street', title: 'Street / Brgy', w: 29, align: 'left' },
-    { key: 'municipality', title: 'Municipality', w: 22, align: 'left' },
-    { key: 'province', title: 'Province', w: 20, align: 'left' },
-    { key: 'contactNumber', title: 'Contact No.', w: 24, align: 'center' },
-    { key: 'email', title: 'Email Address', w: 39, align: 'left' }
+    { key: 'no', w: 8, align: 'center' },
+    { key: 'studentId', w: 22, align: 'center' },
+    { key: 'lastName', w: 22, align: 'left' },
+    { key: 'firstName', w: 22, align: 'left' },
+    { key: 'middleName', w: 20, align: 'left' },
+    { key: 'program', w: 16, align: 'center' },
+    { key: 'sex', w: 9, align: 'center' },
+    { key: 'birthDate', w: 18, align: 'center' },
+    { key: 'street', w: 28, align: 'left' },
+    { key: 'municipality', w: 22, align: 'left' },
+    { key: 'province', w: 18, align: 'left' },
+    { key: 'contactNumber', w: 23, align: 'center' },
+    { key: 'email', w: 49, align: 'left' }
   ];
 
   const leftMargin = 10;
@@ -139,7 +139,7 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
   const pageHeight = 210;
 
   function renderHeader(_pageNum) {
-    // Header Logos
+    // Header Logos (CHED at top-left, CvSU at top-right)
     if (chedLogo) {
       try { doc.addImage(chedLogo, 'PNG', leftMargin + 2, topMargin, 16, 16); } catch (_) {}
     }
@@ -149,65 +149,132 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
 
     // Top Institutional Text
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(8.5);
     doc.setTextColor(30, 41, 59);
     doc.text('Republic of the Philippines', 148.5, topMargin + 3, { align: 'center' });
-    doc.text('Office of the President', 148.5, topMargin + 6.5, { align: 'center' });
+    doc.text('Office of the President', 148.5, topMargin + 6.8, { align: 'center' });
 
-    doc.setFontSize(9.5);
+    doc.setFontSize(10);
     doc.setTextColor(6, 78, 59);
-    doc.text('COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 10.5, { align: 'center' });
+    doc.text('COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 11, { align: 'center' });
 
-    doc.setFontSize(10.5);
-    doc.text(formTitle, 148.5, topMargin + 15, { align: 'center' });
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text(formTitle, 148.5, topMargin + 15.5, { align: 'center' });
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    doc.text(`Academic Year: ${yearStr}`, 148.5, topMargin + 19, { align: 'center' });
+    doc.text(`Academic Year: ${yearStr}`, 148.5, topMargin + 20, { align: 'center' });
 
-    // Institutional Details
-    doc.setFontSize(7.5);
+    // Institutional Details Bar (matching Excel Rows 8 & 9)
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.text('Name of HEI: Cavite State University - Naic', leftMargin, topMargin + 24);
-    doc.text('Address: Bucana Malaki, Naic, Cavite', leftMargin, topMargin + 28);
+    doc.text('Name of HEI: Cavite State University - Naic', leftMargin, topMargin + 25);
+    doc.text('Address: Bucana Malaki, Naic, Cavite', leftMargin, topMargin + 29);
 
-    doc.text('Region: 4A - CALABARZON', 205, topMargin + 24);
-    doc.text(`NSTP Components: ${deptLabel}`, 205, topMargin + 28);
+    doc.text('Region: 4A - CALABARZON', 215, topMargin + 25);
+    doc.text(`NSTP Components: ${deptLabel}`, 215, topMargin + 29);
 
-    // Table Header Top Group Box
-    const tableTop = topMargin + 31;
-    doc.setFillColor(226, 239, 218); // Soft green #E2EFDA
-    doc.rect(leftMargin, tableTop, 277, 10, 'FD');
+    // ── 2-TIER TABLE HEADER (EXACT MATCH TO EXCEL ROWS 11 & 12) ──
+    const tableTop = topMargin + 32;
+    const tier1H = 6;
+    const tier2H = 5.5;
+    const totalHeaderH = tier1H + tier2H; // 11.5mm
+
+    doc.setLineWidth(0.2);
+    doc.setDrawColor(0, 0, 0);
+
+    // 1. Tier 1 Group Box Fill (Soft Green #E2EFDA)
+    doc.setFillColor(226, 239, 218);
+    doc.rect(leftMargin, tableTop, 277, totalHeaderH, 'F');
+
+    // 2. Tier 2 Sub-Headers Box Fill (Light Gray #F2F2F2)
+    doc.setFillColor(242, 242, 242);
+    doc.rect(40, tableTop + tier1H, 64, tier2H, 'F');
+    doc.rect(147, tableTop + tier1H, 68, tier2H, 'F');
 
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
 
-    let x = leftMargin;
-    cols.forEach(col => {
-      doc.rect(x, tableTop, col.w, 10);
-      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
-      doc.text(col.title, textX, tableTop + 6, {
-        align: col.align === 'center' ? 'center' : 'left'
-      });
-      x += col.w;
-    });
+    // Draw Tier 1 Full-Height Merged Header Cells:
+    // No. (x=10, w=8, h=11.5)
+    doc.rect(10, tableTop, 8, totalHeaderH);
+    doc.text('No.', 10 + 4, tableTop + 7, { align: 'center' });
 
-    return tableTop + 10;
+    // Student No. (x=18, w=22, h=11.5)
+    doc.rect(18, tableTop, 22, totalHeaderH);
+    doc.text('Student No.', 18 + 11, tableTop + 7, { align: 'center' });
+
+    // Student Name Group (x=40, w=64, h=6)
+    doc.rect(40, tableTop, 64, tier1H);
+    doc.text('Student Name', 40 + 32, tableTop + 4.2, { align: 'center' });
+
+    // Program (x=104, w=16, h=11.5)
+    doc.rect(104, tableTop, 16, totalHeaderH);
+    doc.text('Program', 104 + 8, tableTop + 7, { align: 'center' });
+
+    // Sex (x=120, w=9, h=11.5)
+    doc.rect(120, tableTop, 9, totalHeaderH);
+    doc.text('Sex', 120 + 4.5, tableTop + 7, { align: 'center' });
+
+    // Birthdate (x=129, w=18, h=11.5)
+    doc.rect(129, tableTop, 18, totalHeaderH);
+    doc.text('Birthdate', 129 + 9, tableTop + 7, { align: 'center' });
+
+    // Address Group (x=147, w=68, h=6)
+    doc.rect(147, tableTop, 68, tier1H);
+    doc.text('Address', 147 + 34, tableTop + 4.2, { align: 'center' });
+
+    // Contact Number (x=215, w=23, h=11.5)
+    doc.rect(215, tableTop, 23, totalHeaderH);
+    doc.text('Contact Number', 215 + 11.5, tableTop + 7, { align: 'center' });
+
+    // Email Address (x=238, w=49, h=11.5)
+    doc.rect(238, tableTop, 49, totalHeaderH);
+    doc.text('Email Address', 238 + 24.5, tableTop + 7, { align: 'center' });
+
+    // Draw Tier 2 Sub-Headers:
+    doc.setFontSize(6.5);
+    // Surname (x=40, w=22)
+    doc.rect(40, tableTop + tier1H, 22, tier2H);
+    doc.text('Surname', 40 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+
+    // First Name (x=62, w=22)
+    doc.rect(62, tableTop + tier1H, 22, tier2H);
+    doc.text('First Name', 62 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+
+    // Middle Name (x=84, w=20)
+    doc.rect(84, tableTop + tier1H, 20, tier2H);
+    doc.text('Middle Name', 84 + 10, tableTop + tier1H + 3.8, { align: 'center' });
+
+    // Street / Barangay (x=147, w=28)
+    doc.rect(147, tableTop + tier1H, 28, tier2H);
+    doc.text('Street / Barangay', 147 + 14, tableTop + tier1H + 3.8, { align: 'center' });
+
+    // Municipality / City (x=175, w=22)
+    doc.rect(175, tableTop + tier1H, 22, tier2H);
+    doc.text('Municipality / City', 175 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+
+    // Province (x=197, w=18)
+    doc.rect(197, tableTop + tier1H, 18, tier2H);
+    doc.text('Province', 197 + 9, tableTop + tier1H + 3.8, { align: 'center' });
+
+    return tableTop + totalHeaderH;
   }
 
   let currentY = renderHeader(1);
-  const rowHeight = 6.2;
+  const rowHeight = 5.8;
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
 
   students.forEach((st, idx) => {
     if (currentY + rowHeight > (pageHeight - bottomMargin)) {
       doc.addPage('a4', 'landscape');
       currentY = renderHeader(doc.internal.getNumberOfPages());
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.8);
+      doc.setFontSize(6.5);
     }
 
     let surname = st.lastName || '';
@@ -225,6 +292,25 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
       firstName = parts.slice(0, -1).join(' ') || '';
     }
 
+    let street = st.street || st.barangay || '';
+    let municipality = st.municipality || st.city || 'Naic';
+    let province = st.province || 'Cavite';
+
+    if (!street && !municipality && (st.address || st.homeAddress)) {
+      const fullAddr = st.address || st.homeAddress || '';
+      const addrParts = fullAddr.split(',').map(p => p.trim());
+      if (addrParts.length >= 3) {
+        street = addrParts[0];
+        municipality = addrParts[1];
+        province = addrParts.slice(2).join(', ');
+      } else if (addrParts.length === 2) {
+        street = addrParts[0];
+        municipality = addrParts[1];
+      } else {
+        street = fullAddr;
+      }
+    }
+
     let birthdate = '';
     if (st.birthDate) {
       const d = new Date(st.birthDate);
@@ -239,16 +325,16 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
 
     const rowData = {
       no: String(idx + 1),
-      studentId: st.studentId || st.id || '',
+      studentId: st.studentId || st.student_no || st.id || '',
       lastName: surname,
       firstName: firstName,
       middleName: middleName,
       program: st.program || st.course || 'BSIT',
       sex: (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
       birthDate: birthdate,
-      street: st.street || st.address || '',
-      municipality: st.municipality || st.city || 'Naic',
-      province: st.province || 'Cavite',
+      street: street,
+      municipality: municipality,
+      province: province,
       contactNumber: st.contactNumber || st.contact_no || '',
       email: st.email || ''
     };
@@ -258,7 +344,7 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
       doc.rect(x, currentY, col.w, rowHeight);
       const val = fitText(doc, rowData[col.key] ?? '', col.w - 2.5);
       const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
-      doc.text(val, textX, currentY + 4.2, {
+      doc.text(val, textX, currentY + 3.9, {
         align: col.align === 'center' ? 'center' : 'left'
       });
       x += col.w;
@@ -267,27 +353,22 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
     currentY += rowHeight;
   });
 
-  // Signatories Section
-  const sigHeight = 16;
+  // Signatories Section matching Excel (3 columns)
+  const sigHeight = 18;
   if (currentY + sigHeight > (pageHeight - 12)) {
     doc.addPage('a4', 'landscape');
-    currentY = topMargin + 10;
+    currentY = topMargin + 12;
   } else {
-    currentY += 4;
+    currentY += 5;
   }
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);
 
-  doc.text('Prepared by:', leftMargin, currentY);
-  doc.text('Certified Correct:', 110, currentY);
-  doc.text('Approved:', 215, currentY);
-
-  doc.setFont('helvetica', 'normal');
-  doc.text('NSTP Department Coordinator', leftMargin, currentY + 4.5);
-  doc.text('Campus NSTP Director', 110, currentY + 4.5);
-  doc.text('Campus Administrator', 215, currentY + 4.5);
+  doc.text('Prepared by: NSTP Department Coordinator', leftMargin, currentY);
+  doc.text('Certified Correct: Campus NSTP Director', 104, currentY);
+  doc.text('Approved: Campus Administrator', 215, currentY);
 
   // Add Page Numbers
   const totalPages = doc.internal.getNumberOfPages();
@@ -358,7 +439,12 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
     graduates: { ROTC: { m: 0, f: 0 }, LTS: { m: 0, f: 0 }, CWTS: { m: 0, f: 0 } }
   };
 
-  const isOnly1stSemBatch = String(yearStr).includes('1st Sem');
+  const yearStrLower = String(yearStr || '').toLowerCase();
+  const is1stSemExplicit = yearStrLower.includes('1st') || yearStrLower.includes('first');
+  const is2ndSemExplicit = yearStrLower.includes('2nd') || yearStrLower.includes('second');
+  const isAnnualExplicit = yearStrLower.includes('annual') || yearStrLower.includes('whole') || yearStrLower.includes('full');
+
+  const isOnly1stSemBatch = is1stSemExplicit || (!is2ndSemExplicit && !isAnnualExplicit && (students || []).every(st => !st.final_grade_2 && (!st.semester || st.semester === '1st Semester')));
 
   (students || []).forEach((st) => {
     const sexRaw = (st.sex || st.gender || 'Male').toUpperCase();
