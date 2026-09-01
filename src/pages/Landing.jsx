@@ -345,23 +345,38 @@ function Landing() {
     startTimer();
   };
 
-  // Touch Swipe Handling for Mobile Carousel
+  // Touch Swipe Handling for Mobile Carousel (Preserving natural vertical scrolling)
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const touchEndX = useRef(0);
+  const touchEndY = useRef(0);
 
   const handleTouchStart = (e) => {
-    touchStartX.current = e.targetTouches[0].clientX;
+    if (e.targetTouches && e.targetTouches[0]) {
+      touchStartX.current = e.targetTouches[0].clientX;
+      touchStartY.current = e.targetTouches[0].clientY;
+      touchEndX.current = e.targetTouches[0].clientX;
+      touchEndY.current = e.targetTouches[0].clientY;
+    }
   };
 
   const handleTouchMove = (e) => {
-    touchEndX.current = e.targetTouches[0].clientX;
+    if (e.targetTouches && e.targetTouches[0]) {
+      touchEndX.current = e.targetTouches[0].clientX;
+      touchEndY.current = e.targetTouches[0].clientY;
+    }
   };
 
   const handleTouchEnd = () => {
-    if (touchStartX.current - touchEndX.current > 50) {
-      nextSlide();
-    } else if (touchEndX.current - touchStartX.current > 50) {
-      prevSlide();
+    const deltaX = touchStartX.current - touchEndX.current;
+    const deltaY = touchStartY.current - touchEndY.current;
+    // Only trigger slide navigation if horizontal swipe is distinctly greater than vertical scroll
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && Math.abs(deltaX) > 60) {
+      if (deltaX > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
     }
   };
 
@@ -643,7 +658,7 @@ function Landing() {
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen on Desktop) ───── */}
       <section 
-        className="relative w-full h-[480px] xs:h-[530px] sm:h-[620px] md:h-[calc(100vh-76px)] min-h-[560px] md:min-h-[660px] lg:min-h-[760px] xl:min-h-[840px] 2xl:min-h-[900px] overflow-hidden bg-gray-950"
+        className="relative w-full h-[480px] xs:h-[530px] sm:h-[620px] md:h-[calc(100vh-76px)] min-h-[560px] md:min-h-[660px] lg:min-h-[760px] xl:min-h-[840px] 2xl:min-h-[900px] overflow-hidden bg-gray-950 touch-pan-y select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
