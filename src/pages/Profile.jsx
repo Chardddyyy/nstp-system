@@ -345,6 +345,8 @@ function Profile() {
       email: inst.email || '',
       role: inst.role || 'instructor',
       department: inst.department || 'CWTS',
+      avatar: inst.avatar || (inst.department === 'LTS' ? 'avatar-6' : (inst.department === 'ROTC' ? 'avatar-8' : 'avatar-2')),
+      profilePicture: inst.profilePicture || null,
       newPassword: ''
     });
     setShowEditPassword(false);
@@ -367,6 +369,8 @@ function Profile() {
         email: editInstructorForm.email.trim(),
         role: editInstructorForm.role,
         department: editInstructorForm.role === 'admin' ? null : editInstructorForm.department,
+        avatar: editInstructorForm.avatar || editingInstructor?.avatar || undefined,
+        profilePicture: editInstructorForm.profilePicture || editingInstructor?.profilePicture || undefined,
         password: editInstructorForm.newPassword || undefined
       });
       setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
@@ -1006,8 +1010,8 @@ function Profile() {
             <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3">
                 <img
-                  src={getAvatarSrc(editingInstructor?.avatar, editingInstructor?.profilePicture)}
-                  alt={editingInstructor?.name || 'Instructor'}
+                  src={getAvatarSrc(editInstructorForm.avatar || editingInstructor?.avatar, editInstructorForm.profilePicture || editingInstructor?.profilePicture)}
+                  alt={editInstructorForm.name || 'Instructor'}
                   className="w-10 h-10 rounded-2xl object-cover border border-amber-400/50 shrink-0 shadow-xs"
                 />
                 <div>
@@ -1086,6 +1090,26 @@ function Profile() {
                   </div>
                 </div>
               )}
+
+              {/* Avatar Selection */}
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Avatar Selection</label>
+                <div className="grid grid-cols-5 gap-2 p-2.5 bg-gray-50 rounded-2xl border border-gray-200/80">
+                  {AVATAR_OPTIONS.map((avatar) => (
+                    <button
+                      type="button"
+                      key={avatar.id}
+                      onClick={() => setEditInstructorForm(prev => ({ ...prev, avatar: avatar.id }))}
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 transition-all p-0.5 bg-white hover:scale-110 shadow-xs cursor-pointer ${
+                        editInstructorForm.avatar === avatar.id ? 'border-emerald-600 ring-2 ring-emerald-400/50 scale-105' : 'border-gray-200 hover:border-emerald-400'
+                      }`}
+                      title={avatar.name}
+                    >
+                      <img src={avatar.image} alt={avatar.name} className="w-full h-full object-cover rounded-full" />
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Change/Reset Password */}
               <div>

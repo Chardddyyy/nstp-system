@@ -2756,7 +2756,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
-    const { name, email, password, department, role } = req.body;
+    const { name, email, password, department, role, avatar } = req.body;
     const assignedRole = role === 'admin' ? 'admin' : 'instructor';
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -2779,9 +2779,11 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     }
     const hashed = await bcrypt.hash(String(password), 12);
     const assignedDept = assignedRole === 'admin' ? null : department;
+    const defaultAvatar = assignedRole === 'admin' ? 'avatar-4' : (assignedDept === 'LTS' ? 'avatar-6' : (assignedDept === 'ROTC' ? 'avatar-8' : 'avatar-2'));
+    const assignedAvatar = avatar ? sanitizeStr(avatar, 50) : defaultAvatar;
     const [result] = await pool.execute(
-      'INSERT INTO users (name, email, password, role, department) VALUES (?, ?, ?, ?, ?)',
-      [name, email, hashed, assignedRole, assignedDept]
+      'INSERT INTO users (name, email, password, role, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, email, hashed, assignedRole, assignedDept, assignedAvatar]
     );
     const newUserId = result.insertId;
 
@@ -2867,20 +2869,31 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Profile picture too large. Maximum 10 MB.' });
     }
 
+    const [existingUserRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (existingUserRows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const existingUser = existingUserRows[0];
+
+    const targetName = name !== undefined ? sanitizeStr(name, 255) : existingUser.name;
+    const targetEmail = email !== undefined ? sanitizeStr(email, 255) : existingUser.email;
+    const targetPhone = phone !== undefined ? sanitizeStr(phone, 50) : existingUser.phone;
+    const targetBio = bio !== undefined ? sanitizeStr(bio, 500) : existingUser.bio;
+    const targetAvatar = avatar !== undefined ? sanitizeStr(avatar, 50) : existingUser.avatar;
+    const targetProfilePicture = profilePicture !== undefined ? (profilePicture || null) : existingUser.profilePicture;
+
     if (req.user.role === 'admin') {
-      const [existingUserRows] = await pool.execute('SELECT role, department FROM users WHERE id = ?', [id]);
-      const existingUser = existingUserRows[0] || {};
-      const targetRole = role ? role : (existingUser.role || 'instructor');
-      const targetDept = targetRole === 'admin' ? 'NSTP Office' : (department ? department : (existingUser.department || 'CWTS'));
+      const targetRole = role !== undefined ? role : (existingUser.role || 'instructor');
+      const targetDept = targetRole === 'admin' ? 'NSTP Office' : (department !== undefined ? department : (existingUser.department || 'CWTS'));
 
       let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?';
       const params = [
-        sanitizeStr(name, 255),
-        sanitizeStr(email, 255),
-        sanitizeStr(phone, 50),
-        sanitizeStr(bio, 500),
-        sanitizeStr(avatar, 50),
-        profilePicture || null,
+        targetName,
+        targetEmail,
+        targetPhone,
+        targetBio,
+        targetAvatar,
+        targetProfilePicture,
         targetRole,
         targetDept
       ];
@@ -2896,12 +2909,12 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
       await pool.execute(
         'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ? WHERE id = ?',
         [
-          sanitizeStr(name, 255),
-          sanitizeStr(email, 255),
-          sanitizeStr(phone, 50),
-          sanitizeStr(bio, 500),
-          sanitizeStr(avatar, 50),
-          profilePicture || null,
+          targetName,
+          targetEmail,
+          targetPhone,
+          targetBio,
+          targetAvatar,
+          targetProfilePicture,
           id
         ]
       );
