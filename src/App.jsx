@@ -652,6 +652,14 @@ function App() {
 
   // Restore session & data from stored cache on mount INSTANTLY (0ms)
   useEffect(() => {
+    try {
+      if (!localStorage.getItem('nstp_fresh_clean_messages_v2')) {
+        localStorage.removeItem('nstp_cached_messages');
+        localStorage.removeItem('nstp_read_conversations');
+        localStorage.setItem('nstp_fresh_clean_messages_v2', 'true');
+      }
+    } catch (_) {}
+
     const token = localStorage.getItem('nstp_token');
     const cachedUser = localStorage.getItem('nstp_cached_user');
     const cachedAllUsers = localStorage.getItem('nstp_cached_all_users');
@@ -737,16 +745,12 @@ function App() {
           )
         );
         const validResults = messageResults.filter(Boolean);
-        if (validResults.length > 0) {
-          setMessages(prev => {
-            const next = { ...prev };
-            validResults.forEach(r => {
-              if (r.msgs && Array.isArray(r.msgs)) next[r.id] = r.msgs;
-            });
-            safeSetStorage('nstp_cached_messages', next);
-            return next;
-          });
-        }
+        const nextMsgs = {};
+        validResults.forEach(r => {
+          if (r.msgs && Array.isArray(r.msgs)) nextMsgs[r.id] = r.msgs;
+        });
+        setMessages(nextMsgs);
+        safeSetStorage('nstp_cached_messages', nextMsgs);
       }
 
       if (activeUser && conversationsData && Array.isArray(conversationsData)) {
@@ -1075,20 +1079,37 @@ function App() {
   }
 
   async function deleteConversationFunc(conversationId) {
-    await conversationsAPI.delete(conversationId);
-    setConversations(prev => prev.filter(c => c.id !== conversationId));
+    try {
+      await conversationsAPI.delete(conversationId);
+    } catch (err) {
+      console.warn('Delete conversation API notice:', err.message);
+    }
+    setConversations(prev => {
+      const updated = prev.filter(c => c.id !== conversationId);
+      safeSetStorage('nstp_cached_conversations', updated);
+      return updated;
+    });
     setMessages(prev => {
       const next = { ...prev };
       delete next[conversationId];
+      safeSetStorage('nstp_cached_messages', next);
       return next;
     });
   }
 
   async function clearMessagesFunc(conversationId) {
-    setMessages(prev => ({ ...prev, [conversationId]: [] }));
-    setConversations(prev => prev.map(c =>
-      c.id === conversationId ? { ...c, last_message: null, last_message_time: null, last_sender_id: null } : c
-    ));
+    setMessages(prev => {
+      const next = { ...prev, [conversationId]: [] };
+      safeSetStorage('nstp_cached_messages', next);
+      return next;
+    });
+    setConversations(prev => {
+      const updated = prev.map(c =>
+        c.id === conversationId ? { ...c, last_message: null, last_message_time: null, last_sender_id: null } : c
+      );
+      safeSetStorage('nstp_cached_conversations', updated);
+      return updated;
+    });
     try {
       await conversationsAPI.clearMessages(conversationId);
     } catch (err) {

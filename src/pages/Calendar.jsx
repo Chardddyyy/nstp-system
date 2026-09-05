@@ -97,9 +97,15 @@ function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const DEFAULT_CUSTOM_EVENTS = [
+    { id: 'cev-1', title: 'CWTS Community Coastal Cleanup & Profiling', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Cleanup and waste profiling along Bucana Malaki shoreline in coordination with MENRO Naic.' },
+    { id: 'cev-2', title: 'ROTC Cadre Inspection & Tactical Drills', date: '2026-09-26', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Battalion parade formation and field manual compliance inspection at tactical parade grounds.' },
+    { id: 'cev-3', title: 'LTS Adopted School Storytelling Workshop', date: '2026-10-03', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Phonics storytelling and learning kit distribution for Grade 2 and 3 pupils in Naic partner schools.' }
+  ];
+
   const [events, setEvents] = useState(() => {
     const saved = localStorage.getItem('nstp_calendar_events');
-    return saved ? JSON.parse(saved) : [];
+    return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
   });
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
 

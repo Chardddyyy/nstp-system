@@ -593,17 +593,18 @@ async function ensureAllCoreTables() {
     }
   }
 
-  // Seed default admin users if not exists
+  // Ensure default admin user 1 exists and has correct info
   try {
-    const [existingRichard] = await pool.execute('SELECT id FROM users WHERE LOWER(TRIM(email)) = ?', ['richardbelen99@gmail.com']);
-    if (existingRichard.length === 0) {
-      const hashedPw2 = await bcrypt.hash('Admin@123', 12);
+    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE id = 1 OR email = ?', ['admin@gmail.com']);
+    if (existingAdmin.length > 0) {
       await pool.execute(
-        'INSERT INTO users (email, password, role, name, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
-        ['richardbelen99@gmail.com', hashedPw2, 'admin', 'NSTP Administrator', 'NSTP Office', 'default']
+        'UPDATE users SET name = ?, department = ?, avatar = ? WHERE id = 1',
+        ['NSTP Administrator', 'NSTP Office', 'avatar-4']
       );
-      console.log('Seeded admin user: richardbelen99@gmail.com');
     }
+  } catch (err) {
+    console.warn('Admin seed notice:', err.message);
+  }
 
     // Seed 20+ students for past batches (2023-2024 and 2024-2025) into archived_years
     await seedPastBatches();
@@ -4847,6 +4848,8 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
+    await pool.execute('DELETE FROM messages WHERE conversation_id = ?', [id]);
+    await pool.execute('DELETE FROM conversation_participants WHERE conversation_id = ?', [id]);
     await pool.execute('DELETE FROM conversations WHERE id = ?', [id]);
     res.json({ message: 'Conversation deleted' });
   } catch (error) {

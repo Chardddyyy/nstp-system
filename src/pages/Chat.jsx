@@ -1783,11 +1783,22 @@ function Chat() {
           const targetId = activeConversation.id;
           await deleteConversation(targetId);
 
+          // Clear local messages state for this conversation as well
+          if (typeof setMessages === 'function') {
+            setMessages(prev => {
+              const next = { ...prev };
+              delete next[targetId];
+              return next;
+            });
+          }
+
           // Return directly to conversation list view
           setActiveConversationId(null);
+          setShowConversations(true);
 
           setShowChatMenu(false);
           setShowConfirmModal(false);
+          addNotification('Conversation and messages deleted successfully', 'success');
         } catch {
           addNotification('Could not delete conversation.', 'error');
           setShowConfirmModal(false);
@@ -2042,8 +2053,20 @@ function Chat() {
 
             {/* ── Contacts panel ── */}
             {showContacts && (() => {
-              const currentUserId = String(user?.id);
-              const contacts = (allUsers || []).filter(u => String(u.id) !== currentUserId && (u.role === 'admin' || u.role === 'instructor'));
+              const currentUserId = String(user?.id || '');
+              const currentUserEmail = (user?.email || '').trim().toLowerCase();
+              const contacts = (allUsers || []).filter(u => {
+                const uId = String(u.id || '');
+                const uEmail = (u.email || '').trim().toLowerCase();
+                // Never show currently logged-in account
+                if (uId && uId === currentUserId) return false;
+                if (uEmail && uEmail === currentUserEmail) return false;
+                // If logged in as admin, never show any admin account in contacts (only instructors)
+                if (user?.role === 'admin' && u.role === 'admin') return false;
+                // If instructor, never show instructor of same department
+                if (user?.role === 'instructor' && u.department === user?.department && u.role === 'instructor') return false;
+                return (u.role === 'admin' || u.role === 'instructor');
+              });
               if (contacts.length === 0) return (
                 <div className="text-center py-8 text-gray-500 px-4">
                   <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
