@@ -2742,80 +2742,78 @@ function StudentManagement() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={closeViewModal}>
             <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overscroll-contain" onClick={(e) => e.stopPropagation()}>
               {/* Sticky Header */}
-              <div className="sticky top-0 bg-green-800 text-white p-4 flex items-center justify-between rounded-t-xl z-10">
-                <h3 className="text-lg font-bold flex items-center">
-                  <Users className="w-5 h-5 mr-2" />
-                  Student Information
+              <div className="sticky top-0 bg-gradient-to-r from-emerald-800 to-emerald-900 text-white p-4 flex items-center justify-between rounded-t-xl z-10 shadow-sm">
+                <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
+                  <Users className="w-5 h-5 text-emerald-200" />
+                  <span>Student Information</span>
                 </h3>
-                <button type="button" onClick={closeViewModal} className="p-1 hover:bg-green-700 rounded-lg transition-colors cursor-pointer">
-                  <X className="w-6 h-6" />
+                <button type="button" onClick={closeViewModal} className="p-1.5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer text-white">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               
               <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-                {/* Personal & Name Breakdown Section */}
-                <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                    <User className="w-4 h-4 text-emerald-600" />
-                    Personal Details &amp; Name Breakdown
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Student ID Number</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.studentId}</span>
+                {/* Step 1: Personal & Demographic Information */}
+                <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-5 border border-gray-200/80 shadow-2xs">
+                  <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b border-gray-200/80">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                      <User className="w-4 h-4" />
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Last Name</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">1. Personal &amp; Demographic Information</h4>
+                      <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Full legal name, student number, birthdate, personal statistics, and complete address</p>
+                    </div>
+                  </div>
+
+                  {/* Name fields */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Last Name</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                         {currentViewStudent.lastName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[0]?.trim() : currentViewStudent.name?.split(' ').slice(-1)[0]) || '-'}
-                      </span>
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">First Name</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">First Name</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                         {currentViewStudent.firstName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ')[0] : currentViewStudent.name?.split(' ')[0]) || '-'}
-                      </span>
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Middle Name</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
-                        {currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '(None)'}
-                      </span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Middle Name</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        {currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '—'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Suffix</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Suffix</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                         {currentViewStudent.suffix || '—'}
-                      </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Email Address</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">{currentViewStudent.email || '-'}</span>
+                  {/* Student ID and Email */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Student No. (9 digits)</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.studentId || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.contactNumber || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Facebook Profile Link</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block truncate">
-                        {currentViewStudent.facebookAccount ? (
-                          <a href={currentViewStudent.facebookAccount.startsWith('http') ? currentViewStudent.facebookAccount : `https://${currentViewStudent.facebookAccount}`} target="_blank" rel="noreferrer" className="text-emerald-700 underline hover:text-emerald-900">
-                            {currentViewStudent.facebookAccount}
-                          </a>
-                        ) : '-'}
-                      </span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Email Address</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        {currentViewStudent.email || '-'}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Demographic & Physical Profile */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Date</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                  {/* Birthdate, Age, Civil Status, Sex, Registered Voter */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                         {(() => {
                           if (currentViewStudent.birthDate || currentViewStudent.birth_date) {
                             try {
@@ -2832,90 +2830,129 @@ function StudentManagement() {
                           }
                           return '-';
                         })()}
-                      </span>
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Age</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.age ? `${currentViewStudent.age} yrs old` : '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Age</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-gray-100 border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                        {currentViewStudent.age ? `${currentViewStudent.age} yrs old` : '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Sex / Gender</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.sex || currentViewStudent.gender || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Civil Status</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.civilStatus || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.civilStatus || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Sex</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.sex || currentViewStudent.gender || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Registered Voter</span>
-                      {(() => {
-                        const raw = currentViewStudent.registeredVoter || currentViewStudent.isVoter || currentViewStudent.voter;
-                        const isYes = String(raw || '').trim().toLowerCase() === 'yes';
-                        return (
-                          <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-0.5 ${
-                            isYes
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                              : 'bg-amber-100 text-amber-900 border border-amber-300'
-                          }`}>
-                            {isYes ? 'Yes' : 'No'}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.bloodType || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.height ? (String(currentViewStudent.height).includes('cm') ? currentViewStudent.height : `${currentViewStudent.height} cm`) : '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.weight ? (String(currentViewStudent.weight).includes('kg') ? currentViewStudent.weight : `${currentViewStudent.weight} kg`) : '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Registered Voter?</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                        {(() => {
+                          const raw = currentViewStudent.registeredVoter || currentViewStudent.isVoter || currentViewStudent.voter;
+                          const isYes = String(raw || '').trim().toLowerCase() === 'yes';
+                          return (
+                            <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full ${
+                              isYes
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                : 'bg-amber-100 text-amber-900 border border-amber-300'
+                            }`}>
+                              {isYes ? 'Yes' : 'No'}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Emergency Contact Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Emergency Contact Person</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}</span>
+                  {/* Contact Number & Facebook Profile */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Contact No. (11 digits)</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.contactNumber || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Emergency Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.emergencyNumber || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Facebook Profile Link</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        {currentViewStudent.facebookAccount ? (
+                          <a href={currentViewStudent.facebookAccount.startsWith('http') ? currentViewStudent.facebookAccount : `https://${currentViewStudent.facebookAccount}`} target="_blank" rel="noreferrer" className="text-emerald-700 underline hover:text-emerald-900">
+                            {currentViewStudent.facebookAccount}
+                          </a>
+                        ) : '-'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Height, Weight, Blood Type */}
+                  <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Height</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.height ? (String(currentViewStudent.height).includes('cm') ? currentViewStudent.height : `${currentViewStudent.height} cm`) : '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Weight</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.weight ? (String(currentViewStudent.weight).includes('kg') ? currentViewStudent.weight : `${currentViewStudent.weight} kg`) : '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Blood Type</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.bloodType || '-'}
+                      </div>
                     </div>
                   </div>
 
                   {/* Complete Address Breakdown */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Street / Barangay</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.street || '-'}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Street / Barangay</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
+                        {currentViewStudent.street || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Municipality / City</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.municipality || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Municipality / City</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
+                        {currentViewStudent.municipality || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Province</span>
-                      <span className="font-bold text-xs text-gray-800 mt-0.5 block">{currentViewStudent.province || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Province</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
+                        {currentViewStudent.province || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-1 sm:col-span-3">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Full Combined Address</span>
-                      <span className="font-bold text-xs text-gray-900 mt-0.5 block">{currentViewStudent.address || currentViewStudent.homeAddress || `${currentViewStudent.street || ''}, ${currentViewStudent.municipality || ''}, ${currentViewStudent.province || ''}`}</span>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Full Combined Address</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.address || currentViewStudent.homeAddress || `${currentViewStudent.street || ''}, ${currentViewStudent.municipality || ''}, ${currentViewStudent.province || ''}`}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Academic Information Section & NSTP Grade Breakdown */}
+                {/* Step 2: Academic Information Section & NSTP Grade Breakdown */}
                 <div className="bg-emerald-50/50 p-3.5 sm:p-5 rounded-2xl border border-emerald-200/60 shadow-2xs">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 flex items-center gap-2 uppercase tracking-wider">
-                      <GraduationCap className="w-4 h-4 text-emerald-600" />
-                      Academic Information &amp; NSTP Track
-                    </h4>
+                  <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-emerald-200/50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                        <GraduationCap className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">2. Academic Information &amp; NSTP Track</h4>
+                        <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Degree program, section, year level, and official grade records</p>
+                      </div>
+                    </div>
                     {(() => {
                       const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
                       if (!finalGrade) return null;
@@ -2936,47 +2973,67 @@ function StudentManagement() {
                       );
                     })()}
                   </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 mb-3">
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Degree Program</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.program || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Degree Program</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                        {currentViewStudent.program || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">School Section</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-800 font-mono mt-0.5 block">{currentViewStudent.section || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">School Section</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs font-mono">
+                        {currentViewStudent.section || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-300/80 bg-emerald-50/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">NSTP Section</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.nstp_section || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1">NSTP Section</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-emerald-50 border border-emerald-300 rounded-xl font-black text-emerald-950 shadow-2xs">
+                        {currentViewStudent.nstp_section || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Year Level</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-950 mt-0.5 block">{currentViewStudent.yearLevel || currentViewStudent.year || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Year Level</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.yearLevel || currentViewStudent.year || '-'}
+                      </div>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-emerald-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">NSTP Component</span>
-                      <span className="font-black text-xs sm:text-sm text-emerald-700 mt-0.5 block">{currentViewStudent.department || '-'}</span>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">NSTP Component</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                          (currentViewStudent.department || currentViewStudent.nstpComponent) === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                          (currentViewStudent.department || currentViewStudent.nstpComponent) === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                          (currentViewStudent.department || currentViewStudent.nstpComponent) === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                          'bg-gray-100 text-gray-800 border border-gray-200'
+                        }`}>
+                          {currentViewStudent.department || currentViewStudent.nstpComponent || '-'}
+                        </span>
+                      </div>
                     </div>
                     {/* Final Grade Card */}
-                    <div className="bg-white p-2.5 rounded-xl border border-amber-300 shadow-2xs bg-amber-50/40">
-                      <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">Cumulative Rating</span>
-                      {(() => {
-                        const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
-                        if (!finalGrade) return <span className="text-xs text-gray-400 font-bold mt-0.5 block">Pending</span>;
-                        const isPassed = remarks === 'Passed' || (Number(finalGrade) <= 3.0 && Number(finalGrade) >= 1.0);
-                        const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0 || finalGrade === '5.00';
-                        const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
-                        return (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className={`font-black text-xs sm:text-sm ${
-                              isPassed ? 'text-emerald-950' : isFailed ? 'text-rose-700' : isInc ? 'text-amber-700' : 'text-gray-900'
-                            }`}>{finalGrade}</span>
-                            <span className={`text-[9.5px] font-extrabold ${
-                              isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600' : isInc ? 'text-amber-600' : 'text-gray-600'
-                            }`}>({remarks})</span>
-                          </div>
-                        );
-                      })()}
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-amber-900 mb-1">Cumulative Rating</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-amber-50/50 border border-amber-300 rounded-xl shadow-2xs flex items-center">
+                        {(() => {
+                          const { finalGrade, remarks } = getStudentGradeInfo(currentViewStudent);
+                          if (!finalGrade) return <span className="text-xs text-gray-400 font-bold">Pending</span>;
+                          const isPassed = remarks === 'Passed' || (Number(finalGrade) <= 3.0 && Number(finalGrade) >= 1.0);
+                          const isFailed = remarks === 'Failed' || Number(finalGrade) >= 4.0 || finalGrade === '5.00';
+                          const isInc = finalGrade === 'INC' || remarks === 'Incomplete';
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className={`font-black text-xs sm:text-sm ${
+                                isPassed ? 'text-emerald-950' : isFailed ? 'text-rose-700' : isInc ? 'text-amber-700' : 'text-gray-900'
+                              }`}>{finalGrade}</span>
+                              <span className={`text-[9.5px] font-extrabold ${
+                                isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-600' : isInc ? 'text-amber-600' : 'text-gray-600'
+                              }`}>({remarks})</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
@@ -3035,17 +3092,46 @@ function StudentManagement() {
                   </div>
                 </div>
 
+                {/* Step 3: Emergency Contact Information */}
+                <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-5 border border-gray-200/80 shadow-2xs">
+                  <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b border-gray-200/80">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                      <Heart className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">3. Emergency Contact Info</h4>
+                      <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Designated emergency contact person and active phone number</p>
+                    </div>
+                  </div>
 
-                {/* Official Student Documents & Photos Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact Person</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact Number</label>
+                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                        {currentViewStudent.emergencyNumber || '-'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 4: Official Student Documents & Photos Section */}
                 <div className="bg-slate-50/90 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
-                  <div className="flex items-center justify-between mb-3.5">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-emerald-950 flex items-center gap-2 uppercase tracking-wider">
-                      <FileText className="w-4 h-4 text-emerald-700" />
-                      Student Official Documents &amp; Photos
-                    </h4>
-                    <span className="text-[10px] font-bold text-slate-500 hidden sm:inline">
-                      Click image or Expand to inspect full size
-                    </span>
+                  <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-200/80">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">4. Student Official Documents &amp; Photos</h4>
+                        <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Click thumbnail or expand button to inspect full size</p>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

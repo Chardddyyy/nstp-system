@@ -6,7 +6,7 @@ import {
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
-  HeartPulse, Phone, Activity
+  HeartPulse, Phone, Activity, GraduationCap, Heart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -2176,95 +2176,301 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 )}
 
                 {/* 2. PERSONAL & ACADEMIC SECTION (Combined with Demographic & Health) */}
-                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (
-                  <div className="p-3.5 space-y-4 bg-white">
-                    {/* Personal Information (Unified with Demographic & Health) */}
-                    <div>
-                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
-                      </p>
-                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
-                        {[
-                          ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
-                          ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
-                          ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
-                          ['Middle Name', selectedEnrollment.middleName || '—'],
-                          ['Suffix', selectedEnrollment.suffix || '—'],
-                          ['Student ID', selectedEnrollment.studentId || selectedEnrollment.student_id],
-                          ['Email', selectedEnrollment.email],
-                          ['Contact No.', selectedEnrollment.contactNumber || selectedEnrollment.contact_number],
-                          ['Facebook', selectedEnrollment.facebookAccount || selectedEnrollment.facebook_account || selectedEnrollment.facebook || '—'],
-                          ['Birth Date', (() => {
-                            const b = selectedEnrollment.birthDate || selectedEnrollment.birth_date;
-                            if (b) {
-                              try {
-                                const d = new Date(b);
-                                if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
-                              } catch (_) {}
-                            }
-                            if (selectedEnrollment.birthYear && selectedEnrollment.birthMonth && selectedEnrollment.birthDay) {
-                              try {
-                                const d = new Date(`${selectedEnrollment.birthYear}-${String(selectedEnrollment.birthMonth).padStart(2, '0')}-${String(selectedEnrollment.birthDay).padStart(2, '0')}`);
-                                if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
-                              } catch (_) {}
-                            }
-                            return b || '—';
-                          })()],
-                          ['Age', selectedEnrollment.age ? `${selectedEnrollment.age} yrs old` : '—'],
-                          ['Sex / Gender', selectedEnrollment.sex || selectedEnrollment.gender || '—'],
-                          ['Civil Status', selectedEnrollment.civilStatus || selectedEnrollment.civil_status || '—'],
-                          ['Registered Voter', selectedEnrollment.registeredVoter || selectedEnrollment.registered_voter || selectedEnrollment.isVoter || '—'],
-                          ['Blood Type', selectedEnrollment.bloodType || selectedEnrollment.blood_type || '—'],
-                          ['Height', selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—'],
-                          ['Weight', selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—'],
-                          ['Emergency Contact', selectedEnrollment.emergencyContact || selectedEnrollment.emergency_contact || selectedEnrollment.emergencyName || '—'],
-                          ['Emergency No.', selectedEnrollment.emergencyNumber || selectedEnrollment.emergency_number || selectedEnrollment.emergencyContactNumber || '—'],
-                        ].map(([label, val]) => (
-                          <div key={label} className="flex justify-between items-start gap-3 text-xs">
-                            <span className="text-gray-500 font-bold flex-shrink-0 w-32">{label}</span>
-                            <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (() => {
+                  const lastName = selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—');
+                  const firstName = selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—');
+                  const middleName = selectedEnrollment.middleName || '—';
+                  const suffix = selectedEnrollment.suffix || '—';
+                  const studentId = selectedEnrollment.studentId || selectedEnrollment.student_id || '—';
+                  const email = selectedEnrollment.email || '—';
+                  const contactNo = selectedEnrollment.contactNumber || selectedEnrollment.contact_number || '—';
+                  const fbAccount = selectedEnrollment.facebookAccount || selectedEnrollment.facebook_account || selectedEnrollment.facebook || '—';
+                  const birthDateStr = (() => {
+                    const b = selectedEnrollment.birthDate || selectedEnrollment.birth_date;
+                    if (b) {
+                      try {
+                        const d = new Date(b);
+                        if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
+                      } catch (_) {}
+                    }
+                    if (selectedEnrollment.birthYear && selectedEnrollment.birthMonth && selectedEnrollment.birthDay) {
+                      try {
+                        const d = new Date(`${selectedEnrollment.birthYear}-${String(selectedEnrollment.birthMonth).padStart(2, '0')}-${String(selectedEnrollment.birthDay).padStart(2, '0')}`);
+                        if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
+                      } catch (_) {}
+                    }
+                    return b || '—';
+                  })();
+                  const age = selectedEnrollment.age ? `${selectedEnrollment.age} yrs old` : '—';
+                  const sex = selectedEnrollment.sex || selectedEnrollment.gender || '—';
+                  const civilStatus = selectedEnrollment.civilStatus || selectedEnrollment.civil_status || '—';
+                  const voterRaw = selectedEnrollment.registeredVoter || selectedEnrollment.registered_voter || selectedEnrollment.isVoter;
+                  const isVoter = String(voterRaw || '').trim().toLowerCase() === 'yes';
+                  const bloodType = selectedEnrollment.bloodType || selectedEnrollment.blood_type || '—';
+                  const height = selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—';
+                  const weight = selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—';
+                  const street = selectedEnrollment.street || '—';
+                  const municipality = selectedEnrollment.municipality || '—';
+                  const province = selectedEnrollment.province || '—';
+                  const fullAddress = selectedEnrollment.address || selectedEnrollment.homeAddress || (selectedEnrollment.street ? `${selectedEnrollment.street}, ${selectedEnrollment.municipality || ''}, ${selectedEnrollment.province || ''}` : '—');
+                  const emPerson = selectedEnrollment.emergencyContact || selectedEnrollment.emergency_contact || selectedEnrollment.emergencyName || '—';
+                  const emNumber = selectedEnrollment.emergencyNumber || selectedEnrollment.emergency_number || selectedEnrollment.emergencyContactNumber || '—';
+                  const program = selectedEnrollment.program || selectedEnrollment.course || '—';
+                  const section = selectedEnrollment.section || '—';
+                  const yearLevel = selectedEnrollment.yearLevel || selectedEnrollment.year_level || selectedEnrollment.year || '—';
+                  const nstpTrack = selectedEnrollment.nstpComponent || selectedEnrollment.nstp_component || selectedEnrollment.department || '—';
 
-                    {/* Address Breakdown */}
-                    <div>
-                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Address Details</p>
-                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
-                        {[
-                          ['Complete Address', selectedEnrollment.address || selectedEnrollment.homeAddress || '—'],
-                          ['Street / Barangay', selectedEnrollment.street || '—'],
-                          ['Municipality / City', selectedEnrollment.municipality || '—'],
-                          ['Province', selectedEnrollment.province || '—'],
-                        ].map(([label, val]) => (
-                          <div key={label} className="flex justify-between items-start gap-3 text-xs">
-                            <span className="text-gray-500 font-bold flex-shrink-0 w-28">{label}</span>
-                            <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
+                  return (
+                    <div className="p-3.5 space-y-4 bg-white">
+                      {/* Step 1: Personal & Demographic Information */}
+                      <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-5 border border-gray-200/80 shadow-2xs">
+                        <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b border-gray-200/80">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                            <User className="w-4 h-4" />
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">1. Personal &amp; Demographic Information</h4>
+                            <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Full legal name, student number, birthdate, personal statistics, and complete address</p>
+                          </div>
+                        </div>
 
-                    {/* Academic */}
-                    <div>
-                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2">Academic Information</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          ['Degree Program', selectedEnrollment.program || selectedEnrollment.course],
-                          ['Section', selectedEnrollment.section || '—'],
-                          ['Year Level', selectedEnrollment.yearLevel || selectedEnrollment.year_level || selectedEnrollment.year],
-                          ['NSTP Track', selectedEnrollment.nstpComponent || selectedEnrollment.nstp_component || selectedEnrollment.department],
-                        ].map(([label, val]) => (
-                          <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-                            <p className="text-xs font-black text-emerald-950">{val || '—'}</p>
+                        {/* Name fields */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Last Name</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {lastName}
+                            </div>
                           </div>
-                        ))}
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">First Name</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {firstName}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Middle Name</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {middleName}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Suffix</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {suffix}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Student ID and Email */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Student No. (9 digits)</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                              {studentId}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Email Address</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {email}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Birthdate, Age, Civil Status, Sex, Registered Voter */}
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {birthDateStr}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Age</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-gray-100 border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                              {age}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Civil Status</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {civilStatus}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Sex</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {sex}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Registered Voter?</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                              <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full ${
+                                isVoter
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-amber-100 text-amber-900 border border-amber-300'
+                              }`}>
+                                {isVoter ? 'Yes' : (voterRaw ? 'No' : '—')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contact Number & Facebook Profile */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Contact No. (11 digits)</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                              {contactNo}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Facebook Account / Profile Link</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                              {fbAccount && fbAccount !== '—' ? (
+                                <a
+                                  href={fbAccount.startsWith('http') ? fbAccount : `https://${fbAccount}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-emerald-700 underline hover:text-emerald-900"
+                                >
+                                  {fbAccount}
+                                </a>
+                              ) : '—'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Height, Weight, Blood Type */}
+                        <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Height</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {height}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Weight</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {weight}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Blood Type</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {bloodType}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Complete Address */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Street / Barangay</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {street}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Municipality / City</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {municipality}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Province</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {province}
+                            </div>
+                          </div>
+                          <div className="sm:col-span-3">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Full Combined Address</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {fullAddress}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 2: Academic Information */}
+                      <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-5 border border-gray-200/80 shadow-2xs">
+                        <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b border-gray-200/80">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                            <GraduationCap className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">2. Academic Information</h4>
+                            <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Selected degree program, section, year level, and NSTP component track</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Program</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                              {program}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Section</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs font-mono">
+                              {section}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Year Level</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {yearLevel}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">NSTP Track</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                                nstpTrack === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                nstpTrack === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                nstpTrack === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-200'
+                              }`}>
+                                {nstpTrack}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Step 3: Emergency Contact Information */}
+                      <div className="bg-gray-50/70 rounded-2xl p-3.5 sm:p-5 border border-gray-200/80 shadow-2xs">
+                        <div className="flex items-center gap-2.5 mb-4 pb-2.5 border-b border-gray-200/80">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
+                            <Heart className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wider">3. Emergency Contact Info</h4>
+                            <p className="text-[10.5px] sm:text-xs text-gray-500 font-medium">Designated emergency contact person and active phone number</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact Person</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                              {emPerson}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact No.</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                              {emNumber}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Submission Status & Timestamp Footer */}
                 <div className="p-3.5 pt-0">
