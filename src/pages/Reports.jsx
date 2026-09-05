@@ -355,8 +355,8 @@ function Reports() {
 
         {/* Filters - Side-by-Side Mobile Layout */}
         <div className="bg-white p-2.5 sm:p-4 rounded-xl sm:rounded-2xl shadow-md mb-4 sm:mb-6 border border-gray-100">
-          <div className="flex flex-row items-center gap-2 sm:gap-4">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+            <div className="w-full sm:flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -367,18 +367,18 @@ function Reports() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoComplete="off"
-                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium"
                 />
               </div>
             </div>
-            <div className="flex flex-row gap-1.5 sm:gap-2 shrink-0">
+            <div className="flex flex-row gap-1.5 sm:gap-2 w-full sm:w-auto">
               {isAdmin && (
                 <select
                   id="filter-dept"
                   name="filterDept"
                   value={filterDept}
                   onChange={(e) => setFilterDept(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium bg-white"
+                  className="flex-1 sm:w-auto px-2.5 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium bg-white truncate"
                 >
                   <option value="All">All Depts</option>
                   <option value="CWTS">CWTS</option>
@@ -391,7 +391,7 @@ function Reports() {
                 name="filterStatus"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-2.5 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium bg-white"
+                className="flex-1 sm:w-auto px-2.5 py-2 text-xs sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-medium bg-white truncate"
               >
                 <option value="All">All Status</option>
                 <option value="Pending">Pending</option>

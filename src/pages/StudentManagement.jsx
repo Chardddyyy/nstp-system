@@ -1184,7 +1184,7 @@ function StudentManagement() {
               )}
 
               {/* Separate Student Section Button (Admin Only) */}
-              {isAdmin && (
+              {isAdmin && !viewingArchive && (
                 <button type="button"
                   onClick={() => {
                     setIsSectioningMode((prev) => {
@@ -1232,12 +1232,10 @@ function StudentManagement() {
                 </button>
               )}
 
-              {isAdmin && (
+              {isAdmin && !viewingArchive && (
                 <button type="button"
-                  onClick={() => !viewingArchive && setShowAddModal(true)}
-                  disabled={viewingArchive}
-                  title={viewingArchive ? 'Exit archive view to add students' : ''}
-                  className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap ${viewingArchive ? 'bg-emerald-700/40 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800'}`}
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800"
                 >
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span>Add Student</span>
@@ -1249,8 +1247,8 @@ function StudentManagement() {
 
         {/* Mobile-Responsive Filters */}
         <div className="bg-white/90 backdrop-blur-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-950/5 border border-emerald-100/80 mb-4 sm:mb-6">
-          <div className="flex flex-row items-center gap-2 sm:gap-3">
-            <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div className="w-full sm:flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700/60" />
                 <input
@@ -1265,14 +1263,14 @@ function StudentManagement() {
                 />
               </div>
             </div>
-            <div className="flex flex-row gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-2.5 w-full sm:w-auto">
               {isAdmin && (
                 <select
                   id="filter-dept"
                   name="filterDept"
                   value={filterDept}
                   onChange={(e) => setFilterDept(e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+                  className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
                 >
                   <option value="All">All Depts</option>
                   <option value="CWTS">CWTS</option>
@@ -1285,7 +1283,7 @@ function StudentManagement() {
                 name="filterNstpSection"
                 value={filterNstpSection}
                 onChange={(e) => setFilterNstpSection(e.target.value)}
-                className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+                className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
               >
                 <option value="All">All Sections</option>
                 <option value="CWTS 1">CWTS 1</option>
@@ -1303,7 +1301,7 @@ function StudentManagement() {
                 name="filterCourse"
                 value={filterCourse}
                 onChange={(e) => setFilterCourse(e.target.value)}
-                className="w-full px-2.5 py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer"
+                className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
               >
                 <option value="All">All Courses</option>
                 <option value="BSIT">BSIT</option>
@@ -1319,7 +1317,7 @@ function StudentManagement() {
         </div>
 
         {/* Admin Batch NSTP Section Assignment Toolbar */}
-        {isAdmin && (isSectioningMode || selectedStudentIds.size > 0) && (
+        {isAdmin && !viewingArchive && (isSectioningMode || selectedStudentIds.size > 0) && (
           <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-600/60 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/50 flex items-center justify-center font-black text-sm shadow-inner shrink-0">
@@ -1498,24 +1496,26 @@ function StudentManagement() {
                           <CreditCard className="w-3 h-3" />
                           <span>{sendingIdFor === (student.id || student.studentId) ? 'Sending...' : 'Send ID'}</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => !viewingArchive && openEditModal(student)}
-                          disabled={viewingArchive}
-                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
-                          title="Edit"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
-                          disabled={viewingArchive}
-                          className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!viewingArchive && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(student)}
+                              className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200"
+                              title="Edit"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStudent(student.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-200"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1773,22 +1773,24 @@ function StudentManagement() {
                               <CreditCard className="w-3.5 h-3.5" />
                               <span>{sendingIdFor === (student.id || student.studentId) ? 'Sending...' : 'Send ID'}</span>
                             </button>
-                            <button type="button"
-                              onClick={() => !viewingArchive && openEditModal(student)}
-                              disabled={viewingArchive}
-                              title={viewingArchive ? 'Exit archive view to edit' : 'Edit Student'}
-                              className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-blue-300 border-gray-100 cursor-not-allowed' : 'text-blue-600 bg-blue-50/80 border-blue-200/80 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-2xs hover:shadow-xs'}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button type="button"
-                              onClick={() => !viewingArchive && handleDeleteStudent(student.id)}
-                              disabled={viewingArchive}
-                              title={viewingArchive ? 'Exit archive view to delete' : 'Delete Student'}
-                              className={`p-1.5 rounded-xl border transition-all active:scale-90 ${viewingArchive ? 'text-rose-300 border-gray-100 cursor-not-allowed' : 'text-rose-600 bg-rose-50/80 border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 shadow-2xs hover:shadow-xs'}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!viewingArchive && (
+                              <>
+                                <button type="button"
+                                  onClick={() => openEditModal(student)}
+                                  title="Edit Student"
+                                  className="p-1.5 rounded-xl border transition-all active:scale-90 text-blue-600 bg-blue-50/80 border-blue-200/80 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-2xs hover:shadow-xs"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button type="button"
+                                  onClick={() => handleDeleteStudent(student.id)}
+                                  title="Delete Student"
+                                  className="p-1.5 rounded-xl border transition-all active:scale-90 text-rose-600 bg-rose-50/80 border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 shadow-2xs hover:shadow-xs"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}
@@ -3250,16 +3252,18 @@ function StudentManagement() {
                   <CreditCard className="w-4 h-4 text-emerald-700" />
                   <span>{sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId) ? 'Sending ID...' : 'Send Digital ID to Email'}</span>
                 </button>
-                <button type="button"
-                  onClick={() => {
-                    const st = currentViewStudent;
-                    closeViewModal();
-                    openEditModal(st);
-                  }}
-                  className="px-5 bg-emerald-700 hover:bg-emerald-800 text-white py-2 rounded-xl font-bold text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
-                >
-                  <Pencil className="w-4 h-4 text-amber-300" /> Edit Student
-                </button>
+                {!viewingArchive && (
+                  <button type="button"
+                    onClick={() => {
+                      const st = currentViewStudent;
+                      closeViewModal();
+                      openEditModal(st);
+                    }}
+                    className="px-5 bg-emerald-700 hover:bg-emerald-800 text-white py-2 rounded-xl font-bold text-xs transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <Pencil className="w-4 h-4 text-amber-300" /> Edit Student
+                  </button>
+                )}
                 <button type="button"
                   onClick={closeViewModal}
                   className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-xl font-bold text-xs transition-colors cursor-pointer"

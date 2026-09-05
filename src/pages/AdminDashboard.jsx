@@ -282,7 +282,7 @@ function AdminDashboard() {
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
-  const [enrollmentReviewTab, setEnrollmentReviewTab] = useState('all'); // 'all' | 'docs' | 'demographic' | 'academic'
+  const [enrollmentReviewTab, setEnrollmentReviewTab] = useState('all'); // 'all' | 'docs' | 'academic'
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
   const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');
@@ -743,22 +743,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       <main className={`min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 transition-all duration-300 ease-in-out p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive */}
         {viewingArchive && archiveViewData && (
-          <div className="bg-amber-500/10 border border-amber-400/40 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md shadow-xs">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="flex items-center space-x-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 border border-amber-400/50">
-                  <Archive className="w-5 h-5 text-amber-800" />
+          <div className="bg-amber-500/10 border border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 mb-3 sm:mb-6 backdrop-blur-md shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 border border-amber-400/50">
+                  <Archive className="w-4 h-4 sm:w-5 sm:h-5 text-amber-800" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-base sm:text-lg font-black text-amber-950 truncate">Viewing Archive: Batch {archiveViewData.year}</h2>
-                  <p className="text-xs text-amber-800/80 font-medium">Historical records preserved for this academic batch. Click below to inspect modules:</p>
+                  <h2 className="text-sm sm:text-lg font-black text-amber-950 truncate">Viewing Archive: Batch {archiveViewData.year}</h2>
+                  <p className="text-[11px] sm:text-xs text-amber-800/90 font-medium truncate">Historical records preserved for this academic batch.</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setShowArchiveDetails(true)}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3 py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3 py-1.5 sm:py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <History className="w-3.5 h-3.5" />
                   <span>Summary</span>
@@ -766,7 +766,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <button
                   type="button"
                   onClick={handleBackToCurrent}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
                   <span>Back to Current</span>
@@ -778,11 +778,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
         {/* Hero Header - Responsive Clean Layout */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
-          <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-4 relative z-10 w-full">
-            <div className="flex items-center space-x-1.5 sm:space-x-3.5 min-w-0 flex-1">
+          <div className="flex flex-row items-center justify-between gap-2 sm:gap-4 relative z-10 w-full">
+            <div className="flex items-center space-x-2 sm:space-x-3.5 min-w-0 flex-1">
               <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 sm:p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
+                className="p-2 sm:p-2.5 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] flex items-center justify-center bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl shrink-0 transition-colors cursor-pointer active:scale-95 shadow-xs"
                 aria-label="Open menu"
               >
                 <Menu className="w-5 h-5" />
@@ -792,12 +792,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
-                  <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
-                    {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
-                  </h1>
-                </div>
-                <p className="text-emerald-200 text-[9.5px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
+                <h1 className="text-xs xs:text-sm sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
+                  {viewingArchive ? `Batch ${archiveViewData?.year}` : 'Admin Dashboard'}
+                </h1>
+                <p className="text-emerald-200 text-[10px] sm:text-xs font-medium truncate mt-0.5 max-w-full">
                   {viewingArchive ? 'Archived Data' : `Welcome, ${user?.name || 'Administrator'}`}
                 </p>
               </div>
@@ -934,15 +932,15 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* User Profile Button */}
               <button type="button"
                 onClick={() => navigate('/profile')}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0 active:scale-95"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white p-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0 active:scale-95"
                 title="View Profile"
               >
                 <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
                   {getUserAvatar()}
                 </div>
-                <div className="text-left min-w-0 flex flex-col justify-center">
-                  <p className="font-extrabold text-[10.5px] sm:text-xs text-white leading-tight truncate max-w-[70px] xs:max-w-[105px] sm:max-w-[140px]">{user?.name || 'Admin'}</p>
-                  <p className="text-[8.5px] sm:text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
+                <div className="text-left min-w-0 hidden md:flex flex-col justify-center">
+                  <p className="font-extrabold text-xs text-white leading-tight truncate max-w-[140px]">{user?.name || 'Admin'}</p>
+                  <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Admin` : 'NSTP Admin'}</p>
                 </div>
               </button>
             </div>
@@ -1930,11 +1928,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               <span className="text-[11px] font-bold text-gray-500">
                                 • {year.reports} Reports
                               </span>
-                              {(year.start_month || year.data?.start_month) && (year.end_month || year.data?.end_month) && (
-                                <span className="text-[10px] font-bold text-emerald-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300/60">
-                                  📅 {year.start_month || year.data?.start_month} to {year.end_month || year.data?.end_month}
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -2064,7 +2057,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 {[
                   { id: 'all', label: 'All Details', icon: '📋' },
                   { id: 'docs', label: 'Photos & COR', icon: '📄' },
-                  { id: 'demographic', label: 'Demographic & Health', icon: '🏥' },
                   { id: 'academic', label: 'Personal & Academic', icon: '👤' },
                 ].map((tab) => (
                   <button
@@ -2183,15 +2175,25 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </>
                 )}
 
-                {/* 2. DEMOGRAPHIC & HEALTH SECTION */}
-                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'demographic') && (
-                  <div className="p-3.5 border-b border-gray-200 bg-white space-y-4">
+                {/* 2. PERSONAL & ACADEMIC SECTION (Combined with Demographic & Health) */}
+                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (
+                  <div className="p-3.5 space-y-4 bg-white">
+                    {/* Personal Information (Unified with Demographic & Health) */}
                     <div>
                       <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <HeartPulse className="w-4 h-4 text-rose-600" /> Demographic &amp; Health Profile
+                        <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
                       </p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
                         {[
+                          ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
+                          ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
+                          ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
+                          ['Middle Name', selectedEnrollment.middleName || '—'],
+                          ['Suffix', selectedEnrollment.suffix || '—'],
+                          ['Student ID', selectedEnrollment.studentId || selectedEnrollment.student_id],
+                          ['Email', selectedEnrollment.email],
+                          ['Contact No.', selectedEnrollment.contactNumber || selectedEnrollment.contact_number],
+                          ['Facebook', selectedEnrollment.facebookAccount || selectedEnrollment.facebook_account || selectedEnrollment.facebook || '—'],
                           ['Birth Date', (() => {
                             const b = selectedEnrollment.birthDate || selectedEnrollment.birth_date;
                             if (b) {
@@ -2215,57 +2217,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           ['Blood Type', selectedEnrollment.bloodType || selectedEnrollment.blood_type || '—'],
                           ['Height', selectedEnrollment.height ? (String(selectedEnrollment.height).includes('cm') ? selectedEnrollment.height : `${selectedEnrollment.height} cm`) : '—'],
                           ['Weight', selectedEnrollment.weight ? (String(selectedEnrollment.weight).includes('kg') ? selectedEnrollment.weight : `${selectedEnrollment.weight} kg`) : '—'],
-                        ].map(([label, val]) => (
-                          <div key={label} className="bg-emerald-50/60 rounded-xl p-2.5 border border-emerald-100/90 shadow-2xs">
-                            <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider mb-0.5">{label}</p>
-                            <p className="text-xs font-black text-gray-900">{val || '—'}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Emergency Contact */}
-                    <div>
-                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-emerald-700" /> Emergency Contact Details
-                      </p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          ['Contact Person', selectedEnrollment.emergencyContact || selectedEnrollment.emergency_contact || selectedEnrollment.emergencyName || '—'],
+                          ['Emergency Contact', selectedEnrollment.emergencyContact || selectedEnrollment.emergency_contact || selectedEnrollment.emergencyName || '—'],
                           ['Emergency No.', selectedEnrollment.emergencyNumber || selectedEnrollment.emergency_number || selectedEnrollment.emergencyContactNumber || '—'],
                         ].map(([label, val]) => (
-                          <div key={label} className="bg-gray-50 rounded-xl p-2.5 border border-gray-200/80">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">{label}</p>
-                            <p className="text-xs font-black text-gray-900">{val || '—'}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. PERSONAL & ACADEMIC SECTION */}
-                {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (
-                  <div className="p-3.5 space-y-4 bg-white">
-                    {/* Personal Information */}
-                    <div>
-                      <p className="text-xs font-black text-emerald-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-emerald-600" /> Personal Information
-                      </p>
-                      <div className="bg-gray-50/90 rounded-xl p-3 border border-gray-200/80 space-y-2">
-                        {[
-                          ['Full Name', selectedEnrollment.fullName || selectedEnrollment.student_name],
-                          ['Last Name', selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—')],
-                          ['First Name', selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—')],
-                          ['Middle Name', selectedEnrollment.middleName || '—'],
-                          ['Suffix', selectedEnrollment.suffix || '—'],
-                          ['Student ID', selectedEnrollment.studentId || selectedEnrollment.student_id],
-                          ['Email', selectedEnrollment.email],
-                          ['Contact No.', selectedEnrollment.contactNumber || selectedEnrollment.contact_number],
-                          ['Facebook', selectedEnrollment.facebookAccount || selectedEnrollment.facebook_account || selectedEnrollment.facebook || '—'],
-                        ].map(([label, val]) => (
                           <div key={label} className="flex justify-between items-start gap-3 text-xs">
-                            <span className="text-gray-500 font-bold flex-shrink-0 w-24">{label}</span>
+                            <span className="text-gray-500 font-bold flex-shrink-0 w-32">{label}</span>
                             <span className="font-extrabold text-gray-900 text-right break-all">{val || '—'}</span>
                           </div>
                         ))}

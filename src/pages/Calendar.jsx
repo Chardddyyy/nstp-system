@@ -611,11 +611,6 @@ function Calendar() {
                   <h2 className="text-base sm:text-lg font-black text-slate-900">
                     {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </h2>
-                  {viewingArchive && batchRange && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-200 rounded-md">
-                      Batch Span: {batchRange.startLabel} – {batchRange.endLabel}
-                    </span>
-                  )}
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
                   {viewingArchive ? 'Calendar navigation locked within this batch academic period' : 'Click on any day with events to view complete details'}

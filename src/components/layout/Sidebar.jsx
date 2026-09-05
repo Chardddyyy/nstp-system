@@ -147,7 +147,6 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               <LayoutDashboard className="w-5 h-5" />
               <span>Dashboard</span>
             </div>
-            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           <button type="button" onClick={() => go('/students')} className={navClass('/students')}>
@@ -155,7 +154,6 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               <Users className="w-5 h-5" />
               <span>{isAdmin ? 'Students' : 'My Students'}</span>
             </div>
-            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           <button type="button" onClick={() => go('/reports')} className={navClass('/reports')}>
@@ -163,7 +161,6 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               <FileText className="w-5 h-5" />
               <span>Reports</span>
             </div>
-            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           <button type="button" onClick={() => go('/calendar')} className={navClass('/calendar')}>
@@ -171,7 +168,6 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               <Calendar className="w-5 h-5" />
               <span>Calendar</span>
             </div>
-            {viewingArchive && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-extrabold">Archive</span>}
           </button>
 
           {/* Letter Formats — Locked in Archive Mode, accessible only in Current Batch */}
