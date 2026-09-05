@@ -924,6 +924,8 @@ function InstructorDashboard() {
           <StudentAttendanceMatrixModal
             isOpen={showAttendanceMatrix}
             onClose={() => setShowAttendanceMatrix(false)}
+            students={students}
+            currentUser={user}
             currentDepartment={user?.department || 'CWTS'}
           />
         )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
-import { attendanceAPI } from '../services/api';
+import { attendanceAPI, studentsAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
@@ -10,12 +10,36 @@ import { useAuth } from '../context/AuthContext';
 const TOTAL_NSTP_DAYS = 15;
 const DAYS_ARRAY = Array.from({ length: TOTAL_NSTP_DAYS }, (_, i) => `Day ${i + 1}`);
 
-export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], currentUser }) {
-  const { showToast } = useAuth();
+export function StudentAttendanceMatrixModal({ 
+  isOpen, 
+  onClose, 
+  students: propStudents = [], 
+  currentUser: propUser,
+  currentDepartment 
+}) {
+  const { showToast, students: authStudents = [], user: authUser } = useAuth() || {};
+  const currentUser = propUser || authUser;
+
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [fetchedStudents, setFetchedStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDept, setSelectedDept] = useState(currentUser?.role === 'admin' ? 'All' : (currentUser?.department || 'CWTS'));
+
+  const initialDept = useMemo(() => {
+    if (currentDepartment) return currentDepartment;
+    if (currentUser?.department) return currentUser.department;
+    if (currentUser?.role === 'admin') return 'All';
+    return 'All';
+  }, [currentDepartment, currentUser]);
+
+  const [selectedDept, setSelectedDept] = useState(initialDept);
+
+  useEffect(() => {
+    if (initialDept) {
+      setSelectedDept(initialDept);
+    }
+  }, [initialDept]);
+
   const [viewFilter, setViewFilter] = useState('all'); // 'all' | 'at-risk' (3+ absences) | 'perfect' (100%)
 
   // Cell Edit Modal state for overriding attendance or deleting absences
@@ -42,7 +66,30 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       }
     }
 
+    async function ensureStudents() {
+      if ((propStudents && propStudents.length > 0) || (authStudents && authStudents.length > 0)) {
+        return;
+      }
+      try {
+        const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+        if (Array.isArray(cached) && cached.length > 0 && isSubscribed) {
+          setFetchedStudents(cached);
+          return;
+        }
+      } catch (_) {}
+
+      try {
+        const liveStudents = await studentsAPI.getAll();
+        if (Array.isArray(liveStudents) && liveStudents.length > 0 && isSubscribed) {
+          setFetchedStudents(liveStudents);
+        }
+      } catch (err) {
+        console.warn('Attendance matrix student fetch warning:', err);
+      }
+    }
+
     loadRecords();
+    ensureStudents();
 
     const handleUpdate = () => {
       loadRecords();
@@ -53,38 +100,88 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
       isSubscribed = false;
       window.removeEventListener('nstp_attendance_updated', handleUpdate);
     };
-  }, [isOpen]);
+  }, [isOpen, propStudents, authStudents]);
 
-  // Identify the highest/maximum Day conducted so far (e.g. if Day 8 was conducted, maxDay is 8)
+  // Derive base students from props, context, fetched, or cache
+  const baseStudents = useMemo(() => {
+    if (propStudents && propStudents.length > 0) return propStudents;
+    if (authStudents && authStudents.length > 0) return authStudents;
+    if (fetchedStudents && fetchedStudents.length > 0) return fetchedStudents;
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch (_) {}
+    return [];
+  }, [propStudents, authStudents, fetchedStudents]);
+
+  // Identify the highest/maximum Day conducted so far
   const maxDayConducted = useMemo(() => {
     let max = 0;
     attendanceRecords.forEach(r => {
-      const act = (r.activity_name || '').toLowerCase();
+      const act = (r.activity_name || r.day || '').trim();
       DAYS_ARRAY.forEach((d, idx) => {
-        if (act.includes(d.toLowerCase())) {
+        const regex = new RegExp(`(^|[^a-zA-Z0-9])(${d}|${d.replace(' ', '')}|${d.replace('Day ', 'D')})([^a-zA-Z0-9]|$)`, 'i');
+        if (regex.test(act)) {
           if (idx + 1 > max) max = idx + 1;
         }
       });
     });
+    if (max === 0 && attendanceRecords.length > 0) {
+      max = 1;
+    }
     return max;
   }, [attendanceRecords]);
 
   // Build the Day 1 - Day 15 Matrix per student
   const studentMatrixList = useMemo(() => {
-    // Filter active students based on department
-    let targetStudents = students.filter(s => !s.status || s.status === 'Active');
+    const studentMap = new Map();
+
+    baseStudents.forEach(st => {
+      const sid = String(st.studentId || st.id || st.student_id || '').trim();
+      if (sid) {
+        studentMap.set(sid.toLowerCase(), {
+          ...st,
+          studentId: st.studentId || st.id || sid
+        });
+      }
+    });
+
+    // Also include any attendees from attendance records who might not be in baseStudents
+    attendanceRecords.forEach(rec => {
+      const sid = String(rec.student_id || '').trim();
+      if (sid && !studentMap.has(sid.toLowerCase())) {
+        studentMap.set(sid.toLowerCase(), {
+          id: sid,
+          studentId: sid,
+          name: rec.student_name || rec.student?.name || sid,
+          department: rec.department || selectedDept || 'CWTS',
+          section: rec.section || '',
+          status: 'Active'
+        });
+      }
+    });
+
+    let targetStudents = Array.from(studentMap.values()).filter(s => !s.status || s.status === 'Active');
     
-    if (selectedDept !== 'All') {
-      targetStudents = targetStudents.filter(s => s.department === selectedDept);
+    if (selectedDept && selectedDept !== 'All') {
+      targetStudents = targetStudents.filter(s => {
+        const dept = (s.department || s.component || s.nstp_program || '').toUpperCase();
+        return dept === selectedDept.toUpperCase();
+      });
     }
 
     const totalConducted = maxDayConducted;
 
     return targetStudents.map((st) => {
-      const stId = String(st.studentId || st.id || '').trim();
+      const stId = String(st.studentId || st.id || st.student_id || '').trim().toLowerCase();
+      const stName = (st.name || `${st.firstName || ''} ${st.lastName || ''}`).trim().toLowerCase();
+
       const stRecords = attendanceRecords.filter(r => {
-        const rId = String(r.student_id || '').trim();
-        return rId === stId || (st.studentId && rId === String(st.studentId).trim());
+        const rId = String(r.student_id || '').trim().toLowerCase();
+        if (stId && rId && (rId === stId || (st.studentId && rId === String(st.studentId).toLowerCase()))) return true;
+        const rName = String(r.student_name || r.student?.name || '').trim().toLowerCase();
+        if (stName && rName && stName === rName) return true;
+        return false;
       });
 
       // Map status for each Day 1 - Day 15
@@ -98,7 +195,12 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
         }
 
         // For past/current conducted days (Day 1 up to maxDayConducted):
-        const matchingRecords = stRecords.filter(r => (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase()));
+        const matchingRecords = stRecords.filter(r => {
+          if (r.day && String(r.day).toLowerCase() === dayStr.toLowerCase()) return true;
+          const act = (r.activity_name || '').trim();
+          const regex = new RegExp(`(^|[^a-zA-Z0-9])(${dayStr}|${dayStr.replace(' ', '')}|${dayStr.replace('Day ', 'D')})([^a-zA-Z0-9]|$)`, 'i');
+          return regex.test(act);
+        });
         
         if (matchingRecords.length > 0) {
           const hasTimeOut = matchingRecords.some(r => r.scan_type === 'TIME_OUT' || r.status === 'Present');
@@ -136,7 +238,7 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
         totalConducted
       };
     });
-  }, [students, attendanceRecords, selectedDept, maxDayConducted]);
+  }, [baseStudents, attendanceRecords, selectedDept, maxDayConducted]);
 
   // Apply search and viewFilter (All vs At-Risk)
   const filteredMatrix = useMemo(() => {
@@ -354,21 +456,19 @@ export function StudentAttendanceMatrixModal({ isOpen, onClose, students = [], c
               />
             </div>
 
-            {/* Department Filter (For Admin) */}
-            {currentUser?.role === 'admin' && (
-              <select
-                id="attendance-matrix-dept"
-                name="matrixDept"
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer"
-              >
-                <option value="All">All Track</option>
-                <option value="CWTS">CWTS</option>
-                <option value="ROTC">ROTC</option>
-                <option value="LTS">LTS</option>
-              </select>
-            )}
+            {/* Department Filter (All Tracks, CWTS, ROTC, LTS) */}
+            <select
+              id="attendance-matrix-dept"
+              name="matrixDept"
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer shadow-2xs"
+            >
+              <option value="All">All Tracks</option>
+              <option value="CWTS">CWTS</option>
+              <option value="ROTC">ROTC</option>
+              <option value="LTS">LTS</option>
+            </select>
 
             {/* View Filter Toggle */}
             <div className="flex items-center gap-1 bg-slate-100 p-0.5 sm:p-1 rounded-lg sm:rounded-xl">
