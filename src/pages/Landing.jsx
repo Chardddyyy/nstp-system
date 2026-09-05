@@ -16,28 +16,32 @@ const CAROUSEL_IMAGES = [
     title: "Cavite State University Naic",
     subtitle: "Premier institution fostering character, academics, and sustainable community leadership through NSTP.",
     badge: "Official Campus Portal",
-    track: "all"
+    track: "all",
+    position: "center 35%"
   },
   {
     src: `${import.meta.env.BASE_URL}IMG_9578.JPG`,
     title: "ROTC Leadership & Defense",
     subtitle: "Developing military preparedness, discipline, patriotism, and disaster rescue response capabilities.",
     badge: "Reserve Officers' Training Corps",
-    track: "ROTC"
+    track: "ROTC",
+    position: "center 30%"
   },
   {
     src: `${import.meta.env.BASE_URL}cwts-cover.jpg`,
     title: "CWTS Community Service",
     subtitle: "Empowering local coastal barangays through public health, environmental tree planting, and civic welfare.",
     badge: "Civic Welfare Training Service",
-    track: "CWTS"
+    track: "CWTS",
+    position: "center 30%"
   },
   {
     src: `${import.meta.env.BASE_URL}lts-cover.jpg`,
     title: "LTS Literacy Program",
     subtitle: "Transforming youth and children's futures through dedicated numeracy, reading, and mentorship modules.",
     badge: "Literacy Training Service",
-    track: "LTS"
+    track: "LTS",
+    position: "center 30%"
   }
 ];
 
@@ -643,7 +647,7 @@ function Landing() {
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen on Desktop) ───── */}
       <section 
-        className="relative w-full h-[480px] xs:h-[530px] sm:h-[620px] md:h-[calc(100vh-76px)] min-h-[560px] md:min-h-[660px] lg:min-h-[760px] xl:min-h-[840px] 2xl:min-h-[900px] overflow-hidden bg-gray-950 touch-pan-y select-none"
+        className="relative w-full h-[380px] xs:h-[430px] sm:h-[530px] md:h-[calc(100vh-76px)] min-h-[360px] xs:min-h-[410px] sm:min-h-[500px] md:min-h-[660px] lg:min-h-[760px] xl:min-h-[840px] 2xl:min-h-[900px] overflow-hidden bg-gray-950 touch-pan-y select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -658,42 +662,43 @@ function Landing() {
             <img
               src={image.src}
               alt={image.title}
-              className="w-full h-full object-cover object-center transition-transform duration-1000 ease-out"
+              style={{ objectPosition: image.position || 'center 30%' }}
+              className="w-full h-full object-cover transition-transform duration-1000 ease-out"
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             {/* Rich Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/65 to-transparent flex flex-col justify-end p-5 xs:p-6 sm:p-12 md:p-16 lg:p-24 pb-7 xs:pb-8 sm:pb-14 md:pb-20">
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/50 via-45% to-transparent flex flex-col justify-end p-4 xs:p-5 sm:p-12 md:p-16 lg:p-24 pb-5 xs:pb-6 sm:pb-14 md:pb-20">
               <div className={`max-w-5xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
-                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[10px] xs:text-xs sm:text-sm px-3.5 sm:px-5 py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
+                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[9.5px] xs:text-xs sm:text-sm px-2.5 xs:px-3.5 sm:px-5 py-0.5 xs:py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-1.5 xs:mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
                   <span>{image.badge}</span>
                 </span>
                 
-                <h2 className="text-xl xs:text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-xl leading-tight max-w-5xl tracking-tight">
+                <h2 className="text-lg xs:text-xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-xl leading-tight max-w-5xl tracking-tight">
                   {image.title}
                 </h2>
                 
-                <p className="text-emerald-100 text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mt-1.5 sm:mt-4 font-medium leading-relaxed drop-shadow">
+                <p className="text-emerald-100/90 text-[11.5px] xs:text-xs sm:text-base md:text-lg lg:text-xl max-w-3xl mt-1 xs:mt-1.5 sm:mt-4 font-medium leading-snug sm:leading-relaxed drop-shadow line-clamp-2 sm:line-clamp-none">
                   {image.subtitle}
                 </p>
 
                 {/* Hero Immediate Action Buttons */}
-                <div className="mt-4 sm:mt-8 flex flex-row items-center gap-2.5 sm:gap-4 max-w-md sm:max-w-none">
+                <div className="mt-3 xs:mt-4 sm:mt-8 flex flex-row items-center gap-2 xs:gap-2.5 sm:gap-4 max-w-md sm:max-w-none">
                   <Link
                     to="/enrollment"
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-4 sm:px-9 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3.5 xs:px-4 sm:px-9 py-2.5 xs:py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
                   >
                     <span>Apply for Enrollment</span>
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0" />
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => scrollToSection('guide')}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 sm:gap-2.5 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2.5 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-3.5 xs:px-4 sm:px-8 py-2.5 xs:py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
                   >
-                    <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
+                    <BookOpen className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
                     <span>How to Enroll</span>
                   </button>
                 </div>
