@@ -23,6 +23,17 @@ async function seedData() {
   const malePhotos = [male1Base64, male2Base64];
   const femalePhotos = [female1Base64, female2Base64];
 
+  const corCwtsBase64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'cor-cwts.jpg')).toString('base64');
+  const corRotcBase64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'cor-rotc.jpg')).toString('base64');
+  const corLtsBase64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'cor-lts.jpg')).toString('base64');
+
+  function getCorForDept(dept) {
+    const d = String(dept || '').toUpperCase();
+    if (d.includes('ROTC')) return corRotcBase64;
+    if (d.includes('LTS')) return corLtsBase64;
+    return corCwtsBase64;
+  }
+
   try {
     console.log('--- STARTING CLEAN TEST SEEDING ---');
 
@@ -357,7 +368,7 @@ async function seedData() {
         p.birthDate, p.birthMonth, p.birthDay, p.birthYear, p.age, p.civilStatus, p.gender,
         p.height, p.weight, p.bloodType, p.facebookAccount, p.course, p.program, p.section,
         p.yearLevel, p.emergencyContact, p.emergencyNumber, p.registeredVoter,
-        p.nstp_section, p.submitted_at, photoUri, photoUri, photoUri
+        p.nstp_section, p.submitted_at, photoUri, photoUri, getCorForDept(p.department)
       ]);
     }
     console.log(`Inserted ${pendingStudents.length} pending enrollment students.`);
@@ -507,7 +518,7 @@ async function seedData() {
         s.birthMonth, s.birthDay, s.birthYear, s.age, s.gender, s.height,
         s.weight, s.bloodType, s.facebookAccount, s.emergencyContact, s.emergencyNumber,
         s.registeredVoter, s.nstp_section, s.nstp_serial_id, s.qr_token,
-        photoUri, photoUri, photoUri
+        photoUri, photoUri, getCorForDept(s.department)
       ]);
 
       const insertedStudentDbId = res.insertId;

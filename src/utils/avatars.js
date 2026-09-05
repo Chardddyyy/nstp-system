@@ -47,3 +47,16 @@ export const getStudentPhotoSrc = (photo, gender) => {
     ? `${import.meta.env.BASE_URL}id-photos/female-1.jpg`
     : `${import.meta.env.BASE_URL}id-photos/male-1.jpg`;
 };
+
+export const getStudentRegFormSrc = (regPhoto, dept) => {
+  if (regPhoto && typeof regPhoto === 'string' && regPhoto.trim() !== '') {
+    if (regPhoto.startsWith('data:') || regPhoto.startsWith('http')) return regPhoto;
+    if (regPhoto.startsWith('id-photos/')) return `${import.meta.env.BASE_URL}${regPhoto}`;
+    if (regPhoto.startsWith('/id-photos/')) return `${import.meta.env.BASE_URL}${regPhoto.slice(1)}`;
+    return regPhoto;
+  }
+  const track = String(dept || 'CWTS').toUpperCase();
+  if (track.includes('ROTC')) return `${import.meta.env.BASE_URL}id-photos/cor-rotc.jpg`;
+  if (track.includes('LTS')) return `${import.meta.env.BASE_URL}id-photos/cor-lts.jpg`;
+  return `${import.meta.env.BASE_URL}id-photos/cor-cwts.jpg`;
+};
