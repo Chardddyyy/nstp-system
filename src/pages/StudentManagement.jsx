@@ -1219,8 +1219,8 @@ function StudentManagement() {
                 </button>
               )}
 
-              {/* View Attendance & Absences Matrix Button (Instructors Only) */}
-              {!isAdmin && (
+              {/* View Attendance & Absences Matrix Button (Instructors & Admin) */}
+              {!viewingArchive && (
                 <button type="button"
                   onClick={() => setShowAttendanceMatrix(true)}
                   title="View Day 1-15 attendance records, track absences, and identify at-risk students"
@@ -4142,6 +4142,7 @@ function StudentManagement() {
           onClose={() => setShowAttendanceMatrix(false)}
           students={sourceStudents}
           currentUser={user}
+          currentDepartment={isAdmin ? 'All' : (user?.department || 'All')}
         />
 
         {/* Student Semester Grades Encoding & Grading Sheet Modal */}

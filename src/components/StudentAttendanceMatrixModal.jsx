@@ -26,9 +26,9 @@ export function StudentAttendanceMatrixModal({
   const [searchQuery, setSearchQuery] = useState('');
 
   const initialDept = useMemo(() => {
-    if (currentDepartment) return currentDepartment;
-    if (currentUser?.department) return currentUser.department;
-    if (currentUser?.role === 'admin') return 'All';
+    if (currentUser?.role === 'admin' || currentUser?.department === 'NSTP Office') return 'All';
+    if (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office') return currentDepartment;
+    if (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department)) return currentUser.department;
     return 'All';
   }, [currentDepartment, currentUser]);
 
@@ -50,15 +50,26 @@ export function StudentAttendanceMatrixModal({
     if (!isOpen) return;
     let isSubscribed = true;
 
-    async function loadRecords() {
+    async function loadData() {
       try {
         setLoading(true);
-        const records = await attendanceAPI.getRecords({ limit: 1000 });
+
+        const [records, stList] = await Promise.all([
+          attendanceAPI.getRecords({ limit: 1000 }).catch(() => []),
+          (!propStudents || propStudents.length === 0) 
+            ? studentsAPI.getAll().catch(() => []) 
+            : Promise.resolve(propStudents)
+        ]);
+
         if (isSubscribed) {
           setAttendanceRecords(Array.isArray(records) ? records : []);
+          if (Array.isArray(stList) && stList.length > 0) {
+            setFetchedStudents(stList);
+            try { localStorage.setItem('nstp_cached_students', JSON.stringify(stList)); } catch (_) {}
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch attendance history:', err);
+        console.error('Failed to load matrix data:', err);
       } finally {
         if (isSubscribed) {
           setLoading(false);
@@ -66,33 +77,10 @@ export function StudentAttendanceMatrixModal({
       }
     }
 
-    async function ensureStudents() {
-      if ((propStudents && propStudents.length > 0) || (authStudents && authStudents.length > 0)) {
-        return;
-      }
-      try {
-        const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
-        if (Array.isArray(cached) && cached.length > 0 && isSubscribed) {
-          setFetchedStudents(cached);
-          return;
-        }
-      } catch (_) {}
-
-      try {
-        const liveStudents = await studentsAPI.getAll();
-        if (Array.isArray(liveStudents) && liveStudents.length > 0 && isSubscribed) {
-          setFetchedStudents(liveStudents);
-        }
-      } catch (err) {
-        console.warn('Attendance matrix student fetch warning:', err);
-      }
-    }
-
-    loadRecords();
-    ensureStudents();
+    loadData();
 
     const handleUpdate = () => {
-      loadRecords();
+      loadData();
     };
     window.addEventListener('nstp_attendance_updated', handleUpdate);
 
@@ -100,7 +88,7 @@ export function StudentAttendanceMatrixModal({
       isSubscribed = false;
       window.removeEventListener('nstp_attendance_updated', handleUpdate);
     };
-  }, [isOpen, propStudents, authStudents]);
+  }, [isOpen, propStudents]);
 
   // Derive base students from props, context, fetched, or cache
   const baseStudents = useMemo(() => {
@@ -161,13 +149,19 @@ export function StudentAttendanceMatrixModal({
       }
     });
 
-    let targetStudents = Array.from(studentMap.values()).filter(s => !s.status || s.status === 'Active');
+    let targetStudents = Array.from(studentMap.values()).filter(s => {
+      const st = (s.status || '').toLowerCase().trim();
+      return st !== 'inactive' && st !== 'dropped' && st !== 'archived';
+    });
     
-    if (selectedDept && selectedDept !== 'All') {
-      targetStudents = targetStudents.filter(s => {
-        const dept = (s.department || s.component || s.nstp_program || '').toUpperCase();
-        return dept === selectedDept.toUpperCase();
+    if (selectedDept && selectedDept !== 'All' && selectedDept !== 'NSTP Office') {
+      const deptFiltered = targetStudents.filter(s => {
+        const dept = (s.department || s.component || s.nstp_program || '').toUpperCase().trim();
+        return dept === selectedDept.toUpperCase().trim();
       });
+      if (deptFiltered.length > 0) {
+        targetStudents = deptFiltered;
+      }
     }
 
     const totalConducted = maxDayConducted;
@@ -533,8 +527,35 @@ export function StudentAttendanceMatrixModal({
               Loading attendance matrix...
             </div>
           ) : filteredMatrix.length === 0 ? (
-            <div className="p-16 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 font-medium">
-              No students found matching current filters.
+            <div className="p-10 sm:p-14 text-center bg-white rounded-2xl border border-slate-200 text-slate-600 flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shadow-2xs">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-black text-slate-800 text-sm sm:text-base">No students found matching current filters</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                  {searchQuery 
+                    ? `No students matching "${searchQuery}".` 
+                    : viewFilter !== 'all' 
+                      ? `Currently filtering by "${viewFilter}". Try clicking "All" to view all students.` 
+                      : selectedDept !== 'All' 
+                        ? `No students found in "${selectedDept}". Try selecting "All Tracks".` 
+                        : 'No student records available.'}
+                </p>
+              </div>
+              {(searchQuery || viewFilter !== 'all' || selectedDept !== 'All') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setViewFilter('all');
+                    setSelectedDept('All');
+                  }}
+                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>Show All Students (Reset Filters)</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-xs overflow-x-auto overflow-y-auto flex-1">
