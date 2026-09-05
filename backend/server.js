@@ -1461,7 +1461,7 @@ app.post('/api/auth/login', async function(req, res) {
     var aliases = [email];
     if (email === 'admin@cvsu.edu.ph' || email === 'richardbelen99@gmail.com' || email === 'admin') {
       aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
-    } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts') {
+    } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor') {
       aliases = ['clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
     } else if (email === 'lts@cvsu.edu.ph' || email === 'lts') {
       aliases = ['lts@cvsu.edu.ph'];

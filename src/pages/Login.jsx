@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check } from 'lucide-react';
 
 // Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
 function copyTextToClipboard(text) {
