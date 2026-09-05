@@ -34,3 +34,16 @@ export const getAvatarSrc = (avatarId, profilePicture) => {
 
   return `${import.meta.env.BASE_URL}avatars/avatar-1.png`;
 };
+
+export const getStudentPhotoSrc = (photo, gender) => {
+  if (photo && typeof photo === 'string' && photo.trim() !== '') {
+    if (photo.startsWith('data:') || photo.startsWith('http')) return photo;
+    if (photo.startsWith('id-photos/')) return `${import.meta.env.BASE_URL}${photo}`;
+    if (photo.startsWith('/id-photos/')) return `${import.meta.env.BASE_URL}${photo.slice(1)}`;
+    return photo;
+  }
+  const isFemale = String(gender || '').toLowerCase().includes('fem') || String(gender || '').toLowerCase() === 'f';
+  return isFemale
+    ? `${import.meta.env.BASE_URL}id-photos/female-1.jpg`
+    : `${import.meta.env.BASE_URL}id-photos/male-1.jpg`;
+};

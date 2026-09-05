@@ -1,5 +1,7 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
 
 async function seedData() {
   const pool = mysql.createPool({
@@ -11,6 +13,15 @@ async function seedData() {
   });
 
   const connection = await pool.getConnection();
+
+  // Load sample 2x2 photos (neat hair, white collared shirt, white background)
+  const idPhotosDir = path.join(__dirname, '../../public/id-photos');
+  const male1Base64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'male-1.jpg')).toString('base64');
+  const male2Base64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'male-2.jpg')).toString('base64');
+  const female1Base64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'female-1.jpg')).toString('base64');
+  const female2Base64 = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(idPhotosDir, 'female-2.jpg')).toString('base64');
+  const malePhotos = [male1Base64, male2Base64];
+  const femalePhotos = [female1Base64, female2Base64];
 
   try {
     console.log('--- STARTING CLEAN TEST SEEDING ---');
@@ -318,8 +329,12 @@ async function seedData() {
       }
     ];
 
-    for (const p of pendingStudents) {
+    for (let pIdx = 0; pIdx < pendingStudents.length; pIdx++) {
+      const p = pendingStudents[pIdx];
       const studentName = `${p.firstName} ${p.middleName ? p.middleName.charAt(0) + '. ' : ''}${p.lastName}${p.suffix ? ' ' + p.suffix : ''}`;
+      const isFemale = p.gender === 'Female';
+      const photoUri = isFemale ? femalePhotos[pIdx % femalePhotos.length] : malePhotos[pIdx % malePhotos.length];
+
       await connection.execute(`
         INSERT INTO enrollments (
           student_name, firstName, lastName, middleName, suffix, email, department,
@@ -327,14 +342,14 @@ async function seedData() {
           birthDate, birthMonth, birthDay, birthYear, age, civilStatus, gender,
           height, weight, bloodType, facebookAccount, course, program, section,
           yearLevel, emergencyContact, emergencyNumber, registeredVoter, status,
-          nstp_section, submitted_at
+          nstp_section, submitted_at, id_photo_2x2, photo, registration_photo
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, 'Pending',
-          ?, ?
+          ?, ?, ?, ?, ?
         )
       `, [
         studentName, p.firstName, p.lastName, p.middleName, p.suffix, p.email, p.department,
@@ -342,7 +357,7 @@ async function seedData() {
         p.birthDate, p.birthMonth, p.birthDay, p.birthYear, p.age, p.civilStatus, p.gender,
         p.height, p.weight, p.bloodType, p.facebookAccount, p.course, p.program, p.section,
         p.yearLevel, p.emergencyContact, p.emergencyNumber, p.registeredVoter,
-        p.nstp_section, p.submitted_at
+        p.nstp_section, p.submitted_at, photoUri, photoUri, photoUri
       ]);
     }
     console.log(`Inserted ${pendingStudents.length} pending enrollment students.`);
@@ -462,7 +477,11 @@ async function seedData() {
       });
     }
 
-    for (const s of enrolledStudents) {
+    for (let sIdx = 0; sIdx < enrolledStudents.length; sIdx++) {
+      const s = enrolledStudents[sIdx];
+      const isFemale = s.gender === 'Female';
+      const photoUri = isFemale ? femalePhotos[sIdx % femalePhotos.length] : malePhotos[sIdx % malePhotos.length];
+
       const [res] = await connection.execute(`
         INSERT INTO students (
           studentId, name, firstName, lastName, middleName, email, department,
@@ -470,14 +489,16 @@ async function seedData() {
           contactNumber, address, street, municipality, province, birthDate,
           birthMonth, birthDay, birthYear, age, civilStatus, gender, height,
           weight, bloodType, facebookAccount, emergencyContact, emergencyNumber,
-          registeredVoter, nstp_section, nstp_serial_id, qr_token
+          registeredVoter, nstp_section, nstp_serial_id, qr_token,
+          id_photo_2x2, photo, registration_photo
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?,
           'Active', '1st Semester', '2026-2027', ?, ?, '1st Year', ?,
           ?, ?, ?, ?, 'Cavite', ?,
           ?, ?, ?, ?, 'Single', ?, ?,
           ?, ?, ?, ?, ?,
-          ?, ?, ?, ?
+          ?, ?, ?, ?,
+          ?, ?, ?
         )
       `, [
         s.studentId, s.name, s.firstName, s.lastName, s.middleName, s.email, s.department,
@@ -485,7 +506,8 @@ async function seedData() {
         s.contactNumber, s.address, s.street, s.municipality, s.birthDate,
         s.birthMonth, s.birthDay, s.birthYear, s.age, s.gender, s.height,
         s.weight, s.bloodType, s.facebookAccount, s.emergencyContact, s.emergencyNumber,
-        s.registeredVoter, s.nstp_section, s.nstp_serial_id, s.qr_token
+        s.registeredVoter, s.nstp_section, s.nstp_serial_id, s.qr_token,
+        photoUri, photoUri, photoUri
       ]);
 
       const insertedStudentDbId = res.insertId;
