@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
+import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, RefreshCw } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
@@ -79,8 +79,8 @@ export function StudentAttendanceMatrixModal({
       }
     }
 
-    // Only show full spinner if there are no attendance records loaded yet
-    loadData(attendanceRecords.length === 0);
+    // Always fetch fresh data when modal opens
+    loadData(true);
 
     const handleUpdate = () => {
       loadData(false);
@@ -123,33 +123,92 @@ export function StudentAttendanceMatrixModal({
     return max;
   }, [attendanceRecords]);
 
-  // Build the Day 1 - Day 15 Matrix per student
+  // Build the Day 1 - Day 15 Matrix per student (with strict deduplication)
   const studentMatrixList = useMemo(() => {
     const studentMap = new Map();
+    const nameToKeyMap = new Map();
+    const idToKeyMap = new Map();
 
-    baseStudents.forEach(st => {
-      const sid = String(st.studentId || st.id || st.student_id || '').trim();
-      if (sid) {
-        studentMap.set(sid.toLowerCase(), {
+    const normalizeName = (name) => {
+      return String(name || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+    };
+
+    const registerOrMergeStudent = (st) => {
+      if (!st) return;
+      const rawSid = String(st.studentId || '').trim();
+      const rawDbId = String(st.id || '').trim();
+      const rawName = String(st.name || `${st.firstName || ''} ${st.lastName || ''}`).trim();
+      const normName = normalizeName(rawName);
+
+      // Determine canonical key: prefer full 9+ digit studentId (e.g. 202610001)
+      let canonicalKey = '';
+      if (rawSid && !/^[0-9]{1,4}$/.test(rawSid)) {
+        canonicalKey = rawSid.toLowerCase();
+      } else if (normName && nameToKeyMap.has(normName)) {
+        canonicalKey = nameToKeyMap.get(normName);
+      } else if (rawDbId && idToKeyMap.has(rawDbId)) {
+        canonicalKey = idToKeyMap.get(rawDbId);
+      } else if (rawSid && idToKeyMap.has(rawSid.toLowerCase())) {
+        canonicalKey = idToKeyMap.get(rawSid.toLowerCase());
+      } else {
+        canonicalKey = (rawSid || rawDbId || normName).toLowerCase();
+      }
+
+      if (!canonicalKey) return;
+
+      if (studentMap.has(canonicalKey)) {
+        const existing = studentMap.get(canonicalKey);
+        const bestStudentId = (!/^[0-9]{1,4}$/.test(rawSid) && rawSid) 
+          ? rawSid 
+          : (!/^[0-9]{1,4}$/.test(existing.studentId) ? existing.studentId : (rawSid || existing.studentId));
+        
+        const bestProgram = (st.program && st.program !== 'BSBA') ? st.program : (existing.program || st.program || '');
+        const bestCourse = st.course || existing.course || '';
+        const bestSection = (st.section && !st.section.startsWith('CWTS') && !st.section.startsWith('ROTC') && !st.section.startsWith('LTS')) 
+          ? st.section 
+          : (existing.section || st.section || '');
+        const bestNstpSection = st.nstp_section || st.nstpSection || existing.nstp_section || existing.nstpSection || '';
+
+        studentMap.set(canonicalKey, {
+          ...existing,
           ...st,
-          studentId: st.studentId || st.id || sid
+          id: existing.id || st.id,
+          studentId: bestStudentId,
+          name: existing.name || rawName,
+          program: bestProgram,
+          course: bestCourse,
+          section: bestSection,
+          nstp_section: bestNstpSection
         });
+      } else {
+        studentMap.set(canonicalKey, {
+          ...st,
+          id: rawDbId || canonicalKey,
+          studentId: rawSid || rawDbId || canonicalKey,
+          name: rawName || canonicalKey
+        });
+        if (normName) nameToKeyMap.set(normName, canonicalKey);
+        if (rawDbId) idToKeyMap.set(rawDbId, canonicalKey);
+        if (rawSid) idToKeyMap.set(rawSid.toLowerCase(), canonicalKey);
       }
-    });
+    };
 
-    // Also include any attendees from attendance records who might not be in baseStudents
+    baseStudents.forEach(st => registerOrMergeStudent(st));
+
     attendanceRecords.forEach(rec => {
-      const sid = String(rec.student_id || '').trim();
-      if (sid && !studentMap.has(sid.toLowerCase())) {
-        studentMap.set(sid.toLowerCase(), {
-          id: sid,
-          studentId: sid,
-          name: rec.student_name || rec.student?.name || sid,
-          department: rec.department || selectedDept || 'CWTS',
-          section: rec.section || '',
-          status: 'Active'
-        });
-      }
+      const recSid = String(rec.student_id || '').trim();
+      const recName = String(rec.student_name || rec.student?.name || '').trim();
+      registerOrMergeStudent({
+        id: recSid,
+        studentId: recSid,
+        name: recName,
+        department: rec.department || selectedDept || 'CWTS',
+        section: rec.section || '',
+        status: 'Active'
+      });
     });
 
     let targetStudents = Array.from(studentMap.values()).filter(s => {
@@ -169,13 +228,15 @@ export function StudentAttendanceMatrixModal({
 
     return targetStudents.map((st) => {
       const stId = String(st.studentId || st.id || st.student_id || '').trim().toLowerCase();
+      const stDbId = String(st.id || '').trim().toLowerCase();
       const stName = (st.name || `${st.firstName || ''} ${st.lastName || ''}`).trim().toLowerCase();
+      const normStName = normalizeName(stName);
 
       const stRecords = attendanceRecords.filter(r => {
         const rId = String(r.student_id || '').trim().toLowerCase();
-        if (stId && rId && (rId === stId || (st.studentId && rId === String(st.studentId).toLowerCase()))) return true;
+        if (stId && rId && (rId === stId || (stDbId && rId === stDbId))) return true;
         const rName = String(r.student_name || r.student?.name || '').trim().toLowerCase();
-        if (stName && rName && stName === rName) return true;
+        if (stName && rName && (stName === rName || normalizeName(rName) === normStName)) return true;
         return false;
       });
 
@@ -382,6 +443,31 @@ export function StudentAttendanceMatrixModal({
     }
   };
 
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      const [records, stList] = await Promise.all([
+        attendanceAPI.getRecords({ limit: 5000 }).catch(() => []),
+        studentsAPI.getAll().catch(() => [])
+      ]);
+      if (Array.isArray(records)) {
+        setAttendanceRecords(records);
+        try { localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(records)); } catch (_) {}
+      }
+      if (Array.isArray(stList) && stList.length > 0) {
+        setFetchedStudents(stList);
+        try { localStorage.setItem('nstp_cached_students', JSON.stringify(stList)); } catch (_) {}
+      }
+      showToast?.('Attendance matrix updated with latest server records!', 'success');
+    } catch (err) {
+      console.error('Failed to refresh attendance data:', err);
+      showToast?.('Error refreshing attendance records.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -513,28 +599,40 @@ export function StudentAttendanceMatrixModal({
             </div>
           </div>
 
-          {/* Export Master PDF & Excel */}
-          <div className="flex items-center gap-1 bg-emerald-50 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-emerald-300">
+          {/* Export Master PDF & Excel and Refresh */}
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               type="button"
-              onClick={handleExportMasterPdf}
-              disabled={studentMatrixList.length === 0}
-              className="px-2.5 sm:px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              title="Export Master Ledger as PDF"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-slate-300"
+              title="Refresh Attendance Records from Database"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-200" />
-              <span>PDF (.pdf)</span>
+              <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden xs:inline">Refresh</span>
             </button>
-            <button
-              type="button"
-              onClick={handleExportMasterExcel}
-              disabled={studentMatrixList.length === 0}
-              className="px-2.5 sm:px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-900 font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-emerald-200"
-              title="Export Master Ledger as Excel (.xlsx)"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Excel (.xlsx)</span>
-            </button>
+            <div className="flex items-center gap-1 bg-emerald-50 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-emerald-300">
+              <button
+                type="button"
+                onClick={handleExportMasterPdf}
+                disabled={studentMatrixList.length === 0}
+                className="px-2.5 sm:px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                title="Export Master Ledger as PDF"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-200" />
+                <span>PDF (.pdf)</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportMasterExcel}
+                disabled={studentMatrixList.length === 0}
+                className="px-2.5 sm:px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-900 font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-emerald-200"
+                title="Export Master Ledger as Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Excel (.xlsx)</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -740,7 +838,7 @@ export function StudentAttendanceMatrixModal({
                             </span>
                           ) : st.absentCount > 0 ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase border border-amber-300 shadow-2xs">
-                              {st.absentCount} Absence{st.absentCount > 1 ? 's' : ''}
+                              <ShieldCheck className="w-3 h-3 text-amber-700 shrink-0" /> {st.absentCount} Absence{st.absentCount > 1 ? 's' : ''}
                             </span>
                           ) : st.presentCount > 0 ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase border border-emerald-300 shadow-2xs">
