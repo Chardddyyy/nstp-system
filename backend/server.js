@@ -6054,7 +6054,7 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
       );
       if (timeInRecord.length === 0) {
         return res.status(400).json({
-          message: `Bawal mag-Time Out: Hindi pa nakakapag-Time In si ${student.name || student.studentId} para sa ${actName}.`
+          message: `Cannot Time Out: ${student.name || student.studentId} has not Timed In yet for ${actName}.`
         });
       }
       wasLateOnTimeIn = timeInRecord[0].status === 'Late' || (timeInRecord[0].notes || '').includes('Late');

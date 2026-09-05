@@ -43,30 +43,13 @@ function playScanBeep(success = true) {
 
 const ATTENDANCE_DAYS = Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
 
-const STANDARD_ACTIVITIES = [
-  { day: 'Day 1', name: 'Orientation & Overview' },
-  { day: 'Day 2', name: 'Leadership Training' },
-  { day: 'Day 3', name: 'Community Profiling' },
-  { day: 'Day 4', name: 'Environmental Conservation' },
-  { day: 'Day 5', name: 'Disaster Preparedness' },
-  { day: 'Day 6', name: 'First Aid & Safety Drills' },
-  { day: 'Day 7', name: 'Health & Sanitation Drive' },
-  { day: 'Day 8', name: 'Literacy & Numeracy Program' },
-  { day: 'Day 9', name: 'Waste Management Campaign' },
-  { day: 'Day 10', name: 'Tree Planting Activity' },
-  { day: 'Day 11', name: 'Civic Consciousness Workshop' },
-  { day: 'Day 12', name: 'Drug Abuse Prevention Seminar' },
-  { day: 'Day 13', name: 'Project Planning & Development' },
-  { day: 'Day 14', name: 'Community Outreach Implementation' },
-  { day: 'Day 15', name: 'Final Evaluation & Culmination' }
-];
-
 function checkIsLate(startTimeStr, graceMinutes = 15) {
   if (!startTimeStr) return false;
   const now = new Date();
   const [startHour, startMin] = startTimeStr.split(':').map(Number);
   if (isNaN(startHour) || isNaN(startMin)) return false;
 
+  // Cutoff includes up to the 59th second of the grace minute
   const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMin + Number(graceMinutes), 59, 999);
   return now.getTime() > cutoff.getTime();
 }
@@ -106,7 +89,7 @@ export function AttendanceScannerModal({
 
   // Session Configuration State (Step 1)
   const [selectedDay, setSelectedDay] = useState('Day 1');
-  const [activityName, setActivityName] = useState('Orientation & Overview');
+  const [activityName, setActivityName] = useState('NSTP Field Session');
   const [sessionStartTime, setSessionStartTime] = useState('08:00'); // '08:00' default
   const [gracePeriod, setGracePeriod] = useState(15); // minutes (0, 10, 15, 30)
 
@@ -175,15 +158,6 @@ export function AttendanceScannerModal({
     }
   }, [isOpen]);
 
-  // Set activity suggestion when Day changes
-  const handleSelectDay = (day) => {
-    setSelectedDay(day);
-    const match = STANDARD_ACTIVITIES.find(a => a.day === day);
-    if (match) {
-      setActivityName(match.name);
-    }
-  };
-
   // Handle QR code scanning process
   const handleProcessScan = useCallback(async (rawCode) => {
     if (!rawCode || isProcessingRef.current) return;
@@ -206,7 +180,7 @@ export function AttendanceScannerModal({
       playScanBeep(false);
       setScanStatus({
         type: 'error',
-        message: `⚠️ Bawal mag-Time Out: Kailangan munang mag-Time In bago mag-Time Out para sa ${selectedDay}.`
+        message: `⚠️ Cannot Time Out: Student must first Time In before Timing Out for ${selectedDay}.`
       });
       setTimeout(() => {
         isProcessingRef.current = false;
@@ -250,16 +224,16 @@ export function AttendanceScannerModal({
           setScanStatus({
             type: finalStudentIsLate ? 'late' : 'success',
             message: finalStudentIsLate
-              ? `⚠️ LATE: Timed in at ${new Date().toLocaleTimeString()} (Cutoff: ${getCutoffTime12h(sessionStartTime, gracePeriod)}). Markado bilang Late para sa ${selectedDay}.`
-              : `🟢 ON-TIME: Time In recorded at ${new Date().toLocaleTimeString()}! Kailangan mag-Time Out upang makumpleto ang attendance.`
+              ? `⚠️ LATE: Timed in at ${new Date().toLocaleTimeString()} (Cutoff: ${getCutoffTime12h(sessionStartTime, gracePeriod)}). Recorded as Late for ${selectedDay}.`
+              : `🟢 ON-TIME: Time In recorded at ${new Date().toLocaleTimeString()}! Student must Time Out to complete session.`
           });
         } else {
           statusText = finalStudentIsLate ? 'Late' : 'Present';
           setScanStatus({
             type: 'success',
             message: finalStudentIsLate
-              ? `🟠 Time Out complete! Status: LATE (Late time-in) para sa ${selectedDay}.`
-              : `🟢 Time Out complete! Status: PRESENT para sa ${selectedDay}.`
+              ? `🟠 Time Out complete! Status: LATE (Late time-in) for ${selectedDay}.`
+              : `🟢 Time Out complete! Status: PRESENT for ${selectedDay}.`
           });
         }
 
@@ -407,7 +381,7 @@ export function AttendanceScannerModal({
         ...prev.filter(l => String(l.student_id) !== cleanId)
       ]);
 
-      showToast(`Si ${selectedStudentToExcuse.name || cleanId} ay namarkahang EXCUSED para sa ${selectedDay}!`, 'success');
+      showToast(`${selectedStudentToExcuse.name || cleanId} marked as EXCUSED for ${selectedDay}!`, 'success');
       setShowExcuseModal(false);
       setSelectedStudentToExcuse(null);
     } catch (err) {
@@ -421,7 +395,7 @@ export function AttendanceScannerModal({
   // Save Record into Attendance Tracker and Database
   const handleSaveRecord = async () => {
     if (sessionLogs.length === 0) {
-      showToast('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.', 'warning');
+      showToast('No attendees in current session list. Please scan student IDs first.', 'warning');
       return;
     }
 
@@ -551,7 +525,7 @@ export function AttendanceScannerModal({
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
-      showToast(`Na-save ang attendance para sa ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
+      showToast(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
     } catch (err) {
       console.error('Error saving record:', err);
       showToast('Failed to save record. Please try again.', 'error');
@@ -581,7 +555,7 @@ export function AttendanceScannerModal({
               </div>
               <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">
                 {step === 1 
-                  ? 'I-set ang Day, activity topic, at scheduled start time ng klase' 
+                  ? 'Set class day, activity title, and scheduled start time' 
                   : `${selectedDay} • ${activityName} (Start: ${formatTime12h(sessionStartTime)})`}
               </p>
             </div>
@@ -608,9 +582,9 @@ export function AttendanceScannerModal({
                 <Sparkles className="w-4 h-4" />
               </div>
               <div className="text-xs text-slate-600">
-                <p className="font-extrabold text-slate-800 text-sm">Bago mag-scan ng mga ID:</p>
+                <p className="font-extrabold text-slate-800 text-sm">Before scanning student IDs:</p>
                 <p className="mt-0.5">
-                  Itakda kung anong araw (Day 1 - 15), anong aktibidad, at kung anong <b>oras ang simula ng pasok</b>. Awtomatikong imamarka ng system na <b>Late (L)</b> ang estudyanteng mag-ta-Time In lampas sa itinakdang oras (+ grace period).
+                  Set the session Day (Day 1 - 15), activity title, and <b>scheduled class start time</b>. The system automatically marks students as <b>Late (L)</b> if they scan Time In after the scheduled cutoff time (+ grace period).
                 </p>
               </div>
             </div>
@@ -627,14 +601,14 @@ export function AttendanceScannerModal({
                 <select
                   id="setup-attendance-day"
                   value={selectedDay}
-                  onChange={(e) => handleSelectDay(e.target.value)}
+                  onChange={(e) => setSelectedDay(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
                 >
                   {ATTENDANCE_DAYS.map((day) => (
                     <option key={day} value={day}>{day}</option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 font-medium">Pumili mula Day 1 hanggang Day 15</p>
+                <p className="text-[10px] text-slate-400 font-medium">Select session from Day 1 to Day 15</p>
               </div>
 
               {/* Field 2: Scheduled Start Time ("Oras ng Pasok") */}
@@ -642,7 +616,7 @@ export function AttendanceScannerModal({
                 <div className="flex items-center justify-between">
                   <label htmlFor="setup-start-time" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
                     <Clock className="w-4 h-4 text-emerald-700" />
-                    <span>2. Oras ng Simula ng Pasok</span>
+                    <span>2. Scheduled Start Time</span>
                   </label>
                   <span className="text-xs font-black font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
                     {formatTime12h(sessionStartTime)}
@@ -688,43 +662,20 @@ export function AttendanceScannerModal({
               </div>
             </div>
 
-            {/* Field 3: Activity / Topic Name */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+            {/* Field 3: Activity / Topic Name (Clean input without suggestions) */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
               <label htmlFor="setup-activity-name" className="block text-xs font-black uppercase text-slate-700">
-                3. Pangalan ng Session / Aktibidad
+                3. Session / Activity Title
               </label>
               <input
                 type="text"
                 id="setup-activity-name"
                 value={activityName}
                 onChange={(e) => setActivityName(e.target.value)}
-                placeholder="Halimbawa: Community Profiling, Tree Planting, Seminar..."
+                placeholder="e.g., Community Profiling, Tree Planting, Seminar..."
                 className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/30"
               />
-
-              {/* Quick Standard Topic Suggestions */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Mungkahi para sa {selectedDay}:</p>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto no-scrollbar">
-                  {STANDARD_ACTIVITIES.map(act => (
-                    <button
-                      key={act.day}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDay(act.day);
-                        setActivityName(act.name);
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold text-left transition-all cursor-pointer ${
-                        selectedDay === act.day && activityName === act.name
-                          ? 'bg-emerald-800 text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900'
-                      }`}
-                    >
-                      <b className="font-mono">{act.day}:</b> {act.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-[10px] text-slate-400 font-medium">Specify the topic or field activity for {selectedDay}</p>
             </div>
 
             {/* Field 4: Grace Period / Lateness Cutoff */}
@@ -732,7 +683,7 @@ export function AttendanceScannerModal({
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
                   <ShieldAlert className="w-4 h-4 text-amber-600" />
-                  <span>4. Grace Period bago ituring na Late</span>
+                  <span>4. Lateness Grace Period</span>
                 </label>
                 <span className="text-[11px] font-bold text-amber-700">
                   Late Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>
@@ -741,10 +692,10 @@ export function AttendanceScannerModal({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { mins: 0, label: 'Strict (0 min)', desc: 'Late agad paglampas ng start time' },
-                  { mins: 10, label: '+10 mins', desc: '10 minuto pagkatapos ng start' },
-                  { mins: 15, label: '+15 mins (Standard)', desc: '15 minutong palugit' },
-                  { mins: 30, label: '+30 mins', desc: '30 minutong palugit' }
+                  { mins: 0, label: 'Strict (0 min)', desc: 'Late immediately after start time' },
+                  { mins: 10, label: '+10 mins', desc: '10 minutes grace period' },
+                  { mins: 15, label: '+15 mins (Standard)', desc: '15 minutes grace period' },
+                  { mins: 30, label: '+30 mins', desc: '30 minutes grace period' }
                 ].map(opt => (
                   <button
                     key={opt.mins}
@@ -771,7 +722,7 @@ export function AttendanceScannerModal({
                   <span>Session Policy:</span>
                 </p>
                 <p className="text-slate-600 text-[11px]">
-                  Simula: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>. Ang mag-ta-Time In pagkatapos nito ay <b>Late (L)</b>.
+                  Class Start: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>. Students timing in after cutoff will be marked as <b>Late (L)</b>.
                 </p>
               </div>
               <div className="text-right">
@@ -821,7 +772,7 @@ export function AttendanceScannerModal({
                   type="button"
                   onClick={() => setShowExcuseModal(true)}
                   className="px-2.5 py-1.5 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-900 font-black text-[10.5px] sm:text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-blue-300/60 shadow-2xs"
-                  title="Mark student as officially Excused (Paalam / Excuse Letter)"
+                  title="Mark student as officially Excused"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-700" />
                   <span>Excuse Student (E)</span>
@@ -832,7 +783,7 @@ export function AttendanceScannerModal({
                   type="button"
                   onClick={() => setStep(1)}
                   className="px-2.5 py-1.5 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-bold text-[10.5px] sm:text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Change session title, day, or start time"
+                  title="Edit session title, day, or start time"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Edit Setup</span>
@@ -1014,8 +965,8 @@ export function AttendanceScannerModal({
                     {sessionLogs.length === 0 ? (
                       <div className="text-center py-6 text-slate-400 text-xs">
                         <Users className="w-6 h-6 mx-auto mb-1 text-slate-300" />
-                        <p className="font-bold">Wala pang na-scan na estudyante sa session na ito.</p>
-                        <p className="text-[10px] mt-0.5 text-slate-400">Itutok ang camera sa QR code o i-click ang "Excuse Student".</p>
+                        <p className="font-bold">No students scanned in this session yet.</p>
+                        <p className="text-[10px] mt-0.5 text-slate-400">Point the camera at an NSTP ID QR code or click 'Excuse Student'.</p>
                       </div>
                     ) : (
                       sessionLogs.map((log, idx) => (
@@ -1059,7 +1010,7 @@ export function AttendanceScannerModal({
                   {/* Primary Save Attendance Session Button */}
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     <p className="text-[10px] text-slate-400">
-                      * Ang may Time-In lamang (walang Out) ay mase-save na <b>Incomplete</b>.
+                      * Students with Time-In only (no Time-Out) will be saved as <b>Incomplete</b>.
                     </p>
                     <button
                       type="button"
@@ -1079,7 +1030,7 @@ export function AttendanceScannerModal({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════ */}
-        {/* SUB-MODAL: EXCUSE STUDENT (PAALAM / EXCUSE LETTER)                   */}
+        {/* SUB-MODAL: EXCUSE STUDENT                                            */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {showExcuseModal && (
           <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in">
@@ -1093,7 +1044,7 @@ export function AttendanceScannerModal({
                   </div>
                   <div>
                     <h4 className="font-black text-sm text-slate-900 leading-tight">Excuse Student for {selectedDay}</h4>
-                    <p className="text-[10px] text-blue-700 font-bold">Mark student as officially Excused (Paalam / Excuse Letter)</p>
+                    <p className="text-[10px] text-blue-700 font-bold">Mark student as officially Excused (with excuse letter / permission)</p>
                   </div>
                 </div>
                 <button
@@ -1107,14 +1058,14 @@ export function AttendanceScannerModal({
 
               {/* Student Search & Picker */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 uppercase">Pumili ng Estudyante:</label>
+                <label className="text-[11px] font-bold text-slate-700 uppercase">Select Student:</label>
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     value={excuseSearch}
                     onChange={(e) => setExcuseSearch(e.target.value)}
-                    placeholder="Maghanap ayon sa Pangalan o Student ID..."
+                    placeholder="Search by Student Name or Student ID..."
                     className="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30"
                   />
                 </div>
@@ -1122,7 +1073,7 @@ export function AttendanceScannerModal({
                 {/* Student Selection List */}
                 <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-white shadow-2xs">
                   {filteredStudentsForExcuse.length === 0 ? (
-                    <p className="p-3 text-center text-slate-400 text-xs font-medium">Walang nahanap na estudyante.</p>
+                    <p className="p-3 text-center text-slate-400 text-xs font-medium">No students found matching search.</p>
                   ) : (
                     filteredStudentsForExcuse.map(st => {
                       const sid = String(st.studentId || st.id || '').trim();
@@ -1166,13 +1117,13 @@ export function AttendanceScannerModal({
 
               {/* Excuse Reason / Notes Field */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-700 uppercase">Dahilan ng Pagliban / Excuse Reason:</label>
+                <label className="text-[11px] font-bold text-slate-700 uppercase">Reason for Absence / Excuse Notes:</label>
                 
                 {/* Reason Presets */}
                 <div className="flex flex-wrap gap-1 mb-1">
                   {[
                     'Medical reason / illness with excuse letter',
-                    'Official school competition / representation',
+                    'Official university competition / representation',
                     'Family emergency / bereavement',
                     'Approved academic engagement'
                   ].map(rs => (
@@ -1193,7 +1144,7 @@ export function AttendanceScannerModal({
                   rows={2}
                   value={excuseReason}
                   onChange={(e) => setExcuseReason(e.target.value)}
-                  placeholder="I-type ang buong detalye ng paalam o excuse letter..."
+                  placeholder="Type complete excuse details or reference notes..."
                   className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/30"
                 />
               </div>
