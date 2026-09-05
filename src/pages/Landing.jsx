@@ -730,6 +730,7 @@ function Landing() {
           {CAROUSEL_IMAGES.map((_, index) => (
             <button
               key={index}
+              type="button"
               onClick={() => {
                 setCurrentSlide(index);
                 startTimer();
