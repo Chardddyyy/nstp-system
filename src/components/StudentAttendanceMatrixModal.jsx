@@ -514,6 +514,39 @@ export function StudentAttendanceMatrixModal({
 
         {/* Attendance Matrix Table */}
         <div className="flex-1 p-2 sm:p-4 bg-slate-50 overflow-hidden flex flex-col">
+          {/* Visual Legend Bar */}
+          <div className="bg-white px-3 py-2 rounded-xl border border-slate-200 mb-2 flex items-center justify-between flex-wrap gap-2 text-[10px] sm:text-[11px] font-bold text-slate-600 shrink-0 shadow-2xs">
+            <div className="flex items-center gap-1.5 text-slate-500 font-black uppercase tracking-wider text-[9px]">
+              <span>Matrix Legend:</span>
+            </div>
+            <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
+              <div className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-800 font-black flex items-center justify-center text-[9px]">P</span>
+                <span className="text-slate-700">Present</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded-md bg-rose-100 border border-rose-300 text-rose-700 font-black flex items-center justify-center text-[9px]">A</span>
+                <span className="text-slate-700">Absent</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="px-1 h-5 rounded-md bg-amber-100 border border-amber-300 text-amber-900 font-black flex items-center justify-center text-[8px]">INC</span>
+                <span className="text-slate-700">Incomplete (Time-in only)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded-md bg-blue-100 border border-blue-300 text-blue-800 font-black flex items-center justify-center text-[9px]">E</span>
+                <span className="text-slate-700">Excused</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded-md bg-amber-100 border border-amber-300 text-amber-800 font-black flex items-center justify-center text-[9px]">L</span>
+                <span className="text-slate-700">Late</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-5 h-5 rounded-md bg-slate-100 border border-slate-200 text-slate-400 font-black flex items-center justify-center text-[10px]">•</span>
+                <span className="text-slate-400">Scheduled</span>
+              </div>
+            </div>
+          </div>
+
           {/* Mobile Swipe Hint */}
           <div className="sm:hidden bg-emerald-900/10 text-emerald-950 font-bold text-[10px] py-1 px-2.5 mb-2 rounded-lg flex items-center justify-between shrink-0">
             <span>👉 Swipe horizontally to view Days 1-15</span>
@@ -584,7 +617,9 @@ export function StudentAttendanceMatrixModal({
                         }`}
                       >
                         {/* Student Details - Sticky Left on Horizontal Scroll */}
-                        <td className="p-2 sm:p-2.5 sticky left-0 z-20 bg-white group-hover:bg-slate-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)]">
+                        <td className={`p-2 sm:p-2.5 sticky left-0 z-20 ${
+                          isWarning ? 'bg-rose-50/95 group-hover:bg-rose-100/90' : 'bg-white group-hover:bg-slate-50'
+                        } shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)] transition-colors`}>
                           <div className="font-black text-slate-900 leading-tight truncate max-w-[140px] sm:max-w-[200px]">
                             {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                           </div>
@@ -613,35 +648,35 @@ export function StudentAttendanceMatrixModal({
                               {status === 'Present' ? (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-emerald-400 active:scale-95 transition-all"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-emerald-400 active:scale-95 transition-all shadow-2xs"
                                 >
                                   P
                                 </button>
                               ) : status === 'Late' ? (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all shadow-2xs"
                                 >
                                   L
                                 </button>
                               ) : status === 'Excused' ? (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-blue-400 active:scale-95 transition-all"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-800 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-blue-400 active:scale-95 transition-all shadow-2xs"
                                 >
                                   E
                                 </button>
                               ) : status === 'Incomplete' ? (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center px-1 h-5 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-[8px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all"
+                                  className="inline-flex items-center justify-center px-1 h-5 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 font-black text-[8px] cursor-pointer hover:ring-2 hover:ring-amber-400 active:scale-95 transition-all shadow-2xs"
                                 >
                                   INC
                                 </button>
                               ) : status === 'Absent' ? (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-100 hover:bg-rose-200 text-rose-700 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-rose-400 active:scale-95 transition-all"
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-rose-100 hover:bg-rose-200 border border-rose-300 text-rose-700 font-black text-[9px] cursor-pointer hover:ring-2 hover:ring-rose-400 active:scale-95 transition-all shadow-2xs"
                                 >
                                   A
                                 </button>
@@ -674,19 +709,19 @@ export function StudentAttendanceMatrixModal({
                         {/* Standing Status Badge */}
                         <td className="p-2.5 text-center whitespace-nowrap">
                           {isWarning ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase">
-                              <AlertTriangle className="w-3 h-3 text-rose-600" /> 3+ Absences
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-black uppercase border border-rose-300 shadow-2xs animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" /> At-Risk ({st.absentCount} Abs)
                             </span>
                           ) : st.absentCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase border border-amber-300 shadow-2xs">
                               {st.absentCount} Absence{st.absentCount > 1 ? 's' : ''}
                             </span>
                           ) : st.presentCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Good Standing
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase border border-emerald-300 shadow-2xs">
+                              <CheckCircle className="w-3 h-3 text-emerald-600 shrink-0" /> 100% Perfect
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase border border-slate-200">
                               0 Absences
                             </span>
                           )}

@@ -1219,8 +1219,8 @@ function StudentManagement() {
                 </button>
               )}
 
-              {/* View Attendance & Absences Matrix Button (Instructors & Admin) */}
-              {!viewingArchive && (
+              {/* View Attendance & Absences Matrix Button (Instructors only) */}
+              {!isAdmin && !viewingArchive && (
                 <button type="button"
                   onClick={() => setShowAttendanceMatrix(true)}
                   title="View Day 1-15 attendance records, track absences, and identify at-risk students"

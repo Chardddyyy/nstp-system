@@ -1164,6 +1164,7 @@ export async function downloadAttendanceMatrixPdf({
       if (s === 'Present') char = 'P';
       else if (s === 'Late') char = 'L';
       else if (s === 'Excused') char = 'E';
+      else if (s === 'Incomplete') char = 'INC';
       else if (s === 'Absent') char = 'A';
       rowData[`day_${d}`] = char;
     });

@@ -835,7 +835,8 @@ export async function downloadAttendanceMatrixExcel({
       const s = st.dayStatuses?.[d];
       if (s === 'Present') return 'P';
       if (s === 'Late') return 'L';
-      if (s === 'Excused') return 'E';
+      else if (s === 'Excused') return 'E';
+      else if (s === 'Incomplete') return 'INC';
       if (s === 'Absent') return 'A';
       return '-';
     });
