@@ -151,29 +151,6 @@ export async function loginUser(email, password, _forceLogin = true) {
     }
     return res;
   } catch (err) {
-    // Fallback if server is completely offline / unreachable or database error (500/503)
-    if (
-      err.name === 'TypeError' ||
-      err.message?.includes('fetch') ||
-      err.message?.includes('NetworkError') ||
-      !err.status ||
-      err.status === 500 ||
-      err.status === 503
-    ) {
-      const cleanEmail = String(email).trim().toLowerCase();
-      if ((cleanEmail === 'richardbelen99@gmail.com' || cleanEmail === 'admin') && (password === 'admin123' || password === 'Admin@123')) {
-        const adminUser = { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' };
-        const demoToken = 'demo-jwt-admin-token';
-        localStorage.setItem('nstp_token', demoToken);
-        return { token: demoToken, user: adminUser };
-      }
-      if ((cleanEmail === 'instructor@cvsu.edu.ph' || cleanEmail.includes('instructor')) && (password === 'instructor123' || password === 'admin123')) {
-        const instUser = { id: 2, name: 'Prof. Juan Dela Cruz', email: cleanEmail, role: 'instructor', department: 'CWTS' };
-        const demoToken = 'demo-jwt-instructor-token';
-        localStorage.setItem('nstp_token', demoToken);
-        return { token: demoToken, user: instUser };
-      }
-    }
     throw err;
   }
 }
@@ -185,26 +162,12 @@ export function getUsers() {
       const stored = JSON.parse(localStorage.getItem('nstp_users') || '[]');
       if (stored.length > 0) return stored;
     } catch (_) {}
-    return [
-      { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' },
-      { id: 2, name: 'Prof. Juan Dela Cruz', email: 'instructor@cvsu.edu.ph', role: 'instructor', department: 'CWTS' }
-    ];
+    return [];
   });
 }
 
 export async function getMe() {
-  try {
-    return await apiCall('/users/me');
-  } catch (err) {
-    const token = localStorage.getItem('nstp_token');
-    if (token && token.includes('admin')) {
-      return { user: { id: 1, name: 'Admin User', email: 'richardbelen99@gmail.com', role: 'admin', department: 'All' } };
-    }
-    if (token && token.includes('instructor')) {
-      return { user: { id: 2, name: 'Prof. Juan Dela Cruz', email: 'instructor@cvsu.edu.ph', role: 'instructor', department: 'CWTS' } };
-    }
-    throw err;
-  }
+  return await apiCall('/users/me');
 }
 
 export function updateUser(id, data) {

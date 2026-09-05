@@ -29,6 +29,17 @@ body {
   min-height: 100dvh;
   overflow-x: clip;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-touch-callout: none;
+}
+
+/* Ensure form fields allow selection & editing while UI elements block accidental inspection selection */
+input, textarea, [contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+img, canvas, video {
+  -webkit-user-drag: none;
 }
 
 /* Mobile-First Input Font Zoom Fix: Prevents iOS/Android auto-zoom on field focus */
