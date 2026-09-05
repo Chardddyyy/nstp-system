@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import * as XLSX from 'xlsx';
-import { X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, FileSpreadsheet, Download, Calendar } from 'lucide-react';
+import { X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
-import { downloadDailyAttendancePdf } from '../utils/chedPdfGenerator';
-import { downloadDailyAttendanceExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
 
 // Web Audio API Beep Generator (100% self-contained sound effect)
@@ -42,7 +39,7 @@ function playScanBeep(success = true) {
 
 const ATTENDANCE_DAYS = Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
 
-export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'All', currentUser = null }) {
+export function AttendanceScannerModal({ isOpen, onClose, currentDepartment: _currentDepartment = 'All', currentUser: _currentUser = null }) {
   const { showToast } = useAuth();
   const [selectedDay, setSelectedDay] = useState('Day 1');
   const [activityName, setActivityName] = useState('NSTP Field Activity');
@@ -325,38 +322,6 @@ export function AttendanceScannerModal({ isOpen, onClose, currentDepartment = 'A
     }
   };
 
-  // 1-Click PDF Attendance Export
-  const handleExportToPdf = async () => {
-    if (sessionLogs.length === 0) {
-      showToast('Walang attendee sa kasalukuyang session list. I-scan muna ang mga student ID.', 'warning');
-      return;
-    }
-    try {
-      await downloadDailyAttendancePdf({
-        records: sessionLogs,
-        selectedDay,
-        selectedDept: currentUser?.department || currentDepartment || 'All'
-      });
-    } catch (err) {
-      console.error('Failed to export daily attendance PDF:', err);
-      showToast('Failed to export attendance PDF. Please try again.', 'error');
-    }
-  };
-
-  // Export Session to Excel (.xlsx)
-  const handleExportToExcel = async () => {
-    if (sessionLogs.length === 0) return;
-    try {
-      await downloadDailyAttendanceExcel({
-        records: sessionLogs,
-        selectedDay,
-        selectedDept: currentUser?.department || currentDepartment || 'All'
-      });
-    } catch (err) {
-      console.error('Failed to export daily attendance Excel:', err);
-      showToast('Failed to export attendance Excel. Please try again.', 'error');
-    }
-  };
 
   if (!isOpen) return null;
 

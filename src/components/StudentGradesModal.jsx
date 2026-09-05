@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import * as XLSX from 'xlsx';
 import {
   X, Search, FileSpreadsheet, CheckCircle, Clock, AlertTriangle,
   Award, Save, Printer, RefreshCw, Check, UserCheck, Filter, Sparkles, Download, ShieldAlert, BookOpen, Calendar, Eye

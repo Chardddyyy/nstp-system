@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-icons': ['lucide-react'],
-            'vendor-xlsx': ['xlsx'],
             'vendor-qr': ['qrcode', 'html5-qrcode'],
             'vendor-media': ['heic2any']
           }

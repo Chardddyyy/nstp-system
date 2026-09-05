@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';

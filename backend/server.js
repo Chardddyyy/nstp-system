@@ -607,11 +607,12 @@ async function ensureAllCoreTables() {
   }
 
     // Seed 20+ students for past batches (2023-2024 and 2024-2025) into archived_years
-    await seedPastBatches();
-  } catch (err) {
-    console.warn('Admin seed notice:', err.message);
+    try {
+      await seedPastBatches();
+    } catch (err) {
+      console.warn('Past batches seed notice:', err.message);
+    }
   }
-}
 
 // ── Seed Past Batches (2023-2024 1st/2nd Sem and 2024-2025 1st/2nd Sem with 20+ students each) ──
 async function seedPastBatches() {
