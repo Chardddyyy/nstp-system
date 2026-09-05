@@ -71,7 +71,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                   <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-110" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU - Naic Campus</h1>
                   <span className="inline-block text-[9px] sm:text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5">
                     Admin Portal
                   </span>
@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                   <Shield className={`w-5 h-5 ${colors.text}`} />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU Naic NSTP</h1>
+                  <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU - Naic Campus</h1>
                   <span className="inline-block text-[9px] sm:text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
                     {user?.department} Instructor
                   </span>

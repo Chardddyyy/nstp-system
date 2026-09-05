@@ -2811,6 +2811,83 @@ function StudentManagement() {
                     </div>
                   </div>
 
+                  {/* Demographic & Physical Profile */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Date</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">
+                        {(() => {
+                          if (currentViewStudent.birthDate || currentViewStudent.birth_date) {
+                            try {
+                              const d = new Date(currentViewStudent.birthDate || currentViewStudent.birth_date);
+                              if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
+                            } catch (_) {}
+                            return currentViewStudent.birthDate || currentViewStudent.birth_date;
+                          }
+                          if (currentViewStudent.birthYear && currentViewStudent.birthMonth && currentViewStudent.birthDay) {
+                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const mIdx = parseInt(currentViewStudent.birthMonth, 10) - 1;
+                            const mName = months[mIdx] || currentViewStudent.birthMonth;
+                            return `${mName} ${currentViewStudent.birthDay}, ${currentViewStudent.birthYear}`;
+                          }
+                          return '-';
+                        })()}
+                      </span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Age</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.age ? `${currentViewStudent.age} yrs old` : '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Sex / Gender</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.sex || currentViewStudent.gender || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.civilStatus || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Registered Voter</span>
+                      {(() => {
+                        const raw = currentViewStudent.registeredVoter || currentViewStudent.isVoter || currentViewStudent.voter;
+                        const isYes = String(raw || '').trim().toLowerCase() === 'yes';
+                        return (
+                          <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-0.5 ${
+                            isYes
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {isYes ? 'Yes' : 'No'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.bloodType || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.height ? (String(currentViewStudent.height).includes('cm') ? currentViewStudent.height : `${currentViewStudent.height} cm`) : '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.weight ? (String(currentViewStudent.weight).includes('kg') ? currentViewStudent.weight : `${currentViewStudent.weight} kg`) : '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-2.5">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Emergency Contact Person</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}</span>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
+                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Emergency Contact Number</span>
+                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.emergencyNumber || '-'}</span>
+                    </div>
+                  </div>
+
                   {/* Complete Address Breakdown */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5">
                     <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
@@ -2958,85 +3035,6 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Demographic & Physical Information Section */}
-                <div className="bg-gray-50/80 p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-emerald-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                    <Heart className="w-4 h-4 text-emerald-600" />
-                    Demographic Information &amp; Physical Stats
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Month</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthMonth || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Day</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthDay || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Birth Year</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.birthYear || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Calculated Age</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.age || '-'} yrs old</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Sex / Gender</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.sex || currentViewStudent.gender || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Civil Status</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.civilStatus || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Registered Voter Status</span>
-                      {(() => {
-                        const raw = currentViewStudent.registeredVoter || currentViewStudent.isVoter || currentViewStudent.voter;
-                        const isYes = String(raw || '').trim().toLowerCase() === 'yes';
-                        return (
-                          <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full mt-1 ${
-                            isYes
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                              : 'bg-amber-100 text-amber-900 border border-amber-300'
-                          }`}>
-                            {isYes ? 'Yes (Registered Voter)' : 'No (Not Registered)'}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Height</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.height ? `${currentViewStudent.height}` : '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Weight</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.weight ? `${currentViewStudent.weight}` : '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/60 shadow-2xs col-span-2 sm:col-span-2">
-                      <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider block">Blood Type</span>
-                      <span className="font-black text-xs sm:text-sm text-gray-900 mt-0.5 block">{currentViewStudent.bloodType || '-'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Emergency Contact Section */}
-                <div className="bg-amber-50/60 p-3.5 sm:p-5 rounded-2xl border border-amber-200/60 shadow-2xs">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-amber-900 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                    <Phone className="w-4 h-4 text-amber-700" />
-                    Emergency Contact Details
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Person</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}</span>
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-2xs">
-                      <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">Emergency Contact Number</span>
-                      <span className="font-black text-xs sm:text-sm text-amber-950 mt-0.5 block">{currentViewStudent.emergencyNumber || '-'}</span>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Official Student Documents & Photos Section */}
                 <div className="bg-slate-50/90 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
