@@ -5949,7 +5949,7 @@ app.post('/students/send-digital-id', authenticateToken, handleSendStudentDigita
 // POST scan attendance via QR code token or student ID
 app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
   try {
-    const { tokenOrId, activity_name, scan_type, notes } = req.body;
+    const { tokenOrId, activity_name, scan_type, notes, is_late, session_start_time } = req.body;
     if (!tokenOrId || !tokenOrId.trim()) {
       return res.status(400).json({ message: 'QR Code or Student ID is required' });
     }
@@ -5976,6 +5976,48 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
     }
 
     const actName = activity_name && activity_name.trim() ? activity_name.trim() : 'NSTP General Session';
+
+    // Support EXCUSED directly
+    if (scan_type === 'EXCUSED') {
+      // Remove any existing records for this student on this day/activity
+      await pool.execute(
+        `DELETE FROM attendance_records WHERE student_id = ? AND activity_name = ?`,
+        [student.studentId, actName]
+      ).catch(() => {});
+
+      const [insertResult] = await pool.execute(
+        `INSERT INTO attendance_records (
+          student_id, student_name, department, section,
+          activity_name, scan_type, scanned_by, status, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          student.studentId,
+          student.name || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+          student.department,
+          student.section,
+          actName,
+          'EXCUSED',
+          req.user.id,
+          'Excused',
+          notes || 'Officially excused by instructor'
+        ]
+      );
+
+      const [savedRecord] = await pool.execute(
+        'SELECT * FROM attendance_records WHERE id = ?',
+        [insertResult.insertId]
+      );
+
+      auditLog('attendance_excused', req.user.id, `student: ${student.studentId}, activity: ${actName}`, req.ip || 'unknown');
+
+      return res.status(201).json({
+        success: true,
+        message: `Excused attendance logged for ${student.name || student.studentId}`,
+        student,
+        record: savedRecord[0]
+      });
+    }
+
     const sType = scan_type === 'TIME_OUT' ? 'TIME_OUT' : 'TIME_IN';
 
     // Check if already scanned today for this exact activity and scan_type
@@ -5989,7 +6031,18 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
       [student.studentId, actName, sType]
     );
 
+    if (existing.length > 0) {
+      return res.json({
+        success: false,
+        already_scanned: true,
+        message: `Already ${sType === 'TIME_IN' ? 'timed in' : 'timed out'} today for ${actName}`,
+        student,
+        record: existing[0]
+      });
+    }
+
     // If scanning TIME_OUT, require student to have timed-in first for this activity/session
+    let wasLateOnTimeIn = false;
     if (sType === 'TIME_OUT') {
       const [timeInRecord] = await pool.execute(
         `SELECT * FROM attendance_records 
@@ -6004,10 +6057,22 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
           message: `Bawal mag-Time Out: Hindi pa nakakapag-Time In si ${student.name || student.studentId} para sa ${actName}.`
         });
       }
+      wasLateOnTimeIn = timeInRecord[0].status === 'Late' || (timeInRecord[0].notes || '').includes('Late');
     }
 
+    // Determine status value:
+    // If TIME_IN: if is_late is true, status is 'Late'. Otherwise 'Timed In'.
+    // If TIME_OUT: if wasLateOnTimeIn is true, status is 'Late'. Otherwise 'Present'.
+    let statusValue = 'Timed In';
+    if (sType === 'TIME_IN') {
+      statusValue = is_late ? 'Late' : 'Timed In';
+    } else if (sType === 'TIME_OUT') {
+      statusValue = wasLateOnTimeIn ? 'Late' : 'Present';
+    }
+
+    const noteText = notes || (is_late ? `Timed in late (Scheduled: ${session_start_time || 'N/A'})` : null);
+
     // Insert new attendance record
-    const statusValue = sType === 'TIME_OUT' ? 'Present' : 'Timed In';
     const [insertResult] = await pool.execute(
       `INSERT INTO attendance_records (
         student_id, student_name, department, section,
@@ -6022,7 +6087,7 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
         sType,
         req.user.id,
         statusValue,
-        notes || null
+        noteText
       ]
     );
 
@@ -6031,13 +6096,14 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
       [insertResult.insertId]
     );
 
-    auditLog('attendance_scanned', req.user.id, `student: ${student.studentId}, activity: ${actName}`, req.ip || 'unknown');
+    auditLog('attendance_scanned', req.user.id, `student: ${student.studentId}, activity: ${actName}, status: ${statusValue}`, req.ip || 'unknown');
 
     res.status(201).json({
       success: true,
       message: `Attendance logged successfully for ${student.name || student.studentId}`,
       student,
-      record: savedRecord[0]
+      record: savedRecord[0],
+      is_late: is_late || wasLateOnTimeIn
     });
   } catch (err) {
     console.error('Error scanning attendance:', err);
@@ -6062,7 +6128,7 @@ app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
       const sec = r.section || '';
       const act = r.activity_name || 'NSTP Session';
       const sType = r.scan_type || 'TIME_IN';
-      const statusVal = r.status || (sType === 'TIME_OUT' ? 'Present' : 'Timed In');
+      const statusVal = r.status || (sType === 'TIME_OUT' ? 'Present' : (sType === 'EXCUSED' ? 'Excused' : 'Incomplete'));
       const scanDate = r.scanned_at ? new Date(r.scanned_at) : new Date();
 
       const [existing] = await pool.execute(

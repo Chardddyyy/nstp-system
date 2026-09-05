@@ -917,6 +917,8 @@ function InstructorDashboard() {
           isOpen={showAttendanceScanner}
           onClose={() => setShowAttendanceScanner(false)}
           currentDepartment={user?.department || 'CWTS'}
+          currentUser={user}
+          students={students}
         />
 
         {/* 15-Day Attendance Matrix Modal */}
