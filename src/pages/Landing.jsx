@@ -131,22 +131,7 @@ function Landing() {
   const [faqCategory, setFaqCategory] = useState('All');
   const [showAllFaqs, setShowAllFaqs] = useState(false);
   
-  // Device Permissions Notice Banner (shown on first load / dismissal stored in localStorage)
-  const [showDeviceNotice, setShowDeviceNotice] = useState(() => {
-    try {
-      return !localStorage.getItem('nstp_device_notice_acknowledged');
-    } catch {
-      return false;
-    }
-  });
 
-  const handleDismissDeviceNotice = () => {
-    try {
-      localStorage.setItem('nstp_device_notice_acknowledged', 'true');
-    } catch (_) {}
-    setShowDeviceNotice(false);
-  };
-  
   // Navigation Dropdown & Mobile Menu State
   const [openDropdown, setOpenDropdown] = useState(null); // 'resources' | null
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -1374,61 +1359,7 @@ function Landing() {
         )}
       </button>
 
-      {/* Device & Privacy Permissions Notice Modal / Floating Banner */}
-      {/* Mobile-Style Top Push Notification Alert Banner */}
-      {showDeviceNotice && (
-        <div className="fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 w-[94%] max-w-lg z-50 transition-all duration-300">
-          <div className="bg-emerald-950/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl p-3 sm:p-4 shadow-2xl text-white ring-1 ring-white/10">
-            {/* Header row like a phone push notification */}
-            <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-emerald-800/80">
-              <div className="flex items-center gap-2">
-                <img src="./cvsu.png" alt="CvSU" className="w-5 h-5 rounded-full bg-white p-0.5" />
-                <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider">CvSU Naic NSTP</span>
-                <span className="text-[10px] text-emerald-400 font-medium">• just now</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleDismissDeviceNotice}
-                className="w-6 h-6 rounded-full bg-emerald-900/80 hover:bg-emerald-800 flex items-center justify-center text-emerald-300 hover:text-white transition-colors cursor-pointer"
-                title="Dismiss"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
 
-            {/* Alert Message */}
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs sm:text-sm font-black text-white leading-tight">Device Capabilities &amp; Privacy Notice</h4>
-                <p className="text-[11px] text-emerald-100/90 leading-relaxed mt-1">
-                  This portal utilizes your device <strong>Camera</strong> (2x2 ID &amp; COR scan), <strong>Microphone</strong> (Voice notes), and <strong>Storage</strong> for official academic enrollment &amp; communications.
-                </p>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center justify-between gap-2 mt-3 pt-2 border-t border-emerald-900/80">
-              <Link
-                to="/enrollment"
-                onClick={handleDismissDeviceNotice}
-                className="text-[10px] sm:text-xs text-amber-300 hover:text-amber-200 font-bold underline"
-              >
-                Go to Enrollment &rarr;
-              </Link>
-              <button
-                type="button"
-                onClick={handleDismissDeviceNotice}
-                className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
-              >
-                Allow &amp; Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
