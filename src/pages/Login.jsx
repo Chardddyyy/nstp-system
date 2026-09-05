@@ -375,7 +375,7 @@ function Login() {
             <p className="text-gray-500 text-[11px] sm:text-xs mt-1">Sign in with your official CvSU faculty or admin credentials</p>
           </div>
 
-          <form onSubmit={handleSubmit} autoComplete="off" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
             <div>
               <label htmlFor="email" className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                 Email Address
@@ -394,7 +394,7 @@ function Login() {
                   data-lpignore="true"
                   className="w-full min-h-[46px] pl-10 pr-3 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="admin@cvsu.edu.ph"
-                  autoComplete="username"
+                  autoComplete="off"
                   required
                 />
               </div>
@@ -426,7 +426,7 @@ function Login() {
                   data-lpignore="true"
                   className="w-full min-h-[46px] pl-10 pr-10 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="••••••••••••"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -562,7 +562,11 @@ function Login() {
                           type="email"
                           id="forgot-email"
                           name="forgotEmail"
-                          autoComplete="email"
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck="false"
+                          data-lpignore="true"
                           value={forgotEmail}
                           onChange={(e) => {
                             setForgotEmail(e.target.value);
@@ -638,7 +642,11 @@ function Login() {
                         type="text"
                         id="forgot-otp"
                         name="forgotOtp"
-                        autoComplete="one-time-code"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck="false"
+                        data-lpignore="true"
                         maxLength="6"
                         value={forgotOtp}
                         onChange={(e) => {
@@ -743,6 +751,10 @@ function Login() {
                           }}
                           placeholder="••••••••••••"
                           autoComplete="new-password"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck="false"
+                          data-lpignore="true"
                           className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
                           minLength="6"
@@ -776,6 +788,10 @@ function Login() {
                           }}
                           placeholder="••••••••••••"
                           autoComplete="new-password"
+                          autoCorrect="off"
+                          autoCapitalize="none"
+                          spellCheck="false"
+                          data-lpignore="true"
                           className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
                           minLength="6"

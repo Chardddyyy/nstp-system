@@ -276,6 +276,7 @@ function AdminDashboard() {
   }, [showNotifications]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
