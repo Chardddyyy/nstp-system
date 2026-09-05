@@ -66,10 +66,12 @@ export default function LetterFormats() {
   const [templates, setTemplates] = useState(() => {
     try {
       const saved = localStorage.getItem('nstp_letter_templates');
-      const parsed = saved ? JSON.parse(saved) : [];
-      return parsed.length > 0 ? parsed : DEFAULT_TEMPLATES;
+      if (saved !== null) {
+        return JSON.parse(saved) || [];
+      }
+      return [];
     } catch {
-      return DEFAULT_TEMPLATES;
+      return [];
     }
   });
 

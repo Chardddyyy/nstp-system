@@ -473,6 +473,55 @@ function Login() {
             </button>
           </form>
 
+          {/* Institutional Testing & Demo Credentials Display */}
+          <div className="mt-3.5 p-3 sm:p-3.5 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-emerald-50/90 rounded-2xl border border-emerald-200/90 shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-md bg-emerald-600/10 flex items-center justify-center text-emerald-700">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <span className="text-[10.5px] sm:text-xs font-black text-emerald-950 uppercase tracking-wider">
+                  Test Accounts (Tap to Fill)
+                </span>
+              </div>
+              <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300/60">
+                Testing
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              {[
+                { role: 'Admin', email: 'admin@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                { role: 'CWTS', email: 'cwts@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
+                { role: 'LTS', email: 'lts@gmail.com', pass: 'lts123', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
+                { role: 'ROTC', email: 'rotc@gmail.com', pass: 'rotc123', badge: 'bg-red-100 text-red-800 border-red-300' },
+              ].map((item) => (
+                <button
+                  key={item.email}
+                  type="button"
+                  onClick={() => {
+                    setEmail(item.email);
+                    setPassword(item.pass);
+                    setError('');
+                  }}
+                  className="p-2 sm:p-2.5 bg-white hover:bg-emerald-100/50 active:scale-95 rounded-xl border border-emerald-200/80 transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-[9.5px] sm:text-[10px] font-black px-1.5 py-0.2 rounded border ${item.badge}`}>
+                      {item.role}
+                    </span>
+                    <span className="text-[9.5px] sm:text-[10px] font-mono text-gray-500 font-bold group-hover:text-emerald-800">
+                      {item.pass}
+                    </span>
+                  </div>
+                  <p className="text-[10.5px] sm:text-[11px] font-extrabold text-gray-800 truncate">
+                    {item.email}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 

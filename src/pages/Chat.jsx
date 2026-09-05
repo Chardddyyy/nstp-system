@@ -1783,13 +1783,8 @@ function Chat() {
           const targetId = activeConversation.id;
           await deleteConversation(targetId);
 
-          // Auto-switch to next available conversation
-          const remaining = (conversations || []).filter(c => String(c.id) !== String(targetId));
-          if (remaining.length > 0) {
-            setActiveConversationId(remaining[0].id);
-          } else {
-            setActiveConversationId(null);
-          }
+          // Return directly to conversation list view
+          setActiveConversationId(null);
 
           setShowChatMenu(false);
           setShowConfirmModal(false);

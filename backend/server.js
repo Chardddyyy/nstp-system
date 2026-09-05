@@ -1459,14 +1459,14 @@ app.post('/api/auth/login', async function(req, res) {
     }
 
     var aliases = [email];
-    if (email === 'admin@cvsu.edu.ph' || email === 'richardbelen99@gmail.com' || email === 'admin') {
-      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com'];
-    } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor') {
-      aliases = ['clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
-    } else if (email === 'lts@cvsu.edu.ph' || email === 'lts') {
-      aliases = ['lts@cvsu.edu.ph'];
-    } else if (email === 'rotc@cvsu.edu.ph' || email === 'rotc') {
-      aliases = ['rotc@cvsu.edu.ph'];
+    if (email === 'admin@cvsu.edu.ph' || email === 'richardbelen99@gmail.com' || email === 'admin' || email === 'admin@gmail.com') {
+      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com', 'admin@gmail.com'];
+    } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor' || email === 'cwts@gmail.com') {
+      aliases = ['clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph', 'cwts@gmail.com'];
+    } else if (email === 'lts@cvsu.edu.ph' || email === 'lts' || email === 'lts@gmail.com') {
+      aliases = ['lts@cvsu.edu.ph', 'lts@gmail.com'];
+    } else if (email === 'rotc@cvsu.edu.ph' || email === 'rotc' || email === 'rotc@gmail.com') {
+      aliases = ['rotc@cvsu.edu.ph', 'rotc@gmail.com'];
     }
 
     var result = await pool.execute(
