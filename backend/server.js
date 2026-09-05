@@ -1271,6 +1271,8 @@ async function ensureEnrollmentColumns() {
     'ALTER TABLE enrollments ADD COLUMN registeredVoter VARCHAR(20)',
     'ALTER TABLE enrollments ADD COLUMN ip_address VARCHAR(45) NULL',
     'ALTER TABLE enrollments ADD COLUMN user_agent TEXT NULL',
+    'ALTER TABLE enrollments ADD COLUMN is_flagged_regform BOOLEAN DEFAULT FALSE',
+    'ALTER TABLE enrollments ADD COLUMN regform_flag_reason VARCHAR(255) NULL',
     'CREATE INDEX idx_enrollments_studentid ON enrollments (studentId)',
     'CREATE INDEX idx_enrollments_email ON enrollments (email)',
     'CREATE INDEX idx_enrollments_status ON enrollments (status)',
