@@ -37,6 +37,21 @@ function Profile() {
     profilePicture: user?.profilePicture || null
   });
 
+  // Keep formData in sync when authenticated user object loads or updates
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        bio: user.bio || '',
+        avatar: user.avatar || prev.avatar || 'default',
+        profilePicture: user.profilePicture !== undefined ? user.profilePicture : prev.profilePicture
+      }));
+    }
+  }, [user]);
+
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -334,6 +349,7 @@ function Profile() {
   const [editingInstructor, setEditingInstructor] = useState(null);
   const [showEditInstructorModal, setShowEditInstructorModal] = useState(false);
   const [editInstructorForm, setEditInstructorForm] = useState({ id: null, name: '', email: '', role: 'instructor', department: 'CWTS', newPassword: '' });
+  const [avatarModified, setAvatarModified] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [isSavingInstructor, setIsSavingInstructor] = useState(false);
 
@@ -349,6 +365,7 @@ function Profile() {
       profilePicture: inst.profilePicture || null,
       newPassword: ''
     });
+    setAvatarModified(false);
     setShowEditPassword(false);
     setShowEditInstructorModal(true);
   };
@@ -364,19 +381,34 @@ function Profile() {
     }
     setIsSavingInstructor(true);
     try {
-      const updated = await usersAPI.update(editInstructorForm.id, {
+      const updatePayload = {
         name: editInstructorForm.name.trim(),
         email: editInstructorForm.email.trim(),
         role: editInstructorForm.role,
         department: editInstructorForm.role === 'admin' ? null : editInstructorForm.department,
-        avatar: editInstructorForm.avatar || editingInstructor?.avatar || undefined,
-        profilePicture: editInstructorForm.profilePicture || editingInstructor?.profilePicture || undefined,
-        password: editInstructorForm.newPassword || undefined
-      });
+      };
+
+      // CRITICAL: Only send avatar if the admin explicitly clicked/selected a new avatar!
+      if (avatarModified && editInstructorForm.avatar) {
+        updatePayload.avatar = editInstructorForm.avatar;
+      }
+
+      // Preserve profilePicture if unchanged
+      if (editInstructorForm.profilePicture) {
+        updatePayload.profilePicture = editInstructorForm.profilePicture;
+      }
+
+      // Include new password if entered
+      if (editInstructorForm.newPassword && editInstructorForm.newPassword.trim().length >= 6) {
+        updatePayload.password = editInstructorForm.newPassword.trim();
+      }
+
+      const updated = await usersAPI.update(editInstructorForm.id, updatePayload);
       setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
       setShowEditInstructorModal(false);
       setEditingInstructor(null);
-      showToast('Faculty member details updated.', 'success');
+      setAvatarModified(false);
+      showToast('Faculty member details updated successfully.', 'success');
     } catch (error) {
       showToast(error?.message || 'Failed to update instructor.', 'error');
     } finally {
@@ -1099,7 +1131,10 @@ function Profile() {
                     <button
                       type="button"
                       key={avatar.id}
-                      onClick={() => setEditInstructorForm(prev => ({ ...prev, avatar: avatar.id }))}
+                      onClick={() => {
+                        setAvatarModified(true);
+                        setEditInstructorForm(prev => ({ ...prev, avatar: avatar.id }));
+                      }}
                       className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 transition-all p-0.5 bg-white hover:scale-110 shadow-xs cursor-pointer ${
                         editInstructorForm.avatar === avatar.id ? 'border-emerald-600 ring-2 ring-emerald-400/50 scale-105' : 'border-gray-200 hover:border-emerald-400'
                       }`}

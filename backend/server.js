@@ -595,12 +595,10 @@ async function ensureAllCoreTables() {
 
   // Ensure default admin user 1 exists and has correct info
   try {
-    const [existingAdmin] = await pool.execute('SELECT id FROM users WHERE id = 1 OR email = ?', ['admin@gmail.com']);
-    if (existingAdmin.length > 0) {
-      await pool.execute(
-        'UPDATE users SET name = ?, department = ?, avatar = ? WHERE id = 1',
-        ['NSTP Administrator', 'NSTP Office', 'avatar-4']
-      );
+    const [existingAdmin] = await pool.execute('SELECT id, name, department, avatar FROM users WHERE id = 1 OR email = ?', ['admin@gmail.com']);
+    if (existingAdmin.length > 0 && !existingAdmin[0].avatar) {
+      // Only set fallback avatar if admin currently has none
+      await pool.execute('UPDATE users SET avatar = ? WHERE id = ?', ['avatar-4', existingAdmin[0].id]);
     }
   } catch (err) {
     console.warn('Admin seed notice:', err.message);
@@ -2879,11 +2877,13 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     }
     const existingUser = existingUserRows[0];
 
-    const targetName = name !== undefined ? sanitizeStr(name, 255) : existingUser.name;
-    const targetEmail = email !== undefined ? sanitizeStr(email, 255) : existingUser.email;
+    const targetName = (name !== undefined && name !== null && String(name).trim() !== '') ? sanitizeStr(name, 255) : existingUser.name;
+    const targetEmail = (email !== undefined && email !== null && String(email).trim() !== '') ? sanitizeStr(email, 255) : existingUser.email;
     const targetPhone = phone !== undefined ? sanitizeStr(phone, 50) : existingUser.phone;
     const targetBio = bio !== undefined ? sanitizeStr(bio, 500) : existingUser.bio;
-    const targetAvatar = avatar !== undefined ? sanitizeStr(avatar, 50) : existingUser.avatar;
+    // Only overwrite avatar if explicitly provided and not null/undefined
+    const targetAvatar = (avatar !== undefined && avatar !== null && String(avatar).trim() !== '') ? sanitizeStr(avatar, 50) : existingUser.avatar;
+    // Only overwrite profilePicture if explicitly provided and not undefined
     const targetProfilePicture = profilePicture !== undefined ? (profilePicture || null) : existingUser.profilePicture;
 
     if (req.user.role === 'admin') {
@@ -2945,8 +2945,8 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
     if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    if (!newPassword || String(newPassword).length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    if (!newPassword || String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
     if (String(newPassword).length > 128) {
       return res.status(400).json({ message: 'Password too long' });

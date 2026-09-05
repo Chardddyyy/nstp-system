@@ -8,7 +8,160 @@ export function generateOfficialLetterHTML(template, batchYear = '2024-2025') {
   let addressee = '';
   let subject = tTitle.toUpperCase();
 
-  if (tDept === 'CWTS' || tTitle.toLowerCase().includes('barangay') || tTitle.toLowerCase().includes('immersion')) {
+  if (tTitle.toLowerCase().includes('excuse') || tTitle.toLowerCase().includes('medical') || tTitle.toLowerCase().includes('absence')) {
+    addressee = `
+      <strong>THE NSTP FACILITATOR / COORDINATOR</strong><br/>
+      Department of ${tDept === 'All' ? 'National Service Training Program' : tDept}<br/>
+      Cavite State University - Naic Campus
+    `;
+    specificBody = `
+      <p>Dear Ma'am / Sir:</p>
+      <p>I am respectfully writing this official communication to request your consideration and formal excuse for my recent absence from our scheduled NSTP session / community immersion activity for Academic Batch <strong>${batchYear}</strong>.</p>
+      <div style="background-color: #f8fafc; padding: 14px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 14px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <tr>
+            <td style="padding: 5px; width: 30%;"><strong>Student Name:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Student Number:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Department &amp; Section:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">${tDept} - Section: _______________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Date(s) of Absence:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Reason / Justification:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">[ ] Medical / Health Illness &nbsp;&nbsp; [ ] Bereavement / Family Emergency &nbsp;&nbsp; [ ] Official University Activity</td>
+          </tr>
+        </table>
+      </div>
+      <p>Herewith attached is the supporting medical consultation slip / hospital certification / official documentation for your validation. I express my full willingness to render the necessary make-up hours or complete supplementary civic welfare/training tasks in order to fulfill the required NSTP contact hours.</p>
+      <p>Thank you very much for your kind understanding and favorable consideration.</p>
+    `;
+  } else if (tTitle.toLowerCase().includes('incomplete') || tTitle.toLowerCase().includes('makeup') || tTitle.toLowerCase().includes('make-up')) {
+    addressee = `
+      <strong>OFFICE OF THE NSTP DIRECTOR / PROGRAM COORDINATOR</strong><br/>
+      Cavite State University - Naic Campus<br/>
+      Bucana Malaki, Naic, Cavite
+    `;
+    specificBody = `
+      <p><strong>SPECIAL MAKE-UP SERVICE &amp; ATTENDANCE RECTIFICATION AGREEMENT</strong></p>
+      <p>In view of an Incomplete (INC) attendance status in the prescribed National Service Training Program modules for Academic Year <strong>${batchYear}</strong>, this formal covenant establishes the required make-up hours, tasks, and completion milestones:</p>
+      <div style="background-color: #f8fafc; padding: 14px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 14px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <tr>
+            <td style="padding: 5px; width: 32%;"><strong>Student Name:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Student Number &amp; Program:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Missing Contact Hours:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">[ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ] Hours Needed (Day: __________)</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Assigned Compensatory Task:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">Campus Greening / Archive Digitization / Special Outreach Duty</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Supervising Faculty:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+        </table>
+      </div>
+      <p>The student commits to rendering the compensatory service hours conscientiously and submitting the completed proof-of-service accomplishment log within thirty (30) calendar days to qualify for official grade conversion and serial issuance.</p>
+    `;
+  } else if (tTitle.toLowerCase().includes('moral') || tTitle.toLowerCase().includes('clearance')) {
+    addressee = `
+      <strong>TO WHOM IT MAY CONCERN:</strong><br/>
+      Academic Credential &amp; Employment Verification Desk
+    `;
+    specificBody = `
+      <p>This is to officially certify that the student whose profile appears below has satisfactorily rendered civic service, exhibited commendable demeanor, and completed all institutional components of the <strong>National Service Training Program (NSTP)</strong> under Republic Act 9163 at Cavite State University - Naic Campus for Academic Batch <strong>${batchYear}</strong>.</p>
+      <div style="background-color: #f8fafc; padding: 14px; border: 1px solid #cbd5e1; border-radius: 6px; margin: 14px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <tr>
+            <td style="padding: 5px; width: 32%;"><strong>Certified Graduate:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Student ID:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">___________________________________________</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Program Component:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">${tDept === 'All' ? 'CWTS / LTS / ROTC' : tDept}</td>
+          </tr>
+          <tr>
+            <td style="padding: 5px;"><strong>Conduct Evaluation:</strong></td>
+            <td style="padding: 5px; border-bottom: 1px solid #94a3b8;">Exemplary / Good Moral Standing</td>
+          </tr>
+        </table>
+      </div>
+      <p>This clearance certifies that the student has no pending liability, unreturned property, or unfulfilled community obligations with this institution.</p>
+      <p>Issued this day for all lawful academic, employment, or government clearance intents and purposes.</p>
+    `;
+  } else if (tTitle.toLowerCase().includes('environmental') || tTitle.toLowerCase().includes('coastal') || tTitle.toLowerCase().includes('cleanup') || tTitle.toLowerCase().includes('tree')) {
+    addressee = `
+      <strong>HON. COMMUNITY ENVIRONMENT &amp; NATURAL RESOURCES OFFICER (CENRO)</strong><br/>
+      Barangay Council &amp; Municipal Environment Office<br/>
+      Municipality of Naic, Province of Cavite
+    `;
+    specificBody = `
+      <p>Environmental Greetings of Sustainability and Stewardship!</p>
+      <p>In line with the environmental preservation mandate of the <strong>National Service Training Program - Civic Welfare Training Service (NSTP-CWTS)</strong> of Cavite State University - Naic, we write to establish formal institutional partnership for our <strong>"Bucana Luntiang Baybayin" Coastal Rehabilitation &amp; Tree Growing Initiative</strong> for Academic Batch <strong>${batchYear}</strong>.</p>
+      <p>Our volunteer contingent of NSTP students and faculty supervisors will undertake the following ecological actions:</p>
+      <ul>
+        <li><strong>Coastal Solid Waste Segregation &amp; Cleanup</strong> along the foreshore communities of Naic.</li>
+        <li><strong>Mangrove Propagule &amp; Indigenous Tree Planting</strong> in identified erosion-prone coastal zones.</li>
+        <li><strong>Community Environmental Briefing</strong> on zero single-use plastic and proper coastal waste disposal.</li>
+      </ul>
+      <p>We kindly request logistical coordination, site clearance, and provision of seedling saplings if available from your office.</p>
+    `;
+  } else if (tTitle.toLowerCase().includes('feeding') || tTitle.toLowerCase().includes('health') || tTitle.toLowerCase().includes('sanitation')) {
+    addressee = `
+      <strong>THE MUNICIPAL HEALTH OFFICER &amp; BARANGAY HEALTH WORKERS (BHW)</strong><br/>
+      Rural Health Unit / Barangay Bucana Health Center<br/>
+      Municipality of Naic, Cavite
+    `;
+    specificBody = `
+      <p>Greetings of Wellness and Community Care!</p>
+      <p>The <strong>Cavite State University - Naic NSTP-CWTS Unit</strong> respectfully requests authorization to conduct a collaborative <strong>Community Supplementary Feeding &amp; Child Health Hygiene Outreach Program</strong> for identified underweight children and young families within your jurisdiction for Batch <strong>${batchYear}</strong>.</p>
+      <p>Key highlights of the student-led project include:</p>
+      <ul>
+        <li>Distribution of nutritious fortified warm meals and vitamin supplementation packages.</li>
+        <li>Interactive handwashing, oral hygiene, and sanitation demonstration for daycare children.</li>
+        <li>Basic anthropometric profiling (height, weight, BMI tracking) in coordination with barangay nurses.</li>
+      </ul>
+      <p>We assure you that all activities comply strictly with sanitary food preparation and child welfare guidelines.</p>
+    `;
+  } else if (tTitle.toLowerCase().includes('inspection') || tTitle.toLowerCase().includes('ati') || tTitle.toLowerCase().includes('pass-in-review')) {
+    addressee = `
+      <strong>THE COMMANDING OFFICER &amp; INSPECTION TEAM</strong><br/>
+      Naval Reserve Command, Philippine Navy / DMST Inspection Board<br/>
+      Naval Station Pascual Ledesma, Cavite City
+    `;
+    specificBody = `
+      <p>Sir / Ma'am:</p>
+      <p>The <strong>Department of Military Science and Tactics (DMST) - Reserve Officers' Training Corps (ROTC)</strong> Unit of Cavite State University - Naic Campus respectfully invites your esteemed board to conduct the <strong>Annual Tactical Inspection (ATI) and Ceremonial Pass-in-Review</strong> for Cadet Corps Batch <strong>${batchYear}</strong>.</p>
+      <p>Our midshipmen and cadet corps will be inspected in the following evaluated areas:</p>
+      <ul>
+        <li><strong>Ceremonial Military Parade &amp; Close Order Drill</strong>.</li>
+        <li><strong>Field Stripping, Weapon Nomenclature &amp; Maintenance</strong>.</li>
+        <li><strong>Comprehensive POI Theoretical Military Knowledge Examination</strong>.</li>
+        <li><strong>Disaster Response Task Unit (DRTU) Demonstration &amp; First Aid Evacuation</strong>.</li>
+      </ul>
+      <p>Your authoritative assessment and guidance are vital to the continuous operational excellence of our naval cadet unit.</p>
+    `;
+  } else if (tDept === 'CWTS' || tTitle.toLowerCase().includes('barangay') || tTitle.toLowerCase().includes('immersion')) {
     addressee = `
       <strong>HON. BARANGAY CHAIRMAN &amp; SANGGUNIANG BARANGAY</strong><br/>
       Barangay Bucana Malaki / Partner Communities<br/>
@@ -124,6 +277,17 @@ export function generateOfficialLetterHTML(template, batchYear = '2024-2025') {
           </tr>
         </table>
       </div>
+    `;
+  } else if (template?.description && template.description.trim().length > 30) {
+    addressee = `
+      <strong>TO: ALL CONCERNED STAKEHOLDERS &amp; COMMUNITY PARTNERS</strong><br/>
+      Department of ${tDept === 'All' ? 'National Service Training Program' : tDept}<br/>
+      Cavite State University - Naic Campus
+    `;
+    specificBody = `
+      <p>Official Institutional Notice and Endorsement:</p>
+      <p>${template.description.replace(/\n/g, '<br/>')}</p>
+      <p>This official document is executed in accordance with institutional guidelines and Republic Act No. 9163 for Academic Year <strong>${batchYear}</strong>.</p>
     `;
   } else {
     // CHED Serial / General Endorsement
