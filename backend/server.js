@@ -6504,8 +6504,8 @@ async function initTelemetry() {
       const stored = JSON.parse(settingRows[0].setting_value);
       if (Array.isArray(stored.visitors)) {
         stored.visitors.forEach(id => {
-          // Only keep genuine web visitor UUIDs (exclude synthetic student/enrollment IDs)
-          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_')) {
+          // Only keep genuine web visitor UUIDs (exclude synthetic student/enrollment IDs and test runner IDs)
+          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_') && !String(id).startsWith('vis_test_')) {
             totalUniqueVisitors.add(String(id));
           }
         });
@@ -6522,7 +6522,7 @@ async function initTelemetry() {
       var parsed = JSON.parse(rawData);
       if (Array.isArray(parsed.visitors)) {
         parsed.visitors.forEach(function(id) {
-          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_')) {
+          if (id && !String(id).startsWith('std_') && !String(id).startsWith('enr_') && !String(id).startsWith('usr_') && !String(id).startsWith('audit_') && !String(id).startsWith('vis_test_')) {
             totalUniqueVisitors.add(String(id));
           }
         });
@@ -6537,7 +6537,7 @@ async function initTelemetry() {
     var [rows] = await pool.query('SELECT DISTINCT visitor_id FROM active_visitors');
     if (Array.isArray(rows)) {
       rows.forEach(function(r) {
-        if (r.visitor_id && !String(r.visitor_id).startsWith('std_') && !String(r.visitor_id).startsWith('enr_') && !String(r.visitor_id).startsWith('usr_') && !String(r.visitor_id).startsWith('audit_')) {
+        if (r.visitor_id && !String(r.visitor_id).startsWith('std_') && !String(r.visitor_id).startsWith('enr_') && !String(r.visitor_id).startsWith('usr_') && !String(r.visitor_id).startsWith('audit_') && !String(r.visitor_id).startsWith('vis_test_')) {
           totalUniqueVisitors.add(String(r.visitor_id));
         }
       });
@@ -6606,10 +6606,13 @@ app.post('/api/track', async function(req, res) {
     }
 
     var cleanId = String(visitor_id).slice(0, 48);
-    var isNew = !totalUniqueVisitors.has(cleanId);
-    totalUniqueVisitors.add(cleanId);
-    if (isNew) {
-      saveTelemetry();
+    var isGenuine = cleanId && !cleanId.startsWith('std_') && !cleanId.startsWith('enr_') && !cleanId.startsWith('usr_') && !cleanId.startsWith('audit_') && !cleanId.startsWith('vis_test_');
+    var isNew = isGenuine && !totalUniqueVisitors.has(cleanId);
+    if (isGenuine) {
+      totalUniqueVisitors.add(cleanId);
+      if (isNew) {
+        saveTelemetry();
+      }
     }
 
     var query = `
@@ -6697,10 +6700,13 @@ app.post('/api/telemetry/ping', function(req, res) {
   }
 
   var cleanId = String(visitorId).slice(0, 48);
-  var isNewVisitor = !totalUniqueVisitors.has(cleanId);
-  totalUniqueVisitors.add(cleanId);
-  if (isNewVisitor) {
-    saveTelemetry();
+  var isGenuine = cleanId && !cleanId.startsWith('std_') && !cleanId.startsWith('enr_') && !cleanId.startsWith('usr_') && !cleanId.startsWith('audit_') && !cleanId.startsWith('vis_test_');
+  var isNewVisitor = isGenuine && !totalUniqueVisitors.has(cleanId);
+  if (isGenuine) {
+    totalUniqueVisitors.add(cleanId);
+    if (isNewVisitor) {
+      saveTelemetry();
+    }
   }
 
   activeSessions.set(sessionId, {

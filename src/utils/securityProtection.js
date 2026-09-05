@@ -11,14 +11,17 @@
 export function initSecurityProtection() {
   if (typeof window === 'undefined') return;
 
-  // 1. Disable Right-Click Context Menu
+  // In development mode, allow developers full access to DevTools and console
+  if (import.meta.env.DEV) return;
+
+  // 1. Disable Right-Click Context Menu in production
   window.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     e.stopPropagation();
     return false;
   }, { capture: true, passive: false });
 
-  // 2. Disable DevTools and View-Source Keyboard Shortcuts
+  // 2. Disable DevTools and View-Source Keyboard Shortcuts in production
   window.addEventListener('keydown', (e) => {
     // F12
     if (e.key === 'F12' || e.keyCode === 123) {
@@ -49,30 +52,18 @@ export function initSecurityProtection() {
     }
   }, { capture: true });
 
-  // 4. Mute console in production to prevent inspection of state/tokens/objects
+  // 4. Clean console output in production
   if (import.meta.env.PROD || (typeof globalThis !== 'undefined' && globalThis.process?.env?.NODE_ENV === 'production')) {
     const noop = () => {};
     try {
       console.log = noop;
       console.info = noop;
       console.warn = noop;
-      console.error = noop;
       console.debug = noop;
       console.table = noop;
       console.trace = noop;
       console.dir = noop;
       console.clear();
     } catch (_) {}
-
-    // Anti-debugger loop
-    setInterval(() => {
-      try {
-        const start = performance.now();
-        (function() { return false; }["constructor"]("debugger")());
-        if (performance.now() - start > 100) {
-          try { console.clear(); } catch (_) {}
-        }
-      } catch (_) {}
-    }, 2000);
   }
 }

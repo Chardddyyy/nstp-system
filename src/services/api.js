@@ -1412,10 +1412,20 @@ export const archivesAPI = {
 export function getPersistentVisitorId() {
   let vId = '';
   try {
-    vId = localStorage.getItem('nstp_persistent_visitor_uuid');
+    vId = localStorage.getItem('nstp_visitor_id') || localStorage.getItem('nstp_persistent_visitor_uuid');
+    if (!vId && typeof document !== 'undefined' && document.cookie) {
+      const match = document.cookie.match(/(?:^|;\s*)nstp_visitor_id=([^;]+)/);
+      if (match && match[1]) {
+        vId = decodeURIComponent(match[1]);
+      }
+    }
     if (!vId) {
       vId = 'vid_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-      localStorage.setItem('nstp_persistent_visitor_uuid', vId);
+    }
+    localStorage.setItem('nstp_visitor_id', vId);
+    localStorage.setItem('nstp_persistent_visitor_uuid', vId);
+    if (typeof document !== 'undefined') {
+      document.cookie = `nstp_visitor_id=${encodeURIComponent(vId)}; path=/; max-age=63072000; SameSite=Lax`;
     }
   } catch (_) {
     vId = 'vid_temp_' + Date.now();

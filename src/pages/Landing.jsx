@@ -814,15 +814,15 @@ function Landing() {
         <div className="max-w-4xl mx-auto text-center relative z-10">
 
           {/* Schedule Status Card */}
-          <div className="mb-8 p-5 sm:p-7 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto text-left">
+          <div className="mb-8 p-4 xs:p-5 sm:p-7 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-w-2xl mx-auto text-left">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start space-x-3.5">
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+              <div className="flex items-start gap-3 sm:gap-3.5 w-full min-w-0">
+                <div className={`w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
                   enrollmentStatus.isOpen
                     ? 'bg-emerald-600 text-white shadow-emerald-950/50'
                     : 'bg-rose-600 text-white shadow-rose-950/50'
                 }`}>
-                  {enrollmentStatus.isOpen ? <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7" /> : <Clock className="w-6 h-6 sm:w-7 sm:h-7" />}
+                  {enrollmentStatus.isOpen ? <CheckCircle2 className="w-5 h-5 sm:w-7 sm:h-7" /> : <Clock className="w-5 h-5 sm:w-7 sm:h-7" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -833,14 +833,16 @@ function Landing() {
                       {enrollmentStatus.isOpen ? 'Portal Active' : 'Portal Closed'}
                     </span>
                   </div>
-                  <p className="text-emerald-100 text-xs sm:text-sm mt-1.5 font-medium leading-relaxed">
+                  <p className="text-emerald-100 text-xs sm:text-sm mt-1.5 font-medium leading-relaxed break-words">
                     {enrollmentStatus.subtext}
                   </p>
                   {enrollmentStatus.customNotice && (
-                    <div className="mt-2 max-w-full">
-                      <div className="text-amber-200 text-[10.5px] sm:text-xs font-semibold bg-emerald-950/90 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-amber-400/30 flex items-center gap-1.5 shadow-xs max-w-full text-left">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-                        <span className="truncate sm:whitespace-normal font-medium">{enrollmentStatus.customNotice}</span>
+                    <div className="mt-2.5 w-full">
+                      <div className="text-amber-200 text-[11px] sm:text-xs font-semibold bg-emerald-950/90 px-3 py-2 rounded-xl border border-amber-400/30 flex items-start sm:items-center gap-2 shadow-xs w-full text-left">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1 sm:mt-0"></span>
+                        <span className="whitespace-normal break-words font-medium leading-snug sm:leading-normal flex-1 min-w-0">
+                          {enrollmentStatus.customNotice}
+                        </span>
                       </div>
                     </div>
                   )}

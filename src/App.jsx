@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, DEFAULT_PAST_BATCHES } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
@@ -193,11 +193,7 @@ function App() {
       sessionStorage.setItem('nstp_session_id', sid);
     }
 
-    let vid = localStorage.getItem('nstp_visitor_id');
-    if (!vid) {
-      vid = 'vid_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-      localStorage.setItem('nstp_visitor_id', vid);
-    }
+    let vid = getPersistentVisitorId();
 
     const sendPing = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
