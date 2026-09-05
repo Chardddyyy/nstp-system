@@ -6156,7 +6156,7 @@ app.get('/api/attendance', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY a.scanned_at DESC';
 
-    const rowLimit = parseInt(limit, 10) || 500;
+    const rowLimit = Math.min(Math.max(parseInt(limit, 10) || 5000, 1), 10000);
     query += ` LIMIT ${rowLimit}`;
 
     const [records] = await pool.execute(query, params).catch(() => [[]]);
@@ -6211,13 +6211,26 @@ app.post('/api/attendance/override', authenticateToken, async (req, res) => {
     }
 
     // Delete existing records for this student on this day/activity
-    await pool.execute(
-      'DELETE FROM attendance_records WHERE student_id = ? AND activity_name LIKE ?',
-      [student.studentId || student_id, `%${activity_name}%`]
-    ).catch(() => {});
+    const dayPattern = req.body.day ? `${req.body.day} %` : null;
+    if (dayPattern) {
+      await pool.execute(
+        'DELETE FROM attendance_records WHERE student_id = ? AND (activity_name LIKE ? OR activity_name LIKE ?)',
+        [student.studentId || student_id, dayPattern, `%${activity_name}%`]
+      ).catch(() => {});
+    } else {
+      await pool.execute(
+        'DELETE FROM attendance_records WHERE student_id = ? AND activity_name LIKE ?',
+        [student.studentId || student_id, `%${activity_name}%`]
+      ).catch(() => {});
+    }
 
-    if (status && status !== 'Clear') {
-      const scanType = status === 'Present' ? 'TIME_OUT' : 'TIME_IN';
+    if (status && status !== 'Clear' && status !== '-') {
+      let scanType = 'TIME_IN';
+      if (status === 'Present' || status === 'Late') scanType = 'TIME_OUT';
+      else if (status === 'Absent') scanType = 'ABSENT';
+      else if (status === 'Excused') scanType = 'EXCUSED';
+      else if (status === 'Incomplete') scanType = 'TIME_IN';
+
       await pool.execute(
         `INSERT INTO attendance_records (
           student_id, student_name, department, section,

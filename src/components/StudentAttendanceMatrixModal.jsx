@@ -29,15 +29,16 @@ export function StudentAttendanceMatrixModal({
     if (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office') return currentDepartment;
     if (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department)) return currentUser.department;
     return 'All';
-  }, [currentDepartment, currentUser]);
+  }, [currentDepartment, currentUser?.role, currentUser?.department]);
 
   const [selectedDept, setSelectedDept] = useState(initialDept);
 
+  // Initialize selectedDept only when modal opens to avoid resetting while user interacts
   useEffect(() => {
-    if (initialDept) {
+    if (isOpen) {
       setSelectedDept(initialDept);
     }
-  }, [initialDept]);
+  }, [isOpen]);
 
   const [viewFilter, setViewFilter] = useState('all'); // 'all' | 'at-risk' (3+ absences) | 'perfect' (100%)
 
@@ -49,12 +50,14 @@ export function StudentAttendanceMatrixModal({
     if (!isOpen) return;
     let isSubscribed = true;
 
-    async function loadData() {
+    async function loadData(showSpinner = false) {
       try {
-        setLoading(true);
+        if (showSpinner) {
+          setLoading(true);
+        }
 
         const [records, stList] = await Promise.all([
-          attendanceAPI.getRecords({ limit: 1000 }).catch(() => []),
+          attendanceAPI.getRecords({ limit: 5000 }).catch(() => []),
           (!propStudents || propStudents.length === 0) 
             ? studentsAPI.getAll().catch(() => []) 
             : Promise.resolve(propStudents)
@@ -70,16 +73,17 @@ export function StudentAttendanceMatrixModal({
       } catch (err) {
         console.error('Failed to load matrix data:', err);
       } finally {
-        if (isSubscribed) {
+        if (isSubscribed && showSpinner) {
           setLoading(false);
         }
       }
     }
 
-    loadData();
+    // Only show full spinner if there are no attendance records loaded yet
+    loadData(attendanceRecords.length === 0);
 
     const handleUpdate = () => {
-      loadData();
+      loadData(false);
     };
     window.addEventListener('nstp_attendance_updated', handleUpdate);
 
@@ -87,7 +91,7 @@ export function StudentAttendanceMatrixModal({
       isSubscribed = false;
       window.removeEventListener('nstp_attendance_updated', handleUpdate);
     };
-  }, [isOpen, propStudents]);
+  }, [isOpen]);
 
   // Derive base students from props, context, fetched, or cache
   const baseStudents = useMemo(() => {
@@ -154,13 +158,11 @@ export function StudentAttendanceMatrixModal({
     });
     
     if (selectedDept && selectedDept !== 'All' && selectedDept !== 'NSTP Office') {
-      const deptFiltered = targetStudents.filter(s => {
-        const dept = (s.department || s.component || s.nstp_program || '').toUpperCase().trim();
-        return dept === selectedDept.toUpperCase().trim();
+      const filterDept = selectedDept.toUpperCase().trim();
+      targetStudents = targetStudents.filter(s => {
+        const dept = (s.department || s.component || s.nstp_program || s.program || '').toUpperCase().trim();
+        return dept === filterDept || dept.includes(filterDept);
       });
-      if (deptFiltered.length > 0) {
-        targetStudents = deptFiltered;
-      }
     }
 
     const totalConducted = maxDayConducted;
@@ -196,16 +198,24 @@ export function StudentAttendanceMatrixModal({
         });
         
         if (matchingRecords.length > 0) {
-          const hasTimeOut = matchingRecords.some(r => r.scan_type === 'TIME_OUT' || r.status === 'Present');
-          const hasTimeIn = matchingRecords.some(r => r.scan_type === 'TIME_IN');
           const isExcused = matchingRecords.some(r => r.status === 'Excused');
+          const isAbsent = matchingRecords.some(r => r.status === 'Absent');
+          const isInc = matchingRecords.some(r => r.status === 'Incomplete') || 
+            (matchingRecords.some(r => r.scan_type === 'TIME_IN') && !matchingRecords.some(r => r.scan_type === 'TIME_OUT' && r.status !== 'Incomplete'));
+          const isLate = matchingRecords.some(r => r.status === 'Late');
+          const isPresent = matchingRecords.some(r => r.status === 'Present') || 
+            matchingRecords.some(r => r.scan_type === 'TIME_OUT' && r.status !== 'Absent' && r.status !== 'Incomplete');
 
           if (isExcused) {
             dayStatuses[dayStr] = 'Excused';
-          } else if (hasTimeOut) {
+          } else if (isAbsent) {
+            dayStatuses[dayStr] = 'Absent';
+          } else if (isInc) {
+            dayStatuses[dayStr] = 'Incomplete';
+          } else if (isLate) {
+            dayStatuses[dayStr] = 'Late';
+          } else if (isPresent) {
             dayStatuses[dayStr] = 'Present';
-          } else if (hasTimeIn) {
-            dayStatuses[dayStr] = 'Incomplete'; // Timed in only, did not time out
           } else {
             dayStatuses[dayStr] = 'Absent';
           }
@@ -278,7 +288,15 @@ export function StudentAttendanceMatrixModal({
     const finalStatus = actionStatus || editingCell.newStatus;
     const { student, dayStr, notes } = editingCell;
     const sid = student.studentId || student.id;
-    const actName = `${dayStr} - NSTP Session`;
+
+    const existingRec = attendanceRecords.find(r => {
+      const sidMatch = String(r.student_id || '').toLowerCase() === String(sid).toLowerCase();
+      if (!sidMatch) return false;
+      const act = (r.activity_name || r.day || '').trim();
+      const regex = new RegExp(`(^|[^a-zA-Z0-9])(${dayStr}|${dayStr.replace(' ', '')}|${dayStr.replace('Day ', 'D')})([^a-zA-Z0-9]|$)`, 'i');
+      return regex.test(act);
+    });
+    const actName = existingRec?.activity_name || `${dayStr} - NSTP Session`;
 
     try {
       setSavingEdit(true);
@@ -287,17 +305,25 @@ export function StudentAttendanceMatrixModal({
       await attendanceAPI.overrideRecord({
         student_id: sid,
         activity_name: actName,
+        day: dayStr,
         status: finalStatus,
         notes: notes || `Manual override by ${currentUser?.name || 'Instructor'}`
       });
 
-      // 2. Update local storage cache
+      // 2. Update local storage cache and state
       const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
       const filtered = cached.filter(r => !(
-        String(r.student_id) === String(sid) && (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase())
+        String(r.student_id).toLowerCase() === String(sid).toLowerCase() && 
+        (r.day === dayStr || (r.activity_name || '').toLowerCase().includes(dayStr.toLowerCase()))
       ));
 
       if (finalStatus && finalStatus !== 'Clear' && finalStatus !== '-') {
+        let scanType = 'TIME_IN';
+        if (finalStatus === 'Present' || finalStatus === 'Late') scanType = 'TIME_OUT';
+        else if (finalStatus === 'Absent') scanType = 'ABSENT';
+        else if (finalStatus === 'Excused') scanType = 'EXCUSED';
+        else if (finalStatus === 'Incomplete') scanType = 'TIME_IN';
+
         filtered.push({
           id: Date.now() + Math.random(),
           student_id: sid,
@@ -305,7 +331,7 @@ export function StudentAttendanceMatrixModal({
           department: student.department || currentUser?.department || 'CWTS',
           section: student.section || '',
           activity_name: actName,
-          scan_type: finalStatus === 'Present' ? 'TIME_OUT' : 'TIME_IN',
+          scan_type: scanType,
           scanned_at: new Date().toISOString(),
           status: finalStatus,
           notes: notes || 'Manual edit'
@@ -786,6 +812,16 @@ export function StudentAttendanceMatrixModal({
 
                   <button
                     type="button"
+                    onClick={() => handleSaveCellEdit('Incomplete')}
+                    disabled={savingEdit}
+                    className="p-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                  >
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span>Mark Incomplete (INC)</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleSaveCellEdit('Excused')}
                     disabled={savingEdit}
                     className="p-3 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
@@ -808,7 +844,7 @@ export function StudentAttendanceMatrixModal({
                     type="button"
                     onClick={() => handleSaveCellEdit('Absent')}
                     disabled={savingEdit}
-                    className="p-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
+                    className="col-span-2 p-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-2xs"
                   >
                     <UserX className="w-4 h-4 text-rose-600" />
                     <span>Mark Absent (A)</span>
