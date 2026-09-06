@@ -239,14 +239,34 @@ Historically, NSTP administration relied on physical paper forms, manual spreads
 
 ---
 
-### Question 10: Future Scalability & Production Readiness
-> **Panelist:** *"If this system were deployed across all campuses of Cavite State University with 25,000+ students, what architectural enhancements would you prioritize?"*
+---
+
+### Question 11: Real-Time QR Code Attendance Verification, Lateness Cutoff & Single-Record Deduplication
+> **Panelist:** *"How does the system prevent duplicate attendance entries when a student scans multiple times or completes both Time-In and Time-Out, and how is lateness calculated fairly?"*
 
 **Technical Defense Answer:**
-> "To scale horizontally across all multi-campus branches, we would implement:
-> 1. **Redis In-Memory Caching & Session Storage:** Introduce a distributed Redis cache layer for JWT revocation lists, user sessions, and Socket.IO Redis Adapter pub/sub across multiple Node.js server instances.
-> 2. **Read/Write Database Replication:** Configure MySQL Primary-Replica topologies, routing write transactions (enrollment submissions, attendance scans) to the Primary node while distributing read queries (student rosters, dashboard analytics) across read replicas.
-> 3. **Microservices Containerization:** Containerize services via Docker and Kubernetes (K8s), separating the Real-time Chat Gateway, Attendance Scanner Engine, and PDF Reporting Service into independently scalable microservices."
+> "In [`src/components/AttendanceScannerModal.jsx`](file:///Users/Chardddddyyyyy/Documents/NSTP/nstp-system/src/components/AttendanceScannerModal.jsx), we developed a multi-stage **Attendance Lifecycle & Deduplication Engine**:
+> 1. **Canonical Student Matching (`isStudentMatch`):** QR codes encode tokens formatted as `NSTP-{studentId}-{serial}`. Our comparator algorithm resolves students across multiple identifiers—primary `studentId`, QR token, serial ID, or normalized name. When a student scans `TIME_OUT`, the algorithm locates their existing session entry rather than creating a second row.
+> 2. **In-Place Lifecycle Progression:** Each student maintains exactly **one attendee record** in the live session roster. Upon `TIME_IN`, the timestamp is captured (e.g. `In: 08:05 AM`). When the student scans `TIME_OUT` in the afternoon (e.g. `Out: 12:00 PM`), the existing entry is updated in-place to reflect both timestamps and elevated to `Present (P)`.
+> 3. **Mathematical Lateness & Grace Period Cutoff:** In Step 1, instructors set the scheduled `session_start_time` (e.g. 08:00 AM) and selectable `grace_period` (0, 10, 15, or 30 minutes). If a student scans after `session_start_time + grace_period` (e.g. 08:16 AM with a 15-min grace period), the system flags the record as `Late (L)` with audio and visual warnings, preserving late status upon Time-Out.
+> 4. **Incomplete Attendance Tracking:** If a student times in but neglects to scan out before the session is saved, the database batch persistence pipeline automatically categorizes their record as **`Incomplete (INC)`** as mandated by university NSTP guidelines."
+
+---
+
+### Question 12: Ledger Integrity, Day Locking, and Master Attendance Matrix
+> **Panelist:** *"How does the system ensure data integrity across the 15-day semester, and how does the Master Attendance Matrix handle instructors with different department assignments?"*
+
+**Technical Defense Answer:**
+> "In [`src/components/StudentAttendanceMatrixModal.jsx`](file:///Users/Chardddddyyyyy/Documents/NSTP/nstp-system/src/components/StudentAttendanceMatrixModal.jsx), we established a comprehensive **15-Day Ledger System**:
+> 1. **Completed Day Locking:** Days that have already been conducted and saved (e.g. Days 1 through 14) are automatically disabled in the setup selector with a `(Conducted / Closed)` indicator. This prevents instructors from accidentally overwriting historical session records.
+> 2. **Department-Scoped Matrix Isolation:** For instructors, track selection dropdowns are removed; the system automatically restricts the 15-day matrix to the instructor's assigned track (`CWTS`, `ROTC`, or `LTS`), enforcing strict role-based data partitioning.
+> 3. **Comprehensive Status Matrix:** The matrix dynamically maps each student across all 15 days with standard institutional status codes:
+>    - 🟢 `P`: Present (Full attendance with Time-In and Time-Out)
+>    - 🔴 `A`: Absent (No attendance logged for a completed day)
+>    - 🟡 `L`: Late (Time-In recorded after grace period cutoff)
+>    - 🔵 `E`: Excused (Documented excuse letter or approved institutional absence)
+>    - 🟠 `INC`: Incomplete (Time-In logged without Time-Out)
+>    - ⚪ `—`: Future session (Not yet conducted; strictly differentiated from an absence)."
 
 ---
 

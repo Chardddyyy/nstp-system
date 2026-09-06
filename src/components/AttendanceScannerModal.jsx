@@ -75,6 +75,43 @@ function getCutoffTime12h(startTimeStr, graceMinutes = 15) {
   return `${hour12}:${String(endM).padStart(2, '0')} ${ampm}`;
 }
 
+// Canonical Student Matching & Deduplication Helper
+function isStudentMatch(logOrRecord, targetStudent, rawCode) {
+  if (!logOrRecord) return false;
+
+  const logSid = String(logOrRecord.student_id || logOrRecord.student?.studentId || logOrRecord.student?.id || '').trim().toLowerCase();
+  const logName = String(logOrRecord.student_name || logOrRecord.student?.name || `${logOrRecord.student?.firstName || ''} ${logOrRecord.student?.lastName || ''}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const logQr = String(logOrRecord.student?.qr_token || logOrRecord.qr_token || '').trim().toLowerCase();
+  const logSerial = String(logOrRecord.student?.nstp_serial_id || logOrRecord.nstp_serial_id || '').trim().toLowerCase();
+
+  const targetSid = String(targetStudent?.studentId || targetStudent?.id || '').trim().toLowerCase();
+  const targetName = String(targetStudent?.name || `${targetStudent?.firstName || ''} ${targetStudent?.lastName || ''}`).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const targetQr = String(targetStudent?.qr_token || '').trim().toLowerCase();
+  const targetSerial = String(targetStudent?.nstp_serial_id || '').trim().toLowerCase();
+  const code = String(rawCode || '').trim().toLowerCase();
+
+  // 1. Exact Student ID match
+  if (targetSid && logSid && targetSid === logSid) return true;
+
+  // 2. Direct code match against Student ID, QR token, or Serial ID
+  if (code) {
+    if (logSid && (logSid === code || code.includes(logSid))) return true;
+    if (logQr && logQr === code) return true;
+    if (logSerial && logSerial === code) return true;
+  }
+
+  // 3. QR token match
+  if (targetQr && (logQr === targetQr || logSid === targetQr)) return true;
+
+  // 4. Serial ID match
+  if (targetSerial && (logSerial === targetSerial || logSid === targetSerial)) return true;
+
+  // 5. Normalized Student Name match
+  if (targetName && logName && targetName === logName) return true;
+
+  return false;
+}
+
 export function AttendanceScannerModal({ 
   isOpen, 
   onClose, 
@@ -227,11 +264,11 @@ export function AttendanceScannerModal({
     // Enforce Rule: Student CANNOT Time Out without a valid Time In for this day
     const existingCache = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
     const hasTimeIn = sessionLogs.some(l => (
-      (String(l.student_id) === cleanCode || l.student?.studentId === cleanCode || l.student?.nstp_serial_id === cleanCode || l.student?.qr_token === cleanCode) &&
+      isStudentMatch(l, null, cleanCode) &&
       (l.day === selectedDay || (l.activity_name || '').includes(selectedDay)) &&
-      (l.scan_type === 'TIME_IN' || l.status === 'Late' || l.status === 'Timed In' || l.status === 'Incomplete')
+      (l.has_time_in || l.time_in || l.scan_type === 'TIME_IN' || l.status === 'Late' || l.status === 'Timed In' || l.status === 'Incomplete')
     )) || existingCache.some(r => (
-      String(r.student_id) === cleanCode &&
+      isStudentMatch(r, null, cleanCode) &&
       (r.activity_name || '').includes(selectedDay) &&
       r.scan_type === 'TIME_IN'
     ));
@@ -271,50 +308,68 @@ export function AttendanceScannerModal({
         playScanBeep(true);
         setLastScannedStudent(res.student);
 
-        // Check if student was previously late on Time In in this session
-        const previousLate = sessionLogs.some(l => (
-          (String(l.student_id) === cleanCode || l.student?.studentId === cleanCode) &&
-          (l.status === 'Late' || l.is_late)
-        ));
-        const finalStudentIsLate = isLateNow || previousLate || res.is_late;
+        setSessionLogs((prev) => {
+          // Find existing log entry for this student in current session
+          const existingEntry = prev.find(p => isStudentMatch(p, res.student, cleanCode));
 
-        let statusText = 'Timed In';
-        if (scanType === 'TIME_IN') {
-          statusText = finalStudentIsLate ? 'Late' : 'Timed In';
-          setScanStatus({
-            type: finalStudentIsLate ? 'late' : 'success',
-            message: finalStudentIsLate
-              ? `⚠️ LATE: Timed in at ${new Date().toLocaleTimeString()} (Cutoff: ${getCutoffTime12h(sessionStartTime, gracePeriod)}). Recorded as Late for ${selectedDay}.`
-              : `🟢 ON-TIME: Time In recorded at ${new Date().toLocaleTimeString()}! Student must Time Out to complete session.`
-          });
-        } else {
-          statusText = finalStudentIsLate ? 'Late' : 'Present';
-          setScanStatus({
-            type: 'success',
-            message: finalStudentIsLate
-              ? `🟠 Time Out complete! Status: LATE (Late time-in) for ${selectedDay}.`
-              : `🟢 Time Out complete! Status: PRESENT for ${selectedDay}.`
-          });
-        }
+          // Carry over lateness from Time-In or current scan
+          const previousLate = existingEntry ? (existingEntry.is_late || existingEntry.status === 'Late') : false;
+          const finalStudentIsLate = isLateNow || previousLate || res.is_late;
 
-        // Prepend to session logs
-        setSessionLogs((prev) => [
-          {
+          const timeInVal = scanType === 'TIME_IN'
+            ? new Date().toLocaleTimeString()
+            : (existingEntry?.time_in || existingEntry?.time || new Date().toLocaleTimeString());
+
+          const timeOutVal = scanType === 'TIME_OUT'
+            ? new Date().toLocaleTimeString()
+            : (existingEntry?.time_out || null);
+
+          let statusText = 'Timed In';
+          if (scanType === 'TIME_IN') {
+            statusText = finalStudentIsLate ? 'Late' : 'Timed In';
+            setScanStatus({
+              type: finalStudentIsLate ? 'late' : 'success',
+              message: finalStudentIsLate
+                ? `⚠️ LATE: Timed in at ${new Date().toLocaleTimeString()} (Cutoff: ${getCutoffTime12h(sessionStartTime, gracePeriod)}). Recorded as Late for ${selectedDay}.`
+                : `🟢 ON-TIME: Time In recorded at ${new Date().toLocaleTimeString()}! Student must Time Out to complete session.`
+            });
+          } else {
+            statusText = finalStudentIsLate ? 'Late' : 'Present';
+            setScanStatus({
+              type: 'success',
+              message: finalStudentIsLate
+                ? `🟠 Time Out complete! Status: LATE (Late time-in) for ${selectedDay}.`
+                : `🟢 Time Out complete! Status: PRESENT for ${selectedDay}.`
+            });
+          }
+
+          const resolvedSid = res.student?.studentId || res.record?.student_id || existingEntry?.student_id || cleanCode;
+          const resolvedName = res.student?.name || `${res.student?.firstName || ''} ${res.student?.lastName || ''}`.trim() || res.record?.student_name || existingEntry?.student_name;
+
+          const updatedStudentEntry = {
+            ...(existingEntry || {}),
             ...res.record,
-            student: res.student,
+            student: res.student || existingEntry?.student,
             day: selectedDay,
-            student_id: res.student?.studentId || res.record?.student_id || cleanCode,
-            student_name: res.student?.name || `${res.student?.firstName || ''} ${res.student?.lastName || ''}`.trim() || res.record?.student_name,
-            department: res.student?.department || res.record?.department || currentDepartment || 'CWTS',
-            section: res.student?.section || res.record?.section || '',
+            student_id: resolvedSid,
+            student_name: resolvedName,
+            department: res.student?.department || res.record?.department || existingEntry?.department || currentDepartment || 'CWTS',
+            section: res.student?.section || res.record?.section || existingEntry?.section || '',
             scan_type: scanType,
             status: statusText,
             is_late: finalStudentIsLate,
+            has_time_in: true,
+            has_time_out: scanType === 'TIME_OUT' || !!existingEntry?.has_time_out,
+            time_in: timeInVal,
+            time_out: timeOutVal,
             time: new Date().toLocaleTimeString(),
             date: new Date().toLocaleDateString()
-          },
-          ...prev.filter(p => !(String(p.student_id) === cleanCode && p.scan_type === scanType && p.day === selectedDay))
-        ]);
+          };
+
+          // Strict Deduplication: filter out ANY previous record of this student so they NEVER appear twice!
+          const remaining = prev.filter(p => !isStudentMatch(p, res.student, cleanCode));
+          return [updatedStudentEntry, ...remaining];
+        });
       }
     } catch (err) {
       playScanBeep(false);
@@ -435,10 +490,12 @@ export function AttendanceScannerModal({
           scan_type: 'EXCUSED',
           status: 'Excused',
           notes: excuseReason,
+          has_time_in: false,
+          has_time_out: false,
           time: new Date().toLocaleTimeString(),
           date: new Date().toLocaleDateString()
         },
-        ...prev.filter(l => String(l.student_id) !== cleanId)
+        ...prev.filter(l => !isStudentMatch(l, selectedStudentToExcuse, cleanId))
       ]);
 
       showToast(`${selectedStudentToExcuse.name || cleanId} marked as EXCUSED for ${selectedDay}!`, 'success');
@@ -487,16 +544,16 @@ export function AttendanceScannerModal({
           studentMap[sid].isExcused = true;
           studentMap[sid].notes = log.notes || 'Excused absence';
         }
-        if (log.scan_type === 'TIME_IN') {
+        if (log.scan_type === 'TIME_IN' || log.has_time_in || log.time_in) {
           studentMap[sid].hasTimeIn = true;
-          studentMap[sid].timeInTime = log.time;
+          studentMap[sid].timeInTime = log.time_in || log.time;
           if (log.status === 'Late' || log.is_late) {
             studentMap[sid].isLate = true;
           }
         }
-        if (log.scan_type === 'TIME_OUT') {
+        if (log.scan_type === 'TIME_OUT' || log.has_time_out || log.time_out) {
           studentMap[sid].hasTimeOut = true;
-          studentMap[sid].timeOutTime = log.time;
+          studentMap[sid].timeOutTime = log.time_out || log.time;
           if (log.status === 'Late' || log.is_late) {
             studentMap[sid].isLate = true;
           }
@@ -1071,7 +1128,7 @@ export function AttendanceScannerModal({
                       </div>
                     ) : (
                       sessionLogs.map((log, idx) => (
-                        <div key={idx} className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                        <div key={log.student_id || idx} className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
                           <div className="min-w-0 pr-2">
                             <p className="font-black text-slate-900 truncate">
                               {log.student_name || log.student?.name || log.student_id}
@@ -1081,7 +1138,7 @@ export function AttendanceScannerModal({
                             </p>
                           </div>
                           
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
                             {log.status === 'Excused' || log.scan_type === 'EXCUSED' ? (
                               <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-black text-[9px] border border-blue-300">
                                 Excused (E)
@@ -1090,7 +1147,7 @@ export function AttendanceScannerModal({
                               <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-black text-[9px] border border-amber-300">
                                 Late (L)
                               </span>
-                            ) : log.status === 'Present' ? (
+                            ) : log.status === 'Present' || (log.has_time_in && log.has_time_out) ? (
                               <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-black text-[9px] border border-emerald-300">
                                 Present (P)
                               </span>
@@ -1099,9 +1156,20 @@ export function AttendanceScannerModal({
                                 Timed In
                               </span>
                             )}
-                            <span className="text-[9.5px] font-mono text-slate-400">
-                              {log.time}
-                            </span>
+                            <div className="flex flex-col items-end text-[9.5px] font-mono leading-tight">
+                              {log.time_in && log.time_out ? (
+                                <>
+                                  <span className="text-emerald-700 font-bold">In: {log.time_in}</span>
+                                  <span className="text-blue-700 font-bold">Out: {log.time_out}</span>
+                                </>
+                              ) : log.time_in ? (
+                                <span className="text-emerald-700 font-bold">In: {log.time_in}</span>
+                              ) : log.time_out ? (
+                                <span className="text-blue-700 font-bold">Out: {log.time_out}</span>
+                              ) : (
+                                <span className="text-slate-400">{log.time}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))

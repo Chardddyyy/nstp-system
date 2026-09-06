@@ -111,7 +111,23 @@ Pending, Approved, o Declined student self-service enrollment submissions.
 | `reviewed_by` | `INT` | YES | Foreign Key -> `users(id)` |
 | `reviewed_at` | `TIMESTAMP` | YES | Timestamp kung kailan na-evaluate |
 
-#### 4. Table: `student_grades`
+#### 4. Table: `attendance_records`
+Lahat ng opisyal na session logs ng QR scanning at manual excuse ng mga estudyante.
+| Column | Data Type | Nullable | Description / Constraints |
+| :--- | :--- | :--- | :--- |
+| `id` | `INT` | NO | Primary Key, Auto Increment |
+| `student_id` | `VARCHAR(50)` | NO | Foreign Key / Reference -> `students(studentId)` |
+| `student_name` | `VARCHAR(255)` | NO | Full name ng estudyante |
+| `department` | `VARCHAR(50)` | NO | NSTP Track (`CWTS`, `ROTC`, `LTS`) |
+| `section` | `VARCHAR(50)` | YES | Assigned Section |
+| `activity_name`| `VARCHAR(255)` | NO | Session title (e.g. `Day 1 - Orientation`, `Day 15 - Final Evaluation`) |
+| `scan_type` | `ENUM('TIME_IN','TIME_OUT','EXCUSED','ABSENT')` | NO | Uri ng scan o attendance entry |
+| `scanned_by` | `INT` | YES | Foreign Key -> `users(id)` (Instructor / Admin ID) |
+| `status` | `VARCHAR(50)` | NO | `Present`, `Late`, `Excused`, `Incomplete`, `Absent` |
+| `notes` | `TEXT` | YES | Reason for excuse, late cutoff notes, o remarks |
+| `scanned_at` | `TIMESTAMP` | NO | Timestamp ng scan (Default: `CURRENT_TIMESTAMP`) |
+
+#### 5. Table: `student_grades`
 Database records ng Midterm, Final, at Remarks ng bawat estudyante.
 | Column | Data Type | Nullable | Description / Constraints |
 | :--- | :--- | :--- | :--- |
@@ -127,7 +143,7 @@ Database records ng Midterm, Final, at Remarks ng bawat estudyante.
 | `remarks` | `VARCHAR(50)` | YES | `PASSED`, `FAILED`, `INC`, `DROPPED` |
 | `instructor_id` | `INT` | YES | Foreign Key -> `users(id)` |
 
-#### 5. Table: `conversations` at `messages`
+#### 6. Table: `conversations` at `messages`
 Realtime chat system para sa direct at group messaging.
 * `conversations`: Nag-iingat ng mga active direct chats at group channels (`id`, `participant_1_id`, `participant_2_id`, `is_group`, `group_name`, `last_message`, `last_message_time`).
 * `messages`: Bawat mensahe, file attachment, voice note, at reaction (`id`, `conversation_id`, `sender_id`, `text`, `type`, `image_url`, `file_url`, `audio_url`, `reactions`, `created_at`).
@@ -377,4 +393,49 @@ Upang mag-download ng handa nang i-print na report para sa CHED:
 3. Pwede kang mag-send ng mensahe, mag-upload ng files/photos, mag-record ng voice notes, o maghanap ng lumang pinag-usapan gamit ang **In-Chat Search Bar (🔍)**.
 
 ---
+
+### 📱 6. Live QR Code Attendance Tracking & 15-Day Master Matrix (Instructors & Admin)
+
+Ang sistema ay may enterprise-grade, real-time camera QR attendance tracking na may sumusunod na mga panuntunan:
+
+#### A. Dalawang Yugto ng Pag-scan (Two-Step Workflow):
+1. **Hakbang 1 (Session Configuration Setup):**
+   * **Piliin ang Araw (Day 1 hanggang Day 15):** Awtomatikong naka-lock ang mga araw na natapos na (`Conducted / Closed`) upang maiwasan ang aksidenteng pagbura o overwrite ng naitalang attendance.
+   * **Session Activity Name:** Isusulat ng instructor ang tiyak na aktibidad (hal. *Orientation, Community Profiling, Tree Planting*).
+   * **Session Start Time & Grace Period:** Itinatakda ng guro ang oras ng simula (hal. `08:00 AM`) at ang grace period tolerance (`0 min`, `10 mins`, `15 mins`, o `30 mins`).
+   * **Visual Cutoff Display:** Awtomatikong kinakalkula at ipinapakita ng system ang eksaktong oras ng late cutoff (hal. `08:15 AM`).
+
+2. **Hakbang 2 (Live QR Scanner & Session Attendees Roster):**
+   * **Live Camera Viewfinder:** Ipinapakita ang WebRTC camera stream na may real-time audio beeps (mataas na beep para sa successful scan, mababang beep para sa warning/error).
+   * **Active Scanner Toggle:** Madaling lumipat sa pagitan ng `TIME_IN` at `TIME_OUT`.
+   * **Mahigpit na Panuntunan:** Hindi maaaring mag-`TIME_OUT` ang sinumang estudyante na walang naitalang `TIME_IN` sa araw na iyon.
+
+#### B. Awtomatikong Lateness Detection & Cutoff Algorithm:
+* Kapag nag-scan ng `TIME_IN` ang estudyante at ang kasalukuyang oras ay lumampas na sa Cutoff Time (`session_start_time + grace_period`), awtomatiko itong mamarkahan bilang **`Late (L)`**.
+* Kapag nag-Time-Out ang estudyante sa hapon, mananatiling `Late` ang status nito dahil sa naunang late time-in.
+
+#### C. Strict Single-Entry Deduplication Engine:
+* Bawat estudyante ay may **isang natatanging card lamang** sa listahan ng mga dumalo sa kasalukuyang session (`Attendees List`).
+* Kapag nag-Time-In ang estudyante, itatala ang `In: [oras]`.
+* Kapag nag-Time-Out ang parehong estudyante, **hindi ito dadami o magiging duplicate**; sa halip, ia-update ang existing entry nito upang ipakita ang `In: [oras]` at `Out: [oras]`, at magiging `Present (P)` (o `Late (L)` kung nahuli sa umaga).
+
+#### D. Pagtatala ng Hindi Nag-Time-Out (Incomplete Attendance):
+* Alinsunod sa patakaran ng unibersidad, ang mga estudyanteng nag-Time-In lamang ngunit **hindi nag-Time-Out** bago i-save ang attendance ay awtomatikong itatala bilang **`Incomplete (INC)`**.
+
+#### E. Pag-excuse ng Estudyante (Excuse Student Workflow):
+* Para sa mga estudyanteng may balidong excuse letter, medikal na dahilan, o opisyal na representasyon ng unibersidad, maaaring i-click ng instructor ang **"Excuse Student"** button.
+* May built-in search upang mabilis na piliin ang estudyante, maglagay ng preset o customized na dahilan, at awtomatiko itong maitala bilang **`Excused (E)`**.
+
+#### F. 15-Day Master Attendance Matrix Ledger:
+* May nakalaang interactive matrix modal kung saan makikita ang bawat estudyante sa buong 15 araw ng semestre.
+* Awtomatikong naka-filter sa track ng instructor (walang manual dropdown para sa instructors) at may opisyal na Matrix Legend:
+  * 🟢 **P (Present):** Buong oras na pumasok (may Time-In at Time-Out).
+  * 🔴 **A (Absent):** Walang record ng pagpasok sa natapos na araw.
+  * 🟡 **L (Late):** Pumasok nang lumagpas sa itinakdang grace period cutoff.
+  * 🔵 **E (Excused):** May opisyal na excuse letter o pinahintulutang pagliban.
+  * 🟠 **INC (Incomplete):** Nag-Time-In lamang ngunit hindi nag-Time-Out.
+  * ⚪ **— (Future / Not Yet Conducted):** Araw na hindi pa dumarating.
+
+---
+
 *Dokumentasyong Inihanda Para sa CvSU Naic NSTP Office — Bersyon 2026.*

@@ -99,3 +99,20 @@ Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng tek
 | **Bot / Spam Defense** | Google reCAPTCHA v2 + Rate Limiters | Awtomatikong hinaharang ang automated scripts, bots, at rapid submission floods. |
 | **Password Reset Security** | Automated 1-Click OTP Copy & Enter | Dynamic 10-minute expiration OTP na may automated 1-click button na awtomatikong nagkokopya ng 6-digit code sa clipboard, nagre-reuse ng active NSTP System tab, at nag-e-enter ng OTP nang walang manual typing. |
 | **Communication Privacy** | Token-authenticated WebSockets & WebRTC | Tanging mga authenticated users na may valid JWT ang pinapayagang sumali sa mga conversation rooms at makipag-ugnayan sa P2P calls. |
+
+---
+
+## 📱 7. Real-Time QR Attendance Engine & 15-Day Ledger Architecture
+
+| Komponent / Teknolohiya | Kategorya | Gamit at Layunin (Purpose & Technical Rationale) |
+| :--- | :--- | :--- |
+| **html5-qrcode** (`Html5Qrcode`) | Live WebRTC Video Scanner | Cross-platform camera scanner na may hardware acceleration (`useBarCodeDetectorIfSupported`), dynamic viewfinder sizing, at cooldown timer upang maiwasan ang multiple burst reads sa loob ng 1.5 segundo. |
+| **Web Audio API Sound Synthesizer** | Auditory Feedback Engine | Zero-latency dynamic oscillator sound effects: high-pitch affirmative double beep (880Hz ➔ 1175Hz) para sa matagumpay na scan, at low-frequency warning buzz (220Hz) para sa invalid QR, duplicate, o unauthorized track. |
+| **Canonical Student Matcher (`isStudentMatch`)** | Deduplication Algorithm | Resolves students across multiple polymorphic keys: primary `studentId`, `qr_token` (`NSTP-{id}-{serial}`), `nstp_serial_id`, at normalized name string. Tinitiyak na **isang natatanging record lamang bawat estudyante** ang lalabas sa sesyon kahit mag-scan ng Time-In at Time-Out. |
+| **In-Place Attendance Lifecycle Progression** | State Management | Pinag-iisa ang Time-In at Time-Out sa iisang attendee card (`In: [oras] • Out: [oras]`). Hindi kailanman dinodoble ang pangalan ng estudyante sa active attendees list. |
+| **Dynamic Lateness Cutoff Engine** | Algorithmic Compliance | Kinakalkula ang late status gamit ang `session_start_time + grace_period` (0, 10, 15, o 30 mins). Kapag lumagpas sa cutoff ang Time-In, awtomatiko itong mamarkahan bilang `Late (L)` at ipinapasa hanggang sa Time-Out. |
+| **Incomplete Session Detection (`INC`)** | Academic Policy Compliance | Sa oras ng pag-save ng attendance, ang mga estudyanteng may Time-In lamang ngunit hindi nag-Time-Out ay awtomatikong sine-save bilang `Incomplete` alinsunod sa CvSU NSTP attendance standards. |
+| **Excuse Management Engine** | Exception Handling Sub-Modal | Dedicated interface para sa mga estudyanteng may valid excuse letter o institutional representation (`Excused (E)`). |
+| **Conducted Session Day Locking** | Integrity Guard | Awtomatikong nile-lock ang mga araw na natapos na (hal. Days 1 hanggang 14) sa session dropdown (`Conducted / Closed`) upang maiwasan ang aksidenteng pagbura ng nakaraang attendance records. |
+| **15-Day Master Matrix Ledger Modal** | Multi-Track Roster View | Real-time matrix view na nagpapakita ng 15 araw ng semestre para sa bawat estudyante (`P`, `A`, `L`, `E`, `INC`, `—`), awtomatikong naka-filter sa track ng instructor nang walang nakalilitong tracks dropdown. |
+
