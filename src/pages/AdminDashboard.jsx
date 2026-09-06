@@ -14,6 +14,7 @@ import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatu
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
 import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
+import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -207,6 +208,9 @@ function AdminDashboard() {
   // Real-time RegForm document validator audit hook
   const regformAudits = useRegformAuditor(pendingEnrollments);
   
+  // Attendance Matrix Modal State
+  const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
+
   // Enrollment Timed Schedule & Portal Control
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleConfig, setScheduleConfig] = useState(() => getEnrollmentSchedule());
@@ -944,6 +948,30 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </div>
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* ── Attendance & Absences Tracker Action Banner ────────────────── */}
+        <div className="bg-white rounded-xl sm:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-emerald-100/90 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white flex items-center justify-center shadow-xs sm:shadow-md shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Student Attendance &amp; Absences Master Matrix</h3>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Day 1 to Day 15 attendance ledger &amp; absence tracker across all tracks (CWTS, ROTC, LTS)</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowAttendanceMatrix(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-blue-600/50 whitespace-nowrap"
+            >
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
+              <span>Open Attendance Matrix</span>
+            </button>
           </div>
         </div>
 
@@ -3161,6 +3189,15 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Student Attendance & Absences Matrix Modal */}
+        {showAttendanceMatrix && (
+          <StudentAttendanceMatrixModal
+            isOpen={showAttendanceMatrix}
+            onClose={() => setShowAttendanceMatrix(false)}
+            currentUser={user}
+          />
         )}
 
       </main>

@@ -1479,12 +1479,14 @@ export function pingTelemetry(data) {
       return res.json().then(function(resData) {
         if (resData && typeof resData.totalVisitors === 'number') {
           try {
-            localStorage.setItem('nstp_cached_total_visitors', String(resData.totalVisitors));
+            const cur = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+            const peak = Math.max(cur, resData.totalVisitors);
+            localStorage.setItem('nstp_cached_total_visitors', String(peak));
           } catch (_) {}
         }
         if (resData && typeof resData.activeOnlineCount === 'number') {
           try {
-            localStorage.setItem('nstp_cached_active_online', String(resData.activeOnlineCount));
+            localStorage.setItem('nstp_cached_active_online', String(Math.max(1, resData.activeOnlineCount)));
           } catch (_) {}
         }
         return resData;
@@ -1518,12 +1520,14 @@ export function getTelemetryStats() {
             }
             if (typeof data.totalVisitors === 'number') {
               try {
-                localStorage.setItem('nstp_cached_total_visitors', String(data.totalVisitors));
+                const cur = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+                const peak = Math.max(cur, data.totalVisitors);
+                localStorage.setItem('nstp_cached_total_visitors', String(peak));
               } catch (_) {}
             }
             if (typeof data.activeOnlineCount === 'number') {
               try {
-                localStorage.setItem('nstp_cached_active_online', String(data.activeOnlineCount));
+                localStorage.setItem('nstp_cached_active_online', String(Math.max(1, data.activeOnlineCount)));
               } catch (_) {}
             }
           }

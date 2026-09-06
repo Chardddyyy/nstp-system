@@ -6782,6 +6782,7 @@ async function saveTelemetry() {
   const telemetryData = {
     visitors: Array.from(totalUniqueVisitors),
     totalCount: totalUniqueVisitors.size,
+    totalVisitors: totalUniqueVisitors.size,
     updatedAt: new Date().toISOString()
   };
 

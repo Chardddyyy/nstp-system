@@ -283,11 +283,24 @@ function Landing() {
         const stats = await getTelemetryStats();
         if (stats && isMounted) {
           setTelemetry(prev => {
-            const nextVisitors = typeof stats.totalVisitors === 'number' && stats.totalVisitors > 0
+            const rawIncomingVisitors = typeof stats.totalVisitors === 'number' && stats.totalVisitors > 0
               ? stats.totalVisitors
-              : (prev.totalVisitors || 1);
+              : (typeof stats.totalCount === 'number' ? stats.totalCount : 0);
+            const nextVisitors = Math.max(prev.totalVisitors || 1, rawIncomingVisitors);
             const nextActive = stats.activeOnlineCount !== undefined ? Math.max(1, stats.activeOnlineCount) : (prev.activeOnlineCount || 1);
             const nextUsers = Math.max(prev.totalUsers || 0, stats.totalUsers || 0, stats.totalRegisteredUsers || 0);
+
+            // Avoid triggering re-renders if telemetry stats are already steady
+            if (
+              prev.totalVisitors === nextVisitors &&
+              prev.activeOnlineCount === nextActive &&
+              prev.totalUsers === nextUsers &&
+              Array.isArray(prev.activeUsers) && Array.isArray(stats.activeUsers) &&
+              prev.activeUsers.length === stats.activeUsers.length
+            ) {
+              return prev;
+            }
+
             return {
               ...prev,
               ...stats,
@@ -302,7 +315,7 @@ function Landing() {
     };
 
     pollStats();
-    const interval = setInterval(pollStats, 4000);
+    const interval = setInterval(pollStats, 12000);
     return () => {
       isMounted = false;
       clearInterval(interval);

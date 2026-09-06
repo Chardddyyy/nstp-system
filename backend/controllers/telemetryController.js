@@ -39,6 +39,7 @@ const saveTelemetry = () => {
     const data = {
       visitors: Array.from(uniqueVisitorsSet),
       totalCount: uniqueVisitorsSet.size,
+      totalVisitors: uniqueVisitorsSet.size,
       lastUpdated: new Date().toISOString()
     };
     fs.writeFileSync(TELEMETRY_FILE, JSON.stringify(data, null, 2), 'utf8');
@@ -88,7 +89,7 @@ const getTelemetryStats = catchAsync(async (req, res) => {
   const [studentCount] = await pool.execute('SELECT COUNT(*) as count FROM students').catch(() => [[{ count: 0 }]]);
 
   return ApiResponse.success(res, {
-    totalVisitors: telemetry.totalVisitors || 120,
+    totalVisitors: telemetry.totalVisitors || telemetry.totalCount || uniqueVisitorsSet.size || 1,
     activeOnlineCount: Math.max(1, activeClients.size),
     totalUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0),
     totalRegisteredUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0)
