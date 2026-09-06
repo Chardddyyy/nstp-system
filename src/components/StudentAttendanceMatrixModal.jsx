@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, RefreshCw } from 'lucide-react';
+import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
 import { formatGradeAndSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
@@ -468,6 +468,38 @@ export function StudentAttendanceMatrixModal({
     }
   };
 
+  const [seeding, setSeeding] = useState(false);
+
+  // Randomize Attendance (Days 1–14) handler
+  const handleSeedRandom = async () => {
+    try {
+      setSeeding(true);
+      const res = await attendanceAPI.seedRandom();
+      if (res && res.success) {
+        showToast?.('Successfully generated randomized attendance across Days 1 to 14!', 'success');
+        const [records, stList] = await Promise.all([
+          attendanceAPI.getRecords({ limit: 5000 }).catch(() => []),
+          studentsAPI.getAll().catch(() => [])
+        ]);
+        if (Array.isArray(records)) {
+          setAttendanceRecords(records);
+          try { localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(records)); } catch (_) {}
+        }
+        if (Array.isArray(stList) && stList.length > 0) {
+          setFetchedStudents(stList);
+        }
+        window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      } else {
+        showToast?.(res?.message || 'Failed to randomize attendance.', 'error');
+      }
+    } catch (err) {
+      console.error('Failed to seed random attendance:', err);
+      showToast?.('Error generating random attendance.', 'error');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -611,12 +643,22 @@ export function StudentAttendanceMatrixModal({
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={loading}
+              disabled={loading || seeding}
               className="px-2.5 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 border border-slate-300"
               title="Refresh Attendance Records from Database"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden xs:inline">Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedRandom}
+              disabled={seeding || loading}
+              className="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              title="Generate varied random attendance across Days 1 to 14 for all students"
+            >
+              <Sparkles className={`w-3.5 h-3.5 text-amber-200 ${seeding ? 'animate-spin' : ''}`} />
+              <span>{seeding ? 'Randomizing...' : 'Randomize (Day 1-14)'}</span>
             </button>
             <div className="flex items-center gap-1 bg-emerald-50 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-emerald-300">
               <button

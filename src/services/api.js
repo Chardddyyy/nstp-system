@@ -1636,6 +1636,15 @@ export const attendanceAPI = {
       return { success: true, message: 'Updated locally' };
     }
   },
+  seedRandom: async () => {
+    try {
+      const res = await apiCall('/attendance/seed-random', { method: 'POST' });
+      return res;
+    } catch (err) {
+      console.warn('Seed random attendance notice:', err.message);
+      return { success: false, message: err.message };
+    }
+  },
   getStudentIdCards: async (params) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     try {

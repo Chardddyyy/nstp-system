@@ -18,7 +18,7 @@ const ACTIVITIES = [
 ];
 
 async function seedAttendance() {
-  console.log('🔄 Fetching active students...');
+  console.log('🔄 Fetching all active students from database...');
   const [students] = await pool.execute(
     "SELECT id, studentId, name, department, section, nstp_section FROM students WHERE status = 'Active' OR status IS NULL OR status = '' ORDER BY id ASC"
   );
@@ -29,105 +29,99 @@ async function seedAttendance() {
     process.exit(0);
   }
 
-  // 1. Clear old generic/sample records
+  // 1. Clear existing attendance records
   await pool.execute('TRUNCATE TABLE attendance_records');
   console.log('🧹 Cleaned existing attendance_records table.');
 
   const recordsToInsert = [];
 
-  // Define designated patterns for students to showcase specific scenarios:
-  // - Students with 3+ Absences (At-Risk trigger):
-  const atRiskStudentIds = [
-    students[2]?.studentId,  // ~4 absences
-    students[7]?.studentId,  // ~3 absences
-    students[15]?.studentId, // ~4 absences
-    students[23]?.studentId, // ~3 absences
-    students[31]?.studentId  // ~5 absences
-  ].filter(Boolean);
+  // Archetype 1: At-Risk Students (3 or more Absences to trigger matrix At-Risk indicator)
+  // Indices: 2 (Daniel R. Reyes), 7 (Hazel C. Torres), 18 (Francis R. Navarro), 25 (Fatima R. Valdez), 35 (Queenie G. Ferrer)
+  const atRiskIndices = new Set([2, 7, 18, 25, 35]);
 
-  // - Students with designated Incomplete (INC) on specific days:
-  const incMap = {
-    [students[1]?.studentId]: [11],
-    [students[4]?.studentId]: [3],
-    [students[6]?.studentId]: [14],
-    [students[11]?.studentId]: [5],
-    [students[17]?.studentId]: [7],
-    [students[21]?.studentId]: [9]
-  };
+  // Archetype 2: Perfect Attendance (100% Present on all 14 days)
+  // Indices: 0 (Angelo D. Cruz), 5 (Fatima T. Garcia), 13 (Nicole S. Rivera), 20 (Angelo M. Mercado), 29 (Gabriel T. Manalo)
+  const perfectIndices = new Set([0, 5, 13, 20, 29]);
 
-  // - Students with Excused (E) on specific days:
-  const excusedMap = {
-    [students[3]?.studentId]: [6],
-    [students[14]?.studentId]: [9],
-    [students[27]?.studentId]: [12]
-  };
+  for (let sIdx = 0; sIdx < students.length; sIdx++) {
+    const st = students[sIdx];
+    const sid = String(st.studentId || st.id);
+    const sName = st.name;
+    const sDept = st.department || 'CWTS';
+    const sSec = st.nstp_section || st.section || '1-A';
 
-  // - Students with 100% Perfect Attendance (0 absences):
-  const perfectStudentIds = new Set([
-    students[0]?.studentId,
-    students[5]?.studentId,
-    students[9]?.studentId,
-    students[13]?.studentId,
-    students[19]?.studentId,
-    students[28]?.studentId
-  ].filter(Boolean));
+    // Determine student's persona
+    const isAtRisk = atRiskIndices.has(sIdx);
+    const isPerfect = perfectIndices.has(sIdx);
 
-  for (const act of ACTIVITIES) {
-    const dayNum = act.dayNum;
-    const actName = act.name;
-    const actDate = act.date;
+    // Pre-calculate specific days for non-present statuses to make attendance look organic
+    // e.g. absentDays, lateDays, excusedDays, incDays
+    const seed = (sIdx + 1) * 31;
+    const dayOffsets = [(seed % 14) + 1, ((seed * 3) % 14) + 1, ((seed * 7) % 14) + 1, ((seed * 11) % 14) + 1, ((seed * 13) % 14) + 1];
 
-    for (let i = 0; i < students.length; i++) {
-      const st = students[i];
-      const sid = String(st.studentId || st.id);
-      const sName = st.name;
-      const sDept = st.department || 'CWTS';
-      const sSec = st.nstp_section || st.section || 'CWTS 1';
+    let absentDays = [];
+    let lateDays = [];
+    let excusedDays = [];
+    let incDays = [];
+
+    if (isPerfect) {
+      // 100% Present - no absences, no lates
+    } else if (isAtRisk) {
+      // 3 to 4 absences
+      absentDays = [dayOffsets[0], dayOffsets[1], dayOffsets[2]];
+      if (sIdx % 2 === 0) absentDays.push(dayOffsets[3]);
+      lateDays = [((dayOffsets[0] + 3) % 14) + 1];
+      excusedDays = [((dayOffsets[1] + 5) % 14) + 1];
+    } else {
+      // Typical student:
+      // 1-2 Late days
+      lateDays = [dayOffsets[0]];
+      if (sIdx % 3 === 0) lateDays.push(dayOffsets[1]);
+
+      // 1 Excused day (on ~50% of students)
+      if (sIdx % 2 === 0) excusedDays = [dayOffsets[2]];
+
+      // 1 Incomplete day (on ~40% of students)
+      if (sIdx % 5 !== 0) incDays = [dayOffsets[3]];
+
+      // 0-1 Absent day (on ~30% of students, max 1 so not at risk)
+      if (sIdx % 3 === 1) absentDays = [dayOffsets[4]];
+    }
+
+    for (const act of ACTIVITIES) {
+      const dayNum = act.dayNum;
+      const actName = act.name;
+      const actDate = act.date;
 
       let status = 'Present';
       let scanType = 'TIME_OUT';
-      let notes = 'Regular session completed';
+      let notes = 'Complete attendance (Time-In and Time-Out recorded)';
 
-      // Check At-Risk students
-      if (atRiskStudentIds.includes(sid)) {
-        // Drop on specific days
-        if (sid === atRiskStudentIds[0] && [4, 7, 10, 13].includes(dayNum)) status = 'Absent';
-        else if (sid === atRiskStudentIds[1] && [3, 8, 12].includes(dayNum)) status = 'Absent';
-        else if (sid === atRiskStudentIds[2] && [2, 5, 9, 14].includes(dayNum)) status = 'Absent';
-        else if (sid === atRiskStudentIds[3] && [6, 11, 13].includes(dayNum)) status = 'Absent';
-        else if (sid === atRiskStudentIds[4] && [3, 4, 8, 10, 14].includes(dayNum)) status = 'Absent';
-      } else if (perfectStudentIds.has(sid)) {
-        status = 'Present';
-      } else if (incMap[sid] && incMap[sid].includes(dayNum)) {
+      if (absentDays.includes(dayNum)) {
+        status = 'Absent';
+        scanType = 'ABSENT';
+        notes = 'Unexcused Absence (No scan recorded)';
+      } else if (excusedDays.includes(dayNum)) {
+        status = 'Excused';
+        scanType = 'EXCUSED';
+        notes = 'Officially excused by Instructor (Valid excuse letter / Medical)';
+      } else if (incDays.includes(dayNum)) {
         status = 'Incomplete';
         scanType = 'TIME_IN';
-        notes = 'Timed in at 08:04 AM; no time-out recorded';
-      } else if (excusedMap[sid] && excusedMap[sid].includes(dayNum)) {
-        status = 'Excused';
+        notes = 'Incomplete (Timed in at 08:04 AM; missed afternoon Time-Out)';
+      } else if (lateDays.includes(dayNum)) {
+        status = 'Late';
         scanType = 'TIME_OUT';
-        notes = 'Medical certificate / Excuse letter endorsed';
+        notes = 'Late Attendance (Timed in at 08:24 AM - past 15-min cutoff)';
       } else {
-        // For general students: ~88% present, ~7% absent, ~5% late/INC
-        const pseudoRand = (i * 17 + dayNum * 23) % 100;
-        if (pseudoRand < 8) {
-          status = 'Absent';
-        } else if (pseudoRand === 12 || pseudoRand === 44) {
-          status = 'Incomplete';
-          scanType = 'TIME_IN';
-          notes = 'Time-in recorded; missed afternoon dismissal scan';
-        } else if (pseudoRand === 25 || pseudoRand === 77) {
-          status = 'Excused';
-          scanType = 'TIME_OUT';
-          notes = 'Official Excuse Form approved by Coordinator';
-        } else {
-          status = 'Present';
-        }
+        status = 'Present';
+        scanType = 'TIME_OUT';
+        notes = 'On-time complete attendance';
       }
 
-      // If absent, we can either insert with status='Absent' or skip. Inserting with status='Absent' allows explicit auditing
-      const timeHour = 7 + ((i + dayNum) % 3);
-      const timeMin = (i * 3 + dayNum * 7) % 60;
-      const timeStr = `${String(timeHour).padStart(2, '0')}:${String(timeMin).padStart(2, '0')}:15`;
+      const timeHour = status === 'Late' ? 8 : 7;
+      const timeMin = status === 'Late' ? 24 : ((sIdx * 3 + dayNum * 7) % 45 + 10);
+      const timeStr = `${String(timeHour).padStart(2, '0')}:${String(timeMin).padStart(2, '0')}:22`;
       const scannedAt = `${actDate} ${timeStr}`;
 
       recordsToInsert.push([
@@ -137,7 +131,7 @@ async function seedAttendance() {
         sSec,
         actName,
         scanType,
-        1, // scanned_by admin/instructor
+        1, // scanned_by Admin/Instructor ID
         scannedAt,
         status,
         notes
@@ -147,7 +141,7 @@ async function seedAttendance() {
 
   console.log(`Inserting ${recordsToInsert.length} attendance records across Days 1 to 14...`);
 
-  // Batch insert
+  // Batch insert in chunks of 100
   const batchSize = 100;
   for (let b = 0; b < recordsToInsert.length; b += batchSize) {
     const chunk = recordsToInsert.slice(b, b + batchSize);
@@ -159,7 +153,13 @@ async function seedAttendance() {
     );
   }
 
-  console.log(`✅ Successfully seeded ${recordsToInsert.length} attendance records up to Day 14!`);
+  console.log(`✅ Successfully seeded ${recordsToInsert.length} randomized attendance records up to Day 14!`);
+
+  // Print summary breakdown
+  const [counts] = await pool.execute('SELECT status, COUNT(*) as count FROM attendance_records GROUP BY status');
+  console.log('\n📊 Attendance Status Breakdown:');
+  counts.forEach(c => console.log(`  • ${c.status}: ${c.count} records`));
+
   process.exit(0);
 }
 
