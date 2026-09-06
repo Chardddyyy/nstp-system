@@ -101,6 +101,7 @@ export function AttendanceScannerModal({
   const [sessionLogs, setSessionLogs] = useState([]);
   const [cameraFacing, setCameraFacing] = useState('environment'); // 'environment' | 'user'
   const [isSaved, setIsSaved] = useState(false);
+  const [pastAttendanceRecords, setPastAttendanceRecords] = useState([]);
 
   // Excuse Student Modal State
   const [showExcuseModal, setShowExcuseModal] = useState(false);
@@ -149,14 +150,73 @@ export function AttendanceScannerModal({
     }).slice(0, 20);
   }, [availableStudents, excuseSearch]);
 
-  // Reset to Step 1 when modal opens
+  // Reset to Step 1 when modal opens and auto-select first available unconducted day
   useEffect(() => {
     if (isOpen) {
       setStep(1);
       setScanStatus(null);
       setLastScannedStudent(null);
+      setIsSaved(false);
+      setSessionLogs([]);
+
+      let isMounted = true;
+      attendanceAPI.getRecords({ limit: 5000 })
+        .then(recs => {
+          if (isMounted && Array.isArray(recs)) {
+            setPastAttendanceRecords(recs);
+          }
+        })
+        .catch(() => {});
+
+      return () => { isMounted = false; };
     }
   }, [isOpen]);
+
+  // Track completed/conducted days for this instructor's department
+  const targetDept = useMemo(() => {
+    return (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
+      ? currentDepartment
+      : (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department) ? currentUser.department : 'CWTS');
+  }, [currentDepartment, currentUser]);
+
+  const completedDays = useMemo(() => {
+    const conducted = new Set();
+    let allRecords = pastAttendanceRecords;
+    if (!allRecords || allRecords.length === 0) {
+      try {
+        allRecords = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+      } catch (_) {
+        allRecords = [];
+      }
+    }
+
+    const deptUpper = (targetDept || '').toUpperCase();
+    allRecords.forEach(r => {
+      const rDept = (r.department || '').toUpperCase();
+      if (!deptUpper || rDept === deptUpper || rDept.includes(deptUpper)) {
+        const act = (r.activity_name || r.day || '').trim();
+        ATTENDANCE_DAYS.forEach((d) => {
+          const regex = new RegExp(`(^|[^a-zA-Z0-9])(${d}|${d.replace(' ', '')}|${d.replace('Day ', 'D')})([^a-zA-Z0-9]|$)`, 'i');
+          if (regex.test(act)) {
+            conducted.add(d);
+          }
+        });
+      }
+    });
+    return conducted;
+  }, [pastAttendanceRecords, targetDept]);
+
+  // Auto-switch to first available unconducted day if current selectedDay is already completed
+  useEffect(() => {
+    if (isOpen) {
+      if (completedDays.has(selectedDay)) {
+        const firstAvailable = ATTENDANCE_DAYS.find(d => !completedDays.has(d));
+        if (firstAvailable) {
+          setSelectedDay(firstAvailable);
+        }
+      }
+    }
+  }, [isOpen, completedDays, selectedDay]);
 
   // Handle QR code scanning process
   const handleProcessScan = useCallback(async (rawCode) => {
@@ -525,6 +585,9 @@ export function AttendanceScannerModal({
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
+      // Immediately add persisted records to pastAttendanceRecords so this day is locked
+      setPastAttendanceRecords(prev => [...prev, ...recordsToPersist]);
+
       showToast(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
     } catch (err) {
       console.error('Error saving record:', err);
@@ -604,11 +667,28 @@ export function AttendanceScannerModal({
                   onChange={(e) => setSelectedDay(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
                 >
-                  {ATTENDANCE_DAYS.map((day) => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
+                  {ATTENDANCE_DAYS.map((day) => {
+                    const isCompleted = completedDays.has(day);
+                    return (
+                      <option 
+                        key={day} 
+                        value={day} 
+                        disabled={isCompleted}
+                        className={isCompleted ? 'text-slate-400 bg-slate-100 font-normal italic' : 'text-emerald-950 font-bold'}
+                      >
+                        {day} {isCompleted ? '— (Conducted / Closed)' : '— (Available)'}
+                      </option>
+                    );
+                  })}
                 </select>
-                <p className="text-[10px] text-slate-400 font-medium">Select session from Day 1 to Day 15</p>
+                {completedDays.has(selectedDay) ? (
+                  <p className="text-[11px] text-rose-700 font-bold flex items-center gap-1 mt-1 bg-rose-50 p-2 rounded-lg border border-rose-200">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{selectedDay} has already been conducted for {targetDept}. This session is locked.</span>
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 font-medium">Select an open session from Day 1 to Day 15</p>
+                )}
               </div>
 
               {/* Field 2: Scheduled Start Time ("Oras ng Pasok") */}
@@ -733,11 +813,32 @@ export function AttendanceScannerModal({
             </div>
 
             {/* Bottom Button to Proceed to Step 2 */}
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+              {completedDays.has(selectedDay) ? (
+                <p className="text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>Please select an available session day to start scanning.</span>
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500 font-medium hidden sm:block">
+                  Ready to configure and open scanner for <b>{selectedDay}</b>
+                </p>
+              )}
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white font-black text-xs sm:text-sm rounded-2xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                disabled={completedDays.has(selectedDay)}
+                onClick={() => {
+                  if (completedDays.has(selectedDay)) {
+                    showToast?.(`${selectedDay} has already been conducted. Please select another day.`, 'error');
+                    return;
+                  }
+                  setStep(2);
+                }}
+                className={`w-full sm:w-auto px-6 py-3 font-black text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 ${
+                  completedDays.has(selectedDay)
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
+                    : 'bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white active:scale-95 cursor-pointer'
+                }`}
               >
                 <span>Proceed to QR Scanner (Step 2)</span>
                 <ArrowRight className="w-4 h-4" />

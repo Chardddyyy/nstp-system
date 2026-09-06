@@ -561,19 +561,26 @@ export function StudentAttendanceMatrixModal({
               />
             </div>
 
-            {/* Department Filter (All Tracks, CWTS, ROTC, LTS) */}
-            <select
-              id="attendance-matrix-dept"
-              name="matrixDept"
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer shadow-2xs"
-            >
-              <option value="All">All Tracks</option>
-              <option value="CWTS">CWTS</option>
-              <option value="ROTC">ROTC</option>
-              <option value="LTS">LTS</option>
-            </select>
+            {/* Department Filter - Only visible to Admin; automatically scoped for Instructors */}
+            {currentUser?.role === 'admin' ? (
+              <select
+                id="attendance-matrix-dept"
+                name="matrixDept"
+                value={selectedDept}
+                onChange={(e) => setSelectedDept(e.target.value)}
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200 font-bold text-slate-700 text-xs focus:outline-none cursor-pointer shadow-2xs"
+              >
+                <option value="All">All Tracks</option>
+                <option value="CWTS">CWTS</option>
+                <option value="ROTC">ROTC</option>
+                <option value="LTS">LTS</option>
+              </select>
+            ) : (
+              <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-emerald-50 rounded-lg sm:rounded-xl border border-emerald-200/80 font-black text-emerald-900 text-xs flex items-center gap-1.5 shadow-2xs shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span>{selectedDept || currentUser?.department || 'My Track'}</span>
+              </div>
+            )}
 
             {/* View Filter Toggle */}
             <div className="flex items-center gap-1 bg-slate-100 p-0.5 sm:p-1 rounded-lg sm:rounded-xl">
