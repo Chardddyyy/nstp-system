@@ -1220,7 +1220,7 @@ function StudentManagement() {
               )}
 
               {/* View Attendance & Absences Matrix Button */}
-              {!viewingArchive && (
+              {!isAdmin && !viewingArchive && (
                 <button type="button"
                   onClick={() => setShowAttendanceMatrix(true)}
                   title="View Day 1-15 attendance records, track absences, and identify at-risk students"
@@ -4223,13 +4223,15 @@ function StudentManagement() {
         })()}
 
         {/* Student Attendance & Absences Matrix Modal */}
-        <StudentAttendanceMatrixModal
-          isOpen={showAttendanceMatrix}
-          onClose={() => setShowAttendanceMatrix(false)}
-          students={sourceStudents}
-          currentUser={user}
-          currentDepartment={isAdmin ? 'All' : (user?.department || 'All')}
-        />
+        {!isAdmin && (
+          <StudentAttendanceMatrixModal
+            isOpen={showAttendanceMatrix}
+            onClose={() => setShowAttendanceMatrix(false)}
+            students={sourceStudents}
+            currentUser={user}
+            currentDepartment={isAdmin ? 'All' : (user?.department || 'All')}
+          />
+        )}
 
         {/* Student Semester Grades Encoding & Grading Sheet Modal */}
         <StudentGradesModal
