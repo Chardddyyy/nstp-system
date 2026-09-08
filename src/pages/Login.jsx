@@ -238,6 +238,8 @@ function Login() {
       }
       if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted')) {
         setError('Cloud server is waking up (~15s). Please tap Login again.');
+      } else if (errMsg.includes('suspended') || errMsg.includes('503') || errMsg.includes('Failed to fetch') || errMsg.includes('Network connection failed')) {
+        setError('Cloud backend is currently sleeping or suspended on Render. Please resume or restart the service in your Render dashboard (dashboard.render.com).');
       } else {
         setError(errMsg || 'Server connection failed. Please try again.');
       }

@@ -1,7 +1,10 @@
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
-    // Purge any stale nstp_api_url from localStorage so mobile never attempts localhost
-    try { localStorage.removeItem('nstp_api_url'); } catch (_) {}
+    var custom = localStorage.getItem('nstp_custom_api_url') || localStorage.getItem('nstp_backend_url');
+    if (custom && typeof custom === 'string' && custom.trim().startsWith('http')) {
+      var cleanCustom = custom.trim().replace(/\/+$/, '');
+      return cleanCustom.endsWith('/api') ? cleanCustom : cleanCustom + '/api';
+    }
 
     var host = window.location.hostname;
 
@@ -19,6 +22,20 @@ function getPrimaryApiUrl() {
     return 'https://nstp-system-iw5p.onrender.com/api';
   }
   return 'http://localhost:3001/api';
+}
+
+if (typeof window !== 'undefined') {
+  window.setBackendUrl = function(url) {
+    if (!url) {
+      localStorage.removeItem('nstp_custom_api_url');
+      localStorage.removeItem('nstp_backend_url');
+      console.log('Reset backend URL to default Render endpoint.');
+    } else {
+      localStorage.setItem('nstp_custom_api_url', url);
+      console.log('Backend URL set to:', url);
+    }
+    window.location.reload();
+  };
 }
 
 function getLocalFallbackUrl(endpoint) {

@@ -46,7 +46,9 @@ app.get('/health', (req, res) => {
 // ── Socket.io Setup with Auto-Reconnect & Handshake Auth ──────────────────────
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: '*',
+    origin: (origin, callback) => {
+      callback(null, origin || true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   },
@@ -135,12 +137,14 @@ var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,htt
 
 function isAllowedOrigin(origin) {
   if (!origin) return true; // Server-to-server or direct curl/health-check
-  if (ALLOWED_ORIGINS.includes(origin)) return true;
-  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
-  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
-  if (/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) return true;
-  if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin)) return true;
-  if (/^https:\/\/.*\.github\.io$/.test(origin)) return true;
+  var clean = String(origin).trim().toLowerCase().replace(/\/+$/, '');
+  if (ALLOWED_ORIGINS.some(a => a.toLowerCase().replace(/\/+$/, '') === clean)) return true;
+  if (/^https?:\/\/localhost(:\d+)?$/.test(clean)) return true;
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(clean)) return true;
+  if (/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
+  if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
+  if (/^https:\/\/.*\.github\.io$/.test(clean)) return true;
+  if (/^https:\/\/.*\.onrender\.com$/.test(clean)) return true;
   return false;
 }
 
@@ -154,25 +158,33 @@ app.use((req, res, next) => {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(204).end();
   }
   next();
 });
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (isAllowedOrigin(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Blocked by CORS policy'));
-    }
+    callback(null, isAllowedOrigin(origin));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With'],
+  maxAge: 86400
 }));
-app.options('*', cors());
+app.options('/*', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
 
 // ── Body size: 500 MB max for large file uploads ────────────────────────────────
 app.use(express.json({ limit: '500mb' }));
