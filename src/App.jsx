@@ -227,16 +227,12 @@ function App() {
       link: notif.link || '#',
     };
 
+    // Direct exclusively to Notifications Bell menu and badge counter (no side toast popups)
     setNotifications(prev => [item, ...prev].slice(0, 50));
-    setToasts(prev => [item, ...prev].slice(0, 5));
 
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try { new Notification(item.title, { body: item.message }); } catch { /* ignore */ }
     }
-
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== item.id));
-    }, 4500);
   }, []);
 
   const dismissToast = useCallback((toastId) => {
@@ -245,12 +241,20 @@ function App() {
 
   const showToast = useCallback((message, type = 'info', title = null) => {
     const defaultTitle = type === 'success' ? 'Success' : type === 'error' ? 'Notice' : type === 'warning' ? 'Warning' : 'Information';
-    pushNotification({
+    const toastId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const toastItem = {
+      id: toastId,
       title: title || defaultTitle,
       message: typeof message === 'string' ? message : (message?.message || 'Operation notification'),
       type
-    });
-  }, [pushNotification]);
+    };
+
+    setToasts(prev => [toastItem, ...prev].slice(0, 3));
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== toastId));
+    }, 4000);
+  }, []);
 
   // ── Real-Time WebSockets (Socket.io) Instant Dispatcher ────────────────────
   useEffect(() => {
