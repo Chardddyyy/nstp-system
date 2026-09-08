@@ -2577,26 +2577,26 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   Batch {archiveViewData.year} Archive Details
                 </h3>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Form B Button */}
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormat(archiveViewData)}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
-                    title="Export Official CHED Form B Masterlist"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Form B</span>
-                  </button>
-
                   {/* Form A Button */}
                   <button
                     type="button"
                     onClick={() => downloadChedFormA(archiveViewData)}
-                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-emerald-700"
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
                     title="Export CHED Form 2-A Summary Matrix"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Form A</span>
+                  </button>
+
+                  {/* Form B Button */}
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormat(archiveViewData)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
+                    title="Export Official CHED Form B Masterlist"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form B</span>
                   </button>
 
                   <button type="button"
@@ -2613,137 +2613,244 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 {(() => {
                   const stList = archiveViewData?.studentData || [];
                   const totalStudents = stList.length || archiveViewData?.students || 0;
-                  const cwtsCount = stList.filter(s => (s.department || '').toUpperCase().includes('CWTS')).length;
-                  const ltsCount = stList.filter(s => (s.department || '').toUpperCase().includes('LTS')).length;
-                  const rotcCount = stList.filter(s => (s.department || '').toUpperCase().includes('ROTC')).length;
+                  const yrStr = String(archiveViewData?.year || '');
+                  const is1stSemOnly = yrStr.toLowerCase().includes('1st') || (!yrStr.toLowerCase().includes('2nd') && stList.every(s => !s.final_grade_2 && s.semester === '1st Semester'));
 
-                  // Graduates count per track (passing mark 1.00 to 3.00 in 2nd sem)
-                  const getPassCount = (track) => stList.filter(s => {
-                    if (!(s.department || '').toUpperCase().includes(track)) return false;
-                    const g = s.final_grade_2 || (s.semester === '2nd Semester' ? s.final_grade : '') || s.final_grade || '';
-                    const n = parseFloat(g);
-                    return !isNaN(n) && n >= 1.0 && n <= 3.0 && g !== '5.00' && !String(g).toUpperCase().includes('FAIL') && !String(g).toUpperCase().includes('INC') && !String(g).toUpperCase().includes('DRP');
-                  }).length;
+                  // Detailed student evaluation function synchronized with StudentManagement
+                  const evalStudent = (student) => {
+                    const g1 = String(student.final_grade_1 || student.grade_sem1 || (student.semester === '1st Semester' ? student.final_grade : '') || '').trim();
+                    const g2 = String(student.final_grade_2 || student.grade_sem2 || (student.semester === '2nd Semester' ? student.final_grade : '') || '').trim();
+                    const rawFinal = String(student.final_grade || student.grade || '').trim();
+                    const rawStatus = String(student.status || '').toLowerCase().trim();
+                    const rawRemarks = String(student.remarks || '').trim().toLowerCase();
 
-                  const totalGrads = getPassCount('ROTC') + getPassCount('CWTS') + getPassCount('LTS');
+                    // Check for failure: explicitly failed status, or failed remark, or 5.00 grade in the relevant semester
+                    const isExplicitFailed = rawStatus === 'failed' || rawRemarks === 'failed' || rawFinal === '5.00' ||
+                      (is1stSemOnly ? g1 === '5.00' : (g2 === '5.00' || g1 === '5.00'));
+
+                    // Check for drop
+                    const isExplicitDropped = rawStatus === 'dropped' || rawRemarks === 'dropped' || rawFinal === 'drp' ||
+                      (is1stSemOnly ? g1 === 'DRP' : (g2 === 'DRP' || g1 === 'DRP'));
+
+                    // Check for incomplete
+                    const isExplicitInc = rawStatus === 'incomplete' || rawRemarks === 'incomplete' || rawFinal === 'inc' ||
+                      (is1stSemOnly ? g1 === 'INC' : (g2 === 'INC' || rawFinal === 'INC'));
+
+                    if (isExplicitFailed) {
+                      return { isPass: false, isFail: true, isInc: false, isDrp: false, displayGrade: '5.00', badgeText: 'FAILED', badgeColor: 'bg-rose-100 text-rose-800 border-rose-300' };
+                    }
+                    if (isExplicitDropped) {
+                      return { isPass: false, isFail: false, isInc: false, isDrp: true, displayGrade: 'DRP', badgeText: 'DROPPED', badgeColor: 'bg-purple-100 text-purple-800 border-purple-300' };
+                    }
+                    if (isExplicitInc) {
+                      return { isPass: false, isFail: false, isInc: true, isDrp: false, displayGrade: 'INC', badgeText: 'INCOMPLETE', badgeColor: 'bg-amber-100 text-amber-800 border-amber-300' };
+                    }
+
+                    const gradeToCheck = is1stSemOnly ? (g1 || rawFinal) : (g2 || rawFinal || g1);
+                    const n = parseFloat(gradeToCheck);
+                    const isPassingGrade = !isNaN(n) && n >= 1.0 && n <= 3.0;
+
+                    if (isPassingGrade) {
+                      return {
+                        isPass: true,
+                        isFail: false,
+                        isInc: false,
+                        isDrp: false,
+                        displayGrade: gradeToCheck,
+                        badgeText: is1stSemOnly ? 'PASSED (1ST SEM)' : 'GRADUATED',
+                        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      };
+                    }
+
+                    return {
+                      isPass: false,
+                      isFail: false,
+                      isInc: false,
+                      isDrp: false,
+                      displayGrade: gradeToCheck || '-',
+                      badgeText: String(student.status || 'Active').toUpperCase(),
+                      badgeColor: 'bg-gray-100 text-gray-700 border-gray-200'
+                    };
+                  };
+
+                  const evaluated = stList.map(s => ({ ...s, ev: evalStudent(s) }));
+                  const totalPass = evaluated.filter(s => s.ev.isPass).length;
+                  const totalFail = evaluated.filter(s => s.ev.isFail).length;
+                  const totalInc = evaluated.filter(s => s.ev.isInc).length;
+                  const totalDrp = evaluated.filter(s => s.ev.isDrp).length;
+
+                  const getTrackPass = (track) => evaluated.filter(s => (s.department || '').toUpperCase().includes(track) && s.ev.isPass).length;
+                  const getTrackFail = (track) => evaluated.filter(s => (s.department || '').toUpperCase().includes(track) && s.ev.isFail).length;
+                  const getTrackTotal = (track) => evaluated.filter(s => (s.department || '').toUpperCase().includes(track)).length;
+
+                  const cwtsTotal = getTrackTotal('CWTS');
+                  const ltsTotal = getTrackTotal('LTS');
+                  const rotcTotal = getTrackTotal('ROTC');
+
+                  const passRate = totalStudents > 0 ? Math.round((totalPass / totalStudents) * 100) : 0;
 
                   return (
-                    <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 shadow-xs">
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <div>
-                          <h4 className="text-sm font-black text-amber-950 uppercase tracking-wider">Archive Enrollees &amp; Graduates Summary</h4>
-                          <p className="text-[11px] text-amber-800 font-medium">Official demographic distribution and graduate counts</p>
+                    <div className="space-y-4">
+                      <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+                          <div>
+                            <h4 className="text-sm sm:text-base font-black text-amber-950 uppercase tracking-wider">
+                              Archive {is1stSemOnly ? 'Enrollees & Semestral Completion' : 'Enrollees & Graduates'} Summary
+                            </h4>
+                            <p className="text-[11px] sm:text-xs text-amber-800 font-medium">
+                              Official verified demographic distribution, passing status, and failure records
+                            </p>
+                          </div>
+                          <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-950 border border-amber-300 shadow-2xs">
+                            {archiveViewData?.year || 'Academic Year'}
+                          </span>
                         </div>
-                        <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-950 border border-amber-300">
-                          {archiveViewData?.year || 'Academic Year'}
-                        </span>
+
+                        {/* Primary KPI Cards */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-center mb-3">
+                          <div className="bg-white rounded-xl p-3 sm:p-4 border border-amber-100 shadow-2xs flex flex-col justify-between">
+                            <div>
+                              <p className="text-xl sm:text-2xl font-black text-blue-600">{totalStudents}</p>
+                              <p className="text-xs font-bold text-gray-700">Total Enrollees</p>
+                            </div>
+                            <p className="text-[11px] text-blue-700 font-extrabold mt-1">100% Cohort Size</p>
+                          </div>
+
+                          <div className="bg-white rounded-xl p-3 sm:p-4 border border-amber-100 shadow-2xs flex flex-col justify-between">
+                            <div>
+                              <p className="text-xl sm:text-2xl font-black text-emerald-600">{totalPass}</p>
+                              <p className="text-xs font-bold text-gray-700">
+                                {is1stSemOnly ? 'Passed (1st Sem)' : 'Total Graduates'}
+                              </p>
+                            </div>
+                            <p className="text-[11px] text-emerald-700 font-extrabold mt-1">{passRate}% Pass Rate</p>
+                          </div>
+
+                          <div className="bg-white rounded-xl p-3 sm:p-4 border border-amber-100 shadow-2xs flex flex-col justify-between">
+                            <div>
+                              <p className="text-xl sm:text-2xl font-black text-rose-600">{totalFail}</p>
+                              <p className="text-xs font-bold text-gray-700">Failed (Bagsak)</p>
+                            </div>
+                            <p className="text-[11px] text-rose-700 font-extrabold mt-1">
+                              {totalFail > 0 ? `${totalFail} Failed Grade` : 'Zero Failures'}
+                            </p>
+                          </div>
+
+                          <div className="bg-white rounded-xl p-3 sm:p-4 border border-amber-100 shadow-2xs flex flex-col justify-between">
+                            <div>
+                              <p className="text-xl sm:text-2xl font-black text-amber-600">{totalInc + totalDrp}</p>
+                              <p className="text-xs font-bold text-gray-700">INC / Dropped</p>
+                            </div>
+                            <p className="text-[11px] text-amber-800 font-extrabold mt-1">
+                              {totalInc} INC • {totalDrp} DRP
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Component Track Breakdown Badges */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-amber-200/60 text-xs">
+                          <div className="bg-white/80 rounded-xl p-2.5 border border-amber-100 flex items-center justify-between">
+                            <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                              CWTS: {cwtsTotal} Students
+                            </span>
+                            <span className="font-mono text-[11px] font-black text-emerald-800">
+                              {getTrackPass('CWTS')} Passed {getTrackFail('CWTS') > 0 ? `• ${getTrackFail('CWTS')} Failed` : ''}
+                            </span>
+                          </div>
+
+                          <div className="bg-white/80 rounded-xl p-2.5 border border-amber-100 flex items-center justify-between">
+                            <span className="font-bold text-purple-950 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block"></span>
+                              LTS: {ltsTotal} Students
+                            </span>
+                            <span className="font-mono text-[11px] font-black text-purple-800">
+                              {getTrackPass('LTS')} Passed {getTrackFail('LTS') > 0 ? `• ${getTrackFail('LTS')} Failed` : ''}
+                            </span>
+                          </div>
+
+                          <div className="bg-white/80 rounded-xl p-2.5 border border-amber-100 flex items-center justify-between">
+                            <span className="font-bold text-rose-950 flex items-center gap-1.5">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+                              ROTC: {rotcTotal} Students
+                            </span>
+                            <span className="font-mono text-[11px] font-black text-rose-800">
+                              {getTrackPass('ROTC')} Passed {getTrackFail('ROTC') > 0 ? `• ${getTrackFail('ROTC')} Failed` : ''}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
-                          <p className="text-xl sm:text-2xl font-black text-blue-600">{totalStudents}</p>
-                          <p className="text-xs font-bold text-gray-700">Total Enrollees</p>
-                          <p className="text-[11px] text-emerald-700 font-extrabold mt-0.5">{totalGrads} Total Graduates</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
-                          <p className="text-xl sm:text-2xl font-black text-emerald-600">{cwtsCount}</p>
-                          <p className="text-xs font-bold text-gray-700">CWTS Enrollees</p>
-                          <p className="text-[11px] text-emerald-700 font-extrabold mt-0.5">{getPassCount('CWTS')} Passed (Graduated)</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
-                          <p className="text-xl sm:text-2xl font-black text-purple-600">{ltsCount}</p>
-                          <p className="text-xs font-bold text-gray-700">LTS Enrollees</p>
-                          <p className="text-[11px] text-purple-700 font-extrabold mt-0.5">{getPassCount('LTS')} Passed (Graduated)</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
-                          <p className="text-xl sm:text-2xl font-black text-rose-600">{rotcCount}</p>
-                          <p className="text-xs font-bold text-gray-700">ROTC Enrollees</p>
-                          <p className="text-[11px] text-rose-700 font-extrabold mt-0.5">{getPassCount('ROTC')} Passed (Graduated)</p>
-                        </div>
+
+                      {/* Student Information Section */}
+                      <div>
+                        <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                          <span className="flex items-center">
+                            <Users className="w-5 h-5 mr-2" />
+                            Student Information &amp; Official Grade Records
+                          </span>
+                          <span className="text-xs font-bold text-gray-500">
+                            {evaluated.length} Students Listed
+                          </span>
+                        </h4>
+                        {evaluated.length > 0 ? (
+                          <div className="overflow-x-auto rounded-xl border border-gray-200">
+                            <table className="w-full text-xs">
+                              <thead className="bg-emerald-950 text-white font-bold">
+                                <tr>
+                                  <th className="px-3 py-2.5 text-center w-10">#</th>
+                                  <th className="px-3 py-2.5 text-left">Student ID</th>
+                                  <th className="px-3 py-2.5 text-left">Name</th>
+                                  <th className="px-3 py-2.5 text-left">Program</th>
+                                  <th className="px-3 py-2.5 text-center">Track</th>
+                                  <th className="px-3 py-2.5 text-center">Final Grade</th>
+                                  <th className="px-3 py-2.5 text-center">Official Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100">
+                                {evaluated.map((student, idx) => (
+                                  <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
+                                    <td className="px-3 py-2.5 text-center text-gray-400 font-mono text-[11px]">{idx + 1}</td>
+                                    <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
+                                    <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
+                                    <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
+                                    <td className="px-3 py-2.5 text-center">
+                                      <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                                        student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                        student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                        student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                        'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {student.department}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5 text-center">
+                                      <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${
+                                        student.ev.isFail ? 'text-rose-700 bg-rose-50 border border-rose-200' :
+                                        student.ev.isInc ? 'text-amber-700 bg-amber-50 border border-amber-200' :
+                                        student.ev.isDrp ? 'text-purple-700 bg-purple-50 border border-purple-200' :
+                                        student.ev.isPass ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' :
+                                        'text-gray-600'
+                                      }`}>
+                                        {student.ev.displayGrade}
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2.5 text-center">
+                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black border ${student.ev.badgeColor}`}>
+                                        {student.ev.badgeText}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-center py-4">Student details not available in archive</p>
+                        )}
                       </div>
                     </div>
                   );
                 })()}
-
-                {/* Student Information Section */}
-                <div>
-                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
-                    <span className="flex items-center">
-                      <Users className="w-5 h-5 mr-2" />
-                      Student Information &amp; Official Grade Records
-                    </span>
-                    <span className="text-xs font-bold text-gray-500">
-                      {archiveViewData?.studentData?.length || 0} Students Listed
-                    </span>
-                  </h4>
-                  {archiveViewData?.studentData && archiveViewData.studentData.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-gray-200">
-                      <table className="w-full text-xs">
-                        <thead className="bg-emerald-950 text-white font-bold">
-                          <tr>
-                            <th className="px-3 py-2.5 text-left">Student ID</th>
-                            <th className="px-3 py-2.5 text-left">Name</th>
-                            <th className="px-3 py-2.5 text-left">Program</th>
-                            <th className="px-3 py-2.5 text-center">Track</th>
-                            <th className="px-3 py-2.5 text-center">Official Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {archiveViewData.studentData.map((student, idx) => {
-                            const g2 = student.final_grade_2 || student.grade_sem2 || (student.semester === '2nd Semester' ? student.final_grade : '') || student.final_grade || '-';
-                            const num2 = parseFloat(g2);
-                            const isPass = !isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && g2 !== '5.00' && !String(g2).toUpperCase().includes('FAIL') && !String(g2).toUpperCase().includes('INC') && !String(g2).toUpperCase().includes('DRP');
-                            const isFail = g2 === '5.00' || String(g2).toUpperCase().includes('FAIL');
-                            const isInc = g2 === 'INC' || String(g2).toUpperCase().includes('INC');
-                            const isDrp = g2 === 'DRP' || String(g2).toUpperCase().includes('DRP');
-
-                            return (
-                              <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
-                                <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
-                                <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
-                                <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
-                                <td className="px-3 py-2.5 text-center">
-                                  <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
-                                    student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                    student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
-                                    student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
-                                    {student.department}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2.5 text-center">
-                                  {isPass ? (
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                      GRADUATED
-                                    </span>
-                                  ) : isFail ? (
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-rose-100 text-rose-800 border border-rose-300">
-                                      FAILED
-                                    </span>
-                                  ) : isInc ? (
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                                      INCOMPLETE
-                                    </span>
-                                  ) : isDrp ? (
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-800 border border-gray-300">
-                                      DROPPED
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
-                                      {String(student.status || 'Active').toUpperCase()}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-4">Student details not available in archive</p>
-                  )}
-                </div>
 
                 {/* Report Details Section */}
                 <div>

@@ -768,10 +768,10 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               <button
                 type="button"
                 onClick={() => setShowFormAModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-emerald-900 bg-emerald-100 hover:bg-emerald-200 rounded-xl border border-emerald-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-emerald-950 bg-amber-400 hover:bg-amber-300 rounded-xl border border-amber-500/50 shadow-2xs transition-all active:scale-95 cursor-pointer"
                 title="Open Official OSDS-NSTP Form A Export Options"
               >
-                <Award className="w-3.5 h-3.5 text-emerald-800" />
+                <Award className="w-3.5 h-3.5 text-emerald-950" />
                 <span>Form A</span>
               </button>
 
@@ -779,10 +779,10 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               <button
                 type="button"
                 onClick={() => setShowFormBModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-teal-900 bg-teal-100 hover:bg-teal-200 rounded-xl border border-teal-300 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-emerald-950 bg-amber-400 hover:bg-amber-300 rounded-xl border border-amber-500/50 shadow-2xs transition-all active:scale-95 cursor-pointer"
                 title="Open Official OSDS-NSTP Form B Export Options"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-teal-800" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-950" />
                 <span>Form B</span>
               </button>
             </div>

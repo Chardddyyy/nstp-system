@@ -110,7 +110,8 @@ function App() {
   const [messages, setMessages] = useState({});
   const [archivedYears, setArchivedYears] = useState(() => {
     try {
-      const cached = JSON.parse(localStorage.getItem('nstp_cached_archives') || '[]');
+      localStorage.removeItem('nstp_cached_archives');
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_archives_v5') || '[]');
       return Array.isArray(cached) && cached.length > 0 ? cached : DEFAULT_PAST_BATCHES;
     } catch {
       return DEFAULT_PAST_BATCHES;
@@ -176,7 +177,8 @@ function App() {
   });
   const [archiveViewData, setArchiveViewDataState] = useState(() => {
     try {
-      const saved = localStorage.getItem('nstp_archive_view_data');
+      localStorage.removeItem('nstp_archive_view_data');
+      const saved = localStorage.getItem('nstp_archive_view_data_v5');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -198,8 +200,9 @@ function App() {
     setArchiveViewDataState(data);
     try {
       if (data) {
-        localStorage.setItem('nstp_archive_view_data', JSON.stringify(data));
+        localStorage.setItem('nstp_archive_view_data_v5', JSON.stringify(data));
       } else {
+        localStorage.removeItem('nstp_archive_view_data_v5');
         localStorage.removeItem('nstp_archive_view_data');
       }
     } catch {}
@@ -765,10 +768,10 @@ function App() {
       if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
       if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
         setArchivedYears(archivesData);
-        safeSetStorage('nstp_cached_archives', archivesData);
+        safeSetStorage('nstp_cached_archives_v5', archivesData);
       } else {
         setArchivedYears(DEFAULT_PAST_BATCHES);
-        safeSetStorage('nstp_cached_archives', DEFAULT_PAST_BATCHES);
+        safeSetStorage('nstp_cached_archives_v5', DEFAULT_PAST_BATCHES);
       }
       setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
 
