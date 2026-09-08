@@ -112,6 +112,92 @@ function isStudentMatch(logOrRecord, targetStudent, rawCode) {
   return false;
 }
 
+// Helper to reconstruct or load draft/saved attendees for a given day and department
+function loadDraftOrCachedLogs(dept, day, availableStudentsList = []) {
+  if (!day) return [];
+  const deptUpper = (dept || 'CWTS').toUpperCase();
+  const draftKey = `nstp_draft_session_logs_${deptUpper}_${day}`;
+
+  // 1. Check local draft storage first
+  try {
+    const rawDraft = localStorage.getItem(draftKey);
+    if (rawDraft) {
+      const parsed = JSON.parse(rawDraft);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
+  // 2. Check cached attendance records for this day and dept
+  try {
+    const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+    if (Array.isArray(cached) && cached.length > 0) {
+      const dayMatches = cached.filter(r => {
+        if (!r) return false;
+        const act = (r.activity_name || r.day || '').toUpperCase();
+        const rDept = (r.department || '').toUpperCase();
+        const matchesDay = act.includes(day.toUpperCase());
+        const matchesDept = !rDept || rDept === deptUpper || deptUpper === 'ALL';
+        return matchesDay && matchesDept;
+      });
+
+      if (dayMatches.length > 0) {
+        const studentLookup = {};
+        if (Array.isArray(availableStudentsList)) {
+          availableStudentsList.forEach(s => {
+            if (!s) return;
+            const sid = String(s.studentId || s.id || '').trim();
+            if (sid) studentLookup[sid] = s;
+          });
+        }
+
+        const reconstructed = dayMatches.map(r => {
+          const sid = String(r.student_id || '').trim();
+          const stObj = studentLookup[sid] || null;
+          const isExcused = r.status === 'Excused' || r.scan_type === 'EXCUSED';
+          const isLate = r.status === 'Late';
+          const hasTimeIn = r.scan_type === 'TIME_IN' || r.scan_type === 'TIME_OUT' || r.status === 'Present' || r.status === 'Late' || r.status === 'Incomplete';
+          const hasTimeOut = r.scan_type === 'TIME_OUT' || r.status === 'Present' || (r.status === 'Late' && (r.notes || '').toLowerCase().includes('complete'));
+
+          return {
+            id: r.id || Date.now() + Math.random(),
+            student_id: sid,
+            student_name: r.student_name || stObj?.name || `${stObj?.firstName || ''} ${stObj?.lastName || ''}`.trim() || sid,
+            student: stObj,
+            department: r.department || stObj?.department || deptUpper,
+            section: r.section || stObj?.section || '',
+            day: day,
+            scan_type: r.scan_type || (hasTimeOut ? 'TIME_OUT' : 'TIME_IN'),
+            status: isExcused ? 'Excused' : isLate ? 'Late' : (hasTimeOut ? 'Present' : 'Timed In'),
+            is_late: isLate,
+            has_time_in: hasTimeIn,
+            has_time_out: hasTimeOut,
+            time_in: r.time_in || (hasTimeIn ? new Date(r.scanned_at || Date.now()).toLocaleTimeString() : null),
+            time_out: r.time_out || (hasTimeOut ? new Date(r.scanned_at || Date.now()).toLocaleTimeString() : null),
+            time: new Date(r.scanned_at || Date.now()).toLocaleTimeString(),
+            date: new Date(r.scanned_at || Date.now()).toLocaleDateString(),
+            notes: r.notes || ''
+          };
+        });
+
+        // Deduplicate in case multiple records exist for the same student
+        const seen = new Set();
+        const unique = [];
+        for (const item of reconstructed) {
+          if (!seen.has(item.student_id)) {
+            seen.add(item.student_id);
+            unique.push(item);
+          }
+        }
+        return unique;
+      }
+    }
+  } catch (_) {}
+
+  return [];
+}
+
 export function AttendanceScannerModal({ 
   isOpen, 
   onClose, 
@@ -142,7 +228,13 @@ export function AttendanceScannerModal({
   const [closedDaysMap, setClosedDaysMap] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('nstp_closed_attendance_days') || '{}');
-      return stored && typeof stored === 'object' ? stored : {};
+      if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+        return stored;
+      }
+      if (Array.isArray(stored)) {
+        return { CWTS: stored, ROTC: stored, LTS: stored };
+      }
+      return {};
     } catch (_) {
       return {};
     }
@@ -170,12 +262,12 @@ export function AttendanceScannerModal({
         if (Array.isArray(cached) && cached.length > 0) list = cached;
       } catch (_) {}
     }
-    const targetDept = (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
+    const targetDeptVal = (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
       ? currentDepartment
       : (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department) ? currentUser.department : null);
 
-    if (targetDept) {
-      const deptUpper = targetDept.toUpperCase();
+    if (targetDeptVal) {
+      const deptUpper = targetDeptVal.toUpperCase();
       return list.filter(s => {
         const d = (s.department || s.component || s.nstp_program || s.program || '').toUpperCase();
         return d === deptUpper || d.includes(deptUpper);
@@ -183,6 +275,19 @@ export function AttendanceScannerModal({
     }
     return list;
   }, [propStudents, currentDepartment, currentUser]);
+
+  // Track completed/conducted days for this instructor's department
+  const targetDept = useMemo(() => {
+    return (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
+      ? currentDepartment
+      : (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department) ? currentUser.department : 'CWTS');
+  }, [currentDepartment, currentUser]);
+
+  const completedDays = useMemo(() => {
+    const deptUpper = (targetDept || 'CWTS').toUpperCase();
+    const closedList = Array.isArray(closedDaysMap[deptUpper]) ? closedDaysMap[deptUpper] : [];
+    return new Set(closedList);
+  }, [closedDaysMap, targetDept]);
 
   // Filtered students for Excuse Picker
   const filteredStudentsForExcuse = useMemo(() => {
@@ -196,14 +301,13 @@ export function AttendanceScannerModal({
     }).slice(0, 20);
   }, [availableStudents, excuseSearch]);
 
-  // Reset to Step 1 when modal opens and auto-select first available unconducted day
+  // Reset ephemeral state when modal opens and fetch latest server records
   useEffect(() => {
     if (isOpen) {
       setStep(1);
       setScanStatus(null);
       setLastScannedStudent(null);
       setIsSaved(false);
-      setSessionLogs([]);
 
       let isMounted = true;
       attendanceAPI.getRecords({ limit: 5000 })
@@ -218,18 +322,27 @@ export function AttendanceScannerModal({
     }
   }, [isOpen]);
 
-  // Track completed/conducted days for this instructor's department
-  const targetDept = useMemo(() => {
-    return (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
-      ? currentDepartment
-      : (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department) ? currentUser.department : 'CWTS');
-  }, [currentDepartment, currentUser]);
+  // Re-hydrate session logs (draft or cached attendees) whenever modal opens or day/department changes
+  // This guarantees scanned/saved attendees persist when clicking 'Back' (Edit Setup) or closing & reopening modal
+  useEffect(() => {
+    if (isOpen && selectedDay && targetDept) {
+      const logs = loadDraftOrCachedLogs(targetDept, selectedDay, availableStudents);
+      setSessionLogs(logs);
+    }
+  }, [isOpen, selectedDay, targetDept, availableStudents]);
 
-  const completedDays = useMemo(() => {
-    const deptUpper = (targetDept || 'CWTS').toUpperCase();
-    const closedList = Array.isArray(closedDaysMap[deptUpper]) ? closedDaysMap[deptUpper] : [];
-    return new Set(closedList);
-  }, [closedDaysMap, targetDept]);
+  // Auto-sync active session logs to draft storage for active day and dept
+  useEffect(() => {
+    if (isOpen && selectedDay && targetDept) {
+      const deptUpper = (targetDept || 'CWTS').toUpperCase();
+      const draftKey = `nstp_draft_session_logs_${deptUpper}_${selectedDay}`;
+      if (sessionLogs && sessionLogs.length > 0) {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify(sessionLogs));
+        } catch (_) {}
+      }
+    }
+  }, [sessionLogs, isOpen, selectedDay, targetDept]);
 
   // Auto-switch to first available unconducted day if current selectedDay is already completed
   useEffect(() => {
@@ -375,11 +488,12 @@ export function AttendanceScannerModal({
   // Stop QR Camera Scanner
   const stopCamera = useCallback(async () => {
     if (scannerRef.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch (_) {}
+      const scanner = scannerRef.current;
       scannerRef.current = null;
+      try {
+        await scanner.stop().catch(() => {});
+        scanner.clear();
+      } catch (_) {}
     }
   }, []);
 
@@ -618,22 +732,33 @@ export function AttendanceScannerModal({
       const excusedCount = recordsToPersist.filter(r => r.status === 'Excused').length;
 
       // Merge and deduplicate client-side cache
+      const existingClean = Array.isArray(existing) ? existing.filter(Boolean) : [];
       const merged = [
         ...recordsToPersist,
-        ...existing.filter(e => !(
-          recordsToPersist.some(n => String(n.student_id) === String(e.student_id) && (e.activity_name || '').includes(selectedDay))
+        ...existingClean.filter(e => !(
+          recordsToPersist.some(n => String(n.student_id) === String(e?.student_id) && (e?.activity_name || '').includes(selectedDay))
         ))
       ];
 
       localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(merged));
-      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      
+      // Persist draft for active session day
+      const deptUpper = (targetDept || 'CWTS').toUpperCase();
+      try {
+        localStorage.setItem(`nstp_draft_session_logs_${deptUpper}_${selectedDay}`, JSON.stringify(sessionLogs));
+      } catch (_) {}
+
+      try {
+        window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      } catch (_) {}
+      
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
-      showToast(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
+      showToast?.(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
     } catch (err) {
       console.error('Error saving record:', err);
-      showToast('Failed to save record. Please try again.', 'error');
+      showToast?.('Failed to save record. Please try again.', 'error');
     }
   };
 
@@ -644,7 +769,11 @@ export function AttendanceScannerModal({
 
       // Auto-save any attendees in current session before closing
       if (sessionLogs.length > 0) {
-        await handleSaveRecord();
+        try {
+          await handleSaveRecord();
+        } catch (saveErr) {
+          console.warn('Auto-save notice before closing:', saveErr);
+        }
       }
 
       const deptUpper = (targetDept || 'CWTS').toUpperCase();
@@ -663,14 +792,13 @@ export function AttendanceScannerModal({
         localStorage.setItem('nstp_closed_attendance_days', JSON.stringify(updatedMap));
       } catch (_) {}
 
-      // Stop camera scanner if running
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.stop();
-          scannerRef.current.clear();
-        } catch (_) {}
-        scannerRef.current = null;
-      }
+      // Clear the draft logs for the closed day now that it is finalized
+      try {
+        localStorage.removeItem(`nstp_draft_session_logs_${deptUpper}_${selectedDay}`);
+      } catch (_) {}
+
+      // Stop camera scanner cleanly
+      await stopCamera();
 
       // Identify the next available unconducted day
       const closedSet = new Set(updatedClosed);
@@ -680,21 +808,23 @@ export function AttendanceScannerModal({
         nextDay = ATTENDANCE_DAYS.find(d => !closedSet.has(d));
       }
 
-      // Clear current session logs for the closed day
-      setSessionLogs([]);
-      setScanStats({ totalScans: 0, timeInCount: 0, timeOutCount: 0, excusedCount: 0 });
-      setActivityName('');
+      setActivityName('NSTP Field Session');
 
       if (nextDay) {
         setSelectedDay(nextDay);
         setStep(1); // Proceed to setup for the next day
+        const nextLogs = loadDraftOrCachedLogs(targetDept, nextDay, availableStudents);
+        setSessionLogs(nextLogs);
         showToast?.(`${selectedDay} class is now closed! Proceeding to ${nextDay}.`, 'success');
       } else {
+        setSessionLogs([]);
         showToast?.(`All 15 days of NSTP attendance for ${targetDept} are now officially completed!`, 'success');
         setStep(1);
       }
 
-      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      try {
+        window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      } catch (_) {}
     } catch (err) {
       console.error('Failed to close class:', err);
       showToast?.('Error closing class session. Please try again.', 'error');
