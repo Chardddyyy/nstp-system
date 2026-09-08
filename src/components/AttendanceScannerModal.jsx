@@ -223,7 +223,6 @@ export function AttendanceScannerModal({
   const [scanStatus, setScanStatus] = useState(null); // { type: 'success' | 'late' | 'already' | 'error', message: '' }
   const [sessionLogs, setSessionLogs] = useState([]);
   const [cameraFacing, setCameraFacing] = useState('environment'); // 'environment' | 'user'
-  const [isSaved, setIsSaved] = useState(false);
   const [closedDaysMap, setClosedDaysMap] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('nstp_closed_attendance_days') || '{}');
@@ -306,7 +305,6 @@ export function AttendanceScannerModal({
       setStep(1);
       setScanStatus(null);
       setLastScannedStudent(null);
-      setIsSaved(false);
 
       let isMounted = true;
       attendanceAPI.getRecords({ limit: 5000 })
@@ -753,8 +751,7 @@ export function AttendanceScannerModal({
         window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
       } catch (_) {}
       
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
+
 
       showToast?.(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
     } catch (err) {

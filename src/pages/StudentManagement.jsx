@@ -1263,14 +1263,14 @@ function StudentManagement() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-2.5 w-full sm:w-auto">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 sm:gap-2.5 w-full sm:w-auto">
               {isAdmin && (
                 <select
                   id="filter-dept"
                   name="filterDept"
                   value={filterDept}
                   onChange={(e) => setFilterDept(e.target.value)}
-                  className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
+                  className="flex-1 sm:flex-none min-w-[95px] sm:min-w-[120px] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
                 >
                   <option value="All">All Depts</option>
                   <option value="CWTS">CWTS</option>
@@ -1283,7 +1283,7 @@ function StudentManagement() {
                 name="filterNstpSection"
                 value={filterNstpSection}
                 onChange={(e) => setFilterNstpSection(e.target.value)}
-                className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
+                className="flex-1 sm:flex-none min-w-[115px] sm:min-w-[135px] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
               >
                 <option value="All">All Sections</option>
                 <option value="CWTS 1">CWTS 1</option>
@@ -1301,7 +1301,7 @@ function StudentManagement() {
                 name="filterCourse"
                 value={filterCourse}
                 onChange={(e) => setFilterCourse(e.target.value)}
-                className="w-full px-2 py-1.5 sm:px-2.5 sm:py-2 text-[11px] sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer truncate"
+                className="flex-1 sm:flex-none min-w-[105px] sm:min-w-[125px] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
               >
                 <option value="All">All Courses</option>
                 <option value="BSIT">BSIT</option>

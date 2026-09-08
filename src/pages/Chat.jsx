@@ -91,7 +91,13 @@ function Chat() {
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
 
-  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [activeConversationId, setActiveConversationId] = useState(() => {
+    try {
+      return localStorage.getItem('nstp_active_chat') || null;
+    } catch {
+      return null;
+    }
+  });
   const [showContacts, setShowContacts] = useState(false);
   const [readConversations, setReadConversations] = useState(() => {
     // Load read state from localStorage
@@ -1610,8 +1616,18 @@ function Chat() {
     };
   };
 
-  // Get the correct partner name for active conversation
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  // Get the correct partner name for active conversation (type-safe string comparison)
+  const activeConversation = useMemo(() => {
+    if (!conversations || conversations.length === 0) return null;
+    if (activeConversationId) {
+      const found = conversations.find(c => 
+        String(c.id) === String(activeConversationId) || 
+        (c.conversation_id && String(c.conversation_id) === String(activeConversationId))
+      );
+      if (found) return found;
+    }
+    return null;
+  }, [conversations, activeConversationId]);
   const activePartnerName = getConversationPartnerName(activeConversation);
 
   // Get messages for active conversation - MUST be declared AFTER activeConversation
@@ -1728,7 +1744,28 @@ function Chat() {
       if (bName === 'All Instructors') return 1;
       return 0;
     });
-
+  // Automatically select an active conversation when user has conversations available
+  useEffect(() => {
+    if (conversations && conversations.length > 0) {
+      const isCurrentValid = activeConversationId && conversations.some(c => 
+        String(c.id) === String(activeConversationId) ||
+        (c.conversation_id && String(c.conversation_id) === String(activeConversationId))
+      );
+      if (!isCurrentValid) {
+        let preferred = null;
+        try {
+          const savedId = localStorage.getItem('nstp_active_chat');
+          if (savedId) {
+            preferred = conversations.find(c => String(c.id) === String(savedId));
+          }
+        } catch {}
+        const target = preferred || filteredConversations[0] || conversations[0];
+        if (target && target.id) {
+          setActiveConversationId(target.id);
+        }
+      }
+    }
+  }, [conversations, activeConversationId, filteredConversations]);
   // Image viewer and editor handlers
   const handleImageClick = (imageUrl) => {
     setSelectedImageUrl(imageUrl);
@@ -2137,7 +2174,7 @@ function Chat() {
                       e.stopPropagation();
                       handleSetActiveConversation(conversation.id);
                     }}
-                    className={`w-full p-4 lg:p-5 flex items-center space-x-4 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${activeConversationId === conversation.id ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
+                    className={`w-full p-4 lg:p-5 flex items-center space-x-4 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${String(activeConversationId) === String(conversation.id) ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
                   >
                     <div className="relative">
                       {isGroupConversation(conversation) ? getGroupAvatar(conversation) : getUserAvatar(partner)}
@@ -2909,19 +2946,40 @@ function Chat() {
           ) : (
             <div className="flex-1 flex items-center justify-center p-6 bg-gray-50/50">
               <div className="text-center max-w-sm mx-auto p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-emerald-50 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageSquare className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-1">Select a Conversation</h3>
-                <p className="text-sm text-gray-500 mb-6">Choose someone from your contact list or start a new chat to begin messaging.</p>
-                <button
-                  type="button"
-                  onClick={() => setShowContacts(true)}
-                  className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm shadow-green-700/20"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Start New Chat
-                </button>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  {filteredConversations.length > 0 ? 'Open a Conversation' : 'Select a Conversation'}
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  {filteredConversations.length > 0 
+                    ? `You have ${filteredConversations.length} active conversation(s). Choose one to begin messaging.`
+                    : 'Choose someone from your contact list or start a new chat to begin messaging.'}
+                </p>
+                {filteredConversations.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = filteredConversations[0];
+                      if (target?.id) handleSetActiveConversation(target.id);
+                      else setShowConversations(true);
+                    }}
+                    className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Open Latest Conversation
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowContacts(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Start New Chat
+                  </button>
+                )}
               </div>
             </div>
           )}

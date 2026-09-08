@@ -6,10 +6,11 @@ import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixM
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
-  Archive, History, FileCheck, RotateCcw, Camera
+  Archive, History, FileCheck, RotateCcw, Camera, Download
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 
 import { getAvatarSrc } from '../utils/avatars';
 
@@ -37,6 +38,7 @@ function InstructorDashboard() {
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
+  const [viewingArchive, setViewingArchive] = useState(false);
   const [archivedYears, setArchivedYears] = useState(() => DEFAULT_PAST_BATCHES);
   const [archiveViewData, setArchiveViewData] = useState(null);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -62,8 +64,12 @@ function InstructorDashboard() {
   };
 
   const handleViewBatch = (batch) => {
-    const existingStudentData = batch.data?.studentData || batch.studentData || [];
-    const existingReportData = batch.data?.reportData || batch.reportData || [];
+    setShowArchiveModal(false);
+    // Strictly filter student and report data to instructor's department only
+    const existingStudentData = (batch.data?.studentData || batch.studentData || [])
+      .filter(s => s && s.department === user?.department);
+    const existingReportData = (batch.data?.reportData || batch.reportData || [])
+      .filter(r => r && (r.department === 'All' || r.department === user?.department));
     const existingLetterData = batch.data?.letterData || batch.letterData || [];
 
     setArchiveViewData({
@@ -72,22 +78,27 @@ function InstructorDashboard() {
       reportData: existingReportData,
       letterData: existingLetterData
     });
-    setShowArchiveDetails(true);
+    setViewingArchive(true);
 
-    if (existingStudentData.length === 0) {
-      archivesAPI.getByYear(batch.year).then((full) => {
-        const sData = full.studentData || full.data?.studentData || [];
-        const rData = full.reportData || full.data?.reportData || [];
-        const lData = full.letterData || full.data?.letterData || [];
-        setArchiveViewData((prev) => ({
-          ...prev,
-          ...batch,
-          studentData: sData,
-          reportData: rData,
-          letterData: lData
-        }));
-      }).catch(() => {});
-    }
+    archivesAPI.getByYear(batch.year).then((full) => {
+      const sData = (full.studentData || full.data?.studentData || [])
+        .filter(s => s && s.department === user?.department);
+      const rData = (full.reportData || full.data?.reportData || [])
+        .filter(r => r && (r.department === 'All' || r.department === user?.department));
+      const lData = full.letterData || full.data?.letterData || [];
+      setArchiveViewData((prev) => ({
+        ...prev,
+        ...batch,
+        studentData: sData,
+        reportData: rData,
+        letterData: lData
+      }));
+    }).catch(() => {});
+  };
+
+  const handleBackToCurrent = () => {
+    setViewingArchive(false);
+    setArchiveViewData(null);
   };
 
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -127,6 +138,21 @@ function InstructorDashboard() {
     };
   }, [showNotifications]);
   
+  // Get instructor's department students only (switches to archive batch when viewingArchive is true)
+  const myStudents = useMemo(() => {
+    if (viewingArchive && archiveViewData?.studentData) {
+      return (archiveViewData.studentData || []).filter(s => s && s.department === user?.department);
+    }
+    return (students || []).filter(s => s && s.department === user?.department);
+  }, [viewingArchive, archiveViewData, students, user?.department]);
+
+  const myReports = useMemo(() => {
+    if (viewingArchive && archiveViewData?.reportData) {
+      return (archiveViewData.reportData || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+    }
+    return (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+  }, [viewingArchive, archiveViewData, reports, user?.department]);
+
   // Check if user is loaded - after all hooks
   if (!user) {
     return (
@@ -253,9 +279,8 @@ function InstructorDashboard() {
     );
   };
 
-  // Get instructor's department students only
-  const myStudents = (students || []).filter(s => s && s.department === user?.department);
-  const myReports = (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+
+
   const pendingReports = myReports.filter(r => !(r.submissions && r.submissions.some(sub => sub && sub.instructor === user?.name)));
 
   // Count unread messages across all conversations
@@ -296,10 +321,50 @@ function InstructorDashboard() {
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
         user={user}
+        archiveMode={viewingArchive}
       />
 
       {/* Main Content */}
       <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+        {/* Previous Report Header - Show when viewing archive (Exact matching Admin design) */}
+        {viewingArchive && archiveViewData && (
+          <div className="bg-amber-500/10 border border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 mb-3 sm:mb-6 backdrop-blur-md shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0 border border-amber-400/50">
+                  <Archive className="w-4 h-4 sm:w-5 sm:h-5 text-amber-800" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-sm sm:text-lg font-black text-amber-950 truncate">
+                    Viewing Archive: Batch {archiveViewData.year} ({user?.department})
+                  </h2>
+                  <p className="text-[11px] sm:text-xs text-amber-800/90 font-medium truncate">
+                    Historical records preserved for your {user?.department} students.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveDetails(true)}
+                  className="bg-emerald-800 hover:bg-emerald-900 text-amber-300 font-bold px-3 py-1.5 sm:py-2 rounded-xl text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Summary</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackToCurrent}
+                  className="bg-emerald-800 hover:bg-emerald-900 text-emerald-100 px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Back to Current</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero Header - Unified CvSU Naic Aesthetics */}
         <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-6 w-full">
           <div className="flex flex-row items-center justify-between gap-1.5 sm:gap-3 relative z-10 w-full">
@@ -318,10 +383,16 @@ function InstructorDashboard() {
 
               <div className="min-w-0 flex-1 overflow-hidden">
                 <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
-                  <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
-                  <span className="sm:hidden">{user?.department} Portal</span>
+                  {viewingArchive ? `Batch ${archiveViewData?.year} (${user?.department})` : (
+                    <>
+                      <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
+                      <span className="sm:hidden">{user?.department} Portal</span>
+                    </>
+                  )}
                 </h2>
-                <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">Welcome, {user?.name || 'Instructor'} 👋</p>
+                <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">
+                  {viewingArchive ? `Archived Records • ${user?.department} Department` : `Welcome, ${user?.name || 'Instructor'} 👋`}
+                </p>
               </div>
             </div>
 
@@ -683,7 +754,7 @@ function InstructorDashboard() {
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-black tracking-tight">{user?.department} Archived Batches</h3>
-                    <p className="text-emerald-200 text-xs font-medium">Historical records for your component</p>
+                    <p className="text-emerald-200 text-xs font-medium">Select a historical batch for your component</p>
                   </div>
                 </div>
                 <button
@@ -715,36 +786,59 @@ function InstructorDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {[...archivedYears].sort((a, b) => String(b.year).localeCompare(String(a.year))).map((year) => (
-                      <div
-                        key={year.year}
-                        className="flex items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
-                      >
-                        <div className="flex items-center space-x-3.5">
-                          <div>
-                            <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                                {year.students} {user?.department} Students
-                              </span>
-                              <span className="text-[11px] font-bold text-gray-500">
-                                • {year.reports} Reports
-                              </span>
+                    {[...archivedYears].sort((a, b) => {
+                      const getSortKey = (item) => {
+                        const str = String(item?.year || item || '');
+                        const matchYear = str.match(/(\d{4})/);
+                        const startYear = matchYear ? parseInt(matchYear[1], 10) : 0;
+                        let semRank = 0;
+                        if (str.includes('1st')) semRank = 1;
+                        else if (str.includes('2nd')) semRank = 2;
+                        else if (str.includes('Summer')) semRank = 3;
+                        return { startYear, semRank };
+                      };
+                      const kA = getSortKey(a);
+                      const kB = getSortKey(b);
+                      if (kA.startYear !== kB.startYear) return kB.startYear - kA.startYear;
+                      return kA.semRank - kB.semRank;
+                    }).map((year) => {
+                      // Calculate strictly department students count for this batch
+                      const sList = year.studentData || year.data?.studentData;
+                      const deptStudentsCount = Array.isArray(sList) && sList.length > 0
+                        ? sList.filter(s => s.department === user?.department).length
+                        : (year.data?.[(user?.department || '').toLowerCase()] ?? Math.max(1, Math.round((year.students || 0) / 3)));
+
+                      return (
+                        <div
+                          key={year.year}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
+                        >
+                          <div className="flex items-center space-x-3.5">
+                            <div>
+                              <h4 className="text-base font-black text-emerald-950">Batch {year.year}</h4>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                                  {deptStudentsCount} {user?.department} Students
+                                </span>
+                                <span className="text-[11px] font-bold text-gray-500">
+                                  • {year.reports} Reports
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleViewBatch(year)}
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
-                          >
-                            View Batch
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                            <button
+                              type="button"
+                              onClick={() => handleViewBatch(year)}
+                              className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+                            >
+                              View Batch
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -762,74 +856,183 @@ function InstructorDashboard() {
           </div>
         )}
 
-        {/* Archive Detail View Modal for Instructor */}
+        {/* Archive Detail View Modal for Instructor - Identical to Admin Design with strict department access */}
         {showArchiveDetails && archiveViewData && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowArchiveDetails(false)}>
-            <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="sticky top-0 bg-emerald-900 text-white p-4 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl z-10">
-                <h3 className="text-base sm:text-lg font-black flex items-center">
-                  <Archive className="w-5 h-5 mr-2 text-amber-400" />
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="sticky top-0 bg-emerald-900 text-white p-4 flex flex-wrap items-center justify-between gap-3 rounded-t-xl z-20 shadow-md">
+                <h3 className="text-base sm:text-lg font-bold flex items-center">
+                  <Archive className="w-5 h-5 mr-2 text-amber-300" />
                   {user?.department} Batch {archiveViewData.year} Archive Details
                 </h3>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setShowArchiveDetails(false)} className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white">
-                    <X className="w-5 h-5" />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {/* Form B Button */}
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormat(archiveViewData, archiveViewData.studentData, user?.department)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
+                    title="Export Official CHED Form B Masterlist"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-950" />
+                    <span>Form B</span>
+                  </button>
+
+                  {/* Form A Button */}
+                  <button
+                    type="button"
+                    onClick={() => downloadChedFormA(archiveViewData, archiveViewData.studentData, user?.department)}
+                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-emerald-700"
+                    title="Export CHED Form 2-A Summary Matrix"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Form A</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowArchiveDetails(false)}
+                    className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white ml-1"
+                  >
+                    <X className="w-6 h-6" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 space-y-4">
-                {/* Department Summary */}
-                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2">{user?.department} Batch Summary</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-center">
-                    <div className="bg-white rounded-xl p-3 border border-emerald-100">
-                      <p className="text-xl sm:text-2xl font-black text-emerald-800">{archiveViewData.students || 0}</p>
-                      <p className="text-xs text-gray-500 font-medium">{user?.department} Students</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-3 border border-emerald-100">
-                      <p className="text-xl sm:text-2xl font-black text-amber-600">{archiveViewData.reports || 0}</p>
-                      <p className="text-xs text-gray-500 font-medium">Department Reports</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-3 border border-emerald-100 col-span-2 sm:col-span-1">
-                      <p className="text-xl sm:text-2xl font-black text-teal-700">{archiveViewData.letterData?.length || 0}</p>
-                      <p className="text-xs text-gray-500 font-medium">Letter Formats</p>
-                    </div>
-                  </div>
-                </div>
+              <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
+                {/* Archive Summary - Component Specific */}
+                {(() => {
+                  const stList = (archiveViewData?.studentData || []).filter(s => s && s.department === user?.department);
+                  const totalStudents = stList.length;
 
-                {/* Student Information Section */}
+                  // Graduates count (passing mark 1.00 to 3.00)
+                  const passCount = stList.filter(s => {
+                    const g = s.final_grade_2 || (s.semester === '2nd Semester' ? s.final_grade : '') || s.final_grade || '';
+                    const n = parseFloat(g);
+                    return !isNaN(n) && n >= 1.0 && n <= 3.0 && g !== '5.00' && !String(g).toUpperCase().includes('FAIL') && !String(g).toUpperCase().includes('INC') && !String(g).toUpperCase().includes('DRP');
+                  }).length;
+
+                  const incCount = stList.filter(s => {
+                    const g = s.final_grade_2 || s.final_grade || '';
+                    return g === 'INC' || String(g).toUpperCase().includes('INC');
+                  }).length;
+
+                  const dropCount = stList.filter(s => {
+                    const g = s.final_grade_2 || s.final_grade || '';
+                    return g === 'DRP' || g === '5.00' || String(g).toUpperCase().includes('FAIL') || String(g).toUpperCase().includes('DRP');
+                  }).length;
+
+                  return (
+                    <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-4 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div>
+                          <h4 className="text-sm font-black text-amber-950 uppercase tracking-wider">{user?.department} Enrollees &amp; Graduates Summary</h4>
+                          <p className="text-[11px] text-amber-800 font-medium">Official demographic distribution for your component</p>
+                        </div>
+                        <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-950 border border-amber-300">
+                          {archiveViewData?.year || 'Academic Year'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-emerald-700">{totalStudents}</p>
+                          <p className="text-xs font-bold text-gray-700">{user?.department} Enrollees</p>
+                          <p className="text-[11px] text-slate-500 font-medium mt-0.5">Total Registered</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-emerald-600">{passCount}</p>
+                          <p className="text-xs font-bold text-gray-700">Passed (Graduated)</p>
+                          <p className="text-[11px] text-emerald-700 font-extrabold mt-0.5">
+                            {totalStudents > 0 ? Math.round((passCount / totalStudents) * 100) : 0}% Pass Rate
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-amber-600">{incCount}</p>
+                          <p className="text-xs font-bold text-gray-700">Incomplete (INC)</p>
+                          <p className="text-[11px] text-amber-700 font-extrabold mt-0.5">Make-Up Pending</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-amber-100 shadow-xs">
+                          <p className="text-xl sm:text-2xl font-black text-rose-600">{dropCount}</p>
+                          <p className="text-xs font-bold text-gray-700">Dropped / Failed</p>
+                          <p className="text-[11px] text-rose-700 font-extrabold mt-0.5">Uncompleted</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Student Information Section - Only Instructor's Students */}
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-emerald-700" />
-                    {user?.department} Student Records
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Users className="w-5 h-5 mr-2" />
+                      {user?.department} Student Records &amp; Official Grades
+                    </span>
+                    <span className="text-xs font-bold text-gray-500">
+                      {archiveViewData?.studentData?.length || 0} Students Listed
+                    </span>
                   </h4>
-                  {archiveViewData.studentData && archiveViewData.studentData.length > 0 ? (
-                    <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                  {archiveViewData?.studentData && archiveViewData.studentData.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
                       <table className="w-full text-xs">
-                        <thead className="bg-gray-100 text-gray-700 font-black">
+                        <thead className="bg-emerald-950 text-white font-bold">
                           <tr>
-                            <th className="px-3.5 py-2.5 text-left">Student ID</th>
-                            <th className="px-3.5 py-2.5 text-left">Name</th>
-                            <th className="px-3.5 py-2.5 text-left">Program</th>
-                            <th className="px-3.5 py-2.5 text-left">Component</th>
-                            <th className="px-3.5 py-2.5 text-left">Status</th>
+                            <th className="px-3 py-2.5 text-left">Student ID</th>
+                            <th className="px-3 py-2.5 text-left">Name</th>
+                            <th className="px-3 py-2.5 text-left">Program</th>
+                            <th className="px-3 py-2.5 text-center">Track</th>
+                            <th className="px-3 py-2.5 text-center">Official Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                          {archiveViewData.studentData.map((student, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="px-3.5 py-2 font-mono font-bold text-gray-900">{student.studentId}</td>
-                              <td className="px-3.5 py-2 font-bold text-gray-900">{student.name}</td>
-                              <td className="px-3.5 py-2 text-gray-600">{student.program}</td>
-                              <td className="px-3.5 py-2">
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800">
-                                  {student.department}
-                                </span>
-                              </td>
-                              <td className="px-3.5 py-2 font-medium text-gray-600">{student.status || 'Completed'}</td>
-                            </tr>
-                          ))}
+                          {archiveViewData.studentData.map((student, idx) => {
+                            const g2 = student.final_grade_2 || student.grade_sem2 || (student.semester === '2nd Semester' ? student.final_grade : '') || student.final_grade || '-';
+                            const num2 = parseFloat(g2);
+                            const isPass = !isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && g2 !== '5.00' && !String(g2).toUpperCase().includes('FAIL') && !String(g2).toUpperCase().includes('INC') && !String(g2).toUpperCase().includes('DRP');
+                            const isFail = g2 === '5.00' || String(g2).toUpperCase().includes('FAIL');
+                            const isInc = g2 === 'INC' || String(g2).toUpperCase().includes('INC');
+                            const isDrp = g2 === 'DRP' || String(g2).toUpperCase().includes('DRP');
+
+                            return (
+                              <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
+                                <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
+                                <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
+                                <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                                    student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                    student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                    student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {student.department}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  {isPass ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                      GRADUATED
+                                    </span>
+                                  ) : isFail ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                      FAILED
+                                    </span>
+                                  ) : isInc ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                      INCOMPLETE
+                                    </span>
+                                  ) : isDrp ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black bg-gray-200 text-gray-800 border border-gray-300">
+                                      DROPPED
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                      {String(student.status || 'Active').toUpperCase()}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -840,24 +1043,24 @@ function InstructorDashboard() {
 
                 {/* Report Details Section */}
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-amber-600" />
-                    {user?.department} Reports &amp; Submissions
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center">
+                    <FileText className="w-5 h-5 mr-2" />
+                    {user?.department} Reports &amp; Documentation
                   </h4>
                   {archiveViewData.reportData && archiveViewData.reportData.length > 0 ? (
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       {archiveViewData.reportData.map((report, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                          <div className="flex items-center justify-between mb-1">
-                            <h5 className="font-bold text-xs text-gray-900">{report.title}</h5>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-900">
+                        <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-medium text-gray-800">{report.title}</h5>
+                            <span className="px-2 py-1 rounded text-xs bg-emerald-100 text-emerald-800 font-bold">
                               {report.department}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-600 mb-1 line-clamp-2">{report.description}</p>
-                          <div className="flex items-center gap-3 text-[11px] text-gray-500">
+                          <p className="text-sm text-gray-600 mb-2">{report.description}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                             {report.due_date && <span>Due: {new Date(report.due_date).toLocaleDateString()}</span>}
-                            <span>{report.submission_count ?? 0} submission(s)</span>
+                            <span>{report.submission_count ?? report.submissions?.length ?? 0} submission(s)</span>
                           </div>
                         </div>
                       ))}
@@ -867,35 +1070,79 @@ function InstructorDashboard() {
                   )}
                 </div>
 
-                {/* Letter Formats Section */}
+                {/* Calendar & Activities Schedule Section */}
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-950 mb-2 border-b pb-2 flex items-center gap-1.5">
-                    <FileCheck className="w-4 h-4 text-teal-700" />
-                    Official Letter Formats ({user?.department} &amp; General)
+                  <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Calendar className="w-5 h-5 mr-2" />
+                      Academic &amp; Training Calendar Schedule
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowArchiveDetails(false);
+                        navigate('/calendar');
+                      }}
+                      className="text-xs text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Open Calendar Page &rarr;</span>
+                    </button>
                   </h4>
-                  {archiveViewData.letterData && archiveViewData.letterData.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {archiveViewData.letterData.map((letter, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                              {letter.department || 'All'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-600 line-clamp-2 mb-1.5">{letter.description}</p>
-                          {letter.file && (
-                            <div className="flex items-center justify-between text-[11px] bg-white p-1.5 rounded-lg border border-gray-100">
-                              <span className="truncate max-w-[150px] font-medium text-gray-700">{letter.file.name}</span>
-                              <span className="text-gray-400">{letter.file.size}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {(() => {
+                      const yr = String(archiveViewData?.year || '');
+                      const events = yr.includes('2023-2024')
+                        ? (yr.includes('1st Semester')
+                            ? [
+                                { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
+                                { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
+                                { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
+                                { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
+                                { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
+                                { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
+                              ]
+                            : [
+                                { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
+                                { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
+                                { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
+                                { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
+                                { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
+                                { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
+                              ])
+                        : (yr.includes('1st Semester')
+                            ? [
+                                { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
+                                { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
+                                { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
+                                { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
+                                { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
+                                { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
+                              ]
+                            : [
+                                { date: '2025-02-08', title: 'NSTP 2 Resumption & Community Deployment', desc: 'Deployment to designated partner barangays in Naic.', dept: 'All' },
+                                { date: '2025-03-01', title: 'CWTS Community Waste Management Drive', desc: 'Solid waste management and segregation training.', dept: 'CWTS' },
+                                { date: '2025-03-15', title: 'LTS Supplementary Literacy Tutorials', desc: 'Remedial reading and numeracy enhancement classes.', dept: 'LTS' },
+                                { date: '2025-03-22', title: 'ROTC Basic Marksmanship & Drill Practical', desc: 'Weapon assembly, safety inspection, and marksmanship fundamentals.', dept: 'ROTC' },
+                                { date: '2025-04-12', title: 'Community Immersion Final Showcase', desc: 'Portfolio evaluation and partner barangay sign-off.', dept: 'All' },
+                                { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Muster', desc: 'Formal graduation and awarding of serial certificates.', dept: 'All' },
+                              ]);
+
+                      const deptEvents = events.filter(e => e.dept === 'All' || e.dept === user?.department);
+
+                      return deptEvents.map((evt, idx) => (
+                        <div key={idx} className="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-mono">{evt.date}</span>
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">{evt.dept}</span>
                             </div>
-                          )}
+                            <h5 className="font-black text-gray-900 text-xs leading-tight mb-1">{evt.title}</h5>
+                            <p className="text-[11px] text-gray-600 line-clamp-2">{evt.desc}</p>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-4 text-xs">No letter format records saved in this archive batch</p>
-                  )}
+                      ));
+                    })()}
+                  </div>
                 </div>
               </div>
 

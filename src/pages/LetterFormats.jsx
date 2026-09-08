@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
-import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive, Sparkles, Shuffle } from 'lucide-react';
+import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
 import xss from 'xss';
 
@@ -126,87 +126,6 @@ const DEFAULT_TEMPLATES = [
   }
 ];
 
-const RANDOM_LETTER_POOL = [
-  {
-    title: 'Student Absence Excuse Letter & Medical Certificate Submission',
-    department: 'All',
-    description: 'Official student absence justification and health excuse letter endorsing submitted medical certificates for make-up clearance.',
-    filename: 'CvSU_NSTP_Student_Medical_Excuse_Letter.doc'
-  },
-  {
-    title: 'Notice of Incomplete Attendance & Special Make-Up Service Agreement',
-    department: 'All',
-    description: 'Official student covenant and faculty agreement designating compensatory community hours to convert an Incomplete (INC) status.',
-    filename: 'CvSU_NSTP_INC_Makeup_Service_Agreement.doc'
-  },
-  {
-    title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form',
-    department: 'All',
-    description: 'Standard institutional waiver, emergency contact profile, and health declaration required for off-campus community immersion.',
-    filename: 'CvSU_NSTP_Parent_Consent_Waiver.doc'
-  },
-  {
-    title: 'Certificate of Good Moral Character & Satisfactory NSTP Service Clearance',
-    department: 'All',
-    description: 'Official university clearance certifying commendable civic demeanor, community service hours completion, and liability clearance.',
-    filename: 'CvSU_NSTP_Good_Moral_Service_Clearance.doc'
-  },
-  {
-    title: 'Barangay Immersion & Community Needs Profiling Request',
-    department: 'CWTS',
-    description: 'Official formal institutional endorsement requesting barangay clearance and facilitation for household health and civic welfare surveys.',
-    filename: 'CvSU_CWTS_Barangay_Immersion_Request.doc'
-  },
-  {
-    title: 'Coastal Cleanup & Mangrove Planting Environmental Partnership',
-    department: 'CWTS',
-    description: 'Formal partnership endorsement to CENRO and Barangay Bucana Malaki for coastal solid waste management and mangrove propagation.',
-    filename: 'CvSU_CWTS_Coastal_Cleanup_Mangrove_Endorsement.doc'
-  },
-  {
-    title: 'Barangay Health Center Supplementary Feeding & Hygiene Drive',
-    department: 'CWTS',
-    description: 'Collaborative endorsement requesting authorization to conduct child nutrition profiling, feeding drive, and handwashing seminars.',
-    filename: 'CvSU_CWTS_Barangay_Feeding_Health_Drive.doc'
-  },
-  {
-    title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement',
-    department: 'LTS',
-    description: 'Formal request to elementary school principals for student-led remedial reading sessions and diagnostic reading clinics.',
-    filename: 'CvSU_LTS_School_Outreach_Permission.doc'
-  },
-  {
-    title: 'Public Elementary School Remedial Reading Center Collaboration',
-    department: 'LTS',
-    description: 'Formal coordination letter requesting classroom space and teacher coordinator assistance for weekend Alagang Basa sessions.',
-    filename: 'CvSU_LTS_Elementary_Reading_Collaboration.doc'
-  },
-  {
-    title: 'Children Storytelling & Illustrated Book Donation Handover',
-    department: 'LTS',
-    description: 'Official institutional deed of handover for storybooks, literacy flashcards, and learning materials donated to the partner school reading corner.',
-    filename: 'CvSU_LTS_Book_Donation_Handover.doc'
-  },
-  {
-    title: 'ROTC Field Training Exercise & Range Facility Request',
-    department: 'ROTC',
-    description: 'Endorsement to Armed Forces / Naval Training Command for weekend tactical drills, land navigation, and range familiarization.',
-    filename: 'CvSU_ROTC_Tactical_Training_Endorsement.doc'
-  },
-  {
-    title: 'ROTC Annual Tactical Inspection (ATI) & Pass-in-Review Invitation',
-    department: 'ROTC',
-    description: 'Official formal invitation addressed to Philippine Navy & DMST Inspection Board for the annual cadet battalion inspection and parade.',
-    filename: 'CvSU_ROTC_Annual_Tactical_Inspection_Invitation.doc'
-  },
-  {
-    title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement',
-    department: 'All',
-    description: 'Official CHED submission document certifying graduates and requesting assigned national serial numbers.',
-    filename: 'CvSU_OSDS_CHED_Serial_Endorsement.doc'
-  }
-];
-
 export default function LetterFormats() {
   const { user, logout, viewingArchive, archiveViewData, setViewingArchive, showToast } = useAuth();
   const navigate = useNavigate();
@@ -321,50 +240,7 @@ export default function LetterFormats() {
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
   };
 
-  const handleGenerateRandomLetter = () => {
-    const pool = user?.role === 'instructor' && user?.department
-      ? RANDOM_LETTER_POOL.filter(p => p.department === 'All' || p.department === user.department)
-      : RANDOM_LETTER_POOL;
 
-    const selected = pool[Math.floor(Math.random() * pool.length)];
-    const randomId = 'rnd-' + Date.now();
-    const newLetter = {
-      id: randomId,
-      title: selected.title,
-      department: selected.department,
-      description: selected.description,
-      file: {
-        name: selected.filename,
-        size: (120 + Math.floor(Math.random() * 65)).toFixed(1) + ' KB',
-        type: 'application/msword'
-      },
-      createdBy: user?.name || (user?.role === 'instructor' ? `${user.department} Instructor` : 'NSTP Office'),
-      createdAt: new Date().toISOString()
-    };
-
-    const updated = [newLetter, ...templates];
-    setTemplates(updated);
-    try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
-    showToast(`Generated random letter format: "${selected.title}"`, 'success');
-  };
-
-  const handleAutoFillRandom = () => {
-    const pool = user?.role === 'instructor' && user?.department
-      ? RANDOM_LETTER_POOL.filter(p => p.department === 'All' || p.department === user.department)
-      : RANDOM_LETTER_POOL;
-
-    const selected = pool[Math.floor(Math.random() * pool.length)];
-    setTitle(selected.title);
-    setDepartment(selected.department);
-    setDescription(selected.description);
-    setAttachedFile({
-      name: selected.filename,
-      size: (120 + Math.floor(Math.random() * 65)).toFixed(1) + ' KB',
-      type: 'application/msword',
-      data: null
-    });
-    showToast(`Template fields populated with "${selected.title}"`, 'info');
-  };
 
   const handleDownloadAttachment = (t) => {
     if (t.file?.data && t.file.data.startsWith('data:')) {
@@ -445,16 +321,7 @@ export default function LetterFormats() {
             </div>
 
             {(user?.role === 'admin' || user?.role === 'instructor') && !viewingArchive && (
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleGenerateRandomLetter}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 bg-emerald-850 hover:bg-emerald-800 text-amber-300 hover:text-amber-200 border border-emerald-600/60 font-black px-3.5 py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 w-full sm:w-auto cursor-pointer text-xs sm:text-sm shrink-0"
-                  title="Generate a random official CvSU Naic letter format"
-                >
-                  <Shuffle className="w-4 h-4 text-amber-400 stroke-[2.5]" />
-                  <span className="whitespace-nowrap">Random Format Letter</span>
-                </button>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -540,14 +407,6 @@ export default function LetterFormats() {
                 : 'The letter format list is empty. Click the button below to upload or create a letter format.'}
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={handleGenerateRandomLetter}
-                className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-emerald-950 font-black px-5 py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                <Shuffle className="w-4 h-4 text-emerald-950 stroke-[2.5]" />
-                <span>Generate Random Letter</span>
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -669,17 +528,8 @@ export default function LetterFormats() {
 
               <form onSubmit={handleSaveTemplate} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm">
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="mb-1.5">
                     <label htmlFor="letter-format-title" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700">Letter Title *</label>
-                    <button
-                      type="button"
-                      onClick={handleAutoFillRandom}
-                      className="flex items-center gap-1 text-[11px] font-extrabold text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-300 transition-all cursor-pointer shadow-2xs active:scale-95"
-                      title="Quickly fill in random sample details"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Auto-Fill Random Template</span>
-                    </button>
                   </div>
                   <input
                     type="text"
