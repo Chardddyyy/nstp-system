@@ -66,7 +66,15 @@ app.use((req, res, next) => {
 });
 
 // ── Security: JWT Secret configuration ──────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[SECURITY CRITICAL] JWT_SECRET environment variable is NOT SET in production! Please set JWT_SECRET in your Render dashboard environment settings immediately.');
+  } else {
+    console.warn('[SECURITY NOTICE] JWT_SECRET environment variable not set. Falling back to local development key.');
+  }
+  JWT_SECRET = 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
+}
 const JWT_EXPIRY = '30d';
 
 // Socket.io JWT Auth Middleware
@@ -6300,6 +6308,43 @@ app.post('/api/attendance/seed-random', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Seed random attendance error:', err);
     res.status(500).json({ message: 'Failed to seed random attendance' });
+  }
+});
+
+// POST clear all attendance records and reset to Day 1
+app.post('/api/attendance/clear-all', authenticateToken, async (req, res) => {
+  try {
+    const { department } = req.body || {};
+    let query = 'DELETE FROM attendance_records';
+    const params = [];
+
+    if (req.user.role === 'instructor') {
+      query += ' WHERE department = ?';
+      params.push(req.user.department);
+    } else if (department && department !== 'All') {
+      query += ' WHERE department = ?';
+      params.push(department);
+    }
+
+    const [delRes] = await pool.execute(query, params);
+    auditLog('attendance_cleared_all', req.user.id, `Cleared ${delRes.affectedRows} attendance records for ${department || 'All'}`, req.ip || 'unknown');
+
+    // Broadcast reset event via Socket.IO
+    if (req.io) {
+      req.io.emit('attendance_reset', {
+        department: req.user.role === 'instructor' ? req.user.department : (department || 'All'),
+        clearedAt: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'All attendance records have been cleared and reset to Day 1.',
+      deletedCount: delRes.affectedRows
+    });
+  } catch (err) {
+    console.error('Clear all attendance error:', err);
+    res.status(500).json({ message: 'Failed to clear attendance records' });
   }
 });
 

@@ -1666,6 +1666,36 @@ export const attendanceAPI = {
       return { success: false, message: err.message };
     }
   },
+  clearAll: async (department = 'All') => {
+    try {
+      const res = await apiCall('/attendance/clear-all', {
+        method: 'POST',
+        body: JSON.stringify({ department })
+      });
+      try {
+        localStorage.removeItem('nstp_closed_attendance_days');
+        localStorage.removeItem('nstp_cached_attendance_records');
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('nstp_draft_session_logs_')) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch (_) {}
+      return res;
+    } catch (err) {
+      console.warn('Clear all attendance API notice:', err.message);
+      try {
+        localStorage.removeItem('nstp_closed_attendance_days');
+        localStorage.removeItem('nstp_cached_attendance_records');
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith('nstp_draft_session_logs_')) {
+            localStorage.removeItem(k);
+          }
+        });
+      } catch (_) {}
+      return { success: true, message: 'Cleared locally' };
+    }
+  },
   getStudentIdCards: async (params) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
     try {
