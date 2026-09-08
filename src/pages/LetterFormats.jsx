@@ -131,7 +131,12 @@ export default function LetterFormats() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (user?.role === 'instructor' && user?.department) {
+      return user.department;
+    }
+    return 'All';
+  });
   const [searchTerm, setSearchTerm] = useState('');
 
   // Local storage persistence for custom uploaded letter formats
@@ -194,12 +199,17 @@ export default function LetterFormats() {
       type: 'application/msword'
     };
 
+    // Instructors can only create/edit letter formats for their own department
     const targetDept = user?.role === 'instructor' && user?.department
       ? user.department
       : (department || 'All');
 
     let updated;
     if (editingTemplate) {
+      if (user?.role === 'instructor' && editingTemplate.department !== user.department) {
+        showToast(`You can only edit letter formats for your assigned department (${user.department}).`, 'error');
+        return;
+      }
       updated = templates.map(t => t.id === editingTemplate.id ? {
         ...t,
         title: title.trim(),
@@ -220,7 +230,7 @@ export default function LetterFormats() {
         createdAt: new Date().toISOString()
       };
       updated = [newT, ...templates];
-      showToast('New letter template saved successfully!', 'success');
+      showToast(`New ${targetDept} letter format saved successfully!`, 'success');
     }
 
     setTemplates(updated);
@@ -235,9 +245,16 @@ export default function LetterFormats() {
   };
 
   const handleDeleteTemplate = (id) => {
+    const item = templates.find(t => t.id === id);
+    if (!item) return;
+    if (user?.role === 'instructor' && item.department !== user.department) {
+      showToast(`You can only delete letter formats for your own department (${user.department}).`, 'error');
+      return;
+    }
     const updated = templates.filter(t => t.id !== id);
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
+    showToast('Letter format deleted successfully.', 'info');
   };
 
 
@@ -263,7 +280,7 @@ export default function LetterFormats() {
 
   const availableTabs = useMemo(() => {
     if (user?.role === 'instructor' && user?.department) {
-      return ['All', user.department];
+      return [user.department, 'All'];
     }
     return ['All', 'ROTC', 'CWTS', 'LTS'];
   }, [user]);
@@ -479,30 +496,35 @@ export default function LetterFormats() {
                   </span>
 
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingTemplate(item);
-                        setTitle(item.title);
-                        setDepartment(item.department);
-                        setDescription(item.description);
-                        setAttachedFile(item.file || null);
-                        setShowAddModal(true);
-                      }}
-                      className="p-2 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
-                      title="Edit"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {/* Instructors can ONLY edit/delete letters belonging to their own department; Admins can manage any */}
+                    {(user?.role === 'admin' || (user?.role === 'instructor' && item.department === user?.department)) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingTemplate(item);
+                            setTitle(item.title);
+                            setDepartment(item.department);
+                            setDescription(item.description);
+                            setAttachedFile(item.file || null);
+                            setShowAddModal(true);
+                          }}
+                          className="p-2 text-gray-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTemplate(item.id)}
-                      className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                      title="Delete"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTemplate(item.id)}
+                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -543,8 +565,8 @@ export default function LetterFormats() {
                   />
                 </div>
 
-                {/* Only Admin sees the Category selector; for Instructors it's automatically their department */}
-                {user?.role === 'admin' && (
+                {/* Only Admin sees the Category dropdown; for Instructors it's locked to their department */}
+                {user?.role === 'admin' ? (
                   <div>
                     <label htmlFor="letter-format-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
                     <select
@@ -559,6 +581,14 @@ export default function LetterFormats() {
                       <option value="CWTS">CWTS</option>
                       <option value="LTS">LTS</option>
                     </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category</label>
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950">
+                      <span className="px-2.5 py-1 bg-emerald-700 text-white rounded-lg text-xs font-black uppercase shadow-xs">{user?.department}</span>
+                      <span className="text-gray-600 text-[11px] font-medium">Locked to your assigned department</span>
+                    </div>
                   </div>
                 )}
 

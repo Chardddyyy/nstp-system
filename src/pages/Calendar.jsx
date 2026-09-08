@@ -5,7 +5,7 @@ import {
   List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
@@ -87,7 +87,7 @@ const PHILIPPINE_HOLIDAYS = [
 ];
 
 function Calendar() {
-  const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive } = useAuth();
+  const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   
@@ -114,9 +114,18 @@ function Calendar() {
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
 
-  // Batch academic date boundaries for archive mode
+  // Academic date boundaries
   const batchRange = useMemo(() => {
-    if (!viewingArchive || !archiveViewData) return null;
+    if (!viewingArchive || !archiveViewData) {
+      // Current active academic year: 2026-2027 (Aug 2026 to May 2027)
+      return {
+        isArchive: false,
+        minDate: new Date(2026, 7, 1),
+        maxDate: new Date(2027, 4, 31),
+        startLabel: 'Aug 2026',
+        endLabel: 'May 2027'
+      };
+    }
     let startStr = archiveViewData.start_month || archiveViewData.startMonth || archiveViewData.data?.start_month || archiveViewData.data?.startMonth;
     let endStr = archiveViewData.end_month || archiveViewData.endMonth || archiveViewData.data?.end_month || archiveViewData.data?.endMonth;
 
@@ -139,6 +148,7 @@ function Calendar() {
     const [sY, sM] = startStr.split('-').map(Number);
     const [eY, eM] = endStr.split('-').map(Number);
     return {
+      isArchive: true,
       minDate: new Date(sY, sM - 1, 1),
       maxDate: new Date(eY, eM - 1, 1),
       startLabel: new Date(sY, sM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -146,17 +156,22 @@ function Calendar() {
     };
   }, [viewingArchive, archiveViewData]);
 
-  // When in archive mode, jump the calendar to the batch's start month (or academic semester)
+  // Jump calendar to batch start month once upon entering archive or returning to current
+  const lastActiveBatchKey = useRef(null);
   useEffect(() => {
-    let timer = setTimeout(() => {
-      if (viewingArchive && batchRange) {
-        setCurrentDate(new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 15));
-      } else if (!viewingArchive) {
-        setCurrentDate(new Date());
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [viewingArchive, batchRange]);
+    const currentKey = viewingArchive ? `archive_${archiveViewData?.year || ''}` : 'current';
+    if (lastActiveBatchKey.current !== currentKey) {
+      lastActiveBatchKey.current = currentKey;
+      const timer = setTimeout(() => {
+        if (viewingArchive && batchRange) {
+          setCurrentDate(new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 15));
+        } else {
+          setCurrentDate(new Date());
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [viewingArchive, archiveViewData?.year, batchRange]);
 
   const handleLogout = async () => {
     await logout();
@@ -270,14 +285,26 @@ function Calendar() {
     { id: 'ann-22', title: 'NSTP Annual Pass-in-Review & Recognition Ceremony', date: '2027-05-22', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Ceremonial graduation muster, issuance of NSTP Serial Numbers & Certificates.' }
   ], []);
 
-  // Combine all events for the year
+  // Combine all events for the year strictly filtered to the active period
   const allAnnualEvents = useMemo(() => {
-    if (viewingArchive) {
-      return [...archiveEvents, ...PHILIPPINE_HOLIDAYS];
+    if (viewingArchive && batchRange) {
+      const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
+      const maxMonthDate = new Date(batchRange.maxDate.getFullYear(), batchRange.maxDate.getMonth() + 1, 0);
+      const batchHolidays = PHILIPPINE_HOLIDAYS.filter(h => {
+        const d = new Date(h.date);
+        return d >= minMonthDate && d <= maxMonthDate;
+      });
+      const combined = [...archiveEvents, ...batchHolidays];
+      return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
-    const combined = [...defaultAnnualEvents2026, ...events, ...PHILIPPINE_HOLIDAYS];
+    // Current Academic Year (AY 2026-2027: Aug 2026 to May 2027)
+    const currentYearHolidays = PHILIPPINE_HOLIDAYS.filter(h => {
+      const d = new Date(h.date);
+      return d >= new Date(2026, 7, 1) && d <= new Date(2027, 4, 31);
+    });
+    const combined = [...defaultAnnualEvents2026, ...events, ...currentYearHolidays];
     return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [viewingArchive, archiveEvents, defaultAnnualEvents2026, events]);
+  }, [viewingArchive, batchRange, archiveEvents, defaultAnnualEvents2026, events]);
 
   // Filtered list for the Annual Summary View
   const filteredSummaryEvents = useMemo(() => {
@@ -442,23 +469,43 @@ function Calendar() {
 
   const canPrev = useMemo(() => {
     if (!batchRange) return true;
+    const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
     const prev = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    return prev >= batchRange.minDate;
+    return prev >= minMonthDate;
   }, [batchRange, currentDate]);
 
   const canNext = useMemo(() => {
     if (!batchRange) return true;
+    const maxMonthDate = new Date(batchRange.maxDate.getFullYear(), batchRange.maxDate.getMonth(), 1);
     const next = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    return next <= batchRange.maxDate;
+    return next <= maxMonthDate;
   }, [batchRange, currentDate]);
 
   const changeMonth = (direction) => {
     const target = new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1);
     if (batchRange) {
-      if (direction < 0 && target < batchRange.minDate) return;
-      if (direction > 0 && target > batchRange.maxDate) return;
+      const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
+      const maxMonthDate = new Date(batchRange.maxDate.getFullYear(), batchRange.maxDate.getMonth(), 1);
+      if (direction < 0 && target < minMonthDate) return;
+      if (direction > 0 && target > maxMonthDate) return;
     }
     setCurrentDate(target);
+  };
+
+  const wheelTimeoutRef = useRef(null);
+  const handleGridWheel = (e) => {
+    if (wheelTimeoutRef.current) return;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) > 35) {
+      if (delta > 35 && canNext) {
+        changeMonth(1);
+      } else if (delta < -35 && canPrev) {
+        changeMonth(-1);
+      }
+      wheelTimeoutRef.current = setTimeout(() => {
+        wheelTimeoutRef.current = null;
+      }, 350);
+    }
   };
 
   const handleGoToBatchToday = () => {
@@ -504,6 +551,7 @@ function Calendar() {
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
         user={user}
+        archiveMode={viewingArchive}
       />
 
       {/* Main Content */}
@@ -600,7 +648,10 @@ function Calendar() {
             </div>
             <button
               type="button"
-              onClick={() => setViewingArchive(false)}
+              onClick={() => {
+                setViewingArchive(false);
+                setArchiveViewData(null);
+              }}
               className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0 shadow-xs"
             >
               Exit Archive
@@ -610,7 +661,7 @@ function Calendar() {
 
         {/* VIEW MODE 1: MONTHLY CALENDAR GRID */}
         {viewMode === 'monthly' ? (
-          <div className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
+          <div onWheel={handleGridWheel} className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
             <div className="flex-shrink-0 flex items-center justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">

@@ -6,11 +6,10 @@ import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixM
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
-  Archive, History, FileCheck, RotateCcw, Camera, Download
+  Archive, History, FileCheck, RotateCcw, Camera
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
-import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 
 import { getAvatarSrc } from '../utils/avatars';
 
@@ -25,7 +24,10 @@ function InstructorDashboard() {
     notifications = [], 
     setNotifications,
     currentBatch = '2026-2027 1st Semester',
-    showToast
+    viewingArchive = false,
+    setViewingArchive = () => {},
+    archiveViewData = null,
+    setArchiveViewData = () => {}
   } = useAuth() || {};
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,10 +40,7 @@ function InstructorDashboard() {
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
-  const [viewingArchive, setViewingArchive] = useState(false);
   const [archivedYears, setArchivedYears] = useState(() => DEFAULT_PAST_BATCHES);
-  const [archiveViewData, setArchiveViewData] = useState(null);
-  const [isArchiving, setIsArchiving] = useState(false);
 
   const loadArchivedYears = async () => {
     try {
@@ -53,9 +52,12 @@ function InstructorDashboard() {
   };
 
   useEffect(() => {
-    if (user && user.role === 'instructor') {
-      loadArchivedYears();
-    }
+    const timer = setTimeout(() => {
+      if (user && user.role === 'instructor') {
+        loadArchivedYears();
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [user]);
 
   const handleOpenArchiveModal = () => {
@@ -99,28 +101,6 @@ function InstructorDashboard() {
   const handleBackToCurrent = () => {
     setViewingArchive(false);
     setArchiveViewData(null);
-  };
-
-  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
-
-  const handleArchiveDepartmentBatch = async () => {
-    const currYear = new Date().getFullYear();
-    setIsArchiving(true);
-    try {
-      let letterTemplates = [];
-      try {
-        const raw = localStorage.getItem('nstp_letter_templates');
-        letterTemplates = raw ? JSON.parse(raw) : [];
-      } catch {}
-      await archivesAPI.archiveBatch(currYear, { letterTemplates });
-      loadArchivedYears();
-      setShowArchiveConfirm(false);
-      showToast(`Batch "${currYear}" archived successfully!`, 'success');
-    } catch (err) {
-      showToast(err.message || 'Failed to archive batch', 'error');
-    } finally {
-      setIsArchiving(false);
-    }
   };
 
   useEffect(() => {
@@ -769,14 +749,6 @@ function InstructorDashboard() {
               <div className="p-5 sm:p-6 overflow-y-auto space-y-3 max-h-[60vh]">
                 <div className="flex items-center justify-between pb-2 border-b border-gray-100">
                   <span className="text-xs font-bold text-gray-600">Archived Academic Batches</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowArchiveConfirm(true)}
-                    disabled={isArchiving}
-                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-all active:scale-95 shadow-xs cursor-pointer disabled:opacity-50"
-                  >
-                    {isArchiving ? 'Archiving...' : `Snapshot ${user?.department} Batch`}
-                  </button>
                 </div>
 
                 {archivedYears.length === 0 ? (
@@ -866,28 +838,6 @@ function InstructorDashboard() {
                   {user?.department} Batch {archiveViewData.year} Archive Details
                 </h3>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Form B Button */}
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormat(archiveViewData, archiveViewData.studentData, user?.department)}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
-                    title="Export Official CHED Form B Masterlist"
-                  >
-                    <Download className="w-3.5 h-3.5 text-emerald-950" />
-                    <span>Form B</span>
-                  </button>
-
-                  {/* Form A Button */}
-                  <button
-                    type="button"
-                    onClick={() => downloadChedFormA(archiveViewData, archiveViewData.studentData, user?.department)}
-                    className="bg-emerald-800 hover:bg-emerald-700 text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-emerald-700"
-                    title="Export CHED Form 2-A Summary Matrix"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Form A</span>
-                  </button>
-
                   <button
                     type="button"
                     onClick={() => setShowArchiveDetails(false)}
@@ -1179,37 +1129,7 @@ function InstructorDashboard() {
           />
         )}
 
-        {/* Confirmation Modal for Department Batch Archiving */}
-        {showArchiveConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-gray-100 text-center">
-              <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-700">
-                <Archive className="w-7 h-7" />
-              </div>
-              <h3 className="text-lg font-black text-gray-900 mb-2">Archive Department Batch?</h3>
-              <p className="text-xs text-gray-500 mb-6">
-                Create an official archive snapshot of {user?.department || 'Department'} student records and reports for Batch Year {new Date().getFullYear()}?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowArchiveConfirm(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={isArchiving}
-                  onClick={handleArchiveDepartmentBatch}
-                  className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-emerald-700/30 cursor-pointer"
-                >
-                  {isArchiving ? 'Archiving...' : 'Confirm'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </main>
     </div>
   );

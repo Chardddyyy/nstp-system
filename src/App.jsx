@@ -167,8 +167,43 @@ function App() {
     return () => clearInterval(checkInterval);
   }, []);
   const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
-  const [viewingArchive, setViewingArchive] = useState(false);
-  const [archiveViewData, setArchiveViewData] = useState(null);
+  const [viewingArchive, setViewingArchiveState] = useState(() => {
+    try {
+      return localStorage.getItem('nstp_viewing_archive') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [archiveViewData, setArchiveViewDataState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nstp_archive_view_data');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const setViewingArchive = useCallback((val) => {
+    setViewingArchiveState(Boolean(val));
+    try {
+      if (val) {
+        localStorage.setItem('nstp_viewing_archive', 'true');
+      } else {
+        localStorage.removeItem('nstp_viewing_archive');
+      }
+    } catch {}
+  }, []);
+
+  const setArchiveViewData = useCallback((data) => {
+    setArchiveViewDataState(data);
+    try {
+      if (data) {
+        localStorage.setItem('nstp_archive_view_data', JSON.stringify(data));
+      } else {
+        localStorage.removeItem('nstp_archive_view_data');
+      }
+    } catch {}
+  }, []);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [toasts, setToasts] = useState([]);

@@ -926,7 +926,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                     <th className="p-2.5 sm:p-3">NSTP Section</th>
                     <th className="p-2.5 sm:p-3 w-32 sm:w-36 text-center">Final Grade</th>
                     <th className="p-2.5 sm:p-3 w-28 text-center">Remarks</th>
-                    <th className="p-2.5 sm:p-3 w-16 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-xs font-medium bg-white">
@@ -1014,21 +1013,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                             </span>
                           ) : (
                             <span className="text-gray-400 text-[11px] italic">Pending</span>
-                          )}
-                        </td>
-
-                        {/* Saved / Dirty Status */}
-                        <td className="p-2.5 sm:p-3 text-center">
-                          {g.isDirty ? (
-                            <span className="inline-flex items-center text-[10px] font-extrabold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
-                              Unsaved
-                            </span>
-                          ) : g.isSaved || g.final_grade ? (
-                            <span className="inline-flex items-center text-emerald-600" title="Saved to database">
-                              <CheckCircle className="w-4 h-4" />
-                            </span>
-                          ) : (
-                            <span className="text-gray-300">-</span>
                           )}
                         </td>
                       </tr>
