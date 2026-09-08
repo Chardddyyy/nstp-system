@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
-  Sparkles, UserCheck, ShieldAlert
+  Sparkles, UserCheck, ShieldAlert, Lock
 } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -139,6 +139,15 @@ export function AttendanceScannerModal({
   const [cameraFacing, setCameraFacing] = useState('environment'); // 'environment' | 'user'
   const [isSaved, setIsSaved] = useState(false);
   const [pastAttendanceRecords, setPastAttendanceRecords] = useState([]);
+  const [closedDaysMap, setClosedDaysMap] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('nstp_closed_attendance_days') || '{}');
+      return stored && typeof stored === 'object' ? stored : {};
+    } catch (_) {
+      return {};
+    }
+  });
+  const [isClosingClass, setIsClosingClass] = useState(false);
 
   // Excuse Student Modal State
   const [showExcuseModal, setShowExcuseModal] = useState(false);
@@ -217,31 +226,10 @@ export function AttendanceScannerModal({
   }, [currentDepartment, currentUser]);
 
   const completedDays = useMemo(() => {
-    const conducted = new Set();
-    let allRecords = pastAttendanceRecords;
-    if (!allRecords || allRecords.length === 0) {
-      try {
-        allRecords = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
-      } catch (_) {
-        allRecords = [];
-      }
-    }
-
-    const deptUpper = (targetDept || '').toUpperCase();
-    allRecords.forEach(r => {
-      const rDept = (r.department || '').toUpperCase();
-      if (!deptUpper || rDept === deptUpper || rDept.includes(deptUpper)) {
-        const act = (r.activity_name || r.day || '').trim();
-        ATTENDANCE_DAYS.forEach((d) => {
-          const regex = new RegExp(`(^|[^a-zA-Z0-9])(${d}|${d.replace(' ', '')}|${d.replace('Day ', 'D')})([^a-zA-Z0-9]|$)`, 'i');
-          if (regex.test(act)) {
-            conducted.add(d);
-          }
-        });
-      }
-    });
-    return conducted;
-  }, [pastAttendanceRecords, targetDept]);
+    const deptUpper = (targetDept || 'CWTS').toUpperCase();
+    const closedList = Array.isArray(closedDaysMap[deptUpper]) ? closedDaysMap[deptUpper] : [];
+    return new Set(closedList);
+  }, [closedDaysMap, targetDept]);
 
   // Auto-switch to first available unconducted day if current selectedDay is already completed
   useEffect(() => {
@@ -642,13 +630,76 @@ export function AttendanceScannerModal({
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
 
-      // Immediately add persisted records to pastAttendanceRecords so this day is locked
-      setPastAttendanceRecords(prev => [...prev, ...recordsToPersist]);
-
       showToast(`Attendance saved for ${selectedDay}: ${presentCount} Present, ${lateCount} Late, ${incompleteCount} Incomplete, ${excusedCount} Excused!`, 'success');
     } catch (err) {
       console.error('Error saving record:', err);
       showToast('Failed to save record. Please try again.', 'error');
+    }
+  };
+
+  // Close the Class: Exclusively closes and finalizes the attendance day and proceeds to the next day
+  const handleCloseClass = async () => {
+    try {
+      setIsClosingClass(true);
+
+      // Auto-save any attendees in current session before closing
+      if (sessionLogs.length > 0) {
+        await handleSaveRecord();
+      }
+
+      const deptUpper = (targetDept || 'CWTS').toUpperCase();
+      const currentClosed = Array.isArray(closedDaysMap[deptUpper]) ? closedDaysMap[deptUpper] : [];
+      const updatedClosed = currentClosed.includes(selectedDay)
+        ? currentClosed
+        : [...currentClosed, selectedDay];
+
+      const updatedMap = {
+        ...closedDaysMap,
+        [deptUpper]: updatedClosed
+      };
+
+      setClosedDaysMap(updatedMap);
+      try {
+        localStorage.setItem('nstp_closed_attendance_days', JSON.stringify(updatedMap));
+      } catch (_) {}
+
+      // Stop camera scanner if running
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop();
+          scannerRef.current.clear();
+        } catch (_) {}
+        scannerRef.current = null;
+      }
+
+      // Identify the next available unconducted day
+      const closedSet = new Set(updatedClosed);
+      const currentIndex = ATTENDANCE_DAYS.indexOf(selectedDay);
+      let nextDay = ATTENDANCE_DAYS.slice(currentIndex + 1).find(d => !closedSet.has(d));
+      if (!nextDay) {
+        nextDay = ATTENDANCE_DAYS.find(d => !closedSet.has(d));
+      }
+
+      // Clear current session logs for the closed day
+      setSessionLogs([]);
+      setScanStats({ totalScans: 0, timeInCount: 0, timeOutCount: 0, excusedCount: 0 });
+      setActivityName('');
+
+      if (nextDay) {
+        setSelectedDay(nextDay);
+        setStep(1); // Proceed to setup for the next day
+        showToast?.(`${selectedDay} class is now closed! Proceeding to ${nextDay}.`, 'success');
+      } else {
+        showToast?.(`All 15 days of NSTP attendance for ${targetDept} are now officially completed!`, 'success');
+        setStep(1);
+      }
+
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+    } catch (err) {
+      console.error('Failed to close class:', err);
+      showToast?.('Error closing class session. Please try again.', 'error');
+    } finally {
+      setIsClosingClass(false);
     }
   };
 
@@ -1176,20 +1227,34 @@ export function AttendanceScannerModal({
                     )}
                   </div>
 
-                  {/* Primary Save Attendance Session Button */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                  {/* Primary Save Attendance Session & Close the Class Buttons */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                     <p className="text-[10px] text-slate-400">
                       * Students with Time-In only (no Time-Out) will be saved as <b>Incomplete</b>.
                     </p>
-                    <button
-                      type="button"
-                      onClick={handleSaveRecord}
-                      disabled={sessionLogs.length === 0}
-                      className="px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-amber-300" />
-                      <span>{isSaved ? 'Saved to DB!' : `Save Attendance (${selectedDay})`}</span>
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleSaveRecord}
+                        disabled={sessionLogs.length === 0}
+                        className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+                        title={`Save current attendance logs for ${selectedDay} without closing the class`}
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-amber-300" />
+                        <span>{isSaved ? 'Saved to DB!' : `Save Attendance (${selectedDay})`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCloseClass}
+                        disabled={isClosingClass}
+                        className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-800 hover:to-red-900 text-white font-black text-xs rounded-xl shadow-md active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border border-rose-600/50"
+                        title={`Close ${selectedDay} class and proceed to the next day`}
+                      >
+                        <Lock className="w-3.5 h-3.5 text-amber-300" />
+                        <span>{isClosingClass ? 'Closing Class...' : 'Close the Class'}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
