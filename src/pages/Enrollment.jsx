@@ -824,7 +824,7 @@ function Enrollment() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
 
       {/* Sticky Glassmorphic Header - Scaled Miniature Match */}
       <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full">
@@ -2418,39 +2418,41 @@ function Enrollment() {
                 {/* Specimen Subjects Table */}
                 <div className="py-2">
                   <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1.5">Enrolled Subjects Schedule:</p>
-                  <table className="w-full text-[10px] sm:text-[11px] border border-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-emerald-50/70 text-emerald-950 font-black border-b border-gray-200">
-                      <tr>
-                        <th className="p-1.5 text-left">Code</th>
-                        <th className="p-1.5 text-left">Course Title</th>
-                        <th className="p-1.5 text-center">Units</th>
-                        <th className="p-1.5 text-left">Schedule</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-gray-700">
-                      <tr>
-                        <td className="p-1.5 font-mono font-bold">GNED 01</td>
-                        <td className="p-1.5">Art Appreciation</td>
-                        <td className="p-1.5 text-center font-bold">3.0</td>
-                        <td className="p-1.5">M-TH 08:00-09:30</td>
-                      </tr>
-                      <tr className="bg-amber-50/70 font-semibold text-amber-950 border-l-4 border-amber-500">
-                        <td className="p-1.5 font-mono font-black text-emerald-800">NSTP 1</td>
-                        <td className="p-1.5 font-black">
-                          NSTP 1 - CWTS (Civic Welfare Training Service)
-                          <span className="block text-[9px] text-amber-700 font-bold">★ Enrolled NSTP course track must be clearly visible</span>
-                        </td>
-                        <td className="p-1.5 text-center font-black">3.0</td>
-                        <td className="p-1.5">SAT 08:00-11:00</td>
-                      </tr>
-                      <tr>
-                        <td className="p-1.5 font-mono font-bold">ITEC 50</td>
-                        <td className="p-1.5">Web Systems and Technologies</td>
-                        <td className="p-1.5 text-center font-bold">3.0</td>
-                        <td className="p-1.5">T-F 10:00-12:00</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="w-full max-w-full overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="w-full min-w-[300px] text-[10px] sm:text-[11px]">
+                      <thead className="bg-emerald-50/70 text-emerald-950 font-black border-b border-gray-200">
+                        <tr>
+                          <th className="p-1.5 text-left whitespace-nowrap">Code</th>
+                          <th className="p-1.5 text-left">Course Title</th>
+                          <th className="p-1.5 text-center whitespace-nowrap">Units</th>
+                          <th className="p-1.5 text-left whitespace-nowrap">Schedule</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-gray-700">
+                        <tr>
+                          <td className="p-1.5 font-mono font-bold whitespace-nowrap">GNED 01</td>
+                          <td className="p-1.5">Art Appreciation</td>
+                          <td className="p-1.5 text-center font-bold">3.0</td>
+                          <td className="p-1.5 whitespace-nowrap">M-TH 08:00-09:30</td>
+                        </tr>
+                        <tr className="bg-amber-50/70 font-semibold text-amber-950 border-l-4 border-amber-500">
+                          <td className="p-1.5 font-mono font-black text-emerald-800 whitespace-nowrap">NSTP 1</td>
+                          <td className="p-1.5 font-black">
+                            NSTP 1 - CWTS (Civic Welfare Training Service)
+                            <span className="block text-[9px] text-amber-700 font-bold">★ Enrolled NSTP course track must be clearly visible</span>
+                          </td>
+                          <td className="p-1.5 text-center font-black">3.0</td>
+                          <td className="p-1.5 whitespace-nowrap">SAT 08:00-11:00</td>
+                        </tr>
+                        <tr>
+                          <td className="p-1.5 font-mono font-bold whitespace-nowrap">ITEC 50</td>
+                          <td className="p-1.5">Web Systems and Technologies</td>
+                          <td className="p-1.5 text-center font-bold">3.0</td>
+                          <td className="p-1.5 whitespace-nowrap">T-F 10:00-12:00</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* Specimen Validation Stamp */}

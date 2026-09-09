@@ -5,13 +5,14 @@ import {
   Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User, Pencil,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useMemo, useEffect } from 'react';
 
 function Reports() {
   const { user, logout, reports, addReport, updateReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, showToast } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isAdmin = user?.role === 'admin';
   const isInstructor = user?.role === 'instructor';
 
@@ -25,6 +26,22 @@ function Reports() {
   const [reportToDelete, setReportToDelete] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Deep-link from notification
+  useEffect(() => {
+    const repId = searchParams.get('reportId');
+    const search = searchParams.get('search') || searchParams.get('q');
+    if (search) {
+      setSearchTerm(search);
+    }
+    if (repId && Array.isArray(reports) && reports.length > 0) {
+      const found = reports.find(r => String(r.id) === String(repId));
+      if (found) {
+        setSelectedReport(found);
+        setShowViewModal(true);
+      }
+    }
+  }, [searchParams, reports]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);

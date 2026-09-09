@@ -797,16 +797,20 @@ function Calendar() {
           <div className="flex-1 bg-white rounded-2xl shadow-md p-3 sm:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
             
             {/* Summary Header Bar */}
-            <div className="flex-shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-              <div>
-                <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-emerald-700" />
-                  <span>{viewingArchive && archiveViewData?.year ? `Archived Events Summary — Batch ${archiveViewData.year}` : 'Annual Events Summary & Whole Year Schedule'}</span>
-                  <span className="text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300">
+            <div className="flex-shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 pb-3 border-b border-slate-200">
+              <div className="w-full">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <BookOpen className="w-5 h-5 text-emerald-700 shrink-0" />
+                    <h2 className="text-sm sm:text-lg font-black text-slate-900 leading-tight">
+                      {viewingArchive && archiveViewData?.year ? `Archived Events Summary — Batch ${archiveViewData.year}` : 'Annual Events Summary & Whole Year Schedule'}
+                    </h2>
+                  </div>
+                  <span className="self-start sm:self-auto text-[10px] sm:text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300 whitespace-nowrap ml-7 sm:ml-0">
                     {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : 'A.Y. 2026-2027'}
                   </span>
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 ml-7 sm:ml-0">
                   Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.
                 </p>
               </div>

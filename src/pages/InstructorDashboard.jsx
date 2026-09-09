@@ -227,13 +227,16 @@ function InstructorDashboard() {
     });
     setNotifications(newNotifications);
     
-    // Navigate based on type
-    if (notification.type === 'student') {
-      navigate('/students');
+    // Navigate based on type with deep-link query
+    if (notification.type === 'student' || notification.type === 'grade') {
+      const q = notification.studentName ? `?search=${encodeURIComponent(notification.studentName)}` : '';
+      navigate(`/students${q}`);
     } else if (notification.type === 'report') {
-      navigate('/reports');
+      const q = notification.reportId ? `?reportId=${notification.reportId}` : (notification.reportTitle ? `?search=${encodeURIComponent(notification.reportTitle)}` : '');
+      navigate(`/reports${q}`);
     } else if (notification.type === 'message') {
-      navigate('/chat');
+      const q = notification.conversationId ? `?convId=${notification.conversationId}` : '';
+      navigate(`/chat${q}`);
     } else if (notification.link && notification.link !== '#') {
       navigate(notification.link);
     }

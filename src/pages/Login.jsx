@@ -339,13 +339,13 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-y-auto">
+    <div className="min-h-screen w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
       {/* Background Decorative Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none overflow-hidden max-w-full"></div>
 
       {/* Header - Edge-to-Edge Desktop & Compact Mobile Match */}
-      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full">
-        <div className="w-full px-4 sm:px-8 lg:px-12 py-2 sm:py-3 flex justify-between items-center gap-2">
+      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-full px-3 sm:px-8 lg:px-12 py-2 sm:py-3 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
@@ -358,7 +358,7 @@ function Login() {
 
           <Link 
             to="/" 
-            className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0"
+            className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0 whitespace-nowrap"
           >
             <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
             <span>Home</span>
@@ -367,8 +367,8 @@ function Login() {
       </header>
 
       {/* Main Content Area - Clean Centered Login Card */}
-      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 my-auto">
-        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-5 sm:p-7">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 my-auto w-full max-w-full overflow-x-hidden">
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-4 sm:p-7">
           <div className="text-center mb-4 sm:mb-6">
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />

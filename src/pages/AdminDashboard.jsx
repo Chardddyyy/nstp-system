@@ -8,7 +8,7 @@ import {
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
   HeartPulse, Phone, Activity, GraduationCap, Heart
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
@@ -193,6 +193,7 @@ function AdminDashboard() {
     showToast
   } = useAuth() || {};
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const safeArchivedYears = useMemo(() => {
@@ -282,6 +283,8 @@ function AdminDashboard() {
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [enrollmentDeptFilter, setEnrollmentDeptFilter] = useState('All');
+  const [enrollmentPage, setEnrollmentPage] = useState(1);
   const [enrollmentReviewTab, setEnrollmentReviewTab] = useState('all'); // 'all' | 'docs' | 'academic'
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
@@ -403,6 +406,25 @@ function AdminDashboard() {
     });
   }, [students, viewingArchive, archiveViewData, selectedComponentFilter, selectedProgramFocus]);
 
+  // Deep-link from notification or external navigation
+  useEffect(() => {
+    const view = searchParams.get('view');
+    const enrollId = searchParams.get('enrollmentId');
+    const search = searchParams.get('search') || searchParams.get('q');
+
+    if (view === 'pending' || enrollId || search) {
+      setTimeout(() => {
+        const el = document.getElementById('pending-enrollments');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (search) setEnrollmentSearch(search);
+        if (enrollId && pendingEnrollments.length > 0) {
+          const found = pendingEnrollments.find(e => String(e.id) === String(enrollId));
+          if (found) setSelectedEnrollment(found);
+        }
+      }, 350);
+    }
+  }, [searchParams, pendingEnrollments]);
+
   // Show loading while user context resolves
   if (!user) {
     return (
@@ -486,8 +508,9 @@ function AdminDashboard() {
     });
   }
 
-  // Handle notification click
+  // Handle notification click with direct deep-linking
   function handleNotificationItemClick(notification) {
+    if (!notification) return;
     // Mark as read
     const newNotifications = (notifications || []).map(n => {
       if (n.id === notification.id) {
@@ -496,14 +519,61 @@ function AdminDashboard() {
       return n;
     });
     setNotifications(newNotifications);
-    
-    // Navigate to the link
-    if (notification.link && notification.link !== '#') {
-      navigate(notification.link);
-    }
-    
     setShowNotifications(false);
     setSelectedNotifications([]);
+
+    const type = notification.type || '';
+    const title = (notification.title || '').toLowerCase();
+    const msg = (notification.message || '').toLowerCase();
+    const link = notification.link || '';
+
+    // 1. Enrollment notification -> directly scroll to and open pending enrollment
+    if (type === 'enrollment' || title.includes('enroll') || msg.includes('enroll')) {
+      const el = document.getElementById('pending-enrollments');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (notification.studentName) {
+          setEnrollmentSearch(notification.studentName);
+        }
+        if (notification.enrollmentId) {
+          const found = (pendingEnrollments || []).find(e => String(e.id) === String(notification.enrollmentId));
+          if (found) {
+            setSelectedEnrollment(found);
+          }
+        }
+      } else {
+        navigate(`/admin/dashboard?view=pending${notification.enrollmentId ? `&enrollmentId=${notification.enrollmentId}` : ''}${notification.studentName ? `&search=${encodeURIComponent(notification.studentName)}` : ''}`);
+      }
+      return;
+    }
+
+    // 2. Report notification -> directly navigate to reports and pass reportId
+    if (type === 'report' || title.includes('report') || msg.includes('report') || link.includes('reports')) {
+      const repQuery = notification.reportId 
+        ? `?reportId=${notification.reportId}` 
+        : (notification.reportTitle ? `?search=${encodeURIComponent(notification.reportTitle)}` : '');
+      navigate(`/reports${repQuery}`);
+      return;
+    }
+
+    // 3. Message / Chat notification -> directly navigate to chat with convId
+    if (type === 'message' || title.includes('message') || msg.includes('message') || link.includes('chat')) {
+      const chatQuery = notification.conversationId ? `?convId=${notification.conversationId}` : '';
+      navigate(`/chat${chatQuery}`);
+      return;
+    }
+
+    // 4. Student roster notification -> navigate to students page with search filter
+    if (type === 'student' || type === 'grade' || title.includes('student') || link.includes('students')) {
+      const studentQuery = notification.studentName ? `?search=${encodeURIComponent(notification.studentName)}` : '';
+      navigate(`/students${studentQuery}`);
+      return;
+    }
+
+    // Default fallback
+    if (link && link !== '#') {
+      navigate(link);
+    }
   }
 
   const handleLogout = async () => {
@@ -1370,15 +1440,18 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
         {/* Pending Enrollments Section with Enrollment Switch */}
         {!viewingArchive && (
-          <div className="bg-white rounded-2xl shadow-md p-3.5 sm:p-6 mb-3 sm:mb-5 border border-emerald-100/60">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div id="pending-enrollments" className="bg-white rounded-2xl shadow-md p-3.5 sm:p-6 mb-3 sm:mb-5 border border-emerald-100/60 scroll-mt-24">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
               <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 flex-1">
                 <h3 className="text-base sm:text-lg font-bold text-gray-800 flex items-center flex-shrink-0">
                   <Users className="w-5 h-5 mr-2 text-amber-600" />
                   Pending Enrollments
                   <span className="ml-2 text-xs sm:text-sm font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
-                    {enrollmentSearch.trim()
+                    {enrollmentSearch.trim() || enrollmentDeptFilter !== 'All'
                       ? `${pendingEnrollments.filter(e => {
+                          const matchesDept = enrollmentDeptFilter === 'All' || e.nstpComponent === enrollmentDeptFilter;
+                          if (!matchesDept) return false;
+                          if (!enrollmentSearch.trim()) return true;
                           const q = enrollmentSearch.toLowerCase();
                           return (e.fullName || '').toLowerCase().includes(q)
                             || (e.studentId || '').toLowerCase().includes(q)
@@ -1399,28 +1472,61 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     name="enrollmentSearch"
                     placeholder="Search by name, ID, email…"
                     value={enrollmentSearch}
-                    onChange={(e) => setEnrollmentSearch(e.target.value)}
+                    onChange={(e) => { setEnrollmentSearch(e.target.value); setEnrollmentPage(1); }}
                     className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   />
                   {enrollmentSearch && (
-                    <button type="button" onClick={() => setEnrollmentSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button type="button" onClick={() => { setEnrollmentSearch(''); setEnrollmentPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               )}
             </div>
+
+            {/* Department Filter Tabs */}
+            {pendingEnrollments.length > 0 && (
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+                {[
+                  { id: 'All', label: 'All Depts', count: pendingEnrollments.length, color: 'text-gray-700 bg-gray-100' },
+                  { id: 'CWTS', label: 'CWTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'CWTS').length, color: 'text-emerald-800 bg-emerald-100' },
+                  { id: 'LTS', label: 'LTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'LTS').length, color: 'text-purple-800 bg-purple-100' },
+                  { id: 'ROTC', label: 'ROTC', count: pendingEnrollments.filter(e => e.nstpComponent === 'ROTC').length, color: 'text-rose-800 bg-rose-100' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => { setEnrollmentDeptFilter(tab.id); setEnrollmentPage(1); }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${
+                      enrollmentDeptFilter === tab.id
+                        ? 'bg-emerald-800 text-white shadow-xs font-black'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${enrollmentDeptFilter === tab.id ? 'bg-white/20 text-white' : tab.color}`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {pendingEnrollments.length > 0 ? (() => {
               const q = enrollmentSearch.trim().toLowerCase();
+              const deptFiltered = enrollmentDeptFilter === 'All'
+                ? pendingEnrollments
+                : pendingEnrollments.filter(e => e.nstpComponent === enrollmentDeptFilter);
+
               const baseFiltered = q
-                ? pendingEnrollments.filter(e =>
+                ? deptFiltered.filter(e =>
                     (e.fullName || '').toLowerCase().includes(q)
                     || (e.studentId || '').toLowerCase().includes(q)
                     || (e.email || '').toLowerCase().includes(q)
                     || (e.nstpComponent || '').toLowerCase().includes(q)
                     || (e.program || '').toLowerCase().includes(q)
                   )
-                : pendingEnrollments;
+                : deptFiltered;
 
               const filtered = !enrollmentSortCol ? baseFiltered : [...baseFiltered].sort((a, b) => {
                 let valA = '';
@@ -1445,17 +1551,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 return enrollmentSortDir === 'asc' ? cmp : -cmp;
               });
 
+              const ENROLLMENT_PER_PAGE = 5;
+              const totalPages = Math.max(1, Math.ceil(filtered.length / ENROLLMENT_PER_PAGE));
+              const safePage = Math.min(Math.max(enrollmentPage, 1), totalPages);
+              const paginatedList = filtered.slice((safePage - 1) * ENROLLMENT_PER_PAGE, safePage * ENROLLMENT_PER_PAGE);
+
               return filtered.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Search className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No results for "<span className="font-medium">{enrollmentSearch}</span>"</p>
-                  <button type="button" onClick={() => setEnrollmentSearch('')} className="mt-2 text-xs text-yellow-600 hover:underline">Clear search</button>
+                  <p className="text-sm">No pending applicants match current filters.</p>
+                  <button type="button" onClick={() => { setEnrollmentSearch(''); setEnrollmentDeptFilter('All'); setEnrollmentPage(1); }} className="mt-2 text-xs text-yellow-600 hover:underline">Reset filters</button>
                 </div>
               ) : (
               <>
                 {/* ── Mobile: card list ── */}
                 <div className="sm:hidden divide-y divide-gray-100">
-                  {filtered.map((enrollment) => {
+                  {paginatedList.map((enrollment) => {
                     const deptColor =
                       enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
                       enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
@@ -1619,7 +1730,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((enrollment) => (
+                      {paginatedList.map((enrollment) => (
                         <tr
                           key={enrollment.id}
                           className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors"
@@ -1695,6 +1806,49 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {filtered.length > ENROLLMENT_PER_PAGE && (
+                  <div className="mt-3.5 sm:mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-gray-600">
+                    <p className="font-medium text-center sm:text-left">
+                      Showing <span className="font-bold text-gray-900">{(safePage - 1) * ENROLLMENT_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(safePage * ENROLLMENT_PER_PAGE, filtered.length)}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> applicants
+                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                      <button
+                        type="button"
+                        disabled={safePage <= 1}
+                        onClick={() => setEnrollmentPage(p => Math.max(p - 1, 1))}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
+                      >
+                        ← Prev
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setEnrollmentPage(pageNum)}
+                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                              safePage === pageNum
+                                ? 'bg-emerald-800 text-white font-black shadow-xs'
+                                : 'hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={safePage >= totalPages}
+                        onClick={() => setEnrollmentPage(p => Math.min(p + 1, totalPages))}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             ); })() : (
               <div className="text-center py-8 text-gray-500">
@@ -1763,20 +1917,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   { year: currentBatch, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
                 ].sort((a, b) => String(a.year).localeCompare(String(b.year))).map((data) => {
                   const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
-                  const totalForYear = (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
 
                   return (
                     <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
-                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors">Batch {data.year}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
+                            Batch {data.year}
+                          </span>
                           {String(data.year) === String(currentBatch) && (
-                            <span className="text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs">Active Batch</span>
+                            <span className="text-[9.5px] sm:text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs whitespace-nowrap">
+                              Active Batch
+                            </span>
                           )}
                         </div>
-                        <span className="text-[10px] sm:text-xs font-bold text-gray-700 bg-white px-2 py-0.5 rounded-lg border border-gray-200 shadow-2xs">
-                          {totalForYear} total
-                        </span>
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         {/* CWTS Bar */}
@@ -1836,7 +1990,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">Batch Management</h3>
-                  <p className="text-green-100">Current Batch: <span className="font-semibold text-white">{currentBatch}</span></p>
+                  <div className="text-green-100 text-xs sm:text-sm mt-0.5 flex flex-col sm:flex-row sm:items-center sm:gap-1.5">
+                    <span className="text-green-200/90 font-medium">Current Batch:</span>
+                    <span className="font-bold text-white whitespace-nowrap">{currentBatch}</span>
+                  </div>
                   <p className="text-green-200 text-sm mt-1">
                     {students.length} students • {reports.length} reports
                   </p>

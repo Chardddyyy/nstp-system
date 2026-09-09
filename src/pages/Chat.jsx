@@ -11,7 +11,7 @@ import {
   FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter,
   ChevronUp, ChevronDown, History, Info, Clock, Check, Sparkles
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 
@@ -89,6 +89,7 @@ function Chat() {
     setMessages,
     pendingAnsweredCall, setPendingAnsweredCall, showToast } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
 
   const [activeConversationId, setActiveConversationId] = useState(() => {
@@ -98,6 +99,16 @@ function Chat() {
       return null;
     }
   });
+
+  // Deep-link from notification
+  useEffect(() => {
+    const convId = searchParams.get('convId');
+    if (convId) {
+      setActiveConversationId(convId);
+      try { localStorage.setItem('nstp_active_chat', convId); } catch (_) {}
+    }
+  }, [searchParams]);
+
   const [showContacts, setShowContacts] = useState(false);
   const [readConversations, setReadConversations] = useState(() => {
     // Load read state from localStorage

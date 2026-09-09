@@ -263,6 +263,12 @@ function App() {
       message: notif.message,
       type: notif.type || 'system',
       link: notif.link || '#',
+      enrollmentId: notif.enrollmentId || null,
+      studentName: notif.studentName || null,
+      reportId: notif.reportId || null,
+      reportTitle: notif.reportTitle || null,
+      conversationId: notif.conversationId || null,
+      senderName: notif.senderName || null,
     };
 
     // Direct exclusively to Notifications Bell menu and badge counter (no side toast popups)
@@ -336,11 +342,14 @@ function App() {
     const handleNewEnrollment = (payload) => {
       if (user.role === 'admin' && payload?.enrollment) {
         setPendingEnrollments(prev => [payload.enrollment, ...prev]);
+        const enrollName = payload.enrollment.name || payload.enrollment.fullName || payload.enrollment.studentId || 'A student';
         pushNotification({
           title: 'New Online Enrollment',
-          message: `${payload.enrollment.name || payload.enrollment.studentId || 'A student'} submitted an enrollment application`,
+          message: `${enrollName} submitted an enrollment application`,
           type: 'enrollment',
-          link: '/admin/dashboard'
+          link: '/admin/dashboard',
+          enrollmentId: payload.enrollment.id,
+          studentName: enrollName
         });
       }
     };
@@ -430,6 +439,8 @@ function App() {
             message: `${enrollName} submitted an enrollment application (${enrollment.department || 'NSTP'})`,
             type: 'enrollment',
             link: '/admin/dashboard',
+            enrollmentId: enrollment.id,
+            studentName: enrollName
           });
         }
       });
@@ -447,6 +458,8 @@ function App() {
               message: `Report "${report.title || 'Untitled'}" was submitted by ${sub.instructor || sub.department || 'an instructor'}`,
               type: 'report',
               link: '/reports',
+              reportId: report.id,
+              reportTitle: report.title
             });
           }
         });
@@ -467,6 +480,7 @@ function App() {
               message: `${studentName} was assigned to ${currentUser.department} class roster`,
               type: 'student',
               link: '/students',
+              studentName
             });
           }
         }
@@ -483,6 +497,8 @@ function App() {
             message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
             type: 'report',
             link: '/reports',
+            reportId: report.id,
+            reportTitle: report.title
           });
         }
       });
@@ -514,6 +530,8 @@ function App() {
             message: `${senderName}: ${preview}`,
             type: 'message',
             link: '/chat',
+            conversationId: conv.id,
+            senderName
           });
         }
 
