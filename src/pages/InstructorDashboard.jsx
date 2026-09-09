@@ -257,7 +257,7 @@ function InstructorDashboard() {
       <img 
         src={getAvatarSrc(user?.avatar, user?.profilePicture)} 
         alt="Profile" 
-        className="w-10 h-10 object-cover rounded-full shadow-xs border border-emerald-600/30"
+        className="w-full h-full object-cover rounded-full shadow-xs"
       />
     );
   };
@@ -504,19 +504,14 @@ function InstructorDashboard() {
                 )}
               </div>
 
-              {/* User Profile Button - Full Display on Mobile & Desktop */}
+              {/* User Profile Avatar Button */}
               <Link 
                 to="/profile" 
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-emerald-800/90 hover:bg-emerald-700 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl border border-emerald-600/60 shadow-md transition-all cursor-pointer shrink-0 min-w-0"
-                title="View Profile"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-emerald-400/80 hover:ring-amber-300 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer shrink-0 overflow-hidden active:scale-95 hover:scale-105 p-0 flex items-center justify-center bg-emerald-900/60"
+                title={`View Profile (${user?.name || 'Instructor'})`}
+                aria-label="View Profile"
               >
-                <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-full overflow-hidden border border-emerald-400/60 shadow-xs">
-                  {getUserAvatar()}
-                </div>
-                <div className="text-left min-w-0 flex flex-col justify-center">
-                  <p className="font-extrabold text-[10.5px] sm:text-xs text-white leading-tight truncate max-w-[70px] xs:max-w-[100px] sm:max-w-none">{user?.name || 'Instructor'}</p>
-                  <p className="text-[8.5px] sm:text-[10px] text-amber-300 font-black uppercase tracking-wider whitespace-nowrap leading-tight">{user?.department ? `${user.department} Instructor` : 'Instructor'}</p>
-                </div>
+                {getUserAvatar()}
               </Link>
             </div>
           </div>
