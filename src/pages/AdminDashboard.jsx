@@ -1481,25 +1481,28 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
             {/* Department Filter Tabs */}
             {pendingEnrollments.length > 0 && (
-              <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+              <div className="grid grid-cols-4 gap-1 sm:flex sm:items-center sm:gap-2 mb-3 sm:mb-4 w-full">
                 {[
-                  { id: 'All', label: 'All Depts', count: pendingEnrollments.length, color: 'text-gray-700 bg-gray-100' },
-                  { id: 'CWTS', label: 'CWTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'CWTS').length, color: 'text-emerald-800 bg-emerald-100' },
-                  { id: 'LTS', label: 'LTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'LTS').length, color: 'text-purple-800 bg-purple-100' },
-                  { id: 'ROTC', label: 'ROTC', count: pendingEnrollments.filter(e => e.nstpComponent === 'ROTC').length, color: 'text-rose-800 bg-rose-100' },
+                  { id: 'All', label: 'All Depts', mobileLabel: 'All', count: pendingEnrollments.length, color: 'text-gray-700 bg-gray-100' },
+                  { id: 'CWTS', label: 'CWTS', mobileLabel: 'CWTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'CWTS').length, color: 'text-emerald-800 bg-emerald-100' },
+                  { id: 'LTS', label: 'LTS', mobileLabel: 'LTS', count: pendingEnrollments.filter(e => e.nstpComponent === 'LTS').length, color: 'text-purple-800 bg-purple-100' },
+                  { id: 'ROTC', label: 'ROTC', mobileLabel: 'ROTC', count: pendingEnrollments.filter(e => e.nstpComponent === 'ROTC').length, color: 'text-rose-800 bg-rose-100' },
                 ].map(tab => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => { setEnrollmentDeptFilter(tab.id); setEnrollmentPage(1); }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${
+                    className={`px-1.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${
                       enrollmentDeptFilter === tab.id
                         ? 'bg-emerald-800 text-white shadow-xs font-black'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    <span>{tab.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${enrollmentDeptFilter === tab.id ? 'bg-white/20 text-white' : tab.color}`}>
+                    <span>
+                      <span className="sm:hidden">{tab.mobileLabel}</span>
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${enrollmentDeptFilter === tab.id ? 'bg-white/20 text-white' : tab.color}`}>
                       {tab.count}
                     </span>
                   </button>
