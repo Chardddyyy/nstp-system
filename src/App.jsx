@@ -197,6 +197,16 @@ function App() {
 
   // Live Auto-Update & Auto-Restart Detection (Brave Mobile Cache Buster)
   useEffect(() => {
+    // Sanitize any stale dummy grades from previous local sessions
+    try {
+      const rawGrades = localStorage.getItem('nstp_cached_grades');
+      if (rawGrades && rawGrades.includes('202310496')) {
+        const parsed = JSON.parse(rawGrades);
+        const cleaned = parsed.filter(g => String(g.studentId || g.student_id) !== '202310496' && Number(g.student_id) !== 41);
+        localStorage.setItem('nstp_cached_grades', JSON.stringify(cleaned));
+      }
+    } catch (_) {}
+
     let currentVersion = localStorage.getItem('nstp_app_version') || null;
     const getVUrl = () => `${BASE_URL_WITH_SLASH}version.json?t=${Date.now()}`;
 
@@ -225,6 +235,15 @@ function App() {
                   names.forEach(name => caches.delete(name));
                 });
               }
+
+              // Purge stale application caches on new release
+              try {
+                Object.keys(localStorage).forEach(k => {
+                  if (k.startsWith('nstp_cached_')) {
+                    localStorage.removeItem(k);
+                  }
+                });
+              } catch (_) {}
 
               const banner = document.createElement('div');
               banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:#059669;color:#fff;text-align:center;padding:12px 16px;font-weight:bold;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';

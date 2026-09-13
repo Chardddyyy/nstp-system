@@ -322,22 +322,27 @@ export function getGrades(params = {}) {
   return apiCall('/grades' + queryStr)
     .then(res => {
       try {
-        const localList = JSON.parse(localStorage.getItem('nstp_cached_grades') || '[]');
-        const map = new Map();
-        (Array.isArray(res) ? res : []).forEach(g => {
-          const k = `${g.studentId || g.student_id}_${g.school_year || g.schoolYear}_${g.semester}`;
-          map.set(k, g);
-        });
-        localList.forEach(g => {
-          const k = `${g.studentId || g.student_id}_${g.school_year || g.schoolYear}_${g.semester}`;
-          if (!map.has(k)) map.set(k, g);
-        });
-        const merged = Array.from(map.values());
-        localStorage.setItem('nstp_cached_grades', JSON.stringify(merged));
-        return merged;
-      } catch (_) {
-        return res;
-      }
+        if (Array.isArray(res)) {
+          if (!queryStr) {
+            // Unfiltered fetch is authoritative list from database; replace cache completely
+            localStorage.setItem('nstp_cached_grades', JSON.stringify(res));
+          } else {
+            // Scope-filtered fetch: merge server results into local cache
+            const localList = JSON.parse(localStorage.getItem('nstp_cached_grades') || '[]');
+            const map = new Map();
+            localList.forEach(g => {
+              const k = `${g.studentId || g.student_id}_${g.school_year || g.schoolYear}_${g.semester}`;
+              map.set(k, g);
+            });
+            res.forEach(g => {
+              const k = `${g.studentId || g.student_id}_${g.school_year || g.schoolYear}_${g.semester}`;
+              map.set(k, g);
+            });
+            localStorage.setItem('nstp_cached_grades', JSON.stringify(Array.from(map.values())));
+          }
+        }
+      } catch (_) {}
+      return res;
     })
     .catch(() => {
       try {
