@@ -11,7 +11,7 @@ import {
   Users, Calendar, Plus, Search, Filter,
   Edit, Trash2, Download, X, Menu, Archive, RotateCcw,
   CheckCircle, AlertCircle, FileSpreadsheet, UserPlus, GraduationCap, User, Phone, Heart, Pencil, FileText, Camera, Upload, SwitchCamera, Eye,
-  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer, CreditCard, RefreshCw
+  ChevronLeft, ChevronRight, Award, Layers, CheckSquare, Square, Printer, CreditCard
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -135,24 +135,6 @@ function StudentManagement() {
       console.warn('Could not load grades in StudentManagement:', e);
     }
   }, []);
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      localStorage.removeItem('nstp_cached_grades');
-      localStorage.removeItem('nstp_cached_students');
-      await Promise.all([
-        loadGradesData(),
-        refreshData ? refreshData() : Promise.resolve()
-      ]);
-      showToast?.('Student list and grades successfully updated from server!', 'success');
-    } catch {
-      showToast?.('Failed to refresh data', 'error');
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
 
   useEffect(() => {
     loadGradesData();
@@ -1316,15 +1298,6 @@ function StudentManagement() {
                 </button>
               )}
 
-              <button type="button"
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                title="Refresh student records and grades directly from server"
-                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-3.5 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-emerald-800 bg-emerald-50/90 hover:bg-emerald-100 font-bold border border-emerald-300/80 active:scale-95 text-[10.5px] sm:text-xs cursor-pointer whitespace-nowrap shadow-xs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700 shrink-0 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
 
               {isAdmin && !viewingArchive && (
                 <button type="button"
