@@ -3,7 +3,7 @@ import {
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
   Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, 
   CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, 
-  Search, Check, HeartHandshake, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
+  Search, Check, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats, pingTelemetry } from '../services/api';
@@ -1199,29 +1199,6 @@ function Landing() {
               </button>
             </div>
           )}
-
-          {/* Support Prompt Card */}
-          <div className="mt-7 bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 rounded-2xl p-4 sm:p-5 text-white shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shrink-0 shadow-md">
-                <HeartHandshake className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-xs sm:text-sm font-black">Still have questions about NSTP?</h4>
-                <p className="text-[11px] text-emerald-200">Reach out to campus coordinators or visit the NSTP office at CvSU Naic.</p>
-              </div>
-            </div>
-            <a
-              href="#contact"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-            >
-              Contact Support
-            </a>
-          </div>
         </div>
       </section>
 
