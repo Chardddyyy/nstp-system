@@ -227,9 +227,9 @@ function DigitalIdViewer() {
         <div className="p-3.5 bg-white">
           
           {/* 2x2 Photo Box */}
-          <div className="w-[84px] h-[88px] mx-auto mb-2 bg-slate-50 rounded-xl border-2 border-emerald-950 shadow-[0_0_0_1.5px_#fbbf24] overflow-hidden flex items-center justify-center">
+          <div className="w-[88px] h-[88px] aspect-square mx-auto mb-2 bg-slate-50 rounded-xl border-2 border-emerald-950 shadow-[0_0_0_1.5px_#fbbf24] overflow-hidden flex items-center justify-center">
             {photoUrl ? (
-              <img src={photoUrl} alt="Student Photo" className="w-full h-full object-cover" />
+              <img src={photoUrl} alt="Student Photo" className="w-full h-full object-cover object-top" />
             ) : (
               <div className="text-center font-mono text-[8px] font-black text-emerald-950">
                 <div className="text-xl mb-0.5">👤</div>

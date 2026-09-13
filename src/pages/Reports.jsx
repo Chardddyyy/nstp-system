@@ -43,6 +43,36 @@ function Reports() {
     }
   }, [searchParams, reports]);
 
+  // Handle Escape key to close open overlays/modals in Reports
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (reportToDelete) {
+          setReportToDelete(null);
+          return;
+        }
+        if (showCreateModal) {
+          setShowCreateModal(false);
+          return;
+        }
+        if (showSubmitModal) {
+          setShowSubmitModal(false);
+          return;
+        }
+        if (showViewModal) {
+          setShowViewModal(false);
+          return;
+        }
+        if (sidebarOpen) {
+          setSidebarOpen(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [reportToDelete, showCreateModal, showSubmitModal, showViewModal, sidebarOpen]);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);

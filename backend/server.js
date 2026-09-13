@@ -791,24 +791,7 @@ async function seedPastBatches() {
         };
       });
 
-      // Insert grades into student_grades table so active grade queries also find them
-      for (const st of studentData) {
-        try {
-          await pool.execute(`
-            INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-            VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-          `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_1, st.final_grade_1, (parseFloat(st.final_grade_1) <= 3.0 ? 'Passed' : st.final_grade_1 === 'INC' ? 'Incomplete' : 'Failed')]);
-
-          if (st.has_2nd_sem && st.final_grade_2) {
-            await pool.execute(`
-              INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-              VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
-              ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-            `, [st.id, st.studentId, st.name, st.department, b.sy, st.nstp_section, st.final_grade_2, st.final_grade_2, (parseFloat(st.final_grade_2) <= 3.0 ? 'Passed' : st.final_grade_2 === 'INC' ? 'Incomplete' : st.final_grade_2 === 'DRP' ? 'Dropped' : 'Failed')]);
-          }
-        } catch (_) {}
-      }
+      // Past batches are archived and preserved in archived_years.data, not in active student_grades table.
 
       const reportData = [
         { 
@@ -879,76 +862,16 @@ async function seedPastBatches() {
       console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
     }
 
-    // Also seed realistic mixed grades for current/active students
-    await seedActiveStudentGrades();
+    // Note: Active students must not get auto-seeded dummy grades.
+    // All grades must be entered and submitted by their assigned instructor via Instructor Dashboard.
   } catch (err) {
     console.warn('Past batches seed notice:', err.message);
   }
 }
 
-// ── Seed realistic grades for active students in `students` table ───────────
-async function seedActiveStudentGrades() {
-  try {
-    const [activeStudents] = await pool.execute("SELECT * FROM students WHERE status != 'Inactive' LIMIT 100").catch(() => [[]]);
-    if (!activeStudents || activeStudents.length === 0) return;
 
-    const activeGradePool = [
-      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem
-      { g1: '5.00', g2: '',     r1: 'Failed', r2: '',       enrolledSem2: false },    // Bagsak sa 1st sem
-      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete
-      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: 'INC',  g2: '',     r1: 'Incomplete', r2: '',   enrolledSem2: false },    // Incomplete sa 1st sem
-      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped
-      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak
-      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-    ];
 
-    for (let idx = 0; idx < activeStudents.length; idx++) {
-      const st = activeStudents[idx];
-      const gInfo = activeGradePool[idx % activeGradePool.length];
-      const isEnrolled2 = gInfo.enrolledSem2;
-      const sy = st.schoolYear || '2025-2026';
-      const sem = st.semester || '1st Semester';
 
-      // Seed 1st sem grade for all active students
-      await pool.execute(`
-        INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-        VALUES (?, ?, ?, ?, '1st Semester', ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-      `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g1, gInfo.g1, gInfo.r1]).catch(() => {});
-
-      // Seed 2nd sem grade only if student is enrolled in 2nd sem
-      if (isEnrolled2) {
-        await pool.execute(`
-          INSERT INTO student_grades (student_id, studentId, student_name, department, semester, school_year, nstp_section, midterm_grade, final_grade, remarks)
-          VALUES (?, ?, ?, ?, '2nd Semester', ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE midterm_grade = VALUES(midterm_grade), final_grade = VALUES(final_grade), remarks = VALUES(remarks)
-        `, [st.id, st.studentId, st.name || `${st.lastName}, ${st.firstName}`, st.department || 'CWTS', sy, st.nstp_section || '', gInfo.g2, gInfo.g2, gInfo.r2]).catch(() => {});
-      } else {
-        await pool.execute(`
-          DELETE FROM student_grades WHERE student_id = ? AND semester = '2nd Semester'
-        `, [st.id]).catch(() => {});
-      }
-
-      // Also sync student table grades
-      const is2nd = sem.includes('2nd');
-      const finalG = is2nd ? (isEnrolled2 ? gInfo.g2 : gInfo.g1) : gInfo.g1;
-      const rem = is2nd ? (isEnrolled2 ? gInfo.r2 : gInfo.r1) : gInfo.r1;
-      await pool.execute(`
-        UPDATE students SET midterm_grade = ?, final_grade = ?, remarks = ?, has_2nd_sem = ? WHERE id = ?
-      `, [gInfo.g1, finalG, rem, isEnrolled2 ? 1 : 0, st.id]).catch(() => {});
-    }
-    console.log(`Seeded realistic grades (with mix of Passed & Failed) for ${activeStudents.length} active students.`);
-  } catch (err) {
-    console.warn('Active student grades seed notice:', err.message);
-  }
-}
 
 // ── Audit log ─────────────────────────────────────────────────────────────────
 async function ensureAuditLogs() {
@@ -3019,7 +2942,14 @@ const handleGetStudents = async (req, res) => {
     const enriched = (students || []).map(st => {
       const sid = String(st.studentId || '').trim();
       const dbId = String(st.id || '').trim();
-      const stGrades = gradesBySid[sid] || gradesByDbId[dbId] || {};
+      let stGrades = gradesBySid[sid];
+      if (!stGrades && dbId && gradesByDbId[dbId]) {
+        const sample = gradesByDbId[dbId]['1st Semester'] || gradesByDbId[dbId]['2nd Semester'];
+        if (!sample?.studentId || sample.studentId === sid) {
+          stGrades = gradesByDbId[dbId];
+        }
+      }
+      stGrades = stGrades || {};
 
       const g1 = stGrades['1st Semester']?.final_grade || '';
       const g2 = stGrades['2nd Semester']?.final_grade || '';
@@ -6184,133 +6114,6 @@ app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/attendance/seed-random - Seed Days 1 to 14 random attendance
-app.post('/api/attendance/seed-random', authenticateToken, async (req, res) => {
-  try {
-    const [students] = await pool.execute(
-      "SELECT id, studentId, name, department, section, nstp_section FROM students WHERE status = 'Active' OR status IS NULL OR status = '' ORDER BY id ASC"
-    );
-
-    if (students.length === 0) {
-      return res.status(404).json({ message: 'No students found to seed attendance' });
-    }
-
-    const ACTIVITIES = [
-      { dayNum: 1, name: 'Day 1 - Orientation & Overview', date: '2026-06-07' },
-      { dayNum: 2, name: 'Day 2 - Leadership Training', date: '2026-06-14' },
-      { dayNum: 3, name: 'Day 3 - Community Profiling', date: '2026-06-21' },
-      { dayNum: 4, name: 'Day 4 - Environmental Conservation', date: '2026-06-28' },
-      { dayNum: 5, name: 'Day 5 - Disaster Preparedness', date: '2026-07-05' },
-      { dayNum: 6, name: 'Day 6 - First Aid & Safety Drills', date: '2026-07-12' },
-      { dayNum: 7, name: 'Day 7 - Health & Sanitation Drive', date: '2026-07-19' },
-      { dayNum: 8, name: 'Day 8 - Literacy & Numeracy Program', date: '2026-07-26' },
-      { dayNum: 9, name: 'Day 9 - Waste Management Campaign', date: '2026-08-02' },
-      { dayNum: 10, name: 'Day 10 - Tree Planting Activity', date: '2026-08-09' },
-      { dayNum: 11, name: 'Day 11 - Civic Consciousness Workshop', date: '2026-08-16' },
-      { dayNum: 12, name: 'Day 12 - Drug Abuse Prevention Seminar', date: '2026-08-23' },
-      { dayNum: 13, name: 'Day 13 - Project Planning & Development', date: '2026-08-30' },
-      { dayNum: 14, name: 'Day 14 - Community Outreach Implementation', date: '2026-09-06' }
-    ];
-
-    await pool.execute('TRUNCATE TABLE attendance_records');
-
-    const recordsToInsert = [];
-    const atRiskIndices = new Set([2, 7, 18, 25, 35]);
-    const perfectIndices = new Set([0, 5, 13, 20, 29]);
-
-    for (let sIdx = 0; sIdx < students.length; sIdx++) {
-      const st = students[sIdx];
-      const sid = String(st.studentId || st.id);
-      const sName = st.name;
-      const sDept = st.department || 'CWTS';
-      const sSec = st.nstp_section || st.section || '1-A';
-
-      const isAtRisk = atRiskIndices.has(sIdx);
-      const isPerfect = perfectIndices.has(sIdx);
-
-      const seed = (sIdx + 1) * 31;
-      const dayOffsets = [(seed % 14) + 1, ((seed * 3) % 14) + 1, ((seed * 7) % 14) + 1, ((seed * 11) % 14) + 1, ((seed * 13) % 14) + 1];
-
-      let absentDays = [];
-      let lateDays = [];
-      let excusedDays = [];
-      let incDays = [];
-
-      if (isPerfect) {
-        // 100% Present
-      } else if (isAtRisk) {
-        absentDays = [dayOffsets[0], dayOffsets[1], dayOffsets[2]];
-        if (sIdx % 2 === 0) absentDays.push(dayOffsets[3]);
-        lateDays = [((dayOffsets[0] + 3) % 14) + 1];
-        excusedDays = [((dayOffsets[1] + 5) % 14) + 1];
-      } else {
-        lateDays = [dayOffsets[0]];
-        if (sIdx % 3 === 0) lateDays.push(dayOffsets[1]);
-        if (sIdx % 2 === 0) excusedDays = [dayOffsets[2]];
-        if (sIdx % 5 !== 0) incDays = [dayOffsets[3]];
-        if (sIdx % 3 === 1) absentDays = [dayOffsets[4]];
-      }
-
-      for (const act of ACTIVITIES) {
-        const dayNum = act.dayNum;
-        const actName = act.name;
-        const actDate = act.date;
-
-        let status = 'Present';
-        let scanType = 'TIME_OUT';
-        let notes = 'Complete attendance (Time-In and Time-Out recorded)';
-
-        if (absentDays.includes(dayNum)) {
-          status = 'Absent';
-          scanType = 'ABSENT';
-          notes = 'Unexcused Absence (No scan recorded)';
-        } else if (excusedDays.includes(dayNum)) {
-          status = 'Excused';
-          scanType = 'EXCUSED';
-          notes = 'Officially excused by Instructor (Valid excuse letter / Medical)';
-        } else if (incDays.includes(dayNum)) {
-          status = 'Incomplete';
-          scanType = 'TIME_IN';
-          notes = 'Incomplete (Timed in at 08:04 AM; missed afternoon Time-Out)';
-        } else if (lateDays.includes(dayNum)) {
-          status = 'Late';
-          scanType = 'TIME_OUT';
-          notes = 'Late Attendance (Timed in at 08:24 AM - past 15-min cutoff)';
-        }
-
-        const timeHour = status === 'Late' ? 8 : 7;
-        const timeMin = status === 'Late' ? 24 : ((sIdx * 3 + dayNum * 7) % 45 + 10);
-        const timeStr = `${String(timeHour).padStart(2, '0')}:${String(timeMin).padStart(2, '0')}:22`;
-        const scannedAt = `${actDate} ${timeStr}`;
-
-        recordsToInsert.push([
-          sid, sName, sDept, sSec, actName, scanType, req.user.id || 1, scannedAt, status, notes
-        ]);
-      }
-    }
-
-    const batchSize = 100;
-    for (let b = 0; b < recordsToInsert.length; b += batchSize) {
-      const chunk = recordsToInsert.slice(b, b + batchSize);
-      const placeholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
-      const flatParams = chunk.flat();
-      await pool.execute(
-        `INSERT INTO attendance_records (student_id, student_name, department, section, activity_name, scan_type, scanned_by, scanned_at, status, notes) VALUES ${placeholders}`,
-        flatParams
-      );
-    }
-
-    res.json({
-      success: true,
-      message: `Successfully generated ${recordsToInsert.length} attendance records across Days 1 to 14 for ${students.length} students.`,
-      count: recordsToInsert.length
-    });
-  } catch (err) {
-    console.error('Seed random attendance error:', err);
-    res.status(500).json({ message: 'Failed to seed random attendance' });
-  }
-});
-
 // POST clear all attendance records and reset to Day 1
 app.post('/api/attendance/clear-all', authenticateToken, async (req, res) => {
   try {
@@ -6513,15 +6316,21 @@ app.post('/api/attendance/override', authenticateToken, async (req, res) => {
 // GET all archived years (with instructor department isolation)
 app.get('/api/archives', authenticateToken, async (req, res) => {
   try {
-    let [archives] = await pool.execute(
-      'SELECT * FROM archived_years ORDER BY year DESC'
-    ).catch(() => [[]]);
+    let [archives] = await pool.query(
+      'SELECT a.* FROM archived_years a JOIN (SELECT id FROM archived_years ORDER BY year DESC) sub ON a.id = sub.id'
+    ).catch(async () => {
+      const [fallback] = await pool.query('SELECT * FROM archived_years ORDER BY id DESC').catch(() => [[]]);
+      return [fallback || []];
+    });
 
     if (!archives || archives.length === 0) {
       await seedPastBatches();
-      const [reloaded] = await pool.execute(
-        'SELECT * FROM archived_years ORDER BY year DESC'
-      ).catch(() => [[]]);
+      const [reloaded] = await pool.query(
+        'SELECT a.* FROM archived_years a JOIN (SELECT id FROM archived_years ORDER BY year DESC) sub ON a.id = sub.id'
+      ).catch(async () => {
+        const [fallback] = await pool.query('SELECT * FROM archived_years ORDER BY id DESC').catch(() => [[]]);
+        return [fallback || []];
+      });
       archives = reloaded || [];
     }
 

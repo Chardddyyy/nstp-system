@@ -5,7 +5,7 @@ import {
   List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
@@ -481,7 +481,7 @@ function Calendar() {
     return next <= maxMonthDate;
   }, [batchRange, currentDate]);
 
-  const changeMonth = (direction) => {
+  const changeMonth = useCallback((direction) => {
     const target = new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1);
     if (batchRange) {
       const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
@@ -490,25 +490,9 @@ function Calendar() {
       if (direction > 0 && target > maxMonthDate) return;
     }
     setCurrentDate(target);
-  };
+  }, [batchRange, currentDate]);
 
-  const wheelTimeoutRef = useRef(null);
-  const handleGridWheel = (e) => {
-    if (wheelTimeoutRef.current) return;
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) > 35) {
-      if (delta > 35 && canNext) {
-        changeMonth(1);
-      } else if (delta < -35 && canPrev) {
-        changeMonth(-1);
-      }
-      wheelTimeoutRef.current = setTimeout(() => {
-        wheelTimeoutRef.current = null;
-      }, 350);
-    }
-  };
-
-  const handleGoToBatchToday = () => {
+  const handleGoToBatchToday = useCallback(() => {
     if (!batchRange) {
       setCurrentDate(new Date());
       return;
@@ -519,7 +503,40 @@ function Calendar() {
     } else {
       setCurrentDate(new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 15));
     }
-  };
+  }, [batchRange]);
+
+  // Keyboard navigation for Calendar & Escape key for modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showAddEventModal) {
+          setShowAddEventModal(false);
+          setEditingEvent(null);
+          return;
+        }
+        if (selectedDate) {
+          setSelectedDate(null);
+          return;
+        }
+      }
+
+      // Context Guard: Never trigger shortcuts if typing inside an input, textarea, or select
+      const activeTag = document.activeElement?.tagName;
+      const isInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
+      if (isInput) return;
+
+      if (e.key === 'ArrowLeft') {
+        if (canPrev) changeMonth(-1);
+      } else if (e.key === 'ArrowRight') {
+        if (canNext) changeMonth(1);
+      } else if (e.key === 't' || e.key === 'T') {
+        handleGoToBatchToday();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAddEventModal, selectedDate, canPrev, canNext, changeMonth, handleGoToBatchToday]);
 
   // Category Badge Styler
   const getCategoryBadgeClass = (category) => {
@@ -661,7 +678,7 @@ function Calendar() {
 
         {/* VIEW MODE 1: MONTHLY CALENDAR GRID */}
         {viewMode === 'monthly' ? (
-          <div onWheel={handleGridWheel} className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
+          <div className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
             <div className="flex-shrink-0 flex items-center justify-between mb-3">
               <div>
                 <div className="flex items-center gap-2">

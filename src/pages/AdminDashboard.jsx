@@ -294,6 +294,53 @@ function AdminDashboard() {
   const [photoViewer, setPhotoViewer] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
+
+  // Handle Escape key to close open overlays/modals in AdminDashboard
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (photoViewer) {
+          setPhotoViewer(null);
+          return;
+        }
+        if (confirmDialog) {
+          setConfirmDialog(null);
+          return;
+        }
+        if (selectedEnrollment) {
+          setSelectedEnrollment(null);
+          return;
+        }
+        if (scheduleModalOpen) {
+          setScheduleModalOpen(false);
+          return;
+        }
+        if (showInstructorList) {
+          setShowInstructorList(false);
+          return;
+        }
+        if (showArchiveModal) {
+          setShowArchiveModal(false);
+          return;
+        }
+        if (showArchiveDetails) {
+          setShowArchiveDetails(false);
+          return;
+        }
+        if (showNewBatchConfirm) {
+          setShowNewBatchConfirm(false);
+          return;
+        }
+        if (showNotifications) {
+          setShowNotifications(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photoViewer, confirmDialog, selectedEnrollment, scheduleModalOpen, showInstructorList, showArchiveModal, showArchiveDetails, showNewBatchConfirm, showNotifications]);
+
   // Online Enrollment Portal Status Switch (stored in localStorage)
   const [_enrollmentOpen, _setEnrollmentOpen] = useState(() => {
     const saved = localStorage.getItem('nstp_enrollment_open');
@@ -1573,8 +1620,17 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     return (
                       <div
                         key={enrollment.id}
-                        className="p-3 hover:bg-green-50 cursor-pointer transition-colors"
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`View enrollment details for ${enrollment.fullName}`}
+                        className="p-3 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50/80 focus:ring-2 focus:ring-emerald-500 rounded-xl"
                         onClick={() => setSelectedEnrollment(enrollment)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedEnrollment(enrollment);
+                          }
+                        }}
                       >
                         <div className="flex items-start gap-3 mb-2.5">
                           <div className="w-12 h-14 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-2xs">
@@ -1731,8 +1787,17 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       {paginatedList.map((enrollment) => (
                         <tr
                           key={enrollment.id}
-                          className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors"
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View enrollment details for ${enrollment.fullName}`}
+                          className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50 focus:ring-2 focus:ring-emerald-500"
                           onClick={() => setSelectedEnrollment(enrollment)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedEnrollment(enrollment);
+                            }
+                          }}
                         >
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
                           <td className="px-4 py-3">
@@ -2193,16 +2258,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
         )}
         {/* Enrollment Detail Modal */}
         {selectedEnrollment && (
-          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fade-in" onClick={() => setSelectedEnrollment(null)}>
-            <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[92vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4 animate-fade-in overflow-hidden" onClick={() => setSelectedEnrollment(null)}>
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 bg-green-800 text-white rounded-t-2xl sm:rounded-t-xl flex-shrink-0">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold truncate">{selectedEnrollment.fullName}</h3>
-                  <p className="text-xs text-green-200 mt-0.5">{selectedEnrollment.studentId} · {selectedEnrollment.nstpComponent}</p>
+              <div className="flex items-center justify-between px-4 py-3 bg-green-800 text-white rounded-t-2xl sm:rounded-t-2xl flex-shrink-0">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm sm:text-base font-bold truncate">{selectedEnrollment.fullName}</h3>
+                  <p className="text-xs text-green-200 mt-0.5 truncate">{selectedEnrollment.studentId} · {selectedEnrollment.nstpComponent}</p>
                 </div>
-                <button type="button" onClick={() => setSelectedEnrollment(null)} className="p-1.5 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0 ml-2">
+                <button type="button" onClick={() => setSelectedEnrollment(null)} className="p-1.5 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0 ml-2 cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -2231,7 +2296,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               </div>
 
               {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto overscroll-contain">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
 
                 {/* 1. DOCUMENTS SECTION: 2x2 ID Photo & Submitted COR */}
                 {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'docs') && (
@@ -2255,7 +2320,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                       <div className="flex items-center gap-3.5 bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80">
                         <div 
-                          className="w-20 h-24 bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
+                          className="w-22 h-22 sm:w-24 sm:h-24 aspect-square bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
                           onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
                           title="Click to expand 2x2 ID Photo"
                         >
@@ -2264,7 +2329,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               <img 
                                 src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
                                 alt="2x2 ID Photo" 
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
                                 🔍 View
@@ -2390,43 +2455,43 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         </div>
 
                         {/* Name fields */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Last Name</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Last Name</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {lastName}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">First Name</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">First Name</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {firstName}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Middle Name</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Middle Name</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {middleName}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Suffix</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Suffix</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {suffix}
                             </div>
                           </div>
                         </div>
 
                         {/* Student ID and Email */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Student No. (9 digits)</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Student No. (9 digits)</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs truncate">
                               {studentId}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Email Address</label>
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Email Address</label>
                             <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {email}
                             </div>
@@ -2434,35 +2499,35 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         </div>
 
                         {/* Birthdate, Age, Civil Status, Sex, Registered Voter */}
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Birthdate</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {birthDateStr}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Age</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-gray-100 border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Age</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-gray-100 border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs truncate">
                               {age}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Civil Status</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Civil Status</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {civilStatus}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Sex</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Sex</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {sex}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Registered Voter?</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
-                              <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full ${
+                          <div className="min-w-0 col-span-2 sm:col-span-1">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Registered Voter?</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                              <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full truncate ${
                                 isVoter
                                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                   : 'bg-amber-100 text-amber-900 border border-amber-300'
@@ -2474,22 +2539,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         </div>
 
                         {/* Contact Number & Facebook Profile */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Contact No. (11 digits)</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Contact No. (11 digits)</label>
+                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs truncate">
                               {contactNo}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Facebook Account / Profile Link</label>
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Facebook Account / Profile Link</label>
                             <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {fbAccount && fbAccount !== '—' ? (
                                 <a
                                   href={fbAccount.startsWith('http') ? fbAccount : `https://${fbAccount}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-emerald-700 underline hover:text-emerald-900"
+                                  className="text-emerald-700 underline hover:text-emerald-900 truncate block"
                                 >
                                   {fbAccount}
                                 </a>
@@ -2499,50 +2564,50 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         </div>
 
                         {/* Height, Weight, Blood Type */}
-                        <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Height</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Height</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {height}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Weight</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Weight</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {weight}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Blood Type</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Blood Type</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {bloodType}
                             </div>
                           </div>
                         </div>
 
                         {/* Complete Address */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Street / Barangay</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Street / Barangay</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {street}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Municipality / City</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Municipality / City</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {municipality}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Province</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Province</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {province}
                             </div>
                           </div>
-                          <div className="sm:col-span-3">
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Full Combined Address</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="sm:col-span-3 min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Full Combined Address</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs break-words">
                               {fullAddress}
                             </div>
                           </div>
@@ -2561,29 +2626,29 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Program</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Program</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-black text-emerald-950 shadow-2xs truncate">
                               {program}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Section</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs font-mono">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Section</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs font-mono truncate">
                               {section}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Year Level</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Year Level</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {yearLevel}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">NSTP Track</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
-                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider ${
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">NSTP Track</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider truncate ${
                                 nstpTrack === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
                                 nstpTrack === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
                                 nstpTrack === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
@@ -2608,16 +2673,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact Person</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Emergency Contact Person</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {emPerson}
                             </div>
                           </div>
-                          <div>
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact No.</label>
-                            <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs">
+                          <div className="min-w-0">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Emergency Contact No.</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-mono font-bold text-gray-900 shadow-2xs truncate">
                               {emNumber}
                             </div>
                           </div>

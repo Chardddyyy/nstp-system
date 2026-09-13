@@ -234,13 +234,13 @@ function Profile() {
     setCapturedImage(null);
   };
 
-  const closeCameraModal = () => {
+  const closeCameraModal = useCallback(() => {
     stopCamera();
     setShowCameraModal(false);
     setCapturedImage(null);
     setShowEditor(false);
     setHistory([]);
-  };
+  }, [stopCamera]);
 
   const handleLogout = async () => {
     await logout();
@@ -352,6 +352,40 @@ function Profile() {
   const [avatarModified, setAvatarModified] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [isSavingInstructor, setIsSavingInstructor] = useState(false);
+
+  // Handle Escape key to close open overlays/modals in Profile
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showEditor) {
+          setShowEditor(false);
+          return;
+        }
+        if (showCameraModal) {
+          closeCameraModal();
+          return;
+        }
+        if (showAvatarSelector) {
+          setShowAvatarSelector(false);
+          return;
+        }
+        if (showAddInstructor) {
+          setShowAddInstructor(false);
+          return;
+        }
+        if (showEditInstructorModal) {
+          setShowEditInstructorModal(false);
+          return;
+        }
+        if (sidebarOpen) {
+          setSidebarOpen(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showEditor, showCameraModal, showAvatarSelector, showAddInstructor, showEditInstructorModal, sidebarOpen, closeCameraModal]);
 
   const openEditInstructorModal = (inst) => {
     setEditingInstructor(inst);

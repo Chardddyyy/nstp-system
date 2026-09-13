@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
@@ -18,6 +18,7 @@ import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
 import LetterFormats from './pages/LetterFormats';
 import DigitalIdViewer from './pages/DigitalIdViewer';
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname.toLowerCase();
@@ -98,6 +99,82 @@ function safeSetStorage(key, value) {
 
 function getNotificationStorageKey(role) {
   return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
+}
+
+function GlobalKeyboardManager() {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useEffect(() => {
+    const handleToggle = () => setShowShortcuts(prev => !prev);
+    window.addEventListener('nstp:toggle-shortcuts', handleToggle);
+    return () => window.removeEventListener('nstp:toggle-shortcuts', handleToggle);
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Toggle shortcuts guide: Ctrl+/ or Cmd+/
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+        return;
+      }
+
+      // Context Guard: If focused in an input, textarea, select, or contentEditable, do not trigger single-key shortcuts
+      const activeTag = document.activeElement?.tagName;
+      const isInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
+
+      // Question mark '?' when not typing
+      if (!isInput && e.key === '?' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+        return;
+      }
+
+      // Quick Search Focus: Ctrl+K / Cmd+K or '/' when not typing
+      if (((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) || (!isInput && e.key === '/')) {
+        const searchInput = document.querySelector('input[type="text"][placeholder*="Search" i], input[type="search"], input[placeholder*="search" i], input[name*="search" i]');
+        if (searchInput) {
+          e.preventDefault();
+          searchInput.focus();
+          searchInput.select?.();
+        }
+        return;
+      }
+
+      // Navigation hotkeys with Alt modifier (only when logged in)
+      if (user && e.altKey && !e.ctrlKey && !e.metaKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'd') {
+          e.preventDefault();
+          navigate(user.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard');
+        } else if (key === 's') {
+          e.preventDefault();
+          navigate('/students');
+        } else if (key === 'r') {
+          e.preventDefault();
+          navigate('/reports');
+        } else if (key === 'c') {
+          e.preventDefault();
+          navigate('/chat');
+        } else if (key === 'l') {
+          e.preventDefault();
+          navigate('/calendar');
+        } else if (key === 'f' && user.role === 'admin') {
+          e.preventDefault();
+          navigate('/letter-formats');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user, navigate]);
+
+  return (
+    <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+  );
 }
 
 function App() {
@@ -1226,6 +1303,7 @@ function App() {
   return (
     <AuthContext.Provider value={contextValue}>
       <BrowserRouter basename={BASE_PATH}>
+        <GlobalKeyboardManager />
         {/* Global Floating Toast Notifications Container */}
         <div className="fixed top-4 right-4 z-[99999] flex flex-col gap-2.5 max-w-sm w-[calc(100vw-2rem)] pointer-events-none">
           {toasts.map((toast) => (

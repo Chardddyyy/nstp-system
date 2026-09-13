@@ -2,6 +2,10 @@
 
 Ang sumusunod ay ang komprehensibo at pinakabagong dokumentasyon ng lahat ng teknolohiya, frameworks, libraries, cloud services, at tools na ginamit sa buong **CvSU Naic NSTP Record & Report Management System** kasama ang kani-kanilang gamit, layunin, at technical rationale:
 
+> [!NOTE]
+> **100% Unified JavaScript Ecosystem:**
+> Ang buong sistema (Client, Server, Real-time WebSockets, PDF/Document Generators, at Utility Scripts) ay **100% JavaScript** (React 19 sa Frontend at Node.js sa Backend). Tinanggal ang Python upang maging magkakatugma, magaan, at madaling i-maintain ang buong stack nang hindi nangangailangan ng hiwalay na Python runtime o `pip` dependencies.
+
 ---
 
 ## 🖥️ 1. Frontend Technologies (Client-Side Architecture)

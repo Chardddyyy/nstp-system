@@ -1,8 +1,9 @@
+import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock
+  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock, Keyboard
 } from 'lucide-react';
 
 const DEPT_COLORS = {
@@ -20,6 +21,17 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
   const archiveViewData = auth.archiveViewData || null;
   const setViewingArchive = auth.setViewingArchive || (() => {});
   const setArchiveViewData = auth.setArchiveViewData || (() => {});
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   const isAdmin = user?.role === 'admin';
   const dashPath = isAdmin ? '/admin/dashboard' : '/instructor/dashboard';
@@ -231,10 +243,28 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
           </button>
         </div>
 
-        {/* Logout Footer */}
-        <div className="p-4 border-t border-emerald-800/60 bg-emerald-950/40 shrink-0">
+        {/* Logout Footer & Shortcuts */}
+        <div className="p-4 border-t border-emerald-800/60 bg-emerald-950/40 shrink-0 space-y-2">
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('nstp:toggle-shortcuts'));
+              onClose();
+            }}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-emerald-200/90 hover:text-white hover:bg-emerald-800/60 text-xs font-semibold transition-colors cursor-pointer border border-emerald-800/40"
+            title="View Keyboard Shortcuts (Ctrl+/)"
+          >
+            <div className="flex items-center space-x-2.5">
+              <Keyboard className="w-4 h-4 text-amber-300" />
+              <span>Shortcuts</span>
+            </div>
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-emerald-900/90 border border-emerald-700/60 rounded text-amber-300 font-bold">
+              ⌘/
+            </kbd>
+          </button>
+
           <button type="button" onClick={onLogout}
-            className="w-full min-h-[48px] flex items-center justify-center space-x-3 px-4 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
+            className="w-full min-h-[44px] flex items-center justify-center space-x-3 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

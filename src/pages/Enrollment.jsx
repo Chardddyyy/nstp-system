@@ -252,31 +252,51 @@ function Enrollment() {
     if (!videoRef.current) return;
     const video = videoRef.current;
     
-    // Normal HD Camera Capture (Resized for fast instant submission)
     const rawW = video.videoWidth || 1280;
     const rawH = video.videoHeight || 720;
-    const MAX = 1200;
-    let w = rawW, h = rawH;
-    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    
-    // Natural Phone Camera Capture: Mirror front-facing selfie, unmirror back-facing document
-    if (facingMode === 'user') {
-      ctx.translate(w, 0);
-      ctx.scale(-1, 1);
-    }
-    ctx.drawImage(video, 0, 0, w, h);
-
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
     if (cameraTarget === 'idphoto') {
+      // Crop true 1:1 square 2x2 portrait photo directly from center of camera stream (matches on-screen guide box)
+      const size = Math.min(rawW, rawH);
+      const srcX = (rawW - size) / 2;
+      const srcY = (rawH - size) / 2;
+      const targetSize = 480;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetSize, targetSize);
+
+      if (facingMode === 'user') {
+        ctx.translate(targetSize, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, srcX, srcY, size, size, 0, 0, targetSize, targetSize);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
       setIdPhoto2x2(dataUrl);
       if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
     } else {
+      // Normal HD Document / COR Capture
+      const MAX = 1200;
+      let w = rawW, h = rawH;
+      if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+      if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      
+      if (facingMode === 'user') {
+        ctx.translate(w, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, w, h);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
       setRegistrationPhoto(dataUrl);
       if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
     }
@@ -557,17 +577,22 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 480; // Crisp, ultra-lightweight 2x2 ID photo (~30KB)
-        let w = img.width, h = img.height;
-        if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-        if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        const TARGET = 480; // Standard 2x2 ID photo dimension
+        // Crop 1:1 center-square for true 2x2 ID photo
+        const size = Math.min(img.width, img.height);
+        const srcX = (img.width - size) / 2;
+        // For portrait photos (height > width), align slightly towards top (20%) to keep head & hair fully visible
+        const srcY = img.height > img.width ? Math.max(0, (img.height - size) * 0.20) : (img.height - size) / 2;
+
         const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
+        canvas.width = TARGET;
+        canvas.height = TARGET;
         const ctx = canvas.getContext('2d', { alpha: false });
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
-        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.80));
+        ctx.fillRect(0, 0, TARGET, TARGET);
+        ctx.drawImage(img, srcX, srcY, size, size, 0, 0, TARGET, TARGET);
+
+        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.82));
         if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
       };
       img.onerror = () => {
@@ -1982,10 +2007,10 @@ function Enrollment() {
 
                       {/* Guide Box for 2x2 ID Photo */}
                       {cameraTarget === 'idphoto' && (
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                          <div className="w-48 h-60 border-2 border-dashed border-amber-400/80 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                            <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full">
-                              Center Face Here
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+                          <div className="w-52 h-52 sm:w-60 sm:h-60 aspect-square border-2 border-dashed border-amber-400/90 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
+                            <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider bg-black/60 px-2.5 py-1 rounded-full border border-amber-400/40">
+                              Center Face (2x2 Box)
                             </span>
                           </div>
                         </div>

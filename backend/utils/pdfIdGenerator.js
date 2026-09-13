@@ -169,7 +169,7 @@ async function generateStudentIdPdf(studentData) {
           doc.save();
           doc.roundedRect(photoX + 0.5, photoBoxY + 0.5, photoSize - 1, photoSize - 1, 5).clip();
           doc.image(photoBuffer, photoX, photoBoxY, {
-            fit: [photoSize, photoSize],
+            cover: [photoSize, photoSize],
             align: 'center',
             valign: 'center'
           });

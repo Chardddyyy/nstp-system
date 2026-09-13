@@ -112,6 +112,7 @@ export function StudentAttendanceMatrixModal({
       isSubscribed = false;
       window.removeEventListener('nstp_attendance_updated', handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]); // Only depends on isOpen to avoid 8-second polling refresh loops!
 
   // Derive base students from props, context, fetched, or cache

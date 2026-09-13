@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
@@ -163,6 +163,29 @@ export default function LetterFormats() {
 
   const [viewingFile, setViewingFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Handle Escape key to close open overlays/modals in LetterFormats
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (viewingFile) {
+          setViewingFile(null);
+          return;
+        }
+        if (showAddModal) {
+          setShowAddModal(false);
+          setEditingTemplate(null);
+          return;
+        }
+        if (sidebarOpen) {
+          setSidebarOpen(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewingFile, showAddModal, sidebarOpen]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];

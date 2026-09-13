@@ -25,7 +25,9 @@ export default defineConfig(({ mode }) => {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-icons': ['lucide-react'],
             'vendor-qr': ['qrcode', 'html5-qrcode'],
-            'vendor-media': ['heic2any']
+            'vendor-media': ['heic2any'],
+            'vendor-pdf': ['jspdf', 'html2canvas'],
+            'vendor-excel': ['exceljs']
           }
         }
       }

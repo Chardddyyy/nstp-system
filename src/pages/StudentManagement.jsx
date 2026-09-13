@@ -1065,6 +1065,72 @@ function StudentManagement() {
     setViewStudent(null);
   };
 
+  // Handle Escape key to close open overlays/modals in StudentManagement
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (confirmDialog) {
+          setConfirmDialog(null);
+          return;
+        }
+        if (showCameraModal) {
+          setShowCameraModal(false);
+          return;
+        }
+        if (showViewModal) {
+          closeViewModal();
+          return;
+        }
+        if (showAddModal) {
+          setShowAddModal(false);
+          return;
+        }
+        if (showEditModal) {
+          setShowEditModal(false);
+          return;
+        }
+        if (showExportModal) {
+          setShowExportModal(false);
+          return;
+        }
+        if (showBatchIdModal) {
+          setShowBatchIdModal(false);
+          return;
+        }
+        if (showAttendanceMatrix) {
+          setShowAttendanceMatrix(false);
+          return;
+        }
+        if (showGradesModal) {
+          setShowGradesModal(false);
+          return;
+        }
+        if (showFormAPreview) {
+          setShowFormAPreview(false);
+          return;
+        }
+        if (showFormBPreview) {
+          setShowFormBPreview(false);
+          return;
+        }
+        if (showFormAModal) {
+          setShowFormAModal(false);
+          return;
+        }
+        if (showFormBModal) {
+          setShowFormBModal(false);
+          return;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    confirmDialog, showCameraModal, showViewModal, showAddModal, showEditModal, 
+    showExportModal, showBatchIdModal, showAttendanceMatrix, showGradesModal,
+    showFormAPreview, showFormBPreview, showFormAModal, showFormBModal
+  ]);
+
   const getDepartmentColor = (dept) => {
     switch(dept) {
       case 'ROTC': return 'bg-red-100 text-red-700';
@@ -2633,7 +2699,7 @@ function StudentManagement() {
                       <div className="w-20 h-24 bg-white rounded-xl border-2 border-emerald-400 overflow-hidden flex items-center justify-center shrink-0 shadow-sm relative group">
                         {formData.id_photo_2x2 || formData.photo || formData.registrationPhoto ? (
                           <>
-                            <img src={formData.id_photo_2x2 || formData.photo || formData.registrationPhoto} alt="2x2 Preview" className="w-full h-full object-cover" />
+                            <img src={formData.id_photo_2x2 || formData.photo || formData.registrationPhoto} alt="2x2 Preview" className="w-full h-full object-cover object-top" />
                             <button
                               type="button"
                               onClick={() => setPhotoViewer(formData.id_photo_2x2 || formData.photo || formData.registrationPhoto)}
@@ -3171,7 +3237,7 @@ function StudentManagement() {
                                   alt="2x2 ID Photo" 
                                   loading="lazy"
                                   decoding="async"
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
                                 />
                                 <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
                                   <Eye className="w-4 h-4" />
