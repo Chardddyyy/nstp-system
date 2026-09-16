@@ -47,6 +47,7 @@ const configureCors = () => {
     'http://localhost:3000',
     'http://localhost:5000',
     'http://127.0.0.1:5173',
+    'https://chardddyyy.github.io',
     'https://chardddddyyyyy.github.io',
     process.env.FRONTEND_URL,
     process.env.CLIENT_ORIGIN
@@ -59,7 +60,7 @@ const configureCors = () => {
       
       const isAllowed = allowedOrigins.some(allowed => {
         if (allowed === origin) return true;
-        if (origin.endsWith('.github.io') || origin.includes('localhost') || origin.includes('127.0.0.1')) return true;
+        if (origin.endsWith('.github.io') || origin.includes('localhost') || origin.includes('127.0.0.1') || origin.endsWith('.onrender.com')) return true;
         return false;
       });
 

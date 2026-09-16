@@ -647,6 +647,40 @@ const RAW_STUDENTS_2024 = [
   { id: 226, studentId: '202410026', firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', suffix: '', name: 'Dagohoy, Karen Escoda', email: 'karen.dagohoy@cvsu.edu.ph', contactNumber: '09171234626', facebookAccount: 'https://facebook.com/karen.dagohoy.cvsu', department: 'LTS', program: 'BSBA', yearLevel: '1st Year', year: '1st Year', section: '1-2', nstp_section: 'LTS 2', sex: 'Female', gender: 'Female', birthMonth: '08', birthDay: '02', birthYear: '2005', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '161', weight: '51', street: 'Brgy. Bagong Karsada', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bagong Karsada, Naic, Cavite', emergencyContact: 'Kiko Dagohoy', emergencyNumber: '09181234626', schoolYear: '2024-2025', status: 'incomplete', final_grade_1: '2.00', final_grade_2: 'INC', midterm_grade: '2.00', final_grade: 'INC', remarks: 'Incomplete', has_2nd_sem: true }
 ];
 
+const RAW_STUDENTS_2025 = [
+  // CWTS (10 students)
+  { id: 301, studentId: '202510001', firstName: 'Cedric', lastName: 'Abrenica', middleName: 'Bautista', suffix: '', name: 'Abrenica, Cedric Bautista', email: 'cedric.abrenica@cvsu.edu.ph', contactNumber: '09171234701', facebookAccount: 'https://facebook.com/cedric.abrenica.cvsu', department: 'CWTS', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'CWTS 1', sex: 'Male', gender: 'Male', birthMonth: '03', birthDay: '12', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'O+', height: '172', weight: '62', street: 'Brgy. Bucana Malaki', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bucana Malaki, Naic, Cavite', emergencyContact: 'Celia Abrenica', emergencyNumber: '09181234701', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 302, studentId: '202510002', firstName: 'Marjorie', lastName: 'Caballero', middleName: 'Dizon', suffix: '', name: 'Caballero, Marjorie Dizon', email: 'marjorie.caballero@cvsu.edu.ph', contactNumber: '09171234702', facebookAccount: 'https://facebook.com/marjorie.caballero.cvsu', department: 'CWTS', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'CWTS 1', sex: 'Female', gender: 'Female', birthMonth: '07', birthDay: '25', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '159', weight: '48', street: 'Brgy. Halang', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Halang, Naic, Cavite', emergencyContact: 'Mario Caballero', emergencyNumber: '09181234702', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.75', midterm_grade: '1.50', final_grade: '1.75', remarks: 'Passed', has_2nd_sem: true },
+  { id: 303, studentId: '202510003', firstName: 'Renz', lastName: 'Esguerra', middleName: 'Flores', suffix: '', name: 'Esguerra, Renz Flores', email: 'renz.esguerra@cvsu.edu.ph', contactNumber: '09171234703', facebookAccount: 'https://facebook.com/renz.esguerra.cvsu', department: 'CWTS', program: 'BSCS', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'CWTS 2', sex: 'Male', gender: 'Male', birthMonth: '11', birthDay: '08', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'B+', height: '174', weight: '66', street: 'Brgy. Ibayo Silangan', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Ibayo Silangan, Naic, Cavite', emergencyContact: 'Rose Esguerra', emergencyNumber: '09181234703', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.75', final_grade_2: '1.50', midterm_grade: '1.75', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 304, studentId: '202510004', firstName: 'Kristine', lastName: 'Guevarra', middleName: 'Hernandez', suffix: '', name: 'Guevarra, Kristine Hernandez', email: 'kristine.guevarra@cvsu.edu.ph', contactNumber: '09171234704', facebookAccount: 'https://facebook.com/kristine.guevarra.cvsu', department: 'CWTS', program: 'BSCS', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'CWTS 2', sex: 'Female', gender: 'Female', birthMonth: '02', birthDay: '14', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'AB+', height: '161', weight: '50', street: 'Brgy. Kanluran', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Kanluran, Naic, Cavite', emergencyContact: 'Karina Guevarra', emergencyNumber: '09181234704', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.00', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 305, studentId: '202510005', firstName: 'Mark Lester', lastName: 'Ilagan', middleName: 'Javier', suffix: '', name: 'Ilagan, Mark Lester Javier', email: 'marklester.ilagan@cvsu.edu.ph', contactNumber: '09171234705', facebookAccount: 'https://facebook.com/marklester.ilagan.cvsu', department: 'CWTS', program: 'BSHM', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'CWTS 3', sex: 'Male', gender: 'Male', birthMonth: '08', birthDay: '30', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'O+', height: '176', weight: '70', street: 'Brgy. Mabolo', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Mabolo, Naic, Cavite', emergencyContact: 'Luz Ilagan', emergencyNumber: '09181234705', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.50', midterm_grade: '1.50', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 306, studentId: '202510006', firstName: 'Mary Ann', lastName: 'Katigbak', middleName: 'Lim', suffix: '', name: 'Katigbak, Mary Ann Lim', email: 'maryann.katigbak@cvsu.edu.ph', contactNumber: '09171234706', facebookAccount: 'https://facebook.com/maryann.katigbak.cvsu', department: 'CWTS', program: 'BSHM', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'CWTS 3', sex: 'Female', gender: 'Female', birthMonth: '10', birthDay: '19', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '156', weight: '46', street: 'Brgy. San Roque', municipality: 'Naic', province: 'Cavite', address: 'Brgy. San Roque, Naic, Cavite', emergencyContact: 'Manuel Katigbak', emergencyNumber: '09181234706', schoolYear: '2025-2026', status: 'incomplete', final_grade_1: '2.00', final_grade_2: 'INC', midterm_grade: '2.00', final_grade: 'INC', remarks: 'Incomplete', has_2nd_sem: true },
+  { id: 307, studentId: '202510007', firstName: 'Jerick', lastName: 'Mendoza', middleName: 'Navarro', suffix: '', name: 'Mendoza, Jerick Navarro', email: 'jerick.mendoza@cvsu.edu.ph', contactNumber: '09171234707', facebookAccount: 'https://facebook.com/jerick.mendoza.cvsu', department: 'CWTS', program: 'BSBA', yearLevel: '1st Year', year: '1st Year', section: '1-1', nstp_section: 'CWTS 1', sex: 'Male', gender: 'Male', birthMonth: '05', birthDay: '16', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'B+', height: '168', weight: '61', street: 'Brgy. Malainen Luma', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Malainen Luma, Naic, Cavite', emergencyContact: 'Jess Mendoza', emergencyNumber: '09181234707', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '2.25', final_grade_2: '2.00', midterm_grade: '2.00', final_grade: '2.00', remarks: 'Passed', has_2nd_sem: true },
+  { id: 308, studentId: '202510008', firstName: 'Eunice', lastName: 'Ocampo', middleName: 'Perez', suffix: '', name: 'Ocampo, Eunice Perez', email: 'eunice.ocampo@cvsu.edu.ph', contactNumber: '09171234708', facebookAccount: 'https://facebook.com/eunice.ocampo.cvsu', department: 'CWTS', program: 'BSBA', yearLevel: '1st Year', year: '1st Year', section: '1-2', nstp_section: 'CWTS 2', sex: 'Female', gender: 'Female', birthMonth: '09', birthDay: '04', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'AB+', height: '160', weight: '51', street: 'Brgy. Bagong Karsada', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bagong Karsada, Naic, Cavite', emergencyContact: 'Emma Ocampo', emergencyNumber: '09181234708', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.75', final_grade_2: '1.50', midterm_grade: '1.75', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 309, studentId: '202510009', firstName: 'Vincent', lastName: 'Quirino', middleName: 'Ramos', suffix: '', name: 'Quirino, Vincent Ramos', email: 'vincent.quirino@cvsu.edu.ph', contactNumber: '09171234709', facebookAccount: 'https://facebook.com/vincent.quirino.cvsu', department: 'CWTS', program: 'BSFAS', yearLevel: '1st Year', year: '1st Year', section: '1-1', nstp_section: 'CWTS 3', sex: 'Male', gender: 'Male', birthMonth: '06', birthDay: '22', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'O+', height: '169', weight: '60', street: 'Brgy. Bucana Malaki', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bucana Malaki, Naic, Cavite', emergencyContact: 'Vic Quirino', emergencyNumber: '09181234709', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '2.50', final_grade_2: '2.25', midterm_grade: '2.25', final_grade: '2.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 310, studentId: '202510010', firstName: 'Bea Clarisse', lastName: 'Santos', middleName: 'Torres', suffix: '', name: 'Santos, Bea Clarisse Torres', email: 'beaclarisse.santos@cvsu.edu.ph', contactNumber: '09171234710', facebookAccount: 'https://facebook.com/beaclarisse.santos.cvsu', department: 'CWTS', program: 'BSFAS', yearLevel: '1st Year', year: '1st Year', section: '1-2', nstp_section: 'CWTS 3', sex: 'Female', gender: 'Female', birthMonth: '12', birthDay: '11', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '158', weight: '47', street: 'Brgy. Halang', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Halang, Naic, Cavite', emergencyContact: 'Beth Santos', emergencyNumber: '09181234710', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+
+  // ROTC (8 students)
+  { id: 311, studentId: '202510011', firstName: 'Christian Paul', lastName: 'Tolentino', middleName: 'Umali', suffix: '', name: 'Tolentino, Christian Paul Umali', email: 'christianpaul.tolentino@cvsu.edu.ph', contactNumber: '09171234711', facebookAccount: 'https://facebook.com/christianpaul.tolentino.cvsu', department: 'ROTC', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'ROTC 1', sex: 'Male', gender: 'Male', birthMonth: '01', birthDay: '18', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'B+', height: '178', weight: '72', street: 'Brgy. Bucana Sasahan', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bucana Sasahan, Naic, Cavite', emergencyContact: 'Carlos Tolentino', emergencyNumber: '09181234711', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.50', midterm_grade: '1.50', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 312, studentId: '202510012', firstName: 'Sherilyn', lastName: 'Valdez', middleName: 'Villanueva', suffix: '', name: 'Valdez, Sherilyn Villanueva', email: 'sherilyn.valdez@cvsu.edu.ph', contactNumber: '09171234712', facebookAccount: 'https://facebook.com/sherilyn.valdez.cvsu', department: 'ROTC', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'ROTC 1', sex: 'Female', gender: 'Female', birthMonth: '08', birthDay: '14', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'AB+', height: '163', weight: '53', street: 'Brgy. Halang', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Halang, Naic, Cavite', emergencyContact: 'Susan Valdez', emergencyNumber: '09181234712', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.75', final_grade_2: '1.75', midterm_grade: '1.75', final_grade: '1.75', remarks: 'Passed', has_2nd_sem: true },
+  { id: 313, studentId: '202510013', firstName: 'John Lloyd', lastName: 'Wong', middleName: 'Yabut', suffix: '', name: 'Wong, John Lloyd Yabut', email: 'johnlloyd.wong@cvsu.edu.ph', contactNumber: '09171234713', facebookAccount: 'https://facebook.com/johnlloyd.wong.cvsu', department: 'ROTC', program: 'BSCS', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'ROTC 2', sex: 'Male', gender: 'Male', birthMonth: '04', birthDay: '20', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'O+', height: '173', weight: '67', street: 'Brgy. Ibayo Silangan', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Ibayo Silangan, Naic, Cavite', emergencyContact: 'Jerry Wong', emergencyNumber: '09181234713', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '2.00', final_grade_2: '1.75', midterm_grade: '2.00', final_grade: '1.75', remarks: 'Passed', has_2nd_sem: true },
+  { id: 314, studentId: '202510014', firstName: 'Kaye Anne', lastName: 'Zambrano', middleName: 'Aquino', suffix: '', name: 'Zambrano, Kaye Anne Aquino', email: 'kayeanne.zambrano@cvsu.edu.ph', contactNumber: '09171234714', facebookAccount: 'https://facebook.com/kayeanne.zambrano.cvsu', department: 'ROTC', program: 'BSCS', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'ROTC 2', sex: 'Female', gender: 'Female', birthMonth: '11', birthDay: '27', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '160', weight: '51', street: 'Brgy. Kanluran', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Kanluran, Naic, Cavite', emergencyContact: 'Karol Zambrano', emergencyNumber: '09181234714', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.50', midterm_grade: '1.50', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 315, studentId: '202510015', firstName: 'Dave', lastName: 'Bernardo', middleName: 'Castillo', suffix: '', name: 'Bernardo, Dave Castillo', email: 'dave.bernardo@cvsu.edu.ph', contactNumber: '09171234715', facebookAccount: 'https://facebook.com/dave.bernardo.cvsu', department: 'ROTC', program: 'BSHM', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'ROTC 3', sex: 'Male', gender: 'Male', birthMonth: '03', birthDay: '05', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'B+', height: '179', weight: '74', street: 'Brgy. Mabolo', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Mabolo, Naic, Cavite', emergencyContact: 'Danilo Bernardo', emergencyNumber: '09181234715', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 316, studentId: '202510016', firstName: 'Rhea Mae', lastName: 'Delos Reyes', middleName: 'Estrada', suffix: '', name: 'Delos Reyes, Rhea Mae Estrada', email: 'rheamae.delosreyes@cvsu.edu.ph', contactNumber: '09171234716', facebookAccount: 'https://facebook.com/rheamae.delosreyes.cvsu', department: 'ROTC', program: 'BSHM', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'ROTC 3', sex: 'Female', gender: 'Female', birthMonth: '07', birthDay: '11', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'AB+', height: '157', weight: '49', street: 'Brgy. San Roque', municipality: 'Naic', province: 'Cavite', address: 'Brgy. San Roque, Naic, Cavite', emergencyContact: 'Rowena Delos Reyes', emergencyNumber: '09181234716', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '2.00', final_grade_2: '2.25', midterm_grade: '2.25', final_grade: '2.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 317, studentId: '202510017', firstName: 'Patrick John', lastName: 'Ferrer', middleName: 'Garcia', suffix: '', name: 'Ferrer, Patrick John Garcia', email: 'patrickjohn.ferrer@cvsu.edu.ph', contactNumber: '09171234717', facebookAccount: 'https://facebook.com/patrickjohn.ferrer.cvsu', department: 'ROTC', program: 'BSFAS', yearLevel: '1st Year', year: '1st Year', section: '1-1', nstp_section: 'ROTC 1', sex: 'Male', gender: 'Male', birthMonth: '10', birthDay: '15', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'O+', height: '170', weight: '64', street: 'Brgy. Bucana Malaki', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bucana Malaki, Naic, Cavite', emergencyContact: 'Pablo Ferrer', emergencyNumber: '09181234717', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.75', final_grade_2: '1.75', midterm_grade: '1.75', final_grade: '1.75', remarks: 'Passed', has_2nd_sem: true },
+  { id: 318, studentId: '202510018', firstName: 'Aileen', lastName: 'Gutierrez', middleName: 'Hilario', suffix: '', name: 'Gutierrez, Aileen Hilario', email: 'aileen.gutierrez@cvsu.edu.ph', contactNumber: '09171234718', facebookAccount: 'https://facebook.com/aileen.gutierrez.cvsu', department: 'ROTC', program: 'BSFAS', yearLevel: '1st Year', year: '1st Year', section: '1-2', nstp_section: 'ROTC 2', sex: 'Female', gender: 'Female', birthMonth: '12', birthDay: '03', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'A+', height: '159', weight: '52', street: 'Brgy. Halang', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Halang, Naic, Cavite', emergencyContact: 'Arlene Gutierrez', emergencyNumber: '09181234718', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.50', midterm_grade: '1.50', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+
+  // LTS (8 students)
+  { id: 319, studentId: '202510019', firstName: 'Ralph', lastName: 'Ignacio', middleName: 'Jimenez', suffix: '', name: 'Ignacio, Ralph Jimenez', email: 'ralph.ignacio@cvsu.edu.ph', contactNumber: '09171234719', facebookAccount: 'https://facebook.com/ralph.ignacio.cvsu', department: 'LTS', program: 'BSED', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'LTS 1', sex: 'Male', gender: 'Male', birthMonth: '05', birthDay: '10', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'B+', height: '170', weight: '62', street: 'Brgy. Bucana Malaki', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bucana Malaki, Naic, Cavite', emergencyContact: 'Ramon Ignacio', emergencyNumber: '09181234719', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 320, studentId: '202510020', firstName: 'Camille Joy', lastName: 'Laurel', middleName: 'Magno', suffix: '', name: 'Laurel, Camille Joy Magno', email: 'camillejoy.laurel@cvsu.edu.ph', contactNumber: '09171234720', facebookAccount: 'https://facebook.com/camillejoy.laurel.cvsu', department: 'LTS', program: 'BSED', yearLevel: '1st Year', year: '1st Year', section: '1-A', nstp_section: 'LTS 1', sex: 'Female', gender: 'Female', birthMonth: '04', birthDay: '17', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'AB+', height: '158', weight: '47', street: 'Brgy. Halang', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Halang, Naic, Cavite', emergencyContact: 'Carmen Laurel', emergencyNumber: '09181234720', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.25', midterm_grade: '1.50', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 321, studentId: '202510021', firstName: 'Gerald', lastName: 'Natividad', middleName: 'Ople', suffix: '', name: 'Natividad, Gerald Ople', email: 'gerald.natividad@cvsu.edu.ph', contactNumber: '09171234721', facebookAccount: 'https://facebook.com/gerald.natividad.cvsu', department: 'LTS', program: 'BEED Science', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'LTS 2', sex: 'Male', gender: 'Male', birthMonth: '09', birthDay: '07', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'O+', height: '173', weight: '65', street: 'Brgy. Ibayo Silangan', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Ibayo Silangan, Naic, Cavite', emergencyContact: 'Gloria Natividad', emergencyNumber: '09181234721', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 322, studentId: '202510022', firstName: 'Princess Sarah', lastName: 'Pascual', middleName: 'Quezon', suffix: '', name: 'Pascual, Princess Sarah Quezon', email: 'princesssarah.pascual@cvsu.edu.ph', contactNumber: '09171234722', facebookAccount: 'https://facebook.com/princesssarah.pascual.cvsu', department: 'LTS', program: 'BEED Science', yearLevel: '1st Year', year: '1st Year', section: '1-B', nstp_section: 'LTS 2', sex: 'Female', gender: 'Female', birthMonth: '12', birthDay: '23', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '162', weight: '53', street: 'Brgy. Kanluran', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Kanluran, Naic, Cavite', emergencyContact: 'Pedro Pascual', emergencyNumber: '09181234722', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.75', midterm_grade: '1.75', final_grade: '1.75', remarks: 'Passed', has_2nd_sem: true },
+  { id: 323, studentId: '202510023', firstName: 'Joshua Ian', lastName: 'Rosales', middleName: 'Salazar', suffix: '', name: 'Rosales, Joshua Ian Salazar', email: 'joshuaian.rosales@cvsu.edu.ph', contactNumber: '09171234723', facebookAccount: 'https://facebook.com/joshuaian.rosales.cvsu', department: 'LTS', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'LTS 3', sex: 'Male', gender: 'Male', birthMonth: '02', birthDay: '11', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'B+', height: '174', weight: '67', street: 'Brgy. Mabolo', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Mabolo, Naic, Cavite', emergencyContact: 'Josefina Rosales', emergencyNumber: '09181234723', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.25', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 324, studentId: '202510024', firstName: 'Janelle', lastName: 'Tan', middleName: 'Urbano', suffix: '', name: 'Tan, Janelle Urbano', email: 'janelle.tan@cvsu.edu.ph', contactNumber: '09171234724', facebookAccount: 'https://facebook.com/janelle.tan.cvsu', department: 'LTS', program: 'BSIT', yearLevel: '1st Year', year: '1st Year', section: '1-C', nstp_section: 'LTS 3', sex: 'Female', gender: 'Female', birthMonth: '06', birthDay: '15', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'No', bloodType: 'AB+', height: '158', weight: '48', street: 'Brgy. San Roque', municipality: 'Naic', province: 'Cavite', address: 'Brgy. San Roque, Naic, Cavite', emergencyContact: 'Jaime Tan', emergencyNumber: '09181234724', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.00', final_grade_2: '1.25', midterm_grade: '1.25', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true },
+  { id: 325, studentId: '202510025', firstName: 'Marco', lastName: 'Valenzuela', middleName: 'Wenceslao', suffix: '', name: 'Valenzuela, Marco Wenceslao', email: 'marco.valenzuela@cvsu.edu.ph', contactNumber: '09171234725', facebookAccount: 'https://facebook.com/marco.valenzuela.cvsu', department: 'LTS', program: 'BSBA', yearLevel: '1st Year', year: '1st Year', section: '1-1', nstp_section: 'LTS 1', sex: 'Male', gender: 'Male', birthMonth: '10', birthDay: '28', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'O+', height: '171', weight: '64', street: 'Brgy. Malainen Luma', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Malainen Luma, Naic, Cavite', emergencyContact: 'Marta Valenzuela', emergencyNumber: '09181234725', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.75', final_grade_2: '1.50', midterm_grade: '1.75', final_grade: '1.50', remarks: 'Passed', has_2nd_sem: true },
+  { id: 326, studentId: '202510026', firstName: 'Diana Rose', lastName: 'Yulo', middleName: 'Zulueta', suffix: '', name: 'Yulo, Diana Rose Zulueta', email: 'dianarose.yulo@cvsu.edu.ph', contactNumber: '09171234726', facebookAccount: 'https://facebook.com/dianarose.yulo.cvsu', department: 'LTS', program: 'BSBA', yearLevel: '1st Year', year: '1st Year', section: '1-2', nstp_section: 'LTS 2', sex: 'Female', gender: 'Female', birthMonth: '08', birthDay: '09', birthYear: '2006', age: '19', civilStatus: 'Single', registeredVoter: 'Yes', bloodType: 'A+', height: '161', weight: '50', street: 'Brgy. Bagong Karsada', municipality: 'Naic', province: 'Cavite', address: 'Brgy. Bagong Karsada, Naic, Cavite', emergencyContact: 'Danny Yulo', emergencyNumber: '09181234726', schoolYear: '2025-2026', status: 'graduated', final_grade_1: '1.50', final_grade_2: '1.25', midterm_grade: '1.50', final_grade: '1.25', remarks: 'Passed', has_2nd_sem: true }
+];
+
 const DEFAULT_ARCHIVE_LETTERS = [
   {
     id: 'letter-1',
@@ -940,6 +974,142 @@ export const DEFAULT_PAST_BATCHES = [
           instructor_name: 'ROTC Instructor',
           submissions: [
             { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: '2025-04-17T17:00:00Z', notes: 'All graduating cadets recommended for national serial number registration.', attachment_name: 'ROTC_Graduation_Muster_2025.pdf' }
+          ]
+        }
+      ],
+      letterData: DEFAULT_ARCHIVE_LETTERS
+    }
+  },
+  {
+    id: 5,
+    year: '2025-2026 1st Semester',
+    students: 26,
+    reports: 3,
+    start_month: '2025-08',
+    end_month: '2025-12',
+    startMonth: '2025-08',
+    endMonth: '2025-12',
+    data: {
+      start_month: '2025-08',
+      end_month: '2025-12',
+      startMonth: '2025-08',
+      endMonth: '2025-12',
+      cwts: 10,
+      lts: 8,
+      rotc: 8,
+      studentData: RAW_STUDENTS_2025.map(s => ({
+        ...s,
+        semester: '1st Semester',
+        final_grade: s.final_grade_1,
+        remarks: s.final_grade_1 === '5.00' ? 'Failed' : s.final_grade_1 === 'INC' ? 'Incomplete' : s.final_grade_1 === 'DRP' ? 'Dropped' : 'Passed',
+        status: s.final_grade_1 === '5.00' ? 'failed' : s.final_grade_1 === 'INC' ? 'incomplete' : s.final_grade_1 === 'DRP' ? 'dropped' : 'active'
+      })),
+      reportData: [
+        { 
+          id: 501, 
+          title: 'Community Health Orientation & Emergency Kit Distribution (2025-2026 1st Sem)', 
+          department: 'CWTS', 
+          description: 'Health awareness campaigns and first-aid supply distribution across partner barangays.',
+          status: 'Approved', 
+          submittedAt: '2025-11-15',
+          instructor: 'CWTS Instructor',
+          instructor_name: 'CWTS Instructor',
+          submissions: [
+            { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: '2025-11-15T10:00:00Z', notes: 'First aid kits successfully turned over to barangay health workers.', attachment_name: 'CWTS_Health_Report_2025.pdf' }
+          ]
+        },
+        { 
+          id: 502, 
+          title: 'Early Childhood Phonics & Literacy Clinic (2025-2026 1st Sem)', 
+          department: 'LTS', 
+          description: 'Structured phonics and English literacy clinics conducted for Grades 1-3 pupils.',
+          status: 'Approved', 
+          submittedAt: '2025-11-16',
+          instructor: 'LTS Instructor',
+          instructor_name: 'LTS Instructor',
+          submissions: [
+            { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: '2025-11-16T11:00:00Z', notes: 'Reading assessments recorded positive baseline improvements.', attachment_name: 'LTS_Phonics_Report_2025.pdf' }
+          ]
+        },
+        { 
+          id: 503, 
+          title: 'ROTC Cadet Leadership Cadre Training & Muster (2025-2026 1st Sem)', 
+          department: 'ROTC', 
+          description: 'Intensive cadet officer leadership training and military drills on campus grounds.',
+          status: 'Approved', 
+          submittedAt: '2025-11-17',
+          instructor: 'ROTC Instructor',
+          instructor_name: 'ROTC Instructor',
+          submissions: [
+            { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: '2025-11-17T14:30:00Z', notes: 'Cadet corps leadership evaluations finalized.', attachment_name: 'ROTC_Cadre_Training_2025.pdf' }
+          ]
+        }
+      ],
+      letterData: DEFAULT_ARCHIVE_LETTERS
+    }
+  },
+  {
+    id: 6,
+    year: '2025-2026 2nd Semester',
+    students: 26,
+    reports: 3,
+    start_month: '2026-01',
+    end_month: '2026-05',
+    startMonth: '2026-01',
+    endMonth: '2026-05',
+    data: {
+      start_month: '2026-01',
+      end_month: '2026-05',
+      startMonth: '2026-01',
+      endMonth: '2026-05',
+      cwts: 10,
+      lts: 8,
+      rotc: 8,
+      studentData: RAW_STUDENTS_2025.map(s => ({
+        ...s,
+        semester: '2nd Semester',
+        final_grade: s.final_grade_2 || s.final_grade_1,
+        remarks: s.remarks,
+        status: s.status
+      })),
+      reportData: [
+        { 
+          id: 601, 
+          title: 'Culminating Coastal Cleanup & Tree Planting Activity (2025-2026 2nd Sem)', 
+          department: 'CWTS', 
+          description: 'Community coastal cleanup and 400 mangrove seedling tree planting alongside Naic shoreline.',
+          status: 'Approved', 
+          submittedAt: '2026-04-15',
+          instructor: 'CWTS Instructor',
+          instructor_name: 'CWTS Instructor',
+          submissions: [
+            { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: '2026-04-15T15:00:00Z', notes: 'Tree planting accomplishment confirmed by MENRO.', attachment_name: 'CWTS_Coastal_TreePlanting_2026.pdf' }
+          ]
+        },
+        { 
+          id: 602, 
+          title: 'Literacy Tutorial Graduation & Books Turnover (2025-2026 2nd Sem)', 
+          department: 'LTS', 
+          description: 'Pupil reading graduation ceremony and book donation turnover to partner school library.',
+          status: 'Approved', 
+          submittedAt: '2026-04-16',
+          instructor: 'LTS Instructor',
+          instructor_name: 'LTS Instructor',
+          submissions: [
+            { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: '2026-04-16T14:00:00Z', notes: 'Pupils achieved passing reading level criteria.', attachment_name: 'LTS_Graduation_Turnover_2026.pdf' }
+          ]
+        },
+        { 
+          id: 603, 
+          title: 'Annual ROTC Tactical Review & Pass-in-Review Parade (2025-2026 2nd Sem)', 
+          department: 'ROTC', 
+          description: 'Final cadet tactical inspection, graduation parade, and ceremonial badge awarding.',
+          status: 'Approved', 
+          submittedAt: '2026-04-17',
+          instructor: 'ROTC Instructor',
+          instructor_name: 'ROTC Instructor',
+          submissions: [
+            { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: '2026-04-17T16:30:00Z', notes: 'Graduating cadets certified for national serial number issuance.', attachment_name: 'ROTC_PassInReview_2026.pdf' }
           ]
         }
       ],

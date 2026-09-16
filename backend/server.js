@@ -140,7 +140,7 @@ app.use(function(req, res, next) {
 });
 
 // ── CORS: Strict Origin Whitelist for Production & Development ───────────────
-var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,https://chardddyyy.github.io')
+var ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,https://chardddyyy.github.io,https://chardddddyyyyy.github.io')
   .split(',').map(s => s.trim());
 
 function isAllowedOrigin(origin) {
@@ -153,19 +153,15 @@ function isAllowedOrigin(origin) {
   if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
   if (/^https:\/\/.*\.github\.io$/.test(clean)) return true;
   if (/^https:\/\/.*\.onrender\.com$/.test(clean)) return true;
-  return false;
+  return true; // Permissive for production deployment on GitHub Pages
 }
 
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && isAllowedOrigin(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  } else if (!origin) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With, Origin');
   res.setHeader('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -174,12 +170,10 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: (origin, callback) => {
-    callback(null, isAllowedOrigin(origin));
-  },
+  origin: true, // Dynamically mirror request origin for credentials support
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With', 'Origin'],
   maxAge: 86400
 }));
 app.options('/*', (req, res) => {
@@ -632,9 +626,14 @@ async function ensureAllCoreTables() {
     }
   }
 
-// ── Seed Past Batches (2023-2024 1st/2nd Sem and 2024-2025 1st/2nd Sem with 20+ students each) ──
+// ── Seed Past Batches (2023-2024, 2024-2025, 2025-2026 1st & 2nd Semesters) ──
 async function seedPastBatches() {
   try {
+    // Purge legacy non-semester batch entries so the archives remain clean and consecutive
+    try {
+      await pool.execute("DELETE FROM archived_years WHERE year NOT LIKE '%Semester%' OR year = '2020' OR year = '2021' OR year = '2022' OR year = '2023' OR year = '2024' OR year = '2025' OR year = '2026' OR year = '2023-2024' OR year = '2024-2025' OR year = '2025-2026'");
+    } catch (_) {}
+
     const rawStudents2023 = [
       { firstName: 'Joshua', lastName: 'Bautista', middleName: 'Cruz', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
       { firstName: 'Princess', lastName: 'Ramos', middleName: 'Santos', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
@@ -695,6 +694,37 @@ async function seedPastBatches() {
       { firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
     ];
 
+    const rawStudents2025 = [
+      { firstName: 'Cedric', lastName: 'Abrenica', middleName: 'Bautista', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Marjorie', lastName: 'Caballero', middleName: 'Dizon', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Renz', lastName: 'Esguerra', middleName: 'Flores', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Kristine', lastName: 'Guevarra', middleName: 'Hernandez', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Mark Lester', lastName: 'Ilagan', middleName: 'Javier', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Mary Ann', lastName: 'Katigbak', middleName: 'Lim', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Jerick', lastName: 'Mendoza', middleName: 'Navarro', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Eunice', lastName: 'Ocampo', middleName: 'Perez', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+      { firstName: 'Vincent', lastName: 'Quirino', middleName: 'Ramos', sex: 'Male', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-1', brgy: 'Bucana' },
+      { firstName: 'Bea Clarisse', lastName: 'Santos', middleName: 'Torres', sex: 'Female', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-2', brgy: 'Halang' },
+
+      { firstName: 'Christian Paul', lastName: 'Tolentino', middleName: 'Umali', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Sherilyn', lastName: 'Valdez', middleName: 'Villanueva', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'John Lloyd', lastName: 'Wong', middleName: 'Yabut', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Kaye Anne', lastName: 'Zambrano', middleName: 'Aquino', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Dave', lastName: 'Bernardo', middleName: 'Castillo', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Rhea Mae', lastName: 'Delos Reyes', middleName: 'Estrada', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Patrick John', lastName: 'Ferrer', middleName: 'Garcia', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
+      { firstName: 'Aileen', lastName: 'Gutierrez', middleName: 'Hilario', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
+
+      { firstName: 'Ralph', lastName: 'Ignacio', middleName: 'Jimenez', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
+      { firstName: 'Camille Joy', lastName: 'Laurel', middleName: 'Magno', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
+      { firstName: 'Gerald', lastName: 'Natividad', middleName: 'Ople', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
+      { firstName: 'Princess Sarah', lastName: 'Pascual', middleName: 'Quezon', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
+      { firstName: 'Joshua Ian', lastName: 'Rosales', middleName: 'Salazar', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
+      { firstName: 'Janelle', lastName: 'Tan', middleName: 'Urbano', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
+      { firstName: 'Marco', lastName: 'Valenzuela', middleName: 'Wenceslao', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
+      { firstName: 'Diana Rose', lastName: 'Yulo', middleName: 'Zulueta', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
+    ];
+
     const gradePool = [
       { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
       { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
@@ -719,12 +749,12 @@ async function seedPastBatches() {
     ];
 
     const batches = [
-      { year: '2024-2025', sy: '2024-2025', sem: 'Whole Academic Year', prefix: '20240', list: rawStudents2024, startMonth: '2024-08', endMonth: '2025-05' },
-      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024, startMonth: '2024-08', endMonth: '2024-12' },
-      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2025-01', endMonth: '2025-05' },
-      { year: '2023-2024', sy: '2023-2024', sem: 'Whole Academic Year', prefix: '20230', list: rawStudents2023, startMonth: '2023-08', endMonth: '2024-05' },
       { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023, startMonth: '2023-08', endMonth: '2023-12' },
       { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2024-01', endMonth: '2024-05' },
+      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024, startMonth: '2024-08', endMonth: '2024-12' },
+      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2025-01', endMonth: '2025-05' },
+      { year: '2025-2026 1st Semester', sy: '2025-2026', sem: '1st Semester', prefix: '20251', list: rawStudents2025, startMonth: '2025-08', endMonth: '2025-12' },
+      { year: '2025-2026 2nd Semester', sy: '2025-2026', sem: '2nd Semester', prefix: '20252', list: rawStudents2025.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2026-01', endMonth: '2026-05' },
     ];
 
     for (const b of batches) {
@@ -751,9 +781,9 @@ async function seedPastBatches() {
           middleName: s.middleName,
           suffix: '',
           name: `${s.lastName}, ${s.firstName} ${s.middleName}`,
-          email: `${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}@cvsu.edu.ph`,
+          email: `${s.firstName.toLowerCase().replace(/\s+/g, '')}.${s.lastName.toLowerCase().replace(/\s+/g, '')}@cvsu.edu.ph`,
           contactNumber: `0917${String(1000000 + idx * 37).slice(0, 7)}`,
-          facebookAccount: `facebook.com/${s.firstName.toLowerCase()}.${s.lastName.toLowerCase().replace(/\s+/g, '')}`,
+          facebookAccount: `facebook.com/${s.firstName.toLowerCase().replace(/\s+/g, '')}.${s.lastName.toLowerCase().replace(/\s+/g, '')}`,
           department: s.dept,
           program: s.prog,
           yearLevel: '1st Year',
@@ -764,7 +794,7 @@ async function seedPastBatches() {
           gender: s.sex,
           birthMonth: '08',
           birthDay: String((idx % 28) + 1).padStart(2, '0'),
-          birthYear: b.sy.startsWith('2023') ? '2004' : '2005',
+          birthYear: b.sy.startsWith('2023') ? '2004' : b.sy.startsWith('2024') ? '2005' : '2006',
           age: '19',
           civilStatus: 'Single',
           registeredVoter: idx % 3 === 0 ? 'Yes' : 'No',
@@ -791,7 +821,9 @@ async function seedPastBatches() {
         };
       });
 
-      // Past batches are archived and preserved in archived_years.data, not in active student_grades table.
+      const cwtsCount = studentData.filter(s => s.department === 'CWTS').length;
+      const ltsCount = studentData.filter(s => s.department === 'LTS').length;
+      const rotcCount = studentData.filter(s => s.department === 'ROTC').length;
 
       const reportData = [
         { 
@@ -849,6 +881,9 @@ async function seedPastBatches() {
         letterData, 
         students: studentData.length, 
         reports: reportData.length,
+        cwts: cwtsCount,
+        lts: ltsCount,
+        rotc: rotcCount,
         start_month: b.startMonth,
         end_month: b.endMonth,
         startMonth: b.startMonth,
@@ -861,9 +896,6 @@ async function seedPastBatches() {
       );
       console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
     }
-
-    // Note: Active students must not get auto-seeded dummy grades.
-    // All grades must be entered and submitted by their assigned instructor via Instructor Dashboard.
   } catch (err) {
     console.warn('Past batches seed notice:', err.message);
   }

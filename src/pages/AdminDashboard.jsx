@@ -17,6 +17,29 @@ import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValid
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
+function getStudentProgram(s) {
+  const raw = String(s?.program || s?.course || s?.degreeProgram || s?.degree_program || '').trim();
+  if (!raw) return 'BSIT';
+  const upper = raw.toUpperCase();
+  if (upper === 'BSIT' || upper.includes('INFORMATION TECH') || upper.includes('INFO TECH') || (upper.includes('IT') && !upper.includes('HOSP') && !upper.includes('ADMIN') && !upper.includes('SECUR'))) return 'BSIT';
+  if (upper === 'BSCS' || upper.includes('COMPUTER SCI')) return 'BSCS';
+  if (upper === 'BSFAS' || upper.includes('FISHER') || upper.includes('AQUATIC')) return 'BSFAS';
+  if (upper === 'BSHM' || upper.includes('HOSPITALITY') || upper.includes('HOTEL')) return 'BSHM';
+  if (upper === 'BSBA' || upper.includes('BUSINESS') || upper.includes('ADMINISTRATION') || upper.includes('ENTREP')) return 'BSBA';
+  if (upper === 'BEED' || upper === 'BEED SCIENCE' || upper.includes('ELEMENTARY')) return 'BEED Science';
+  if (upper === 'BSED' || upper.includes('SECONDARY') || upper.includes('EDUCATION')) return 'BSED';
+  if (upper.includes('CRIM')) return 'BS Crim';
+  return raw;
+}
+
+function parseBatchSortKey(batchStr) {
+  const str = String(batchStr || '').trim();
+  const yearMatch = str.match(/(\d{4})/);
+  const startYear = yearMatch ? parseInt(yearMatch[1], 10) : 2000;
+  const semScore = /2nd|second/i.test(str) ? 2 : /1st|first/i.test(str) ? 1 : 0;
+  return startYear * 10 + semScore;
+}
+
 import { getAvatarSrc } from '../utils/avatars';
 
 function RegistrationDocumentPreview({ documentUrl, onExpand, isFullscreen = false }) {
@@ -199,9 +222,19 @@ function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const safeArchivedYears = useMemo(() => {
-    return Array.isArray(archivedYears) && archivedYears.length > 0
+    const rawList = Array.isArray(archivedYears) && archivedYears.length > 0
       ? archivedYears
       : DEFAULT_PAST_BATCHES;
+
+    // Filter out obsolete batches that have no student records and no semester identifier
+    const valid = rawList.filter(item => {
+      const y = String(item.year || item).trim();
+      const hasSemester = /1st|2nd|semester|sem/i.test(y);
+      const totalCount = (item.data?.cwts || 0) + (item.data?.lts || 0) + (item.data?.rotc || 0) + (item.students || 0) + (item.cwts || 0) + (item.lts || 0) + (item.rotc || 0) + (item.studentData?.length || item.data?.studentData?.length || 0);
+      return hasSemester || totalCount > 0;
+    });
+
+    return valid.length > 0 ? valid : DEFAULT_PAST_BATCHES;
   }, [archivedYears]);
   
   const [showNotifications, setShowNotifications] = useState(false);
@@ -452,16 +485,26 @@ function AdminDashboard() {
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
-    const mapped = OFFICIAL_PROGRAMS.map(prog => {
-      const list = source.filter(s => (s.program || '').trim().toLowerCase() === prog.toLowerCase());
-      return {
-        program: prog,
-        total: list.length,
-        cwts: list.filter(s => s.department === 'CWTS').length,
-        lts:  list.filter(s => s.department === 'LTS').length,
-        rotc: list.filter(s => s.department === 'ROTC').length,
-      };
-    }).filter(p => p.total > 0);
+    
+    // Group all students in source by normalized program
+    const progMap = {};
+    OFFICIAL_PROGRAMS.forEach(p => {
+      progMap[p] = { program: p, total: 0, cwts: 0, lts: 0, rotc: 0 };
+    });
+
+    (source || []).forEach(s => {
+      const prog = getStudentProgram(s);
+      if (!progMap[prog]) {
+        progMap[prog] = { program: prog, total: 0, cwts: 0, lts: 0, rotc: 0 };
+      }
+      progMap[prog].total += 1;
+      const dept = String(s.department || s.nstpComponent || '').toUpperCase();
+      if (dept.includes('CWTS')) progMap[prog].cwts += 1;
+      else if (dept.includes('LTS')) progMap[prog].lts += 1;
+      else if (dept.includes('ROTC')) progMap[prog].rotc += 1;
+    });
+
+    const mapped = Object.values(progMap).filter(p => p.total > 0);
 
     return mapped.sort((a, b) => {
       // Put user-focused/selected program at the very top
@@ -2248,71 +2291,79 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
               {/* Bar Chart — Fitted 100% on Mobile */}
               <div className="w-full space-y-3 sm:space-y-4">
-                {[...safeArchivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
-                  year: y.year, 
-                  cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
-                  lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || 0, 
-                  rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || 0 
-                })), 
-                  { year: currentBatch, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
-                ].sort((a, b) => String(a.year).localeCompare(String(b.year))).map((data) => {
-                  const maxVal = Math.max(data.cwts || 0, data.lts || 0, data.rotc || 0, 100);
+                {(() => {
+                  const allComparisonBatches = [
+                    ...safeArchivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
+                      year: y.year, 
+                      cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || (y.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
+                      lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || (y.studentData?.filter(s => s.department === 'LTS').length) || 0, 
+                      rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || (y.studentData?.filter(s => s.department === 'ROTC').length) || 0 
+                    })), 
+                    { year: currentBatch, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
+                  ].sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year));
 
-                  return (
-                    <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
-                      <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
-                          <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
-                            Batch {data.year}
-                          </span>
-                          {String(data.year) === String(currentBatch) && (
-                            <span className="text-[9.5px] sm:text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs whitespace-nowrap">
-                              Active Batch
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 sm:space-y-2">
-                        {/* CWTS Bar */}
-                        <div className="flex items-center gap-2">
-                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-emerald-800 shrink-0">CWTS</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(data.cwts / maxVal) * 100}%`, minWidth: data.cwts > 0 ? '20px' : '0' }}
-                            >
-                              {data.cwts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.cwts}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        {/* LTS Bar */}
-                        <div className="flex items-center gap-2">
-                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-purple-800 shrink-0">LTS</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(data.lts / maxVal) * 100}%`, minWidth: data.lts > 0 ? '20px' : '0' }}
-                            >
-                              {data.lts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.lts}</span>}
-                            </div>
-                          </div>
-                        </div>
-                        {/* ROTC Bar */}
-                        <div className="flex items-center gap-2">
-                          <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-rose-800 shrink-0">ROTC</span>
-                          <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                              style={{ width: `${(data.rotc / maxVal) * 100}%`, minWidth: data.rotc > 0 ? '20px' : '0' }}
-                            >
-                              {data.rotc > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.rotc}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  const globalMaxVal = Math.max(
+                    ...allComparisonBatches.flatMap(b => [b.cwts || 0, b.lts || 0, b.rotc || 0]),
+                    20
                   );
-                })}
+
+                  return allComparisonBatches.map((data) => {
+                    return (
+                      <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                            <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
+                              Batch {data.year}
+                            </span>
+                            {String(data.year) === String(currentBatch) && (
+                              <span className="text-[9.5px] sm:text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs whitespace-nowrap">
+                                Active Batch
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 sm:space-y-2">
+                          {/* CWTS Bar */}
+                          <div className="flex items-center gap-2">
+                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-emerald-800 shrink-0">CWTS</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${Math.min(100, ((data.cwts || 0) / globalMaxVal) * 100)}%`, minWidth: data.cwts > 0 ? '24px' : '0' }}
+                              >
+                                {data.cwts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.cwts}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          {/* LTS Bar */}
+                          <div className="flex items-center gap-2">
+                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-purple-800 shrink-0">LTS</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${Math.min(100, ((data.lts || 0) / globalMaxVal) * 100)}%`, minWidth: data.lts > 0 ? '24px' : '0' }}
+                              >
+                                {data.lts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.lts}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          {/* ROTC Bar */}
+                          <div className="flex items-center gap-2">
+                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-rose-800 shrink-0">ROTC</span>
+                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
+                                style={{ width: `${Math.min(100, ((data.rotc || 0) / globalMaxVal) * 100)}%`, minWidth: data.rotc > 0 ? '24px' : '0' }}
+                              >
+                                {data.rotc > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.rotc}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}

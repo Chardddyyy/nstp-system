@@ -2608,7 +2608,7 @@ function Enrollment() {
             <div className="bg-emerald-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
-                  <UserSquare2 className="w-5 h-5" />
+                  <User className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black tracking-tight">Official 2x2 ID Photo Specimen &amp; Guide</h3>
