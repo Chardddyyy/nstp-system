@@ -1582,6 +1582,26 @@ function Chat() {
     return partner?.name || conversation.partnerName || conversation.with || 'Instructor';
   };
 
+  // Helper function to get the active, non-deleted snippet for conversation preview
+  const getConversationSnippet = (conversation) => {
+    if (!conversation) return 'No messages yet';
+    const convMsgs = messages[conversation.id];
+    if (Array.isArray(convMsgs) && convMsgs.length > 0) {
+      const activeMsgs = convMsgs.filter(m => !m.deleted_for_everyone && m.type !== 'deleted' && m.text !== '[deleted]');
+      if (activeMsgs.length > 0) {
+        const lastMsg = activeMsgs[activeMsgs.length - 1];
+        if (lastMsg.type === 'image') return '📷 Photo';
+        if (lastMsg.type === 'file') return `📄 ${lastMsg.fileName || lastMsg.file_name || 'Attachment'}`;
+        if (lastMsg.type === 'audio') return '🎤 Voice message';
+        return lastMsg.text || 'No messages yet';
+      }
+      return 'No messages yet';
+    }
+    const raw = conversation.last_message || conversation.lastMessage;
+    if (!raw || raw === '[deleted]') return 'No messages yet';
+    return raw;
+  };
+
   // Get the user object for conversation partner
   const getConversationPartner = (conversation) => {
     if (!conversation || !user || isGroupConversation(conversation)) return null;
@@ -2206,7 +2226,7 @@ function Chat() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 truncate">
-                        {conversation.last_message || conversation.lastMessage || 'No messages yet'}
+                        {getConversationSnippet(conversation)}
                       </p>
                     </div>
                     {/* Show unread count badge */}

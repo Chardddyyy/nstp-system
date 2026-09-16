@@ -824,18 +824,20 @@ function Profile() {
                               className="w-9 h-9 rounded-full object-cover shrink-0 border border-emerald-600/30 shadow-xs"
                             />
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-800 truncate">{inst.name}</p>
+                                {inst.role === 'admin' ? (
+                                  <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700 shrink-0">Admin</span>
+                                ) : (
+                                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'} shrink-0`}>
+                                    {inst.department}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-400 truncate">{inst.email}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            {inst.role === 'admin' ? (
-                              <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">Admin</span>
-                            ) : (
-                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'}`}>
-                                {inst.department}
-                              </span>
-                            )}
                             <button type="button"
                               onClick={() => openEditInstructorModal(inst)}
                               className="p-1.5 text-gray-400 hover:text-green-700 hover:bg-gray-100 rounded transition-colors"

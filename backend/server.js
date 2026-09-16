@@ -4656,6 +4656,23 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
         [snapshot, messageId]
       );
       
+      // Recalculate conversation last_message to remove deleted message preview
+      const [latestActive] = await pool.query(
+        "SELECT text, type, created_at, sender_id FROM messages WHERE conversation_id = ? AND (deleted_for_everyone IS NULL OR deleted_for_everyone = 0) AND (type != 'deleted') ORDER BY id DESC LIMIT 1",
+        [conversationId]
+      );
+      if (latestActive.length > 0) {
+        await pool.query(
+          'UPDATE conversations SET last_message = ?, last_message_time = ?, last_sender_id = ? WHERE id = ?',
+          [latestActive[0].text || '[Media]', latestActive[0].created_at, latestActive[0].sender_id, conversationId]
+        );
+      } else {
+        await pool.query(
+          'UPDATE conversations SET last_message = NULL, last_message_time = NULL, last_sender_id = NULL WHERE id = ?',
+          [conversationId]
+        );
+      }
+
       res.json({ message: 'Message deleted for everyone', forEveryone: true });
     } else {
       // Delete for me only - add user to deleted_for array

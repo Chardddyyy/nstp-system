@@ -97,8 +97,37 @@ function safeSetStorage(key, value) {
   }
 }
 
-function getNotificationStorageKey(role) {
-  return role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
+function getNotificationStorageKey(userOrRole, maybeId) {
+  if (typeof userOrRole === 'object' && userOrRole !== null) {
+    const role = userOrRole.role || 'user';
+    const uid = userOrRole.id ? `_${userOrRole.id}` : '';
+    return `nstp_notifications_${role}${uid}`;
+  }
+  const role = userOrRole || 'admin';
+  const uid = maybeId ? `_${maybeId}` : '';
+  return `nstp_notifications_${role}${uid}`;
+}
+
+function getDismissedStorageKey(userOrRole, maybeId) {
+  if (typeof userOrRole === 'object' && userOrRole !== null) {
+    const role = userOrRole.role || 'user';
+    const uid = userOrRole.id ? `_${userOrRole.id}` : '';
+    return `nstp_dismissed_notifications_${role}${uid}`;
+  }
+  const role = userOrRole || 'admin';
+  const uid = maybeId ? `_${maybeId}` : '';
+  return `nstp_dismissed_notifications_${role}${uid}`;
+}
+
+function getSeenEntitiesStorageKey(userOrRole, maybeId) {
+  if (typeof userOrRole === 'object' && userOrRole !== null) {
+    const role = userOrRole.role || 'user';
+    const uid = userOrRole.id ? `_${userOrRole.id}` : '';
+    return `nstp_seen_entities_${role}${uid}`;
+  }
+  const role = userOrRole || 'admin';
+  const uid = maybeId ? `_${maybeId}` : '';
+  return `nstp_seen_entities_${role}${uid}`;
 }
 
 function GlobalKeyboardManager() {
@@ -351,9 +380,33 @@ function App() {
   }, [user]);
 
   const pushNotification = useCallback((notif) => {
+    if (!notif) return;
+    const notifKey = notif.id || notif.key || (
+      notif.enrollmentId ? `enrollment-${notif.enrollmentId}` :
+      notif.reportId ? `report-${notif.reportId}` :
+      notif.conversationId ? `conv-${notif.conversationId}` :
+      `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+    );
+
+    // Check if user previously dismissed or deleted this notification/entity
+    if (user) {
+      try {
+        const dismissKey = getDismissedStorageKey(user);
+        const dismissed = new Set(JSON.parse(localStorage.getItem(dismissKey) || '[]').map(String));
+        if (
+          dismissed.has(String(notifKey)) ||
+          (notif.enrollmentId && dismissed.has(`enrollment-${notif.enrollmentId}`)) ||
+          (notif.reportId && dismissed.has(`report-${notif.reportId}`)) ||
+          (notif.conversationId && dismissed.has(`conv-${notif.conversationId}`))
+        ) {
+          return; // Previously dismissed by user; never recreate
+        }
+      } catch {}
+    }
+
     const item = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
-      time: 'Just now',
+      id: notifKey,
+      time: notif.time || 'Just now',
       read: false,
       title: notif.title,
       message: notif.message,
@@ -367,12 +420,50 @@ function App() {
       senderName: notif.senderName || null,
     };
 
-    // Direct exclusively to Notifications Bell menu and badge counter (no side toast popups)
-    setNotifications(prev => [item, ...prev].slice(0, 50));
+    setNotifications(prev => {
+      // Prevent duplicate notification for same entity key
+      if (prev.some(n => String(n.id) === String(notifKey))) return prev;
+      return [item, ...prev].slice(0, 50);
+    });
 
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try { new Notification(item.title, { body: item.message }); } catch { /* ignore */ }
     }
+  }, [user]);
+
+  const deleteNotifications = useCallback((idsToDelete) => {
+    const idSet = new Set((Array.isArray(idsToDelete) ? idsToDelete : [idsToDelete]).map(String));
+    
+    // Save to persistent dismissed registry for this user
+    if (user) {
+      const dismissKey = getDismissedStorageKey(user);
+      try {
+        const existing = JSON.parse(localStorage.getItem(dismissKey) || '[]');
+        const dismissed = new Set(existing.map(String));
+        notifications.forEach(n => {
+          if (idSet.has(String(n.id))) {
+            dismissed.add(String(n.id));
+            if (n.enrollmentId) dismissed.add(`enrollment-${n.enrollmentId}`);
+            if (n.reportId) dismissed.add(`report-${n.reportId}`);
+            if (n.conversationId) dismissed.add(`conv-${n.conversationId}`);
+          }
+        });
+        idSet.forEach(id => dismissed.add(String(id)));
+        safeSetStorage(dismissKey, Array.from(dismissed).slice(-500));
+      } catch {}
+    }
+
+    setNotifications(prev => (prev || []).filter(n => !idSet.has(String(n.id))));
+  }, [user, notifications]);
+
+  const markAllNotificationsRead = useCallback((idsToMark = null) => {
+    setNotifications(prev => {
+      if (Array.isArray(idsToMark) && idsToMark.length > 0) {
+        const idSet = new Set(idsToMark.map(String));
+        return (prev || []).map(n => idSet.has(String(n.id)) ? { ...n, read: true } : n);
+      }
+      return (prev || []).map(n => ({ ...n, read: true }));
+    });
   }, []);
 
   const dismissToast = useCallback((toastId) => {
@@ -513,6 +604,19 @@ function App() {
       }
     });
 
+    // Persist seen IDs to storage so next login doesn't duplicate existing records
+    if (currentUser) {
+      try {
+        const seenPayload = {
+          enrollments: Array.from(seenEnrollmentIds.current).slice(-500),
+          submissions: Array.from(seenSubmissionKeys.current).slice(-500),
+          reports: Array.from(seenReportIds.current).slice(-500),
+          students: Array.from(seenStudentIds.current).slice(-500)
+        };
+        safeSetStorage(getSeenEntitiesStorageKey(currentUser), seenPayload);
+      } catch {}
+    }
+
     baselineReady.current = true;
   }
 
@@ -523,14 +627,30 @@ function App() {
     const safeStudents = Array.isArray(studentsList) ? studentsList : [];
     const safeReports = Array.isArray(reportsList) ? reportsList : [];
 
+    // Load dismissed keys to ensure dismissed notifications are never recreated
+    let dismissedSet = new Set();
+    try {
+      const dismissKey = getDismissedStorageKey(currentUser);
+      dismissedSet = new Set(JSON.parse(localStorage.getItem(dismissKey) || '[]').map(String));
+    } catch {}
+
+    let newlySeen = false;
+
     if (currentUser.role === 'admin') {
       // 1. New Pending Enrollments
       safePending.forEach(enrollment => {
         if (!enrollment || !enrollment.id) return;
+        const eKey = `enrollment-${enrollment.id}`;
+        if (dismissedSet.has(String(enrollment.id)) || dismissedSet.has(eKey)) {
+          seenEnrollmentIds.current.add(enrollment.id);
+          return;
+        }
         if (!seenEnrollmentIds.current.has(enrollment.id)) {
           seenEnrollmentIds.current.add(enrollment.id);
+          newlySeen = true;
           const enrollName = enrollment.student_name || enrollment.fullName || enrollment.firstName || 'A student';
           pushNotification({
+            id: eKey,
             title: 'New Enrollment Application',
             message: `${enrollName} submitted an enrollment application (${enrollment.department || 'NSTP'})`,
             type: 'enrollment',
@@ -547,9 +667,15 @@ function App() {
         (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
           if (!sub) return;
           const subKey = `${report.id}-${sub.instructor_id}-${sub.id}`;
+          if (dismissedSet.has(subKey) || dismissedSet.has(`report-${report.id}`)) {
+            seenSubmissionKeys.current.add(subKey);
+            return;
+          }
           if (!seenSubmissionKeys.current.has(subKey)) {
             seenSubmissionKeys.current.add(subKey);
+            newlySeen = true;
             pushNotification({
+              id: `submission-${subKey}`,
               title: 'New Report Submission',
               message: `Report "${report.title || 'Untitled'}" was submitted by ${sub.instructor || sub.department || 'an instructor'}`,
               type: 'report',
@@ -563,15 +689,22 @@ function App() {
     }
 
     if (currentUser.role === 'instructor') {
-      // 1. Check for newly approved/enrolled students assigned to this instructor's department (e.g. ROTC, CWTS, LTS)
+      // 1. Check for newly approved/enrolled students assigned to this instructor's department
       safeStudents.forEach(student => {
         if (!student || !student.id) return;
+        const sKey = `student-${student.id}`;
+        if (dismissedSet.has(String(student.id)) || dismissedSet.has(sKey)) {
+          seenStudentIds.current.add(student.id);
+          return;
+        }
         if (!seenStudentIds.current.has(student.id)) {
           seenStudentIds.current.add(student.id);
+          newlySeen = true;
           const studentDept = student.department || student.nstp_component || '';
           if (studentDept === currentUser.department) {
             const studentName = student.name || student.student_name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'New Student';
             pushNotification({
+              id: sKey,
               title: `New ${currentUser.department} Student Enrolled`,
               message: `${studentName} was assigned to ${currentUser.department} class roster`,
               type: 'student',
@@ -585,10 +718,17 @@ function App() {
       // 2. Check for newly created report assignments targeting All or this department
       safeReports.forEach(report => {
         if (!report || !report.id) return;
+        const rKey = `report-${report.id}`;
+        if (dismissedSet.has(String(report.id)) || dismissedSet.has(rKey)) {
+          seenReportIds.current.add(report.id);
+          return;
+        }
         const isTargetDept = report.department === 'All' || report.department === currentUser.department;
         if (isTargetDept && !seenReportIds.current.has(report.id)) {
           seenReportIds.current.add(report.id);
+          newlySeen = true;
           pushNotification({
+            id: rKey,
             title: report.department === 'All' ? 'New General Report Assignment' : `New ${report.department} Report Assignment`,
             message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
             type: 'report',
@@ -598,6 +738,18 @@ function App() {
           });
         }
       });
+    }
+
+    if (newlySeen && currentUser) {
+      try {
+        const seenPayload = {
+          enrollments: Array.from(seenEnrollmentIds.current).slice(-500),
+          submissions: Array.from(seenSubmissionKeys.current).slice(-500),
+          reports: Array.from(seenReportIds.current).slice(-500),
+          students: Array.from(seenStudentIds.current).slice(-500)
+        };
+        safeSetStorage(getSeenEntitiesStorageKey(currentUser), seenPayload);
+      } catch {}
     }
   }
 
@@ -705,25 +857,44 @@ function App() {
     }
   }
 
+  const notificationsLoadedUserRef = useRef(null);
+
   // Load notifications from storage when user logs in
   useEffect(() => {
-    if (!user) return;
-    const saved = localStorage.getItem(getNotificationStorageKey(user.role));
-    try {
-      setNotifications(saved ? JSON.parse(saved) : []);
-    } catch {
-      setNotifications([]);
+    if (!user) {
+      notificationsLoadedUserRef.current = null;
+      return;
     }
+    const key = getNotificationStorageKey(user);
+    const legacyKey = user.role === 'admin' ? 'nstp_admin_notifications' : 'nstp_instructor_notifications';
+    const saved = localStorage.getItem(key) || localStorage.getItem(legacyKey);
+    let loaded = [];
+    try {
+      loaded = saved ? JSON.parse(saved) : [];
+    } catch {
+      loaded = [];
+    }
+    setNotifications(Array.isArray(loaded) ? loaded : []);
+    notificationsLoadedUserRef.current = user.id;
+
+    // Load seen entity IDs from storage so existing items are never re-notified
+    try {
+      const seenData = JSON.parse(localStorage.getItem(getSeenEntitiesStorageKey(user)) || '{}');
+      (seenData.enrollments || []).forEach(id => seenEnrollmentIds.current.add(id));
+      (seenData.submissions || []).forEach(k => seenSubmissionKeys.current.add(k));
+      (seenData.reports || []).forEach(id => seenReportIds.current.add(id));
+      (seenData.students || []).forEach(id => seenStudentIds.current.add(id));
+    } catch {}
+
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
   }, [user]);
 
-
-
+  // Persist notifications to storage ONLY AFTER they have been loaded for this active user
   useEffect(() => {
-    if (!user) return;
-    safeSetStorage(getNotificationStorageKey(user.role), notifications);
+    if (!user || notificationsLoadedUserRef.current !== user.id) return;
+    safeSetStorage(getNotificationStorageKey(user), notifications);
   }, [notifications, user]);
 
   // Real-time polling while logged in
@@ -915,6 +1086,7 @@ function App() {
           (enrollmentsData || []).filter(e => e?.status === 'Pending'),
           reportsData || [],
           conversationsData,
+          studentsData || [],
           activeUser
         );
       }
@@ -952,6 +1124,10 @@ function App() {
     } catch (_) {}
     localStorage.removeItem('nstp_token');
     localStorage.removeItem('nstp_cached_user');
+    if (user) {
+      safeSetStorage(getNotificationStorageKey(user), notifications);
+    }
+    notificationsLoadedUserRef.current = null;
     setUser(null);
     setUsers([]);
     setStudents([]);
@@ -1311,7 +1487,7 @@ function App() {
     clearBatchData, submitEnrollment: submitEnrollmentFunc,
     approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
     loading, refreshData: loadAllData, refreshLiveData,
-    notifications, setNotifications, pushNotification,
+    notifications, setNotifications, pushNotification, deleteNotifications, markAllNotificationsRead,
     toasts, dismissToast, showToast,
     incomingCall, outgoingCallStatus,
     pendingAnsweredCall, setPendingAnsweredCall,

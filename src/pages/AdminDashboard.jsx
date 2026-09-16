@@ -186,6 +186,8 @@ function AdminDashboard() {
     currentBatch = '2026-2027 1st Semester', 
     notifications = [], 
     setNotifications, 
+    deleteNotifications,
+    markAllNotificationsRead,
     viewingArchive, 
     archiveViewData, 
     setViewingArchive, 
@@ -203,7 +205,27 @@ function AdminDashboard() {
   }, [archivedYears]);
   
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
+  const [selectedMessages, setSelectedMessages] = useState([]);
+
+  const isMessageNotification = (n) => n?.type === 'message' || n?.link === '/chat' || Boolean(n?.conversationId);
+
+  const systemNotifications = useMemo(() => {
+    return (notifications || []).filter(n => !isMessageNotification(n));
+  }, [notifications]);
+
+  const messageNotifications = useMemo(() => {
+    return (notifications || []).filter(n => isMessageNotification(n));
+  }, [notifications]);
+
+  const unreadCount = useMemo(() => {
+    return systemNotifications.filter(n => !n.read).length;
+  }, [systemNotifications]);
+
+  const messageUnreadCount = useMemo(() => {
+    return messageNotifications.filter(n => !n.read).length;
+  }, [messageNotifications]);
   
   // Real-time RegForm document validator audit hook
   const regformAudits = useRegformAuditor(pendingEnrollments);
@@ -260,13 +282,15 @@ function AdminDashboard() {
     setScheduleStatus(updatedStatus);
   };
   
-  // Close notification panel when clicking outside
+  // Close notification / message panels when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!showNotifications) return;
-      if (e.target.closest('.notification-container')) return;
+      if (!showNotifications && !showMessages) return;
+      if (e.target.closest('.notification-container') || e.target.closest('.message-notification-container')) return;
       setShowNotifications(false);
+      setShowMessages(false);
       setSelectedNotifications([]);
+      setSelectedMessages([]);
     };
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
@@ -274,7 +298,7 @@ function AdminDashboard() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [showNotifications]);
+  }, [showNotifications, showMessages]);
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
@@ -484,7 +508,7 @@ function AdminDashboard() {
     );
   }
   
-  const unreadCount = (notifications || []).filter(n => !n.read).length;
+
   
   function notificationIdsMatch(a, b) {
     return String(a) === String(b);
@@ -499,14 +523,39 @@ function AdminDashboard() {
       return prev.concat([id]);
     });
   }
+
+  function handleSelectMessage(id) {
+    setSelectedMessages(function(prev) {
+      const has = prev.some(function(nId) { return notificationIdsMatch(nId, id); });
+      if (has) {
+        return prev.filter(function(nId) { return !notificationIdsMatch(nId, id); });
+      }
+      return prev.concat([id]);
+    });
+  }
   
   function handleSelectAll(e) {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    const list = notifications || [];
+    const list = systemNotifications;
     setSelectedNotifications(function(prev) {
+      const allSelected = list.length > 0 && list.every(function(n) {
+        return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+      });
+      if (allSelected) return [];
+      return list.map(function(n) { return n.id; });
+    });
+  }
+
+  function handleSelectAllMessages(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const list = messageNotifications;
+    setSelectedMessages(function(prev) {
       const allSelected = list.length > 0 && list.every(function(n) {
         return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
       });
@@ -520,52 +569,122 @@ function AdminDashboard() {
       e.preventDefault();
       e.stopPropagation();
     }
-    const selectedSet = new Set(selectedNotifications.map(function(id) { return String(id); }));
-    setNotifications(function(prev) {
-      return (prev || []).filter(function(n) {
-        return !selectedSet.has(String(n.id));
+    if (deleteNotifications) {
+      deleteNotifications(selectedNotifications);
+    } else {
+      const selectedSet = new Set(selectedNotifications.map(function(id) { return String(id); }));
+      setNotifications(function(prev) {
+        return (prev || []).filter(function(n) {
+          return !selectedSet.has(String(n.id));
+        });
       });
-    });
+    }
     setSelectedNotifications([]);
+  }
+
+  function handleDeleteSelectedMessages(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (deleteNotifications) {
+      deleteNotifications(selectedMessages);
+    } else {
+      const selectedSet = new Set(selectedMessages.map(function(id) { return String(id); }));
+      setNotifications(function(prev) {
+        return (prev || []).filter(function(n) {
+          return !selectedSet.has(String(n.id));
+        });
+      });
+    }
+    setSelectedMessages([]);
+  }
+
+  function handleDeleteOne(e, id) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (deleteNotifications) {
+      deleteNotifications([id]);
+    } else {
+      setNotifications(function(prev) {
+        return (prev || []).filter(function(n) {
+          return !notificationIdsMatch(n.id, id);
+        });
+      });
+    }
+    setSelectedNotifications(function(prev) {
+      return prev.filter(function(sid) { return !notificationIdsMatch(sid, id); });
+    });
+    setSelectedMessages(function(prev) {
+      return prev.filter(function(sid) { return !notificationIdsMatch(sid, id); });
+    });
   }
 
   function handleMarkAllRead(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    setNotifications(function(prev) {
-      if (selectedNotifications.length > 0) {
+    const targets = selectedNotifications.length > 0 ? selectedNotifications : systemNotifications.map(n => n.id);
+    if (markAllNotificationsRead) {
+      markAllNotificationsRead(targets.length > 0 ? targets : null);
+    } else {
+      const targetSet = new Set(targets.map(id => String(id)));
+      setNotifications(function(prev) {
         return (prev || []).map(function(n) {
-          const isSelected = selectedNotifications.some(function(sid) {
-            return notificationIdsMatch(sid, n.id);
-          });
-          return isSelected ? { ...n, read: true } : n;
+          return targetSet.has(String(n.id)) ? { ...n, read: true } : n;
         });
-      }
-      return (prev || []).map(function(n) { return { ...n, read: true }; });
-    });
+      });
+    }
     setSelectedNotifications([]);
   }
 
-  function handleMarkOneRead(e, id) {
-    e.preventDefault();
-    e.stopPropagation();
-    setNotifications(function(prev) {
-      return (prev || []).map(function(n) {
-        return notificationIdsMatch(n.id, id) ? { ...n, read: true } : n;
+  function handleMarkAllMessagesRead(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    const targets = selectedMessages.length > 0 ? selectedMessages : messageNotifications.map(n => n.id);
+    if (markAllNotificationsRead) {
+      markAllNotificationsRead(targets.length > 0 ? targets : null);
+    } else {
+      const targetSet = new Set(targets.map(id => String(id)));
+      setNotifications(function(prev) {
+        return (prev || []).map(function(n) {
+          return targetSet.has(String(n.id)) ? { ...n, read: true } : n;
+        });
       });
-    });
+    }
+    setSelectedMessages([]);
+  }
+
+  function handleMarkOneRead(e, id) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (markAllNotificationsRead) {
+      markAllNotificationsRead([id]);
+    } else {
+      setNotifications(function(prev) {
+        return (prev || []).map(function(n) {
+          return notificationIdsMatch(n.id, id) ? { ...n, read: true } : n;
+        });
+      });
+    }
   }
 
   // Handle notification click with direct deep-linking
   function handleNotificationItemClick(notification) {
     if (!notification) return;
-    // Mark as read
-    const newNotifications = (notifications || []).map(n => {
-      if (n.id === notification.id) {
-        return { ...n, read: true };
-      }
-      return n;
-    });
-    setNotifications(newNotifications);
+    // Mark as read persistently
+    if (markAllNotificationsRead) {
+      markAllNotificationsRead([notification.id]);
+    } else {
+      const newNotifications = (notifications || []).map(n => {
+        if (n.id === notification.id) {
+          return { ...n, read: true };
+        }
+        return n;
+      });
+      setNotifications(newNotifications);
+    }
     setShowNotifications(false);
     setSelectedNotifications([]);
 
@@ -919,10 +1038,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
-              {/* Notification Bell & Interactive Dropdown Panel */}
+              {/* System Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
                 <button type="button"
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    if (!showNotifications) setShowMessages(false);
+                  }}
                   className="relative p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0 active:scale-95 shadow-xs"
                   title="Notifications"
                 >
@@ -934,7 +1056,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   )}
                 </button>
 
-                {/* Notification Dropdown Panel */}
+                {/* System Notification Dropdown Panel */}
                 {showNotifications && (
                   <div
                     className="notification-dropdown fixed sm:absolute inset-x-2 sm:inset-auto right-2 sm:right-0 mt-1 sm:mt-3 w-auto sm:w-80 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
@@ -947,7 +1069,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           onClick={handleSelectAll}
                           className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
-                          {selectedNotifications.length === (notifications || []).length && notifications.length > 0
+                          {selectedNotifications.length === (systemNotifications || []).length && systemNotifications.length > 0
                             ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
                             : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                         </button>
@@ -958,8 +1080,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           onClick={handleMarkAllRead}
                           disabled={
                             selectedNotifications.length > 0
-                              ? !(notifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
-                              : (notifications || []).every(n => n.read)
+                              ? !(systemNotifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                              : (systemNotifications || []).every(n => n.read)
                           }
                           className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
                           title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
@@ -984,13 +1106,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     </div>
 
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
-                      {(!notifications || notifications.length === 0) ? (
+                      {(!systemNotifications || systemNotifications.length === 0) ? (
                         <div className="p-4 text-center text-gray-400 text-xs font-medium">
                           <Bell className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-emerald-800" />
-                          No notifications yet
+                          No system notifications yet
                         </div>
                       ) : (
-                        notifications.map((n) => {
+                        systemNotifications.map((n) => {
                           const isSelected = selectedNotifications.some(sid => notificationIdsMatch(sid, n.id));
                           return (
                             <div
@@ -1024,12 +1146,167 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     {!n.read && (
                                       <button type="button"
                                         onClick={(e) => handleMarkOneRead(e, n.id)}
-                                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                                        className="text-emerald-600 hover:text-emerald-700 transition-colors p-0.5"
                                         title="Mark as read"
                                       >
                                         <MailOpen className="w-3 h-3" />
                                       </button>
                                     )}
+                                    <button type="button"
+                                      onClick={(e) => handleDeleteOne(e, n.id)}
+                                      className="text-gray-400 hover:text-rose-600 transition-colors p-0.5"
+                                      title="Delete notification"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">{n.time}</span>
+                                  </div>
+                                </div>
+                                <p className={`text-[10px] sm:text-xs mt-0.5 line-clamp-1 sm:line-clamp-2 ${n.read ? 'text-gray-500 font-normal' : 'text-gray-700 font-medium'}`}>
+                                  {n.message}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Message Notification Button & Interactive Dropdown Panel */}
+              <div className="relative message-notification-container">
+                <button type="button"
+                  onClick={() => {
+                    setShowMessages(!showMessages);
+                    if (!showMessages) setShowNotifications(false);
+                  }}
+                  className="relative p-2 sm:p-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white rounded-xl sm:rounded-2xl transition-colors cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                  title="Messages"
+                >
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {messageUnreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 text-emerald-950 text-[8.5px] sm:text-[10px] font-black rounded-full flex items-center justify-center border border-emerald-950 shadow-xs">
+                      {messageUnreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Message Dropdown Panel */}
+                {showMessages && (
+                  <div
+                    className="message-dropdown fixed sm:absolute inset-x-2 sm:inset-auto right-2 sm:right-0 mt-1 sm:mt-3 w-auto sm:w-80 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 z-[100] text-gray-900 overflow-hidden animate-fade-in"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
+                    <div className="px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 border-b border-gray-100 flex justify-between items-center bg-gray-50/90">
+                      <div className="flex items-center space-x-1.5 sm:space-x-2">
+                        <button type="button"
+                          onClick={handleSelectAllMessages}
+                          className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                        >
+                          {selectedMessages.length === (messageNotifications || []).length && messageNotifications.length > 0
+                            ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                            : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                        </button>
+                        <h3 className="font-extrabold text-[11px] sm:text-xs text-gray-900 flex items-center gap-1.5">
+                          <MessageSquare className="w-3.5 h-3.5 text-emerald-700" />
+                          Messages ({messageUnreadCount} new)
+                        </h3>
+                      </div>
+                      <div className="flex items-center space-x-1 sm:space-x-1.5">
+                        <button type="button"
+                          onClick={handleMarkAllMessagesRead}
+                          disabled={
+                            selectedMessages.length > 0
+                              ? !(messageNotifications || []).some(n => selectedMessages.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                              : (messageNotifications || []).every(n => n.read)
+                          }
+                          className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
+                          title={selectedMessages.length > 0 ? "Mark selected as read" : "Mark all as read"}
+                        >
+                          <MailOpen className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button"
+                          onClick={handleDeleteSelectedMessages}
+                          disabled={selectedMessages.length === 0}
+                          className="text-rose-600 hover:text-rose-700 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
+                          title="Delete selected"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button"
+                          onClick={() => { setShowMessages(false); setSelectedMessages([]); }}
+                          className="text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                        >
+                          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
+                      {(!messageNotifications || messageNotifications.length === 0) ? (
+                        <div className="p-4 text-center text-gray-400 text-xs font-medium">
+                          <MessageSquare className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-emerald-800" />
+                          No message notifications yet
+                        </div>
+                      ) : (
+                        messageNotifications.map((n) => {
+                          const isSelected = selectedMessages.some(sid => notificationIdsMatch(sid, n.id));
+                          return (
+                            <div
+                              key={n.id}
+                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
+                                !n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <button type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectMessage(n.id);
+                                }}
+                                className="mt-0.5 shrink-0 text-gray-400 hover:text-emerald-600 cursor-pointer"
+                              >
+                                {isSelected ? (
+                                  <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                                ) : (
+                                  <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-300" />
+                                )}
+                              </button>
+                              <div
+                                className="flex-1 cursor-pointer min-w-0"
+                                onClick={() => {
+                                  handleMarkOneRead(null, n.id);
+                                  setShowMessages(false);
+                                  if (n.conversationId) {
+                                    navigate(`/chat?conv=${n.conversationId}`);
+                                  } else {
+                                    navigate('/chat');
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                    {n.senderName || n.title || 'Message'}
+                                  </h4>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {!n.read && (
+                                      <button type="button"
+                                        onClick={(e) => handleMarkOneRead(e, n.id)}
+                                        className="text-emerald-600 hover:text-emerald-700 transition-colors p-0.5"
+                                        title="Mark as read"
+                                      >
+                                        <MailOpen className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                    <button type="button"
+                                      onClick={(e) => handleDeleteOne(e, n.id)}
+                                      className="text-gray-400 hover:text-rose-600 transition-colors p-0.5"
+                                      title="Delete message notification"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
                                     <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium">{n.time}</span>
                                   </div>
                                 </div>

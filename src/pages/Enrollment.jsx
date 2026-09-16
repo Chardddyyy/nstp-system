@@ -190,6 +190,9 @@ function Enrollment() {
   // Full Photo Inspection & Lightbox Modal State
   const [previewPhotoModal, setPreviewPhotoModal] = useState(null);
   const [showSampleCorModal, setShowSampleCorModal] = useState(false);
+  const [corGuideAction, setCorGuideAction] = useState('file'); // 'file' or 'camera'
+  const [showSample2x2Modal, setShowSample2x2Modal] = useState(false);
+  const [photoGuideAction, setPhotoGuideAction] = useState('file'); // 'file' or 'camera'
   const [corUploadWarning, setCorUploadWarning] = useState('');
 
   // Live Camera Capture Modal State & WebRTC Refs
@@ -209,6 +212,34 @@ function Enrollment() {
   const closeCameraModal = () => {
     stopCameraStream();
     setShowCameraModal(false);
+  };
+
+  const triggerCorAction = (action = 'file') => {
+    setCorGuideAction(action);
+    setShowSampleCorModal(true);
+  };
+
+  const confirmCorAction = () => {
+    setShowSampleCorModal(false);
+    if (corGuideAction === 'camera') {
+      startLiveCamera('regform');
+    } else {
+      photoInputRef.current?.click();
+    }
+  };
+
+  const trigger2x2Action = (action = 'file') => {
+    setPhotoGuideAction(action);
+    setShowSample2x2Modal(true);
+  };
+
+  const confirm2x2Action = () => {
+    setShowSample2x2Modal(false);
+    if (photoGuideAction === 'camera') {
+      startLiveCamera('idphoto', 'user');
+    } else {
+      idPhotoInputRef.current?.click();
+    }
   };
 
   const startLiveCamera = async (target = 'regform', preferredFacing = 'environment') => {
@@ -1696,14 +1727,6 @@ function Enrollment() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowSampleCorModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 shrink-0"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span>📋 View RegForm (COR) Sample Guide</span>
-                      </button>
                     </div>
                     <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
                   </div>
@@ -1762,7 +1785,7 @@ function Enrollment() {
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
                         type="button"
-                        onClick={() => photoInputRef.current.click()}
+                        onClick={() => triggerCorAction('file')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
@@ -1770,7 +1793,7 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => startLiveCamera('regform')}
+                        onClick={() => triggerCorAction('camera')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
@@ -1884,7 +1907,7 @@ function Enrollment() {
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
                         type="button"
-                        onClick={() => idPhotoInputRef.current.click()}
+                        onClick={() => trigger2x2Action('file')}
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
@@ -1892,7 +1915,7 @@ function Enrollment() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => startLiveCamera('idphoto', 'user')}
+                        onClick={() => trigger2x2Action('camera')}
                         className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                       >
                         <Camera className="w-4 h-4 text-amber-300" />
@@ -2005,12 +2028,28 @@ function Enrollment() {
                         </div>
                       </div>
 
-                      {/* Guide Box for 2x2 ID Photo */}
+                      {/* Guide Box & Head Alignment Silhouette for 2x2 ID Photo */}
                       {cameraTarget === 'idphoto' && (
                         <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                          <div className="w-52 h-52 sm:w-60 sm:h-60 aspect-square border-2 border-dashed border-amber-400/90 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] flex items-center justify-center">
-                            <span className="text-[10px] font-black text-amber-300 uppercase tracking-wider bg-black/60 px-2.5 py-1 rounded-full border border-amber-400/40">
-                              Center Face (2x2 Box)
+                          <div className="w-56 h-56 sm:w-64 sm:h-64 aspect-square border-2 border-dashed border-amber-400/90 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] flex flex-col items-center justify-center relative overflow-hidden">
+                            {/* Head & Shoulder Alignment Silhouette Overlay */}
+                            <svg viewBox="0 0 200 200" className="w-full h-full text-amber-300/80 stroke-current fill-none">
+                              {/* Oval Head Contour */}
+                              <ellipse cx="100" cy="74" rx="34" ry="44" strokeWidth="2.2" strokeDasharray="5 3" />
+                              {/* Eye balance reference line */}
+                              <line x1="78" y1="68" x2="122" y2="68" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
+                              {/* Vertical alignment line */}
+                              <line x1="100" y1="28" x2="100" y2="122" strokeWidth="1.2" strokeDasharray="4 4" opacity="0.45" />
+                              {/* Chin guide curve */}
+                              <path d="M 85 106 Q 100 120 115 106" strokeWidth="2" strokeDasharray="4 2" />
+                              {/* Neck guide lines */}
+                              <line x1="88" y1="120" x2="88" y2="140" strokeWidth="1.8" strokeDasharray="4 2" />
+                              <line x1="112" y1="120" x2="112" y2="140" strokeWidth="1.8" strokeDasharray="4 2" />
+                              {/* Shoulders contour */}
+                              <path d="M 28 190 Q 75 142 100 142 Q 125 142 172 190" strokeWidth="2.2" strokeDasharray="5 3" />
+                            </svg>
+                            <span className="absolute bottom-2.5 text-[9px] sm:text-[10.5px] font-black text-amber-300 uppercase tracking-wider bg-black/80 px-2.5 py-1 rounded-full border border-amber-400/50 shadow-md">
+                              👤 Align Head &amp; Shoulders Here
                             </span>
                           </div>
                         </div>
@@ -2521,30 +2560,178 @@ function Enrollment() {
             {/* Modal Footer */}
             <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
               <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                Click either button below to attach your official Registration Form:
+                Ensure your document matches the official CvSU COR specimen before proceeding.
               </span>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSampleCorModal(false);
-                    startLiveCamera('regform');
-                  }}
-                  className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                  onClick={() => setShowSampleCorModal(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  <Camera className="w-3.5 h-3.5 text-amber-400" />
-                  Scan / Take Photo
+                  Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSampleCorModal(false);
-                    photoInputRef.current?.click();
-                  }}
-                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
+                  onClick={confirmCorAction}
+                  className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-sm active:scale-95"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  Choose File (PDF/Image)
+                  {corGuideAction === 'camera' ? (
+                    <>
+                      <Camera className="w-4 h-4 text-amber-300" />
+                      <span>Confirm &amp; Open Camera</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Confirm &amp; Choose File</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Official 2x2 ID Photo Specimen & Guide Modal ── */}
+      {showSample2x2Modal && (
+        <div 
+          className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in overflow-y-auto"
+          onClick={() => setShowSample2x2Modal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-emerald-200 my-auto animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-emerald-900 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
+                  <UserSquare2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight">Official 2x2 ID Photo Specimen &amp; Guide</h3>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Standards for official NSTP ID Card portrait photo</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSample2x2Modal(false)}
+                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
+              
+              {/* Photo Visual Specimen Card */}
+              <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-sm flex flex-col sm:flex-row items-center gap-5">
+                <div className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl border-4 border-emerald-600/30 bg-white p-1 shrink-0 shadow-md relative overflow-hidden flex items-center justify-center">
+                  {/* Visual 2x2 specimen illustration */}
+                  <svg viewBox="0 0 160 160" className="w-full h-full bg-white">
+                    {/* Plain White Background */}
+                    <rect width="160" height="160" fill="#ffffff" />
+                    {/* Formal Collared White Polo / Shirt */}
+                    <path d="M 30 160 L 50 120 L 70 128 L 80 142 L 90 128 L 110 120 L 130 160 Z" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
+                    <path d="M 62 120 L 80 138 L 98 120 L 92 110 L 80 114 L 68 110 Z" fill="#ffffff" stroke="#94a3b8" strokeWidth="1.5" />
+                    <line x1="80" y1="138" x2="80" y2="160" stroke="#cbd5e1" strokeWidth="1.5" />
+                    {/* Neck */}
+                    <rect x="70" y="85" width="20" height="30" fill="#fcd34d" rx="4" opacity="0.6" />
+                    {/* Face / Head */}
+                    <ellipse cx="80" cy="70" rx="26" ry="32" fill="#fbbf24" opacity="0.5" />
+                    {/* Hair */}
+                    <path d="M 54 65 C 54 42 70 38 80 38 C 90 38 106 42 106 65 C 106 50 96 44 80 44 C 64 44 54 50 54 65 Z" fill="#334155" />
+                    {/* Ears */}
+                    <ellipse cx="53" cy="70" rx="3.5" ry="7" fill="#fbbf24" opacity="0.6" />
+                    <ellipse cx="107" cy="70" rx="3.5" ry="7" fill="#fbbf24" opacity="0.6" />
+                    {/* Eyes level */}
+                    <circle cx="71" cy="67" r="2.5" fill="#1e293b" />
+                    <circle cx="89" cy="67" r="2.5" fill="#1e293b" />
+                    {/* Nose & Smile */}
+                    <path d="M 80 72 L 78 77 L 82 77" stroke="#92400e" strokeWidth="1.2" fill="none" />
+                    <path d="M 75 83 Q 80 86 85 83" stroke="#92400e" strokeWidth="1.5" fill="none" />
+                  </svg>
+                  <div className="absolute top-2 right-2 bg-emerald-700 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
+                    PROPER 2x2
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0 text-center sm:text-left">
+                  <div className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
+                    <CheckCircle className="w-3 h-3 text-emerald-700" /> Standard NSTP ID Photo
+                  </div>
+                  <h4 className="text-sm font-black text-gray-900">Plain White Background &amp; Formal Shirt</h4>
+                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                    This photo will be printed on your physical PVC NSTP ID Card. Make sure your face is centered, lighting is even, and no shadows are cast on the wall.
+                  </p>
+                </div>
+              </div>
+
+              {/* Requirement Bullet Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
+                  <p className="font-black text-emerald-950 text-xs flex items-center gap-1.5 mb-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    DOs (Acceptable Photo):
+                  </p>
+                  <ul className="space-y-1 text-[11px] text-emerald-900/90 font-medium">
+                    <li>✓ Plain solid white background</li>
+                    <li>✓ White polo, blouse, or collared shirt</li>
+                    <li>✓ Face and eyes looking straight ahead</li>
+                    <li>✓ Neutral expression, mouth closed</li>
+                    <li>✓ Ears uncovered and visible</li>
+                  </ul>
+                </div>
+
+                <div className="p-3.5 bg-red-50/80 border border-red-200 rounded-2xl">
+                  <p className="font-black text-red-950 text-xs flex items-center gap-1.5 mb-1.5">
+                    <X className="w-4 h-4 text-red-600 shrink-0" />
+                    DON'Ts (Will be Declined):
+                  </p>
+                  <ul className="space-y-1 text-[11px] text-red-900/90 font-medium">
+                    <li>✗ No colored walls, doors, or curtains</li>
+                    <li>✗ No selfies, angled heads, or peace signs</li>
+                    <li>✗ No eyeglasses, sunglasses, or caps</li>
+                    <li>✗ No sleeveless shirts or casual sando</li>
+                    <li>✗ Do not upload full body pictures</li>
+                  </ul>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
+              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
+                Ready to attach your official 2x2 ID picture?
+              </span>
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowSample2x2Modal(false)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirm2x2Action}
+                  className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-sm active:scale-95"
+                >
+                  {photoGuideAction === 'camera' ? (
+                    <>
+                      <Camera className="w-4 h-4 text-amber-300" />
+                      <span>Confirm &amp; Open Camera</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Confirm &amp; Choose 2x2 Photo</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
