@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { 
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
-  Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe, Award, 
-  CheckCircle2, Activity, Clock, Play, Film, ArrowRight, HelpCircle, Compass, 
+  Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe,
+  CheckCircle2, Activity, Clock, Play, ArrowRight, HelpCircle, Compass,
   Search, Check, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -264,10 +264,10 @@ function Landing() {
       cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
     } catch (_) {}
     return {
-      totalVisitors: cachedVisitors > 0 ? cachedVisitors : 1,
+      totalVisitors: cachedVisitors > 0 ? cachedVisitors : 0,
       totalUsers: cachedUsers,
       totalRegisteredUsers: cachedUsers,
-      activeOnlineCount: 1,
+      activeOnlineCount: 0,
       activeUsers: []
     };
   });
@@ -283,11 +283,9 @@ function Landing() {
         const stats = await getTelemetryStats();
         if (stats && isMounted) {
           setTelemetry(prev => {
-            const rawIncomingVisitors = typeof stats.totalVisitors === 'number' && stats.totalVisitors > 0
-              ? stats.totalVisitors
-              : (typeof stats.totalCount === 'number' ? stats.totalCount : 0);
-            const nextVisitors = Math.max(prev.totalVisitors || 1, rawIncomingVisitors);
-            const nextActive = stats.activeOnlineCount !== undefined ? Math.max(1, stats.activeOnlineCount) : (prev.activeOnlineCount || 1);
+            const rawIncomingVisitors = typeof stats.totalVisitors === 'number' ? stats.totalVisitors : 0;
+            const nextVisitors = rawIncomingVisitors >= 0 ? rawIncomingVisitors : (prev.totalVisitors || 0);
+            const nextActive = stats.activeOnlineCount !== undefined ? Math.max(0, stats.activeOnlineCount) : (prev.activeOnlineCount || 0);
             const nextUsers = Math.max(prev.totalUsers || 0, stats.totalUsers || 0, stats.totalRegisteredUsers || 0);
 
             // Avoid triggering re-renders if telemetry stats are already steady
@@ -323,7 +321,7 @@ function Landing() {
   }, []);
 
   const totalVisitorsCount = telemetry.totalVisitors ?? 0;
-  const activeOnlineCount = telemetry.activeOnlineCount || 1;
+  const activeOnlineCount = telemetry.activeOnlineCount ?? 0;
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -969,32 +967,8 @@ function Landing() {
                 className="w-full h-full rounded-2xl object-cover bg-black"
               >
                 <source src={`${import.meta.env.BASE_URL}nstp-orientation.mp4`} type="video/mp4" />
-                <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
                 Your browser does not support HTML5 video.
               </video>
-            </div>
-
-            {/* Video Details & Credits Box */}
-            <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-left">
-              <div className="flex items-center space-x-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shrink-0">
-                  <Film className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-black text-xs sm:text-sm text-white">National Service Training Program (NSTP) Orientation</h4>
-                  <p className="text-xs text-emerald-200 font-medium">Educational orientation guide explaining Republic Act 9163, CWTS, LTS, & ROTC</p>
-                </div>
-              </div>
-
-              {/* Video Credits */}
-              <div className="bg-amber-400/10 border border-amber-400/25 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-left shrink-0 w-full sm:w-auto overflow-hidden">
-                <p className="text-[9px] sm:text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1">
-                  <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" /> Video Credits:
-                </p>
-                <p className="text-[10.5px] xs:text-xs sm:text-xs font-black text-white mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-                  University of the Philippines Diliman (UP Diliman)
-                </p>
-              </div>
             </div>
           </div>
         </div>

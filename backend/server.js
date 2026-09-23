@@ -21,6 +21,7 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { generateStudentIdPdf } = require('./utils/pdfIdGenerator');
+const smsService = require('./services/smsService');
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -2740,8 +2741,10 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
-    const { name, email, password, department, role, avatar } = req.body;
+    const { name, email, password, department, role, avatar, phone } = req.body;
     const assignedRole = role === 'admin' ? 'admin' : 'instructor';
+    const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(0, 15) : null;
+
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
     }
@@ -2766,10 +2769,20 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     const defaultAvatar = assignedRole === 'admin' ? 'avatar-4' : (assignedDept === 'LTS' ? 'avatar-6' : (assignedDept === 'ROTC' ? 'avatar-8' : 'avatar-2'));
     const assignedAvatar = avatar ? sanitizeStr(avatar, 50) : defaultAvatar;
     const [result] = await pool.execute(
-      'INSERT INTO users (name, email, password, role, department, avatar) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, email, hashed, assignedRole, assignedDept, assignedAvatar]
+      'INSERT INTO users (name, email, password, role, department, avatar, phone) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email, hashed, assignedRole, assignedDept, assignedAvatar, cleanPhone]
     );
     const newUserId = result.insertId;
+
+    // Dispatch welcome SMS to instructor's phone number
+    if (cleanPhone) {
+      smsService.sendSms({
+        to: cleanPhone,
+        recipientName: name,
+        message: `CvSU Naic NSTP: Welcome ${name}! Your faculty account for ${assignedDept || 'NSTP'} has been created by Admin. Login email: ${email}`,
+        eventType: 'INSTRUCTOR_WELCOME'
+      }).catch(err => console.warn('[SMS Dispatcher] Welcome SMS notice:', err.message));
+    }
 
     // Auto-add to the "All Instructors" group if it exists
     try {
@@ -2790,7 +2803,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
       }
     } catch (_) { /* non-fatal */ }
 
-    res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept });
+    res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept, phone: cleanPhone });
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -3914,10 +3927,130 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
 
     const [reports] = await pool.execute('SELECT * FROM reports WHERE id = ?', [result.insertId]);
     reports[0].submissions = [];
+
+    // Notify instructors via SMS
+    smsService.notifyInstructors({
+      department: department,
+      message: `CvSU Naic NSTP: Admin assigned a new report compliance requirement: "${title}" for ${department || 'All Tracks'}. Due: ${safeDueDate || 'Open'}. Please check your portal.`,
+      eventType: 'REPORT_ASSIGNMENT'
+    }).catch(err => console.warn('[SMS Dispatcher] Report notify notice:', err.message));
+
     res.status(201).json(reports[0]);
   } catch (error) {
     console.error('Add report error:', error.message, error.code);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Calendar Events Endpoints (with Instructor SMS Alerts) ───────────────────
+app.get('/api/calendar/events', async (req, res) => {
+  try {
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS calendar_events (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        date VARCHAR(30) NOT NULL,
+        track VARCHAR(50) DEFAULT 'All Tracks',
+        category VARCHAR(50) DEFAULT 'Training',
+        description TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(() => {});
+
+    const [events] = await pool.query('SELECT * FROM calendar_events ORDER BY date ASC');
+    res.json(events || []);
+  } catch (err) {
+    console.warn('[Calendar] Events fetch error:', err.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/calendar/events', authenticateToken, async (req, res) => {
+  try {
+    const { id, title, date, track, category, description } = req.body;
+    if (!title || !date) {
+      return res.status(400).json({ message: 'Title and Date are required' });
+    }
+
+    const eventId = String(id || 'cev_' + Date.now());
+    const eventTrack = track || 'All Tracks';
+    const eventCategory = category || 'Training';
+    const eventDesc = description || '';
+    const creatorName = req.user.name || 'Administrator';
+
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS calendar_events (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        date VARCHAR(30) NOT NULL,
+        track VARCHAR(50) DEFAULT 'All Tracks',
+        category VARCHAR(50) DEFAULT 'Training',
+        description TEXT,
+        created_by VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `).catch(() => {});
+
+    await pool.execute(
+      `INSERT INTO calendar_events (id, title, date, track, category, description, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE title = VALUES(title), date = VALUES(date), track = VALUES(track), category = VALUES(category), description = VALUES(description)`,
+      [eventId, title, date, eventTrack, eventCategory, eventDesc, creatorName]
+    );
+
+    // If added by admin, notify instructors via SMS
+    if (req.user && req.user.role === 'admin') {
+      smsService.notifyInstructors({
+        department: eventTrack,
+        message: `CvSU Naic NSTP: Admin added a new calendar event "${title}" on ${date} (${eventTrack}). Details on your NSTP portal.`,
+        eventType: 'CALENDAR_EVENT'
+      }).catch(err => console.warn('[SMS Dispatcher] Calendar SMS error:', err.message));
+    }
+
+    res.status(201).json({
+      id: eventId,
+      title,
+      date,
+      track: eventTrack,
+      category: eventCategory,
+      description: eventDesc,
+      createdBy: creatorName
+    });
+  } catch (err) {
+    console.error('[Calendar] Add event error:', err.message);
+    res.status(500).json({ message: 'Failed to create calendar event' });
+  }
+});
+
+// Update calendar event (admin only)
+app.put('/api/calendar/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, date, track, category, description } = req.body;
+    if (!title || !date) {
+      return res.status(400).json({ message: 'Title and Date are required' });
+    }
+    await pool.execute(
+      `UPDATE calendar_events SET title = ?, date = ?, track = ?, category = ?, description = ? WHERE id = ?`,
+      [title, date, track || 'All Tracks', category || 'Training', description || '', id]
+    );
+    res.json({ id, title, date, track, category, description });
+  } catch (err) {
+    console.error('[Calendar] Update event error:', err.message);
+    res.status(500).json({ message: 'Failed to update calendar event' });
+  }
+});
+
+// Delete calendar event (admin only)
+app.delete('/api/calendar/events/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Calendar] Delete event error:', err.message);
+    res.status(500).json({ message: 'Failed to delete calendar event' });
   }
 });
 
@@ -4610,6 +4743,44 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
       WHERE m.id = ?
     `, [result.insertId]);
 
+    // Dispatch SMS notification if admin is sending message
+    if (req.user && req.user.role === 'admin') {
+      (async () => {
+        try {
+          let recipients = [];
+          const [convRows] = await pool.execute('SELECT is_group, participant_1_id, participant_2_id FROM conversations WHERE id = ?', [targetConvId]);
+          if (convRows.length > 0 && convRows[0].is_group) {
+            const [parts] = await pool.execute(
+              "SELECT u.id, u.name, u.phone FROM conversation_participants cp JOIN users u ON cp.user_id = u.id WHERE cp.conversation_id = ? AND cp.user_id != ? AND u.role = 'instructor' AND u.phone IS NOT NULL AND u.phone != ''",
+              [targetConvId, req.user.id]
+            );
+            recipients = parts;
+          } else if (convRows.length > 0) {
+            const otherId = convRows[0].participant_1_id === req.user.id ? convRows[0].participant_2_id : convRows[0].participant_1_id;
+            const [u] = await pool.execute(
+              "SELECT id, name, phone FROM users WHERE id = ? AND role = 'instructor' AND phone IS NOT NULL AND phone != ''",
+              [otherId]
+            );
+            recipients = u;
+          }
+
+          const snippet = String(safeText || lastMessagePreview || 'New message').slice(0, 75);
+          for (const rec of recipients) {
+            if (rec.phone) {
+              smsService.sendSms({
+                to: rec.phone,
+                recipientName: rec.name,
+                message: `CvSU Naic NSTP: Admin (${req.user.name || 'Coordinator'}) sent a message: "${snippet}". Reply via your NSTP portal.`,
+                eventType: 'ADMIN_CHAT_MESSAGE'
+              }).catch(() => {});
+            }
+          }
+        } catch (smsErr) {
+          console.warn('[SMS Dispatcher] Chat SMS notice:', smsErr.message);
+        }
+      })();
+    }
+
     res.status(201).json(messages[0]);
   } catch (error) {
     console.error('Send message error:', error.sqlMessage || error.message, error.code);
@@ -5256,15 +5427,23 @@ app.post('/api/calls/:id/webrtc/ice', authenticateToken, async (req, res) => {
 
 // ===== BATCH MANAGEMENT ROUTES =====
 
-// Get all archived years
+// Helper to ensure current_batch date columns exist
+async function ensureCurrentBatchColumns() {
+  try { await pool.execute('ALTER TABLE current_batch ADD COLUMN start_month VARCHAR(20) NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE current_batch ADD COLUMN end_month VARCHAR(20) NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE current_batch ADD COLUMN start_date VARCHAR(30) NULL'); } catch (_) {}
+  try { await pool.execute('ALTER TABLE current_batch ADD COLUMN end_date VARCHAR(30) NULL'); } catch (_) {}
+}
+
 // Get current batch
 app.get('/api/current-batch', authenticateToken, async (req, res) => {
   try {
+    await ensureCurrentBatchColumns().catch(() => {});
     const [batches] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
-    res.json(batches[0] || { year: '2026-2027 1st Semester', semester: '1st Semester' });
+    res.json(batches[0] || { year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
   } catch (error) {
     console.error('Get current batch error:', error);
-    res.json({ year: '2026-2027 1st Semester', semester: '1st Semester' });
+    res.json({ year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
   }
 });
 
@@ -5272,20 +5451,40 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
 app.put('/api/current-batch', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const rawYear = req.body.year !== undefined ? String(req.body.year).trim() : '';
+    const startMonth = req.body.start_month || req.body.startMonth || null;
+    const endMonth = req.body.end_month || req.body.endMonth || null;
+    const startDate = req.body.start_date || req.body.startDate || (startMonth ? `${startMonth}-01` : null);
+    const endDate = req.body.end_date || req.body.endDate || (endMonth ? `${endMonth}-28` : null);
+
     if (!rawYear || rawYear.length < 2) {
       return res.status(400).json({ message: 'Invalid batch identifier.' });
     }
+
+    await ensureCurrentBatchColumns().catch(() => {});
 
     // Check if exists
     const [existing] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
     
     if (existing.length > 0) {
-      await pool.execute('UPDATE current_batch SET year = ? WHERE id = 1', [rawYear]);
+      await pool.execute(
+        'UPDATE current_batch SET year = ?, start_month = COALESCE(?, start_month), end_month = COALESCE(?, end_month), start_date = COALESCE(?, start_date), end_date = COALESCE(?, end_date) WHERE id = 1',
+        [rawYear, startMonth, endMonth, startDate, endDate]
+      );
     } else {
-      await pool.execute('INSERT INTO current_batch (id, year) VALUES (1, ?)', [rawYear]);
+      await pool.execute(
+        'INSERT INTO current_batch (id, year, start_month, end_month, start_date, end_date) VALUES (1, ?, ?, ?, ?, ?)',
+        [rawYear, startMonth, endMonth, startDate, endDate]
+      );
     }
     
-    res.json({ year: rawYear, message: 'Batch updated' });
+    res.json({
+      year: rawYear,
+      start_month: startMonth,
+      end_month: endMonth,
+      start_date: startDate,
+      end_date: endDate,
+      message: 'Batch updated'
+    });
   } catch (error) {
     console.error('Update batch error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -6542,7 +6741,7 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
 app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
   try {
 
-    const { year, next_batch, nextBatch, newBatchYear, letterTemplates } = req.body;
+    const { year, next_batch, nextBatch, newBatchYear, letterTemplates, start_month, end_month, calendar_start_date, calendar_end_date } = req.body;
     const archiveYear = String(year || req.body.batch_name || req.body.batchName || new Date().getFullYear()).trim();
 
     // Get current stats
@@ -6596,7 +6795,11 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
         reportCount[0]?.count || 0,
         JSON.stringify({
           year: archiveYear, students: totalStudents, cwts, lts, rotc, reports: reportCount[0]?.count || 0,
-          studentData, reportData, letterData
+          studentData, reportData, letterData,
+          start_month: start_month || calendar_start_date || null,
+          end_month: end_month || calendar_end_date || null,
+          calendar_start_date: calendar_start_date || start_month || null,
+          calendar_end_date: calendar_end_date || end_month || null
         })
       ]
     );
@@ -6833,7 +7036,7 @@ app.get('/api/active-count', async function(req, res) {
     var activeQuery = `SELECT COUNT(*) AS activeVisitors FROM active_visitors WHERE last_seen >= NOW() - INTERVAL 30 SECOND`;
     var [activeRows] = await pool.execute(activeQuery).catch(function() { return [[{ activeVisitors: 1 }]]; });
 
-    var activeVisitors = Math.max(1, (activeRows[0] && activeRows[0].activeVisitors) || activeSessions.size || 1);
+    var activeVisitors = Math.max(0, (activeRows[0] && activeRows[0].activeVisitors) || activeSessions.size || 0);
     var totalVisitors = totalUniqueVisitors.size;
 
     res.json({
@@ -6890,7 +7093,7 @@ app.post('/api/telemetry/ping', function(req, res) {
     [cleanId, String(page || '/').slice(0, 500)]
   ).catch(function() {});
 
-  res.json({ success: true, totalVisitors: totalUniqueVisitors.size, activeOnlineCount: Math.max(1, activeSessions.size) });
+  res.json({ success: true, totalVisitors: totalUniqueVisitors.size, activeOnlineCount: Math.max(0, activeSessions.size) });
 });
 
 // Telemetry statistics and real-time active user list (Public)
@@ -6941,8 +7144,12 @@ app.get('/api/telemetry/stats', async function(req, res) {
     var dbEnrollments = (enrollRows[0] && enrollRows[0].count) || 0;
     var dbUsers = (userRows[0] && userRows[0].count) || 0;
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var totalVisitorsCount = Math.max(1, totalUniqueVisitors.size);
-    var activeOnlineCount = Math.max(1, activeSessions.size, activeList.length);
+    var visitorDbRows = await pool.query(
+      "SELECT COUNT(DISTINCT visitor_id) as count FROM active_visitors WHERE visitor_id NOT LIKE 'vis_test_%' AND visitor_id NOT LIKE 'std_%' AND visitor_id NOT LIKE 'enr_%' AND visitor_id NOT LIKE 'usr_%' AND visitor_id NOT LIKE 'audit_%'"
+    ).then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+    var dbUniqueVisitors = (visitorDbRows[0] && visitorDbRows[0].count) || 0;
+    var totalVisitorsCount = Math.max(0, dbUniqueVisitors, totalUniqueVisitors.size);
+    var activeOnlineCount = Math.max(0, activeSessions.size, activeList.length);
 
     res.json({
       totalVisitors: totalVisitorsCount,

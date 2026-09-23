@@ -478,12 +478,13 @@ function Profile() {
         email: instructorForm.email.trim(),
         password: instructorForm.password,
         role: instructorForm.role,
-        department: instructorForm.role === 'instructor' ? instructorForm.department : undefined
+        department: instructorForm.role === 'instructor' ? instructorForm.department : undefined,
+        phone: instructorForm.phone ? instructorForm.phone.trim() : undefined
       });
       setInstructors(prev => [...prev, created]);
       // Ensure the All Instructors group exists — creates it if not yet, which also adds the new user
       getAllInstructorsGroup().catch(() => {});
-      setInstructorForm({ name: '', email: '', department: 'CWTS', password: '', confirmPassword: '' });
+      setInstructorForm({ name: '', email: '', phone: '', department: 'CWTS', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
       showToast('Faculty account created successfully!', 'success');
     } catch (error) {
@@ -1006,6 +1007,29 @@ function Profile() {
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.email.length > 0 && !emailOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                   />
                   {f.email.length > 0 && !emailOk && <p className="text-red-500 text-xs mt-0.5">Enter a valid email address</p>}
+                </div>
+
+                {/* Mobile / Phone Number for SMS */}
+                <div>
+                  <label htmlFor="inst-phone" className="block text-xs font-semibold text-gray-600 mb-1">
+                    Mobile Phone Number (for SMS Notifications)
+                  </label>
+                  <input
+                    type="tel"
+                    id="inst-phone"
+                    name="instructorPhone"
+                    value={f.phone || ''}
+                    onChange={e => {
+                      const clean = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setInstructorForm(prev => ({ ...prev, phone: clean }));
+                    }}
+                    placeholder="e.g. 09171234567"
+                    autoComplete="tel"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    Dito matatanggap ng instructor ang SMS alerts para sa mga chat messages, bagong report, at calendar updates.
+                  </p>
                 </div>
 
                 {/* Department (instructor only) */}

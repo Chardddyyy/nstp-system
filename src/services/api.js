@@ -7,13 +7,25 @@ function getPrimaryApiUrl() {
     }
 
     var host = window.location.hostname;
+    var port = window.location.port;
+
+    // If served via Vite dev server (port 5173) or public tunnel forwarding to frontend
+    if (
+      port === '5173' ||
+      host.endsWith('.ngrok-free.app') ||
+      host.endsWith('.ngrok.io') ||
+      host.endsWith('.ngrok.app') ||
+      host.endsWith('.trycloudflare.com') ||
+      host.endsWith('.loca.lt')
+    ) {
+      return window.location.origin + '/api';
+    }
 
     // Auto-detect local network IP (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), localhost, or localtunnel
     if (
       host === 'localhost' ||
       host === '127.0.0.1' ||
       host.endsWith('.local') ||
-      host.endsWith('.loca.lt') ||
       /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host)
     ) {
       return window.location.protocol + '//' + host + ':3001/api';
@@ -1184,10 +1196,16 @@ export function getCurrentBatch() {
   return apiCall('/current-batch');
 }
 
-export function updateCurrentBatch(year) {
+export function updateCurrentBatch(yearOrPayload, maybeOptions) {
+  let payload = {};
+  if (typeof yearOrPayload === 'object' && yearOrPayload !== null) {
+    payload = yearOrPayload;
+  } else {
+    payload = Object.assign({ year: yearOrPayload }, maybeOptions || {});
+  }
   return apiCall('/current-batch', {
     method: 'PUT',
-    body: JSON.stringify({ year: year })
+    body: JSON.stringify(payload)
   });
 }
 
@@ -1673,8 +1691,8 @@ function getClientSideTelemetry() {
   const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
   const cachedActive = parseInt(localStorage.getItem('nstp_cached_active_online') || '1', 10);
 
-  const finalVisitors = cachedVisitors > 0 ? cachedVisitors : 1;
-  const finalActive = Math.max(1, activeCount, cachedActive || 1);
+  const finalVisitors = cachedVisitors > 0 ? cachedVisitors : 0;
+  const finalActive = Math.max(0, activeCount, cachedActive || 0);
 
   return {
     totalVisitors: finalVisitors,
@@ -1694,7 +1712,8 @@ function isTelemetryCooldown() {
 
 function markTelemetryOffline() {
   isTelemetryServerOffline = true;
-  telemetryOfflineUntil = Date.now() + 20000;
+  // 3 minutes quiet cooldown on connection failure to prevent console error spam
+  telemetryOfflineUntil = Date.now() + 180000;
 }
 
 function markTelemetryOnline() {
@@ -1716,26 +1735,29 @@ export function pingTelemetry(data) {
   }
 
   var url = getPrimaryApiUrl() + '/telemetry/ping';
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = controller ? setTimeout(function() { controller.abort(); }, 3500) : null;
+
   return fetch(url, {
     method: 'POST',
     mode: 'cors',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: controller ? controller.signal : undefined
   })
   .then(function(res) { 
+    if (timer) clearTimeout(timer);
     if (res.ok) {
       markTelemetryOnline();
       return res.json().then(function(resData) {
         if (resData && typeof resData.totalVisitors === 'number') {
           try {
-            const cur = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-            const peak = Math.max(cur, resData.totalVisitors);
-            localStorage.setItem('nstp_cached_total_visitors', String(peak));
+            localStorage.setItem('nstp_cached_total_visitors', String(resData.totalVisitors));
           } catch (_) {}
         }
         if (resData && typeof resData.activeOnlineCount === 'number') {
           try {
-            localStorage.setItem('nstp_cached_active_online', String(Math.max(1, resData.activeOnlineCount)));
+            localStorage.setItem('nstp_cached_active_online', String(Math.max(0, resData.activeOnlineCount)));
           } catch (_) {}
         }
         return resData;
@@ -1745,6 +1767,7 @@ export function pingTelemetry(data) {
     return getClientSideTelemetry(); 
   })
   .catch(function() { 
+    if (timer) clearTimeout(timer);
     markTelemetryOffline();
     return getClientSideTelemetry(); 
   });
@@ -1756,8 +1779,12 @@ export function getTelemetryStats() {
   }
 
   var url = getPrimaryApiUrl() + '/telemetry/stats';
-  return fetch(url)
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = controller ? setTimeout(function() { controller.abort(); }, 3500) : null;
+
+  return fetch(url, { signal: controller ? controller.signal : undefined })
     .then(function(res) {
+      if (timer) clearTimeout(timer);
       if (res.ok) {
         markTelemetryOnline();
         return res.json().then(function(data) {
@@ -1769,14 +1796,12 @@ export function getTelemetryStats() {
             }
             if (typeof data.totalVisitors === 'number') {
               try {
-                const cur = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-                const peak = Math.max(cur, data.totalVisitors);
-                localStorage.setItem('nstp_cached_total_visitors', String(peak));
+                localStorage.setItem('nstp_cached_total_visitors', String(data.totalVisitors));
               } catch (_) {}
             }
             if (typeof data.activeOnlineCount === 'number') {
               try {
-                localStorage.setItem('nstp_cached_active_online', String(Math.max(1, data.activeOnlineCount)));
+                localStorage.setItem('nstp_cached_active_online', String(Math.max(0, data.activeOnlineCount)));
               } catch (_) {}
             }
           }
@@ -1787,9 +1812,37 @@ export function getTelemetryStats() {
       return getClientSideTelemetry();
     })
     .catch(function() { 
+      if (timer) clearTimeout(timer);
       markTelemetryOffline();
       return getClientSideTelemetry(); 
     });
+}
+
+export async function testBackendPing(customUrl) {
+  const target = (customUrl && typeof customUrl === 'string' && customUrl.trim()) ? customUrl.trim() : getPrimaryApiUrl();
+  const cleanTarget = target.replace(/\/+$/, '');
+  const pingUrl = cleanTarget.endsWith('/api') ? cleanTarget + '/ping' : cleanTarget + '/api/ping';
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 6000) : null;
+  const start = Date.now();
+  try {
+    const res = await fetch(pingUrl, { signal: controller ? controller.signal : undefined });
+    if (timeoutId) clearTimeout(timeoutId);
+    const latency = Date.now() - start;
+    if (res.ok) {
+      return { success: true, latency, status: res.status, url: pingUrl };
+    }
+    return { success: false, latency, status: res.status, url: pingUrl, message: `Server replied with HTTP ${res.status}` };
+  } catch (err) {
+    if (timeoutId) clearTimeout(timeoutId);
+    const isTimeout = err.name === 'AbortError' || (err.message && err.message.includes('abort'));
+    return {
+      success: false,
+      isTimeout,
+      url: pingUrl,
+      message: isTimeout ? 'Timed out (no response within 6s)' : (err.message || 'Connection failed')
+    };
+  }
 }
 
 export const telemetryAPI = {
@@ -2010,6 +2063,30 @@ export const mediaAPI = {
   }
 };
 
-
-
-
+// ── Calendar Events API ──────────────────────────────────────────────────────
+export const calendarAPI = {
+  getEvents: async () => {
+    try {
+      return await apiCall('/calendar/events');
+    } catch (_) {
+      return [];
+    }
+  },
+  createEvent: async (event) => {
+    return await apiCall('/calendar/events', {
+      method: 'POST',
+      body: JSON.stringify(event)
+    });
+  },
+  updateEvent: async (id, event) => {
+    return await apiCall(`/calendar/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(event)
+    });
+  },
+  deleteEvent: async (id) => {
+    return await apiCall(`/calendar/events/${id}`, {
+      method: 'DELETE'
+    });
+  }
+};

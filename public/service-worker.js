@@ -18,6 +18,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.link || '/', self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      const existingClient = clients.find((client) => client.url.startsWith(self.location.origin));
+      if (existingClient) {
+        existingClient.navigate(targetUrl);
+        return existingClient.focus();
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
+
 // Fetch event - passthrough for development
 self.addEventListener('fetch', (event) => {
   // Only handle navigation requests

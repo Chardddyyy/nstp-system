@@ -1901,9 +1901,37 @@ function Enrollment() {
                       <Camera className="w-7 h-7" />
                     </div>
                     <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Photo</h4>
-                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
-                      Required: Plain <b>White Background</b> and <b>White Shirt</b>. Clear front-facing portrait without sunglasses or caps.
+                    <p className="text-xs text-gray-500 mb-3 max-w-sm mx-auto">
+                      First, check the correct 2x2 format below. The photo must have a plain white background and a white/collared shirt.
                     </p>
+                    <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowSample2x2Modal(true)}
+                        className="group flex items-center gap-2.5 p-1.5 pr-3.5 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200/90 rounded-2xl cursor-pointer transition-all shadow-xs"
+                        title="Click to view full 2x2 guidelines"
+                      >
+                        <div className="flex -space-x-2.5 overflow-hidden p-0.5">
+                          <img
+                            src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-female.jpg`}
+                            alt="Sample Female 2x2"
+                            className="inline-block h-9 w-9 rounded-xl ring-2 ring-white object-cover shadow-2xs"
+                          />
+                          <img
+                            src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-male.jpg`}
+                            alt="Sample Male 2x2"
+                            className="inline-block h-9 w-9 rounded-xl ring-2 ring-white object-cover shadow-2xs"
+                          />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-[11px] sm:text-xs font-black text-emerald-950 flex items-center gap-1">
+                            <span>Official 2x2 Photo Specimens</span>
+                            <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                          </p>
+                          <p className="text-[10px] text-emerald-800/80 font-semibold">Tignan ang Tamang 2x2 Format</p>
+                        </div>
+                      </button>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
                         type="button"
@@ -2627,45 +2655,57 @@ function Enrollment() {
             {/* Modal Body */}
             <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
               
-              {/* Photo Visual Specimen Card */}
-              <div className="bg-white rounded-2xl p-5 border border-emerald-200 shadow-sm flex flex-col sm:flex-row items-center gap-5">
-                <div className="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl border-4 border-emerald-600/30 bg-white p-1 shrink-0 shadow-md relative overflow-hidden flex items-center justify-center">
-                  {/* Visual 2x2 specimen illustration */}
-                  <svg viewBox="0 0 160 160" className="w-full h-full bg-white">
-                    {/* Plain White Background */}
-                    <rect width="160" height="160" fill="#ffffff" />
-                    {/* Formal Collared White Polo / Shirt */}
-                    <path d="M 30 160 L 50 120 L 70 128 L 80 142 L 90 128 L 110 120 L 130 160 Z" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.5" />
-                    <path d="M 62 120 L 80 138 L 98 120 L 92 110 L 80 114 L 68 110 Z" fill="#ffffff" stroke="#94a3b8" strokeWidth="1.5" />
-                    <line x1="80" y1="138" x2="80" y2="160" stroke="#cbd5e1" strokeWidth="1.5" />
-                    {/* Neck */}
-                    <rect x="70" y="85" width="20" height="30" fill="#fcd34d" rx="4" opacity="0.6" />
-                    {/* Face / Head */}
-                    <ellipse cx="80" cy="70" rx="26" ry="32" fill="#fbbf24" opacity="0.5" />
-                    {/* Hair */}
-                    <path d="M 54 65 C 54 42 70 38 80 38 C 90 38 106 42 106 65 C 106 50 96 44 80 44 C 64 44 54 50 54 65 Z" fill="#334155" />
-                    {/* Ears */}
-                    <ellipse cx="53" cy="70" rx="3.5" ry="7" fill="#fbbf24" opacity="0.6" />
-                    <ellipse cx="107" cy="70" rx="3.5" ry="7" fill="#fbbf24" opacity="0.6" />
-                    {/* Eyes level */}
-                    <circle cx="71" cy="67" r="2.5" fill="#1e293b" />
-                    <circle cx="89" cy="67" r="2.5" fill="#1e293b" />
-                    {/* Nose & Smile */}
-                    <path d="M 80 72 L 78 77 L 82 77" stroke="#92400e" strokeWidth="1.2" fill="none" />
-                    <path d="M 75 83 Q 80 86 85 83" stroke="#92400e" strokeWidth="1.5" fill="none" />
-                  </svg>
-                  <div className="absolute top-2 right-2 bg-emerald-700 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
-                    PROPER 2x2
+              {/* Photo Visual Specimen Cards - Real Female & Male Examples */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 text-[11px] font-black uppercase px-2.5 py-1 rounded-full w-fit">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-700" /> Standard NSTP 2x2 ID Photo Specimen
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-500">Plain White Background • Formal White Attire</span>
+                </div>
+
+                {/* Side-by-Side 2x2 Photo Specimens */}
+                <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                  {/* Female Student 2x2 Specimen */}
+                  <div className="bg-slate-50 border border-emerald-200/90 rounded-2xl p-3 text-center flex flex-col items-center shadow-xs">
+                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl border-4 border-emerald-600/30 bg-white p-1 shrink-0 shadow-md relative overflow-hidden mb-2">
+                      <img
+                        src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-female.jpg`}
+                        alt="Female 2x2 ID Specimen"
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                      <div className="absolute top-1.5 right-1.5 bg-emerald-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
+                        Female
+                      </div>
+                    </div>
+                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Female Student</h5>
+                    <p className="text-[10px] sm:text-[11px] text-gray-600 font-medium mt-0.5 leading-snug">
+                      White shirt, visible ears, centered neutral face
+                    </p>
+                  </div>
+
+                  {/* Male Student 2x2 Specimen */}
+                  <div className="bg-slate-50 border border-emerald-200/90 rounded-2xl p-3 text-center flex flex-col items-center shadow-xs">
+                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl border-4 border-emerald-600/30 bg-white p-1 shrink-0 shadow-md relative overflow-hidden mb-2">
+                      <img
+                        src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-male.jpg`}
+                        alt="Male 2x2 ID Specimen"
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                      <div className="absolute top-1.5 right-1.5 bg-emerald-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
+                        Male
+                      </div>
+                    </div>
+                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Male Student</h5>
+                    <p className="text-[10px] sm:text-[11px] text-gray-600 font-medium mt-0.5 leading-snug">
+                      White collared polo, looking straight ahead
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <div className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-1">
-                    <CheckCircle className="w-3 h-3 text-emerald-700" /> Standard NSTP ID Photo
-                  </div>
-                  <h4 className="text-sm font-black text-gray-900">Plain White Background &amp; Formal Shirt</h4>
-                  <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                    This photo will be printed on your physical PVC NSTP ID Card. Make sure your face is centered, lighting is even, and no shadows are cast on the wall.
+                <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-left">
+                  <p className="text-xs text-emerald-950 font-bold leading-relaxed">
+                    💡 <strong>Opisyal na Pamantayan:</strong> Ang litratong ito ang direktang ipi-print sa iyong opisyal na physical NSTP PVC ID Card. Siguraduhing pantay ang ilaw, walang anino sa likod, at sumusunod sa mga halimbawa sa itaas.
                   </p>
                 </div>
               </div>

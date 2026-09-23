@@ -73,8 +73,8 @@ const pingTelemetry = catchAsync(async (req, res) => {
   }
 
   return ApiResponse.success(res, {
-    activeOnlineCount: Math.max(1, activeClients.size),
-    totalVisitors: Math.max(1, uniqueVisitorsSet.size)
+    activeOnlineCount: Math.max(0, activeClients.size),
+    totalVisitors: Math.max(0, uniqueVisitorsSet.size)
   }, 'Telemetry ping recorded');
 });
 
@@ -89,8 +89,8 @@ const getTelemetryStats = catchAsync(async (req, res) => {
   const [studentCount] = await pool.execute('SELECT COUNT(*) as count FROM students').catch(() => [[{ count: 0 }]]);
 
   return ApiResponse.success(res, {
-    totalVisitors: telemetry.totalVisitors || telemetry.totalCount || uniqueVisitorsSet.size || 1,
-    activeOnlineCount: Math.max(1, activeClients.size),
+    totalVisitors: telemetry.totalVisitors || telemetry.totalCount || uniqueVisitorsSet.size || 0,
+    activeOnlineCount: Math.max(0, activeClients.size),
     totalUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0),
     totalRegisteredUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0)
   }, 'Telemetry stats retrieved');

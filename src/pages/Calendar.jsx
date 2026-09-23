@@ -1,12 +1,13 @@
 import { useAuth } from '../context/AuthContext';
 import {
-  Calendar as CalendarIcon, Plus, X, Pencil,
+  Calendar as CalendarIcon, CalendarDays, Plus, X, Pencil,
   ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive,
   List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Sidebar from '../components/layout/Sidebar';
+import { calendarAPI } from '../services/api';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
 const PHILIPPINE_HOLIDAYS = [
@@ -87,7 +88,7 @@ const PHILIPPINE_HOLIDAYS = [
 ];
 
 function Calendar() {
-  const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData } = useAuth();
+  const { user, logout, pushNotification, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch, currentBatchRange, updateActiveBatchRange } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
   
@@ -97,6 +98,50 @@ function Calendar() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [showEditRangeModal, setShowEditRangeModal] = useState(false);
+  const [rangeSaving, setRangeSaving] = useState(false);
+  const [editRangeStart, setEditRangeStart] = useState('');
+  const [editRangeEnd, setEditRangeEnd] = useState('');
+
+  useEffect(() => {
+    if (batchRange?.rawStart) setEditRangeStart(batchRange.rawStart);
+    if (batchRange?.rawEnd) setEditRangeEnd(batchRange.rawEnd);
+  }, [batchRange?.rawStart, batchRange?.rawEnd]);
+
+  const handleSaveSemesterRange = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editRangeStart || !editRangeEnd) return;
+    setRangeSaving(true);
+    try {
+      const payload = {
+        year: currentBatch || '2026-2027 1st Semester',
+        start_month: editRangeStart,
+        end_month: editRangeEnd,
+        startMonth: editRangeStart,
+        endMonth: editRangeEnd,
+        start_date: `${editRangeStart}-01`,
+        end_date: `${editRangeEnd}-28`
+      };
+      await archivesAPI.updateBatch(payload).catch(() => {});
+      if (updateActiveBatchRange) {
+        updateActiveBatchRange({
+          startMonth: editRangeStart,
+          endMonth: editRangeEnd,
+          startDate: `${editRangeStart}-01`,
+          endDate: `${editRangeEnd}-28`
+        });
+      }
+      setShowEditRangeModal(false);
+      pushNotification?.({
+        type: 'success',
+        message: `Updated academic semester calendar range to ${editRangeStart} - ${editRangeEnd}`
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRangeSaving(false);
+    }
+  };
   const DEFAULT_CUSTOM_EVENTS = [
     { id: 'cev-1', title: 'CWTS Community Coastal Cleanup & Profiling', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Cleanup and waste profiling along Bucana Malaki shoreline in coordination with MENRO Naic.' },
     { id: 'cev-2', title: 'ROTC Cadre Inspection & Tactical Drills', date: '2026-09-26', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Battalion parade formation and field manual compliance inspection at tactical parade grounds.' },
@@ -104,9 +149,23 @@ function Calendar() {
   ];
 
   const [events, setEvents] = useState(() => {
-    const saved = localStorage.getItem('nstp_calendar_events');
-    return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
+    try {
+      const saved = localStorage.getItem('nstp_calendar_events');
+      return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
+    } catch (_) { return DEFAULT_CUSTOM_EVENTS; }
   });
+
+  // Load events from backend DB on mount (overrides localStorage with authoritative data)
+  useEffect(() => {
+    let cancelled = false;
+    calendarAPI.getEvents().then(dbEvents => {
+      if (!cancelled && Array.isArray(dbEvents) && dbEvents.length > 0) {
+        setEvents(dbEvents);
+        try { localStorage.setItem('nstp_calendar_events', JSON.stringify(dbEvents)); } catch (_) {}
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
 
   // Summary view filters
@@ -114,18 +173,52 @@ function Calendar() {
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
 
-  // Academic date boundaries
+  // Academic date boundaries - Dynamically configured from Active Batch Settings
   const batchRange = useMemo(() => {
     if (!viewingArchive || !archiveViewData) {
-      // Current active academic year: 2026-2027 (Aug 2026 to May 2027)
+      // Dynamic active academic batch range
+      let startStr = currentBatchRange?.startMonth || currentBatchRange?.startDate;
+      let endStr = currentBatchRange?.endMonth || currentBatchRange?.endDate;
+
+      if (!startStr || !endStr) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('nstp_active_batch_range') || '{}');
+          startStr = stored.startMonth || stored.startDate;
+          endStr = stored.endMonth || stored.endDate;
+        } catch (_) {}
+      }
+
+      if (!startStr || !endStr) {
+        const yr = String(currentBatch || '2026-2027 1st Semester');
+        const match = yr.match(/(\d{4})/);
+        const baseYear = match ? parseInt(match[1], 10) : 2026;
+        if (yr.includes('1st Sem')) {
+          startStr = `${baseYear}-08`;
+          endStr = `${baseYear}-12`;
+        } else if (yr.includes('2nd Sem')) {
+          startStr = `${baseYear + 1}-01`;
+          endStr = `${baseYear + 1}-05`;
+        } else {
+          startStr = `${baseYear}-08`;
+          endStr = `${baseYear + 1}-05`;
+        }
+      }
+
+      const cleanStart = String(startStr).slice(0, 7);
+      const cleanEnd = String(endStr).slice(0, 7);
+      const [sY, sM] = cleanStart.split('-').map(Number);
+      const [eY, eM] = cleanEnd.split('-').map(Number);
       return {
         isArchive: false,
-        minDate: new Date(2026, 7, 1),
-        maxDate: new Date(2027, 4, 31),
-        startLabel: 'Aug 2026',
-        endLabel: 'May 2027'
+        minDate: new Date(sY, sM - 1, 1),
+        maxDate: new Date(eY, eM, 0), // Last day of target end month
+        startLabel: new Date(sY, sM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        endLabel: new Date(eY, eM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        rawStart: cleanStart,
+        rawEnd: cleanEnd
       };
     }
+
     let startStr = archiveViewData.start_month || archiveViewData.startMonth || archiveViewData.data?.start_month || archiveViewData.data?.startMonth;
     let endStr = archiveViewData.end_month || archiveViewData.endMonth || archiveViewData.data?.end_month || archiveViewData.data?.endMonth;
 
@@ -145,16 +238,20 @@ function Calendar() {
       }
     }
 
-    const [sY, sM] = startStr.split('-').map(Number);
-    const [eY, eM] = endStr.split('-').map(Number);
+    const cleanStart = String(startStr).slice(0, 7);
+    const cleanEnd = String(endStr).slice(0, 7);
+    const [sY, sM] = cleanStart.split('-').map(Number);
+    const [eY, eM] = cleanEnd.split('-').map(Number);
     return {
       isArchive: true,
       minDate: new Date(sY, sM - 1, 1),
-      maxDate: new Date(eY, eM - 1, 1),
+      maxDate: new Date(eY, eM, 0),
       startLabel: new Date(sY, sM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      endLabel: new Date(eY, eM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      endLabel: new Date(eY, eM - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+      rawStart: cleanStart,
+      rawEnd: cleanEnd
     };
-  }, [viewingArchive, archiveViewData]);
+  }, [viewingArchive, archiveViewData, currentBatchRange, currentBatch]);
 
   // Jump calendar to batch start month once upon entering archive or returning to current
   const lastActiveBatchKey = useRef(null);
@@ -379,35 +476,35 @@ function Calendar() {
     return [...holidays, ...defaultInst, ...customEvents];
   };
 
-  const handleSaveEvent = () => {
+  const handleSaveEvent = async () => {
     if (viewingArchive) return;
     if (!newEvent.title.trim() || !newEvent.date) return;
-    
-    if (editingEvent) {
-      const updatedEvents = events.map(e => {
-        if (e.id === editingEvent.id) {
-          return {
-            ...e,
-            title: newEvent.title.trim(),
-            date: newEvent.date,
-            description: newEvent.description.trim(),
-            track: newEvent.track || 'All Tracks',
-            category: newEvent.category || 'Training',
-            isEdited: true,
-            editedAt: new Date().toISOString(),
-            lastModifiedBy: user?.name
-          };
-        }
-        return e;
-      });
 
+    if (editingEvent) {
+      const updatedEvent = {
+        title: newEvent.title.trim(),
+        date: newEvent.date,
+        description: newEvent.description.trim(),
+        track: newEvent.track || 'All Tracks',
+        category: newEvent.category || 'Training',
+      };
+
+      // Optimistic update
+      const updatedEvents = events.map(e =>
+        e.id === editingEvent.id ? { ...e, ...updatedEvent, isEdited: true, editedAt: new Date().toISOString(), lastModifiedBy: user?.name } : e
+      );
       setEvents(updatedEvents);
-      localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
+      try { localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents)); } catch (_) {}
+
+      // Persist to backend
+      calendarAPI.updateEvent(editingEvent.id, updatedEvent).catch(err =>
+        console.warn('[Calendar] Update event backend error:', err)
+      );
 
       if (typeof pushNotification === 'function') {
         pushNotification({
           title: 'Calendar Event Updated',
-          message: `Event "${newEvent.title.trim()}" was updated for ${newEvent.date} (Edited)`,
+          message: `Event "${newEvent.title.trim()}" was updated for ${newEvent.date}`,
           type: 'calendar',
           link: '/calendar',
         });
@@ -417,21 +514,28 @@ function Calendar() {
       setEditingEvent(null);
       setShowAddEventModal(false);
     } else {
-      const newEventObj = {
-        id: Date.now().toString(),
+      const eventPayload = {
+        id: 'cev_' + Date.now(),
         title: newEvent.title.trim(),
         date: newEvent.date,
         description: newEvent.description.trim(),
         track: newEvent.track || 'All Tracks',
         category: newEvent.category || 'Training',
-        type: 'custom',
         createdBy: user?.name || 'Administrator',
-        createdAt: new Date().toISOString()
       };
 
-      const updatedEvents = [...events, newEventObj];
+      // Optimistic update
+      const updatedEvents = [...events, eventPayload];
       setEvents(updatedEvents);
-      localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
+      try { localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents)); } catch (_) {}
+
+      // Persist to backend (triggers SMS notifications for instructors)
+      calendarAPI.createEvent(eventPayload).then(created => {
+        if (created && created.id) {
+          // Sync final server ID if different
+          setEvents(prev => prev.map(e => e.id === eventPayload.id ? { ...e, ...created } : e));
+        }
+      }).catch(err => console.warn('[Calendar] Create event backend error:', err));
 
       if (typeof pushNotification === 'function') {
         pushNotification({
@@ -464,7 +568,11 @@ function Calendar() {
     if (viewingArchive) return;
     const updatedEvents = events.filter(e => e.id !== eventId);
     setEvents(updatedEvents);
-    localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents));
+    try { localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents)); } catch (_) {}
+    // Delete from backend
+    calendarAPI.deleteEvent(eventId).catch(err =>
+      console.warn('[Calendar] Delete event backend error:', err)
+    );
   };
 
   const canPrev = useMemo(() => {
@@ -594,9 +702,25 @@ function Calendar() {
                 <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight flex items-center gap-2">
                   <span>{viewingArchive ? `Archived Calendar - Batch ${archiveViewData?.year}` : 'NSTP Academic Calendar'}</span>
                 </h1>
-                <p className="text-[10px] sm:text-xs text-emerald-300 font-medium truncate">
-                  {viewingArchive ? 'Historical batch activity records' : 'A.Y. 2026-2027 • Official Schedule & Immersion Planner'}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <p className="text-[10px] sm:text-xs text-emerald-300 font-medium truncate">
+                    {viewingArchive ? 'Historical batch activity records' : `${currentBatch || 'A.Y. 2026-2027'} • Official Schedule`}
+                  </p>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-900/90 border border-emerald-700/80 text-[10px] sm:text-[11px] font-bold text-amber-300 shadow-2xs">
+                    <span>📅</span>
+                    <span>Range: {batchRange.startLabel} – {batchRange.endLabel}</span>
+                  </span>
+                  {!viewingArchive && isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEditRangeModal(true)}
+                      className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-emerald-950 font-black shadow-xs transition-all cursor-pointer active:scale-95"
+                      title="Palitan o i-adjust ang sakop na buwan ng semester"
+                    >
+                      I-edit ang Range
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1312,6 +1436,93 @@ function Calendar() {
                   {editingEvent ? 'Update Event' : 'Add Event'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Active Semester Range Modal */}
+        {showEditRangeModal && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in"
+            onClick={() => setShowEditRangeModal(false)}
+          >
+            <div 
+              className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-emerald-200 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0">
+                    <CalendarDays className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight">I-set ang Sakop ng Semester</h3>
+                    <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{currentBatch || 'Aktibong Academic Batch'}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditRangeModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Form Body */}
+              <form onSubmit={handleSaveSemesterRange} className="p-5 space-y-4">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-950 leading-relaxed font-medium">
+                  Ang coverage dates na ito ang maglilimita sa buwanang pag-navigate at pagsusumite ng schedule para sa kasalukuyang semester.
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="edit-range-start" className="block text-xs font-bold text-gray-700 mb-1">
+                      Start Month:
+                    </label>
+                    <input
+                      type="month"
+                      id="edit-range-start"
+                      value={editRangeStart}
+                      onChange={(e) => setEditRangeStart(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit-range-end" className="block text-xs font-bold text-gray-700 mb-1">
+                      End Month:
+                    </label>
+                    <input
+                      type="month"
+                      id="edit-range-end"
+                      value={editRangeEnd}
+                      onChange={(e) => setEditRangeEnd(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditRangeModal(false)}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Kanselahin
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={rangeSaving || !editRangeStart || !editRangeEnd}
+                    className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {rangeSaving ? 'Saving...' : 'I-save ang Coverage'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

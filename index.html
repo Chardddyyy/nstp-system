@@ -68,19 +68,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script> 
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            registration.unregister();
-          }
-        }).catch(function() {});
-        if (window.caches) {
-          caches.keys().then(function(names) {
-            for (let name of names) caches.delete(name);
-          }).catch(function() {});
-        }
-      }
-    </script>
   </body>
 </html>

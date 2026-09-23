@@ -302,6 +302,72 @@ function App() {
     return () => clearInterval(checkInterval);
   }, []);
   const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
+
+  // Desktop Display Zoom Scale (Default 78% for spacious, compact dashboard view)
+  const [displayZoom, setDisplayZoomState] = useState(() => {
+    try {
+      return localStorage.getItem('nstp_display_zoom') || '78%';
+    } catch (_) {
+      return '78%';
+    }
+  });
+
+  const setDisplayZoom = useCallback((newZoom) => {
+    const clean = String(newZoom || '78%').trim();
+    setDisplayZoomState(clean);
+    try {
+      localStorage.setItem('nstp_display_zoom', clean);
+      document.documentElement.style.setProperty('--app-zoom', clean);
+      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+        document.documentElement.style.zoom = clean;
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      const zoomVal = displayZoom || '78%';
+      document.documentElement.style.setProperty('--app-zoom', zoomVal);
+      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+        document.documentElement.style.zoom = zoomVal;
+      } else {
+        document.documentElement.style.zoom = '1';
+      }
+    } catch (_) {}
+  }, [displayZoom]);
+
+  // Active Batch Calendar & Academic Semester Coverage Range
+  const [currentBatchRange, setCurrentBatchRangeState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nstp_active_batch_range');
+      if (saved) return JSON.parse(saved);
+    } catch (_) {}
+    return {
+      startMonth: '2026-08',
+      endMonth: '2026-12',
+      startDate: '2026-08-01',
+      endDate: '2026-12-31'
+    };
+  });
+
+  const updateActiveBatchRange = useCallback((rangeObj) => {
+    if (!rangeObj) return;
+    const startM = rangeObj.startMonth || rangeObj.start_month || '2026-08';
+    const endM = rangeObj.endMonth || rangeObj.end_month || '2026-12';
+    const startD = rangeObj.startDate || rangeObj.start_date || `${startM}-01`;
+    const endD = rangeObj.endDate || rangeObj.end_date || `${endM}-30`;
+    const normalized = {
+      startMonth: startM,
+      endMonth: endM,
+      startDate: startD,
+      endDate: endD
+    };
+    setCurrentBatchRangeState(normalized);
+    try {
+      localStorage.setItem('nstp_active_batch_range', JSON.stringify(normalized));
+    } catch (_) {}
+  }, []);
+
   const [viewingArchive, setViewingArchiveState] = useState(() => {
     try {
       return localStorage.getItem('nstp_viewing_archive') === 'true';
@@ -436,7 +502,19 @@ function App() {
     });
 
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      try { new Notification(item.title, { body: item.message }); } catch { /* ignore */ }
+      const notificationOptions = {
+        body: item.message,
+        icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
+        badge: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
+        tag: String(item.id),
+        data: { link: item.link || '/' },
+      };
+
+      navigator.serviceWorker?.ready
+        .then(registration => registration.showNotification(item.title, notificationOptions))
+        .catch(() => {
+          try { new Notification(item.title, notificationOptions); } catch { /* ignore */ }
+        });
     }
   }, [user]);
 
@@ -1068,6 +1146,14 @@ function App() {
         safeSetStorage('nstp_cached_archives_v5', DEFAULT_PAST_BATCHES);
       }
       setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
+      if (batchData && (batchData.start_month || batchData.end_month || batchData.startMonth || batchData.endMonth)) {
+        updateActiveBatchRange({
+          startMonth: batchData.start_month || batchData.startMonth,
+          endMonth: batchData.end_month || batchData.endMonth,
+          startDate: batchData.start_date || batchData.startDate,
+          endDate: batchData.end_date || batchData.endDate
+        });
+      }
 
       if (conversationsData && Array.isArray(conversationsData)) {
         setConversations(conversationsData);
@@ -1502,6 +1588,9 @@ function App() {
     pendingAnsweredCall, setPendingAnsweredCall,
     registerOutgoingCall, clearOutgoingCall,
     answerIncomingCall, declineIncomingCall,
+    displayZoom, setDisplayZoom,
+    currentBatchRange, setCurrentBatchRange: setCurrentBatchRangeState,
+    updateActiveBatchRange,
   };
 
   return (

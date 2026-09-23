@@ -10,6 +10,11 @@ initSecurityProtection();
 // Auto-reload page when new deployment replaces chunk assets (prevents 404 chunk load errors)
 if (typeof window !== 'undefined') {
   window.name = 'nstp_system_tab';
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`).catch(() => {});
+  }
+
   window.addEventListener('vite:preloadError', (event) => {
     event.preventDefault();
     window.location.reload();

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { requestPasswordReset, verifyResetOtp, confirmPasswordReset } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check } from 'lucide-react';
+import { requestPasswordReset, verifyResetOtp, confirmPasswordReset, testBackendPing, getPrimaryApiUrl } from '../services/api';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings } from 'lucide-react';
+
 
 // Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
 function copyTextToClipboard(text) {
@@ -68,6 +69,51 @@ function Login() {
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Server connection diagnostics state
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'slow' | 'offline'
+  const [serverPingInfo, setServerPingInfo] = useState(null);
+  const [customUrlInput, setCustomUrlInput] = useState(() => {
+    try {
+      return localStorage.getItem('nstp_custom_api_url') || localStorage.getItem('nstp_backend_url') || '';
+    } catch (_) {
+      return '';
+    }
+  });
+  const [isPinging, setIsPinging] = useState(false);
+
+  const runPingCheck = useCallback(async (targetUrl) => {
+    setIsPinging(true);
+    try {
+      const result = await testBackendPing(targetUrl);
+      setServerPingInfo(result);
+      if (result.success) {
+        setServerStatus(result.latency > 2500 ? 'slow' : 'online');
+      } else {
+        setServerStatus('offline');
+      }
+    } catch (_) {
+      setServerStatus('offline');
+    } finally {
+      setIsPinging(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    runPingCheck();
+  }, [runPingCheck]);
+
+  const handleSaveBackendUrl = (urlToSave) => {
+    const clean = String(urlToSave || '').trim();
+    if (!clean) {
+      localStorage.removeItem('nstp_custom_api_url');
+      localStorage.removeItem('nstp_backend_url');
+    } else {
+      localStorage.setItem('nstp_custom_api_url', clean);
+    }
+    window.location.reload();
+  };
 
   useEffect(() => {
     let timer;
@@ -236,10 +282,10 @@ function Login() {
           }
         } catch (_) {}
       }
-      if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted')) {
-        setError('Cloud server is waking up (~15s). Please tap Login again.');
-      } else if (errMsg.includes('suspended') || errMsg.includes('503') || errMsg.includes('Failed to fetch') || errMsg.includes('Network connection failed')) {
-        setError('Cloud backend is currently sleeping or suspended on Render. Please resume or restart the service in your Render dashboard (dashboard.render.com).');
+      if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted') || errMsg.includes('Network connection failed') || errMsg.includes('Failed to fetch')) {
+        setError('Cloud server connection timed out. The backend on Render is currently sleeping or experiencing network timeout. Click "Server Settings" below to test connection or connect to Local Server.');
+      } else if (errMsg.includes('suspended') || errMsg.includes('503')) {
+        setError('Cloud backend is currently sleeping or suspended on Render. Please resume or restart the service in your Render dashboard (dashboard.render.com), or switch to Local Server below.');
       } else {
         setError(errMsg || 'Server connection failed. Please try again.');
       }
@@ -524,7 +570,55 @@ function Login() {
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
+          {/* Server Connection Diagnostics Bar */}
+          <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] sm:text-xs">
+            <button
+              type="button"
+              onClick={() => setShowServerModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-gray-700 cursor-pointer text-left"
+              title="Click to check or configure server backend"
+            >
+              <span className="relative flex h-2 w-2">
+                {serverStatus === 'online' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                {serverStatus === 'slow' && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                )}
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    serverStatus === 'online'
+                      ? 'bg-emerald-500'
+                      : serverStatus === 'slow'
+                      ? 'bg-amber-500'
+                      : serverStatus === 'checking'
+                      ? 'bg-blue-400 animate-pulse'
+                      : 'bg-red-500'
+                  }`}
+                ></span>
+              </span>
+              <span className="font-bold text-[10.5px]">
+                {serverStatus === 'online' && `Cloud Server: Connected (${serverPingInfo?.latency || 0}ms)`}
+                {serverStatus === 'slow' && `Cloud Server: Slow (${serverPingInfo?.latency || 0}ms)`}
+                {serverStatus === 'checking' && 'Cloud Server: Checking...'}
+                {serverStatus === 'offline' && 'Cloud Server: Offline / Timed out'}
+              </span>
+              <Settings className="w-3 h-3 text-gray-400 ml-0.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => runPingCheck()}
+              disabled={isPinging}
+              className="text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-1 cursor-pointer font-bold"
+              title="Retest server connection"
+            >
+              <RefreshCw className={`w-2.5 h-2.5 ${isPinging ? 'animate-spin text-emerald-600' : ''}`} />
+              <span>{isPinging ? 'Pinging' : 'Ping'}</span>
+            </button>
+          </div>
+
+          <div className="mt-2.5 pt-2 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
               to="/enrollment" 
@@ -903,7 +997,156 @@ function Login() {
         </div>
       )}
 
-      {/* Footer Bar - Matching Landing Page Edge-to-Edge Footer Bar */}
+      {/* Server Connection Settings Modal */}
+      {showServerModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3.5 sm:p-4 animate-fade-in"
+          onClick={() => setShowServerModal(false)}
+        >
+          <div
+            className="bg-white text-gray-900 rounded-2xl sm:rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-emerald-800/30 flex flex-col relative my-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-emerald-800/60">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+                  <Server className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight text-white leading-tight">Backend Server Connection</h3>
+                  <p className="text-emerald-200 text-[10px] sm:text-xs font-medium">Configure API Endpoint &amp; Test Live Ping</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowServerModal(false)}
+                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+              {/* Live Connection Diagnostics Card */}
+              <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-500">Active API Endpoint:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    serverStatus === 'online'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : serverStatus === 'slow'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                      : serverStatus === 'checking'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                  }`}>
+                    {serverStatus === 'online' && `Online (${serverPingInfo?.latency || 0}ms)`}
+                    {serverStatus === 'slow' && `Slow (${serverPingInfo?.latency || 0}ms)`}
+                    {serverStatus === 'checking' && 'Checking...'}
+                    {serverStatus === 'offline' && 'Connection Failed'}
+                  </span>
+                </div>
+                <p className="font-mono text-xs font-bold text-emerald-950 break-all bg-white p-2.5 rounded-xl border border-gray-200 select-all">
+                  {getPrimaryApiUrl()}
+                </p>
+
+                {serverPingInfo && (
+                  <p className={`text-[11px] font-medium ${serverPingInfo.success ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {serverPingInfo.success
+                      ? `✓ Ping success! Server replied in ${serverPingInfo.latency}ms (Status: ${serverPingInfo.status})`
+                      : `✗ Error: ${serverPingInfo.message || 'Server did not respond'}`}
+                  </p>
+                )}
+
+                <div className="pt-1 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => runPingCheck()}
+                    disabled={isPinging}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isPinging ? 'animate-spin' : ''}`} />
+                    <span>{isPinging ? 'Testing Ping...' : 'Test Ping Now'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Network / PLDT Notice */}
+              <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-[11px] text-amber-900 leading-relaxed">
+                <p className="font-bold flex items-center gap-1.5 mb-1">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  Bakit nagkakaroon ng Connection Timeout?
+                </p>
+                <p>
+                  1. <strong>Render Free Tier Cold-Start:</strong> Kapag matagal na walang gumagamit, natutulog ang cloud server at nangangailangan ng 15-30 segundo bago muling mag-boot.<br />
+                  2. <strong>PLDT Route Dropout:</strong> Kung gumagamit ng PLDT sa Pilipinas, maaaring may temporary packet drop papuntang Render Cloudflare IP (216.24.57.18).
+                </p>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-gray-700">Mabilisang Paglipat ng Server:</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveBackendUrl('')}
+                    className="p-2.5 text-left bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    <span className="block font-black text-xs text-emerald-950">Default Cloud (Render)</span>
+                    <span className="block text-[10px] text-gray-500 font-medium truncate">nstp-system-iw5p.onrender.com</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveBackendUrl('http://localhost:3001/api')}
+                    className="p-2.5 text-left bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    <span className="block font-black text-xs text-emerald-950">Localhost Server</span>
+                    <span className="block text-[10px] text-gray-500 font-medium">http://localhost:3001/api</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom URL Input */}
+              <div className="space-y-1.5">
+                <label htmlFor="custom-backend-url" className="block text-xs font-bold text-gray-700">
+                  Custom Backend o Tunnel URL (ngrok / Cloudflare / LAN IP):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    id="custom-backend-url"
+                    value={customUrlInput}
+                    onChange={(e) => setCustomUrlInput(e.target.value)}
+                    placeholder="https://your-tunnel.ngrok-free.app/api"
+                    className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveBackendUrl(customUrlInput)}
+                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shrink-0"
+                  >
+                    Save &amp; Reload
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowServerModal(false)}
+                className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <footer className="bg-emerald-950/90 border-t border-emerald-900 py-2.5 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-medium">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>

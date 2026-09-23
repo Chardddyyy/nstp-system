@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --app-zoom: 0.78;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -21,6 +22,14 @@ html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
 }
+
+/* Compact 75%-80% Desktop Layout Scale for crisp, spacious dashboard viewing */
+@media screen and (min-width: 1024px) {
+  html {
+    zoom: var(--app-zoom, 0.78);
+  }
+}
+
 
 /* Accessible High-Contrast Keyboard Focus Indicators */
 :focus-visible {
@@ -49,8 +58,8 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* Ensure form fields allow selection & editing while UI elements block accidental inspection selection */
-input, textarea, [contenteditable="true"] {
+/* Ensure form fields, text content, tables, and codes allow selection & copying */
+input, textarea, [contenteditable="true"], p, span, h1, h2, h3, h4, h5, h6, table, pre, code, .selectable-text {
   user-select: text !important;
   -webkit-user-select: text !important;
 }

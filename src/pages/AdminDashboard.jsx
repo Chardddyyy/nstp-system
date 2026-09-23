@@ -215,7 +215,8 @@ function AdminDashboard() {
     archiveViewData, 
     setViewingArchive, 
     setArchiveViewData,
-    showToast
+    showToast,
+    updateActiveBatchRange
   } = useAuth() || {};
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -868,6 +869,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
   };
   
   const confirmNewBatch = async () => {
+    if (!newBatchStartMonth || !newBatchEndMonth) {
+      showNotif('error', 'Kailangang piliin ang Start Month at End Month para sa bagong batch upang malaman ang sakop ng calendar.');
+      return;
+    }
+
     if (confirmText.toLowerCase() !== 'confirm') {
       showNotif('error', 'You must type "confirm" exactly to proceed with creating a new batch.');
       return;
@@ -883,6 +889,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
         end_month: newBatchEndMonth,
         startMonth: newBatchStartMonth,
         endMonth: newBatchEndMonth,
+        calendar_start_date: newBatchStartMonth,
+        calendar_end_date: newBatchEndMonth,
         data: {
           cwts: stats.cwtsStudents,
           lts: stats.ltsStudents,
@@ -890,20 +898,44 @@ function getConsecutiveBatchDetails(currentBatchStr) {
           start_month: newBatchStartMonth,
           end_month: newBatchEndMonth,
           startMonth: newBatchStartMonth,
-          endMonth: newBatchEndMonth
+          endMonth: newBatchEndMonth,
+          calendar_start_date: newBatchStartMonth,
+          calendar_end_date: newBatchEndMonth
         }
       });
 
       await clearBatchData();
+
+      const newBatchPayload = {
+        year: targetNewBatch,
+        start_month: newBatchStartMonth,
+        end_month: newBatchEndMonth,
+        startMonth: newBatchStartMonth,
+        endMonth: newBatchEndMonth,
+        start_date: `${newBatchStartMonth}-01`,
+        end_date: `${newBatchEndMonth}-28`
+      };
+
       try {
-        await archivesAPI.updateBatch(targetNewBatch);
+        await archivesAPI.updateBatch(newBatchPayload);
       } catch (_) {}
+
+      // Immediately sync with active system state and persistent storage
+      if (updateActiveBatchRange) {
+        updateActiveBatchRange({
+          startMonth: newBatchStartMonth,
+          endMonth: newBatchEndMonth,
+          startDate: `${newBatchStartMonth}-01`,
+          endDate: `${newBatchEndMonth}-28`
+        });
+      }
+
       await refreshData();
 
       setShowNewBatchConfirm(false);
       setConfirmText('');
 
-      showNotif('success', `Batch "${currentBatch}" archived successfully. New batch "${targetNewBatch}" is now active.`);
+      showNotif('success', `Batch "${currentBatch}" archived successfully. Bagong batch "${targetNewBatch}" ay aktibo na (Calendar: ${newBatchStartMonth} hanggang ${newBatchEndMonth}).`);
     } catch (error) {
       console.error('Archive batch error:', error);
       showNotif('error', 'Failed to archive batch. Please try again.');
@@ -2546,6 +2578,67 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </p>
                 </div>
                 
+                {/* Calendar Range Configuration for the Batch */}
+                <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                      <span>📅</span> Calendar Coverage Range (Para sa Batch)
+                    </p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200/60 text-emerald-900 rounded-full">
+                      Required
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="batch-start-date" className="block text-[11px] font-bold text-gray-700 mb-1">
+                        Start Month / Date:
+                      </label>
+                      <input
+                        type="month"
+                        id="batch-start-date"
+                        name="batchStartDate"
+                        value={newBatchStartMonth}
+                        onChange={(e) => setNewBatchStartMonth(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="batch-end-date" className="block text-[11px] font-bold text-gray-700 mb-1">
+                        End Month / Date:
+                      </label>
+                      <input
+                        type="month"
+                        id="batch-end-date"
+                        name="batchEndDate"
+                        value={newBatchEndMonth}
+                        onChange={(e) => setNewBatchEndMonth(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-800 font-medium italic">
+                    Ang sakop na buwan o petsa na ito ang magiging batayan ng academic calendar, schedule matrix, at mga reports para sa batch na ito.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="target-batch-name" className="block text-xs font-bold text-gray-700 mb-1">
+                    Incoming Batch Label:
+                  </label>
+                  <input
+                    type="text"
+                    id="target-batch-name"
+                    name="targetBatchName"
+                    value={newBatchName}
+                    onChange={(e) => setNewBatchName(e.target.value)}
+                    placeholder="e.g. 2026-2027 2nd Semester"
+                    className="w-full px-3.5 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-bold mb-3"
+                  />
+                </div>
+
                 <div>
                   <label htmlFor="confirm-batch" className="block text-xs font-bold text-gray-700 mb-1.5">
                     Type <span className="text-red-600 font-black">"confirm"</span> to continue:
