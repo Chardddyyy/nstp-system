@@ -11,6 +11,23 @@ initSecurityProtection();
 if (typeof window !== 'undefined') {
   window.name = 'nstp_system_tab';
 
+  // Enforce 75% compact zoom on desktop & laptop screens so layout looks spacious and crisp at standard 100% browser zoom
+  const applyResponsiveAppZoom = () => {
+    try {
+      if (window.innerWidth >= 768) {
+        document.body.style.zoom = '0.75';
+      } else {
+        document.body.style.zoom = '1';
+      }
+    } catch (_) {}
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyResponsiveAppZoom);
+  } else {
+    applyResponsiveAppZoom();
+  }
+  window.addEventListener('resize', applyResponsiveAppZoom);
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}service-worker.js`).catch(() => {});
   }

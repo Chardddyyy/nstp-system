@@ -23,10 +23,10 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Compact 75%-80% Desktop Layout Scale for crisp, spacious dashboard viewing */
-@media screen and (min-width: 1024px) {
-  html {
-    zoom: var(--app-zoom, 0.78);
+/* Compact 75% Desktop & Laptop Scale for crisp, spacious dashboard viewing */
+@media screen and (min-width: 768px) {
+  body {
+    zoom: 0.75;
   }
 }
 
