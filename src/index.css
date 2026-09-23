@@ -30,6 +30,29 @@ html {
   }
 }
 
+/* Full Screen Viewport Coverage adjusted for 75% Desktop Zoom */
+.hero-full-viewport {
+  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
+}
+
+@media screen and (min-width: 768px) {
+  .hero-full-viewport {
+    height: calc((100vh - 62px) / 0.75);
+    min-height: calc((100vh - 62px) / 0.75);
+  }
+}
+
+.login-full-viewport {
+  min-height: 100vh;
+}
+
+@media screen and (min-width: 768px) {
+  .login-full-viewport {
+    min-height: calc(100vh / 0.75);
+  }
+}
+
 
 /* Accessible High-Contrast Keyboard Focus Indicators */
 :focus-visible {

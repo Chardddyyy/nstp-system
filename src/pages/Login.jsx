@@ -397,7 +397,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
+    <div className="min-h-screen min-h-[100dvh] login-full-viewport w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
       {/* Background Decorative Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none overflow-hidden max-w-full"></div>
 
@@ -424,8 +424,8 @@ function Login() {
         </div>
       </header>
 
-      {/* Main Content Area - Clean Centered Login Card */}
-      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 w-full max-w-full overflow-x-hidden">
+      {/* Main Content Area - Clean Centered Login Card with Generous Breathing Room */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 py-16 sm:py-28 my-auto relative z-10 w-full max-w-full overflow-x-hidden">
         <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-4 sm:p-7">
           <div className="text-center mb-4 sm:mb-6">
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">

@@ -96,9 +96,10 @@ async function apiCall(endpoint, options) {
 
   var response;
   try {
-    // Generous 45s timeout for Render cold-start on free tier
+    // Fast 3s timeout for login to avoid freezing if Cloud Server is asleep, 20s for general calls
+    var timeoutDuration = endpoint === '/auth/login' ? 3000 : 20000;
     var controller = new AbortController();
-    var timeoutId = setTimeout(function() { controller.abort(); }, 45000);
+    var timeoutId = setTimeout(function() { controller.abort(); }, timeoutDuration);
     var configWithSignal = Object.assign({}, config, { signal: controller.signal });
 
     try {

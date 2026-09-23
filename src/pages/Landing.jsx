@@ -575,23 +575,23 @@ function Landing() {
         {/* ── Mobile Backdrop Overlay (Auto-closes when tapping outside) ── */}
         {mobileMenuOpen && (
           <div
-            className="fixed inset-0 top-0 left-0 w-screen h-screen bg-black/65 backdrop-blur-xs z-30 lg:hidden"
+            className="fixed inset-0 top-[56px] w-full h-[calc(100dvh-56px)] bg-black/80 z-30 lg:hidden animate-fade-in"
             onClick={() => setMobileMenuOpen(false)}
             onTouchStart={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
         )}
 
-        {/* ── Mobile Slide-down Full Drawer Navigation ──────────────────── */}
+        {/* ── Mobile Slide-down Full Drawer Navigation (Solid, Sleek, Unified Aesthetic) ── */}
         {mobileMenuOpen && (
-          <div className="relative z-40 lg:hidden bg-emerald-950/98 backdrop-blur-3xl border-t border-emerald-800/90 px-4 py-3.5 space-y-3 animate-slide-up shadow-2xl">
+          <div className="relative z-40 lg:hidden bg-emerald-950 border-t border-b border-emerald-800/90 px-4 py-4 space-y-3.5 shadow-2xl animate-slide-up">
             
             {/* Quick Actions in Mobile Drawer */}
-            <div className="grid grid-cols-2 gap-2 pb-3 border-b border-emerald-800/80">
+            <div className="grid grid-cols-2 gap-2.5 pb-3.5 border-b border-emerald-800/80">
               <Link
                 to="/enrollment"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 px-3 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-700 shadow-sm transition-colors"
+                className="py-2.5 px-3 bg-emerald-800 hover:bg-emerald-700 text-white font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-600 shadow-sm transition-colors active:scale-95"
               >
                 <span>Enroll Now</span>
                 <ChevronRight className="w-3.5 h-3.5 text-amber-400" />
@@ -599,7 +599,7 @@ function Landing() {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                className="py-2.5 px-3 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95"
               >
                 <span>Portal Login</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -607,53 +607,63 @@ function Landing() {
             </div>
 
             {/* Categorized Mobile Navigation Links */}
-            <div className="space-y-1 text-xs font-bold text-emerald-100">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-1 pb-0.5">Programs &amp; Guides</p>
+            <div className="space-y-1.5 text-xs font-bold text-emerald-100">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 px-2 pt-1 pb-0.5">Programs &amp; Guides</p>
               
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('guide'); setMobileMenuOpen(false); }} 
-                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
+                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/90 active:bg-emerald-900 text-left flex items-center gap-3 cursor-pointer transition-colors border border-transparent hover:border-emerald-700/60"
               >
-                <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-900/80 border border-emerald-700 flex items-center justify-center text-emerald-300 shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
                 <span>How to Enroll (3 Steps)</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('schedule'); setMobileMenuOpen(false); }} 
-                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
+                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/90 active:bg-emerald-900 text-left flex items-center gap-3 cursor-pointer transition-colors border border-transparent hover:border-emerald-700/60"
               >
-                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-900/80 border border-emerald-700 flex items-center justify-center text-amber-400 shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
                 <span>Enrollment Schedule</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('video'); setMobileMenuOpen(false); }} 
-                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
+                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/90 active:bg-emerald-900 text-left flex items-center gap-3 cursor-pointer transition-colors border border-transparent hover:border-emerald-700/60"
               >
-                <Play className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-900/80 border border-emerald-700 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Play className="w-4 h-4" />
+                </div>
                 <span>Video Orientation Guide</span>
               </button>
 
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 pt-2 pb-0.5">Help &amp; Contact</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400 px-2 pt-2.5 pb-0.5">Help &amp; Contact</p>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }} 
-                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
+                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/90 active:bg-emerald-900 text-left flex items-center gap-3 cursor-pointer transition-colors border border-transparent hover:border-emerald-700/60"
               >
-                <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-900/80 border border-emerald-700 flex items-center justify-center text-amber-300 shrink-0">
+                  <HelpCircle className="w-4 h-4" />
+                </div>
                 <span>Frequently Asked Questions</span>
               </button>
 
               <button 
                 type="button" 
                 onClick={() => { scrollToSection('contact'); setMobileMenuOpen(false); }} 
-                className="w-full p-2 rounded-xl hover:bg-white/10 text-left flex items-center gap-2.5 cursor-pointer transition-colors"
+                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/90 active:bg-emerald-900 text-left flex items-center gap-3 cursor-pointer transition-colors border border-transparent hover:border-emerald-700/60"
               >
-                <Phone className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-900/80 border border-emerald-700 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
                 <span>CvSU Naic Contact Directory</span>
               </button>
             </div>
@@ -663,7 +673,7 @@ function Landing() {
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen Coverage) ───── */}
       <section 
-        className="relative w-full h-[calc(100vh-62px)] min-h-[580px] xs:min-h-[640px] sm:min-h-[720px] md:min-h-[calc(100vh-62px)] overflow-hidden bg-gray-950 touch-pan-y select-none"
+        className="relative w-full hero-full-viewport overflow-hidden bg-gray-950 touch-pan-y select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

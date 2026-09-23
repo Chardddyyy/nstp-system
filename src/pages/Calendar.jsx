@@ -103,76 +103,6 @@ function Calendar() {
   const [editRangeStart, setEditRangeStart] = useState('');
   const [editRangeEnd, setEditRangeEnd] = useState('');
 
-  useEffect(() => {
-    if (batchRange?.rawStart) setEditRangeStart(batchRange.rawStart);
-    if (batchRange?.rawEnd) setEditRangeEnd(batchRange.rawEnd);
-  }, [batchRange?.rawStart, batchRange?.rawEnd]);
-
-  const handleSaveSemesterRange = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
-    if (!editRangeStart || !editRangeEnd) return;
-    setRangeSaving(true);
-    try {
-      const payload = {
-        year: currentBatch || '2026-2027 1st Semester',
-        start_month: editRangeStart,
-        end_month: editRangeEnd,
-        startMonth: editRangeStart,
-        endMonth: editRangeEnd,
-        start_date: `${editRangeStart}-01`,
-        end_date: `${editRangeEnd}-28`
-      };
-      await archivesAPI.updateBatch(payload).catch(() => {});
-      if (updateActiveBatchRange) {
-        updateActiveBatchRange({
-          startMonth: editRangeStart,
-          endMonth: editRangeEnd,
-          startDate: `${editRangeStart}-01`,
-          endDate: `${editRangeEnd}-28`
-        });
-      }
-      setShowEditRangeModal(false);
-      pushNotification?.({
-        type: 'success',
-        message: `Updated academic semester calendar range to ${editRangeStart} - ${editRangeEnd}`
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRangeSaving(false);
-    }
-  };
-  const DEFAULT_CUSTOM_EVENTS = [
-    { id: 'cev-1', title: 'CWTS Community Coastal Cleanup & Profiling', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Cleanup and waste profiling along Bucana Malaki shoreline in coordination with MENRO Naic.' },
-    { id: 'cev-2', title: 'ROTC Cadre Inspection & Tactical Drills', date: '2026-09-26', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Battalion parade formation and field manual compliance inspection at tactical parade grounds.' },
-    { id: 'cev-3', title: 'LTS Adopted School Storytelling Workshop', date: '2026-10-03', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Phonics storytelling and learning kit distribution for Grade 2 and 3 pupils in Naic partner schools.' }
-  ];
-
-  const [events, setEvents] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nstp_calendar_events');
-      return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
-    } catch (_) { return DEFAULT_CUSTOM_EVENTS; }
-  });
-
-  // Load events from backend DB on mount (overrides localStorage with authoritative data)
-  useEffect(() => {
-    let cancelled = false;
-    calendarAPI.getEvents().then(dbEvents => {
-      if (!cancelled && Array.isArray(dbEvents) && dbEvents.length > 0) {
-        setEvents(dbEvents);
-        try { localStorage.setItem('nstp_calendar_events', JSON.stringify(dbEvents)); } catch (_) {}
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
-
-  // Summary view filters
-  const [summarySemester, setSummarySemester] = useState('all'); // 'all' | '1st' | '2nd'
-  const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
-  const [summarySearch, setSummarySearch] = useState('');
-
   // Academic date boundaries - Dynamically configured from Active Batch Settings
   const batchRange = useMemo(() => {
     if (!viewingArchive || !archiveViewData) {
@@ -252,6 +182,76 @@ function Calendar() {
       rawEnd: cleanEnd
     };
   }, [viewingArchive, archiveViewData, currentBatchRange, currentBatch]);
+
+  useEffect(() => {
+    if (batchRange?.rawStart) setEditRangeStart(batchRange.rawStart);
+    if (batchRange?.rawEnd) setEditRangeEnd(batchRange.rawEnd);
+  }, [batchRange?.rawStart, batchRange?.rawEnd]);
+
+  const handleSaveSemesterRange = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!editRangeStart || !editRangeEnd) return;
+    setRangeSaving(true);
+    try {
+      const payload = {
+        year: currentBatch || '2026-2027 1st Semester',
+        start_month: editRangeStart,
+        end_month: editRangeEnd,
+        startMonth: editRangeStart,
+        endMonth: editRangeEnd,
+        start_date: `${editRangeStart}-01`,
+        end_date: `${editRangeEnd}-28`
+      };
+      await archivesAPI.updateBatch(payload).catch(() => {});
+      if (updateActiveBatchRange) {
+        updateActiveBatchRange({
+          startMonth: editRangeStart,
+          endMonth: editRangeEnd,
+          startDate: `${editRangeStart}-01`,
+          endDate: `${editRangeEnd}-28`
+        });
+      }
+      setShowEditRangeModal(false);
+      pushNotification?.({
+        type: 'success',
+        message: `Updated academic semester calendar range to ${editRangeStart} - ${editRangeEnd}`
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRangeSaving(false);
+    }
+  };
+  const DEFAULT_CUSTOM_EVENTS = [
+    { id: 'cev-1', title: 'CWTS Community Coastal Cleanup & Profiling', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Cleanup and waste profiling along Bucana Malaki shoreline in coordination with MENRO Naic.' },
+    { id: 'cev-2', title: 'ROTC Cadre Inspection & Tactical Drills', date: '2026-09-26', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Battalion parade formation and field manual compliance inspection at tactical parade grounds.' },
+    { id: 'cev-3', title: 'LTS Adopted School Storytelling Workshop', date: '2026-10-03', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Phonics storytelling and learning kit distribution for Grade 2 and 3 pupils in Naic partner schools.' }
+  ];
+
+  const [events, setEvents] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nstp_calendar_events');
+      return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
+    } catch (_) { return DEFAULT_CUSTOM_EVENTS; }
+  });
+
+  // Load events from backend DB on mount (overrides localStorage with authoritative data)
+  useEffect(() => {
+    let cancelled = false;
+    calendarAPI.getEvents().then(dbEvents => {
+      if (!cancelled && Array.isArray(dbEvents) && dbEvents.length > 0) {
+        setEvents(dbEvents);
+        try { localStorage.setItem('nstp_calendar_events', JSON.stringify(dbEvents)); } catch (_) {}
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
+
+  // Summary view filters
+  const [summarySemester, setSummarySemester] = useState('all'); // 'all' | '1st' | '2nd'
+  const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
+  const [summarySearch, setSummarySearch] = useState('');
 
   // Jump calendar to batch start month once upon entering archive or returning to current
   const lastActiveBatchKey = useRef(null);

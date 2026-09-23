@@ -644,6 +644,46 @@ function AdminDashboard() {
     setSelectedMessages([]);
   }
 
+  const handleTestDeviceNotification = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (typeof Notification === 'undefined') {
+      showToast?.('Device notifications are not supported by this browser.', 'warning');
+      return;
+    }
+    try {
+      let permission = Notification.permission;
+      if (permission !== 'granted') {
+        permission = await Notification.requestPermission();
+      }
+      if (permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification('CvSU Naic NSTP Portal', {
+              body: '🔔 Device notifications are active and working properly!',
+              icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
+              badge: `${import.meta.env.BASE_URL}icons/icon-192x192.png`
+            });
+          }).catch(() => {
+            new Notification('CvSU Naic NSTP Portal', {
+              body: '🔔 Device notifications are active and working properly!',
+              icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`
+            });
+          });
+        } else {
+          new Notification('CvSU Naic NSTP Portal', {
+            body: '🔔 Device notifications are active and working properly!',
+            icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`
+          });
+        }
+        showToast?.('Device notification sent! Check your system notification banner.', 'success');
+      } else {
+        showToast?.('Notification permission was blocked in browser settings.', 'warning');
+      }
+    } catch (err) {
+      showToast?.('Could not send notification: ' + err.message, 'error');
+    }
+  };
+
   function handleDeleteOne(e, id) {
     if (e) {
       e.preventDefault();
@@ -1178,6 +1218,21 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       </div>
+                    </div>
+
+                    {/* Quick Device Push Notification Verifier */}
+                    <div className="bg-emerald-50/70 border-b border-emerald-100 px-3 py-1.5 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                        <Bell className="w-3 h-3 text-emerald-600" /> Device Alerts
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleTestDeviceNotification}
+                        className="text-[9.5px] font-black text-emerald-700 hover:text-emerald-900 bg-white hover:bg-emerald-100/60 px-2 py-0.5 rounded-lg border border-emerald-200 transition-all cursor-pointer shadow-2xs"
+                        title="Click to test device push notification"
+                      >
+                        🔔 Test Notification
+                      </button>
                     </div>
 
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
