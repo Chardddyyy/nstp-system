@@ -6,7 +6,7 @@
 const jwt = require('jsonwebtoken');
 const { AppError } = require('./errorHandler');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nstp_jwt_super_secret_key_change_in_production_2026';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'nstp-dev-secret-change-before-production');
 
 /**
  * Authenticate JWT Bearer Token
@@ -19,6 +19,10 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) {
     return next(new AppError('Authentication required. Please provide a valid token.', 401, 'AUTH_REQUIRED'));
+  }
+
+  if (!JWT_SECRET) {
+    return next(new AppError('Server misconfiguration: missing JWT secret.', 500, 'JWT_SECRET_MISSING'));
   }
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {

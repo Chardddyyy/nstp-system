@@ -218,7 +218,16 @@ function App() {
     try {
       localStorage.removeItem('nstp_cached_archives');
       const cached = JSON.parse(localStorage.getItem('nstp_cached_archives_v5') || '[]');
-      return Array.isArray(cached) && cached.length > 0 ? cached : DEFAULT_PAST_BATCHES;
+      if (Array.isArray(cached) && cached.length > 0) {
+        // Bust cache if any entry is missing cwts/lts/rotc counts (stale format)
+        const hasCounts = cached.every(a => a.cwts != null || a.lts != null || a.rotc != null || (a.data?.cwts != null));
+        if (!hasCounts) {
+          localStorage.removeItem('nstp_cached_archives_v5');
+          return DEFAULT_PAST_BATCHES;
+        }
+        return cached;
+      }
+      return DEFAULT_PAST_BATCHES;
     } catch {
       return DEFAULT_PAST_BATCHES;
     }

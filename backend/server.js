@@ -69,11 +69,10 @@ app.use((req, res, next) => {
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
-    console.error('[SECURITY CRITICAL] JWT_SECRET environment variable is NOT SET in production! Please set JWT_SECRET in your Render dashboard environment settings immediately.');
-  } else {
-    console.warn('[SECURITY NOTICE] JWT_SECRET environment variable not set. Falling back to local development key.');
+    throw new Error('[SECURITY CRITICAL] JWT_SECRET environment variable is NOT SET in production. Set it in Render before deployment.');
   }
-  JWT_SECRET = 'nstp-system-persistent-production-jwt-secret-key-2026-v1-super-secure-key';
+  console.warn('[SECURITY NOTICE] JWT_SECRET environment variable not set. Falling back to a development-only key.');
+  JWT_SECRET = 'nstp-system-dev-secret-change-before-production';
 }
 const JWT_EXPIRY = '30d';
 
@@ -157,9 +156,14 @@ function isAllowedOrigin(origin) {
 }
 
 app.use((req, res, next) => {
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  const origin = req.headers.origin;
+  if (origin && !isAllowedOrigin(origin)) {
+    return res.status(403).json({ message: 'Origin not allowed by CORS policy.' });
+  }
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Private-Network, Accept, X-Requested-With, Origin');
   res.setHeader('Access-Control-Max-Age', '86400');
@@ -170,7 +174,10 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: true, // Dynamically mirror request origin for credentials support
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    callback(null, isAllowedOrigin(origin));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Allow-Private-Network', 'Accept', 'X-Requested-With', 'Origin'],
@@ -2790,20 +2797,25 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete instructor account (admin only, cannot delete self or any admin)
+// Delete user account (admin only, cannot delete self or the only remaining admin)
 app.delete('/api/users/:id', authenticateToken, async (req, res) => {
   try {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
+      return res.status(403).json({ message: 'Admin access required.' });
     }
     const { id } = req.params;
     if (parseInt(id) === req.user.id) {
-      return res.status(400).json({ message: 'You cannot delete your own account.' });
+      return res.status(400).json({ message: 'You cannot delete your own account while logged in.' });
     }
-    const [target] = await pool.execute('SELECT id, role, email FROM users WHERE id = ?', [id]);
+    const [target] = await pool.execute('SELECT id, role, email, name FROM users WHERE id = ?', [id]);
     if (target.length === 0) return res.status(404).json({ message: 'User not found.' });
+    
+    // If deleting an admin account, protect against deleting the last admin
     if (target[0].role === 'admin') {
-      return res.status(403).json({ message: 'Admin accounts cannot be deleted.' });
+      const [adminCount] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "admin"');
+      if ((adminCount[0]?.count || 0) <= 1) {
+        return res.status(400).json({ message: 'Cannot delete the only remaining admin account in the system.' });
+      }
     }
 
     // Safely remove or dissociate all referencing child records across relational tables:
@@ -2817,8 +2829,8 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     }
 
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
-    console.log(`[USER DELETED] User ID ${id} (${target[0].email}) successfully removed by Admin ID ${req.user.id}`);
-    res.json({ success: true, message: 'Instructor deleted successfully.' });
+    console.log(`[USER DELETED] ${target[0].role.toUpperCase()} ID ${id} (${target[0].email}) successfully removed by Admin ID ${req.user.id}`);
+    res.json({ success: true, message: `${target[0].role === 'admin' ? 'Admin' : 'Instructor'} account "${target[0].name || target[0].email}" deleted successfully.` });
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ message: error.message || 'Server error deleting user.' });
@@ -6389,7 +6401,11 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
     res.json((archives || []).map(archive => {
       var parsedData = null;
       if (archive.data) {
-        try { parsedData = JSON.parse(archive.data); } catch (e) { parsedData = null; }
+        try {
+          parsedData = typeof archive.data === 'string' ? JSON.parse(archive.data) : archive.data;
+        } catch (e) {
+          parsedData = null;
+        }
       }
 
       let students = archive.students || 0;
@@ -6398,7 +6414,7 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
       if (isInstructor && instructorDept && parsedData) {
         const sData = parsedData.studentData || [];
         const rData = parsedData.reportData || [];
-        const deptStudents = sData.filter(s => s.department === instructorDept);
+        const deptStudents = sData.filter(s => (s.department || s.dept) === instructorDept);
         const deptReports = rData.filter(r => r.department === 'All' || r.department === instructorDept);
         students = deptStudents.length;
         reports = deptReports.length;
@@ -6412,10 +6428,18 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
         };
       }
 
+      const sList = Array.isArray(parsedData?.studentData) ? parsedData.studentData : [];
+      const cwtsCount = parsedData?.cwts || (sList.length > 0 ? sList.filter(s => (s.department || s.dept) === 'CWTS').length : 0);
+      const ltsCount = parsedData?.lts || (sList.length > 0 ? sList.filter(s => (s.department || s.dept) === 'LTS').length : 0);
+      const rotcCount = parsedData?.rotc || (sList.length > 0 ? sList.filter(s => (s.department || s.dept) === 'ROTC').length : 0);
+
       return {
         ...archive,
-        students,
+        students: students || (sList.length > 0 ? sList.length : archive.students || 0),
         reports,
+        cwts: cwtsCount,
+        lts: ltsCount,
+        rotc: rotcCount,
         data: parsedData
       };
     }));

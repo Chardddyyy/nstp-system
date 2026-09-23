@@ -24,6 +24,7 @@ function Profile() {
   const [showPassword, setShowPassword] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [instructorToDelete, setInstructorToDelete] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -492,12 +493,17 @@ function Profile() {
     }
   };
 
-  const handleDeleteInstructor = (id, name) => {
-    setInstructorToDelete({ id, name });
+  const handleDeleteInstructor = (id, name, role) => {
+    setInstructorToDelete({ id, name, role });
+    setDeleteConfirmText('');
   };
 
   const confirmDeleteInstructor = async () => {
     if (!instructorToDelete) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      showToast('Please type DELETE to confirm.', 'warning');
+      return;
+    }
     const { id, name } = instructorToDelete;
     setDeletingInstructorId(id);
     try {
@@ -507,10 +513,11 @@ function Profile() {
         const stored = JSON.parse(localStorage.getItem('nstp_users') || '[]');
         localStorage.setItem('nstp_users', JSON.stringify(stored.filter(u => u.id !== id)));
       } catch (_) {}
-      showToast(`Instructor "${name}" deleted successfully.`, 'info');
+      showToast(`Account "${name}" deleted successfully.`, 'info');
       setInstructorToDelete(null);
+      setDeleteConfirmText('');
     } catch (error) {
-      showToast(error?.message || 'Failed to delete instructor.', 'error');
+      showToast(error?.message || 'Failed to delete account.', 'error');
     } finally {
       setDeletingInstructorId(null);
     }
@@ -846,10 +853,10 @@ function Profile() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button type="button"
-                              onClick={() => handleDeleteInstructor(inst.id, inst.name)}
+                              onClick={() => handleDeleteInstructor(inst.id, inst.name, inst.role)}
                               disabled={deletingInstructorId === inst.id}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
-                              title="Delete instructor"
+                              title={inst.role === 'admin' ? 'Delete admin account' : 'Delete instructor'}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1417,14 +1424,35 @@ function Profile() {
             <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 text-rose-600">
               <Trash2 className="w-7 h-7" />
             </div>
-            <h3 className="text-lg font-black text-gray-900 mb-2">Delete Faculty Member?</h3>
-            <p className="text-xs text-gray-500 mb-6">
-              Are you sure you want to delete instructor <strong>"{instructorToDelete.name}"</strong>? This action cannot be undone.
+            <h3 className="text-lg font-black text-gray-900 mb-1">
+              {instructorToDelete.role === 'admin' ? 'Delete Admin Account?' : 'Delete Faculty Member?'}
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">
+              You are about to permanently delete{' '}
+              <strong className="text-gray-800">"{instructorToDelete.name}"</strong>.
+              {instructorToDelete.role === 'admin' && (
+                <span className="block mt-1 text-rose-600 font-semibold">⚠ This is an admin account. This action is irreversible.</span>
+              )}
             </p>
+            <div className="mb-4 text-left">
+              <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                Type <span className="font-black text-rose-600 tracking-widest">DELETE</span> to confirm
+              </label>
+              <input
+                type="text"
+                id="delete-confirm-input"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && deleteConfirmText.trim().toUpperCase() === 'DELETE') confirmDeleteInstructor(); }}
+                placeholder="Type DELETE here..."
+                autoFocus
+                className="w-full px-3 py-2 border-2 border-gray-300 focus:border-rose-400 rounded-xl text-sm outline-none transition-colors"
+              />
+            </div>
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setInstructorToDelete(null)}
+                onClick={() => { setInstructorToDelete(null); setDeleteConfirmText(''); }}
                 className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Cancel
@@ -1432,9 +1460,10 @@ function Profile() {
               <button
                 type="button"
                 onClick={confirmDeleteInstructor}
-                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 cursor-pointer"
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || deletingInstructorId === instructorToDelete?.id}
+                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs rounded-xl transition-all shadow-md shadow-rose-600/30 cursor-pointer"
               >
-                Delete
+                {deletingInstructorId === instructorToDelete?.id ? 'Deleting...' : 'Permanently Delete'}
               </button>
             </div>
           </div>
