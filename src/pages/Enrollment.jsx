@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { analyzeDocumentFile } from '../utils/documentValidation';
 
@@ -76,18 +76,21 @@ function Enrollment() {
     };
 
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
+    let rendered = false;
 
     const renderWidget = () => {
+      if (rendered || recaptchaWidgetIdRef.current !== null) return;
       if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
         if (!recaptchaContainerRef.current.hasChildNodes()) {
           try {
+            rendered = true;
             recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
               sitekey: siteKey,
-              callback: (token) => window.onGoogleRecaptchaSuccess(token),
-              'expired-callback': () => window.onGoogleRecaptchaExpired(),
+              callback: (token) => window.onGoogleRecaptchaSuccess && window.onGoogleRecaptchaSuccess(token),
+              'expired-callback': () => window.onGoogleRecaptchaExpired && window.onGoogleRecaptchaExpired(),
             });
           } catch (e) {
-            console.warn('reCAPTCHA render notice:', e);
+            console.warn('reCAPTCHA notice:', e);
           }
         }
       }
@@ -120,17 +123,8 @@ function Enrollment() {
       }
     }
 
-    const pollInterval = setInterval(() => {
-      if (recaptchaContainerRef.current && !recaptchaContainerRef.current.hasChildNodes()) {
-        renderWidget();
-      } else if (recaptchaContainerRef.current && recaptchaContainerRef.current.hasChildNodes()) {
-        clearInterval(pollInterval);
-      }
-    }, 300);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
+    const timer = setTimeout(renderWidget, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const convertToCm = (val, unit) => {
@@ -1727,6 +1721,14 @@ function Enrollment() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
+                      <button
+                        type="button"
+                        onClick={() => setShowSampleCorModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs transition-all cursor-pointer shadow-2xs self-start sm:self-auto"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        <span>View Official Sample COR</span>
+                      </button>
                     </div>
                     <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
                   </div>
@@ -2468,91 +2470,52 @@ function Enrollment() {
             {/* Modal Body */}
             <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
               
-              {/* Document Specimen Simulation */}
-              <div className="bg-white rounded-2xl p-4 sm:p-6 border-2 border-dashed border-emerald-300 shadow-sm font-sans text-slate-800 relative">
-                
-                {/* Visual "SAMPLE ONLY" Watermark */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.06] select-none">
-                  <span className="text-7xl font-black text-emerald-950 uppercase rotate-[-25deg]">CVSU SPECIMEN</span>
+              {/* Document Specimen Preview from Actual CvSU Naic Registration Form PDF */}
+              <div className="bg-white rounded-2xl p-3 sm:p-4 border-2 border-emerald-300 shadow-md font-sans text-slate-800 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Official CvSU Naic Document Specimen
+                    </span>
+                    <span className="text-[11px] text-gray-500 font-semibold hidden sm:inline">
+                      (CvSU Naic Certificate of Registration)
+                    </span>
+                  </div>
+                  <a
+                    href={`${import.meta.env.BASE_URL}id-photos/sample-cor.jpg`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
+                  >
+                    <span>Open Full Size</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
 
-                {/* Specimen Header */}
-                <div className="text-center pb-3 border-b border-gray-300">
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Republic of the Philippines</p>
-                  <h4 className="text-xs sm:text-sm font-black text-emerald-950 uppercase">CAVITE STATE UNIVERSITY</h4>
-                  <p className="text-[10.5px] font-bold text-emerald-800">Naic Campus • Bucana Malaki, Naic, Cavite</p>
-                  <p className="text-[10px] text-gray-500 font-bold tracking-wider uppercase mt-0.5">Office of the University Registrar</p>
-                  <div className="inline-block mt-2 px-3 py-0.5 bg-emerald-100/80 text-emerald-900 rounded-md text-[11px] font-black tracking-wider uppercase border border-emerald-300">
-                    CERTIFICATE OF REGISTRATION (COR)
+                {/* Real High-Resolution Specimen Image from BELEN_RICHARD_M.pdf */}
+                <div className="relative rounded-xl overflow-hidden border border-gray-300 bg-gray-100 shadow-inner group">
+                  <img
+                    src={`${import.meta.env.BASE_URL}id-photos/sample-cor.jpg`}
+                    alt="Official CvSU Certificate of Registration (COR) Specimen"
+                    className="w-full h-auto max-h-[480px] object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
+                    loading="eager"
+                  />
+                  
+                  {/* Floating callout badges highlighting key inspection areas */}
+                  <div className="absolute top-3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>1. Student Number &amp; Name</span>
                   </div>
-                </div>
 
-                {/* Specimen Student Data */}
-                <div className="grid grid-cols-2 gap-2 text-[10.5px] sm:text-xs py-3 border-b border-gray-200">
-                  <div>
-                    <span className="text-gray-500 font-semibold">Student No.:</span>{' '}
-                    <strong className="text-emerald-950 font-black font-mono">202610001</strong>
+                  <div className="absolute top-1/3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>2. Enrolled NSTP Subject Row</span>
                   </div>
-                  <div>
-                    <span className="text-gray-500 font-semibold">Academic Year:</span>{' '}
-                    <strong className="text-gray-900 font-bold">2026-2027 1st Sem</strong>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500 font-semibold">Name:</span>{' '}
-                    <strong className="text-gray-900 font-black uppercase">DELA CRUZ, JUAN SANTOS</strong>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500 font-semibold">Degree Program:</span>{' '}
-                    <strong className="text-gray-900 font-bold">BS in Information Technology (BSIT 1-A)</strong>
-                  </div>
-                </div>
 
-                {/* Specimen Subjects Table */}
-                <div className="py-2">
-                  <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1.5">Enrolled Subjects Schedule:</p>
-                  <div className="w-full max-w-full overflow-x-auto rounded-lg border border-gray-200">
-                    <table className="w-full min-w-[300px] text-[10px] sm:text-[11px]">
-                      <thead className="bg-emerald-50/70 text-emerald-950 font-black border-b border-gray-200">
-                        <tr>
-                          <th className="p-1.5 text-left whitespace-nowrap">Code</th>
-                          <th className="p-1.5 text-left">Course Title</th>
-                          <th className="p-1.5 text-center whitespace-nowrap">Units</th>
-                          <th className="p-1.5 text-left whitespace-nowrap">Schedule</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-gray-700">
-                        <tr>
-                          <td className="p-1.5 font-mono font-bold whitespace-nowrap">GNED 01</td>
-                          <td className="p-1.5">Art Appreciation</td>
-                          <td className="p-1.5 text-center font-bold">3.0</td>
-                          <td className="p-1.5 whitespace-nowrap">M-TH 08:00-09:30</td>
-                        </tr>
-                        <tr className="bg-amber-50/70 font-semibold text-amber-950 border-l-4 border-amber-500">
-                          <td className="p-1.5 font-mono font-black text-emerald-800 whitespace-nowrap">NSTP 1</td>
-                          <td className="p-1.5 font-black">
-                            NSTP 1 - CWTS (Civic Welfare Training Service)
-                            <span className="block text-[9px] text-amber-700 font-bold">★ Enrolled NSTP course track must be clearly visible</span>
-                          </td>
-                          <td className="p-1.5 text-center font-black">3.0</td>
-                          <td className="p-1.5 whitespace-nowrap">SAT 08:00-11:00</td>
-                        </tr>
-                        <tr>
-                          <td className="p-1.5 font-mono font-bold whitespace-nowrap">ITEC 50</td>
-                          <td className="p-1.5">Web Systems and Technologies</td>
-                          <td className="p-1.5 text-center font-bold">3.0</td>
-                          <td className="p-1.5 whitespace-nowrap">T-F 10:00-12:00</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div className="absolute bottom-3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <span>3. Registrar "ENROLLED" Stamp</span>
                   </div>
-                </div>
-
-                {/* Specimen Validation Stamp */}
-                <div className="mt-3 pt-2 border-t border-gray-200 flex items-center justify-between flex-wrap gap-2 text-[10px]">
-                  <div className="border border-emerald-500 rounded-md px-2.5 py-1 text-emerald-800 font-black uppercase bg-emerald-50/60">
-                    ✓ OFFICIALLY ENROLLED • ASSESSED
-                  </div>
-                  <span className="text-gray-400 italic">Registrar Signature &amp; Official Stamp</span>
                 </div>
               </div>
 

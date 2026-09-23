@@ -210,6 +210,18 @@ function Login() {
     };
   }, []);
 
+  // Ensure body and html background color matches deep emerald dark background to prevent any white edge leaks
+  useEffect(() => {
+    const origBodyBg = document.body.style.backgroundColor;
+    const origHtmlBg = document.documentElement.style.backgroundColor;
+    document.body.style.backgroundColor = '#022c22';
+    document.documentElement.style.backgroundColor = '#022c22';
+    return () => {
+      document.body.style.backgroundColor = origBodyBg;
+      document.documentElement.style.backgroundColor = origHtmlBg;
+    };
+  }, []);
+
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -385,7 +397,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
+    <div className="min-h-screen min-h-[100dvh] w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
       {/* Background Decorative Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none overflow-hidden max-w-full"></div>
 
@@ -413,7 +425,7 @@ function Login() {
       </header>
 
       {/* Main Content Area - Clean Centered Login Card */}
-      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 my-auto w-full max-w-full overflow-x-hidden">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-6 relative z-10 w-full max-w-full overflow-x-hidden">
         <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-4 sm:p-7">
           <div className="text-center mb-4 sm:mb-6">
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">
@@ -570,55 +582,7 @@ function Login() {
             </div>
           </div>
 
-          {/* Server Connection Diagnostics Bar */}
-          <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] sm:text-xs">
-            <button
-              type="button"
-              onClick={() => setShowServerModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition-all text-gray-700 cursor-pointer text-left"
-              title="Click to check or configure server backend"
-            >
-              <span className="relative flex h-2 w-2">
-                {serverStatus === 'online' && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                {serverStatus === 'slow' && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                )}
-                <span
-                  className={`relative inline-flex rounded-full h-2 w-2 ${
-                    serverStatus === 'online'
-                      ? 'bg-emerald-500'
-                      : serverStatus === 'slow'
-                      ? 'bg-amber-500'
-                      : serverStatus === 'checking'
-                      ? 'bg-blue-400 animate-pulse'
-                      : 'bg-red-500'
-                  }`}
-                ></span>
-              </span>
-              <span className="font-bold text-[10.5px]">
-                {serverStatus === 'online' && `Cloud Server: Connected (${serverPingInfo?.latency || 0}ms)`}
-                {serverStatus === 'slow' && `Cloud Server: Slow (${serverPingInfo?.latency || 0}ms)`}
-                {serverStatus === 'checking' && 'Cloud Server: Checking...'}
-                {serverStatus === 'offline' && 'Cloud Server: Offline / Timed out'}
-              </span>
-              <Settings className="w-3 h-3 text-gray-400 ml-0.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => runPingCheck()}
-              disabled={isPinging}
-              className="text-[10px] text-gray-400 hover:text-gray-600 flex items-center gap-1 cursor-pointer font-bold"
-              title="Retest server connection"
-            >
-              <RefreshCw className={`w-2.5 h-2.5 ${isPinging ? 'animate-spin text-emerald-600' : ''}`} />
-              <span>{isPinging ? 'Pinging' : 'Ping'}</span>
-            </button>
-          </div>
-
-          <div className="mt-2.5 pt-2 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
+          <div className="mt-3 pt-2.5 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
               to="/enrollment" 
@@ -1147,7 +1111,7 @@ function Login() {
           </div>
         </div>
       )}
-      <footer className="bg-emerald-950/90 border-t border-emerald-900 py-2.5 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full">
+      <footer className="bg-emerald-950/95 border-t border-emerald-900 py-3 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full mt-auto">
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-medium">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
           <p className="text-emerald-300/70">Authorized Faculty &amp; Admin Personnel Access Only</p>
