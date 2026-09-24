@@ -249,7 +249,14 @@ function App() {
   const [conversations, setConversations] = useState(() => {
     try {
       const cached = JSON.parse(localStorage.getItem('nstp_cached_conversations') || '[]');
-      if (Array.isArray(cached) && cached.length > 0) return cached;
+      if (Array.isArray(cached) && cached.length > 0) {
+        // Strip any obsolete mock last messages
+        return cached.map(c => ({
+          ...c,
+          last_message: (c.last_message && (c.last_message.includes('immersion sites') || c.last_message.includes('cadet officers') || c.last_message.includes('assessment workshop') || c.last_message.includes('Thank you everyone. Please keep student attendance'))) ? null : c.last_message,
+          last_message_time: (c.last_message && (c.last_message.includes('immersion sites') || c.last_message.includes('cadet officers') || c.last_message.includes('assessment workshop') || c.last_message.includes('Thank you everyone. Please keep student attendance'))) ? null : c.last_message_time
+        }));
+      }
     } catch {}
     return [
       {
@@ -260,8 +267,8 @@ function App() {
         group_name: 'All Instructors',
         with: 'All Instructors',
         participants: [1, 2, 3, 4],
-        last_message: 'Thank you everyone. Please keep student attendance and grade submissions updated.',
-        last_message_time: new Date().toISOString()
+        last_message: null,
+        last_message_time: null
       },
       {
         id: '1-2',
@@ -272,8 +279,8 @@ function App() {
         with: 'CWTS Instructor',
         partnerName: 'CWTS Instructor',
         partnerId: 2,
-        last_message: 'Good day Sir! All immersion sites in Naic have been coordinated with the barangay chairpersons.',
-        last_message_time: new Date().toISOString()
+        last_message: null,
+        last_message_time: null
       },
       {
         id: '1-3',
@@ -284,8 +291,8 @@ function App() {
         with: 'LTS Instructor',
         partnerName: 'LTS Instructor',
         partnerId: 3,
-        last_message: 'Everything is set for the Saturday assessment workshop, Sir. Materials are prepared.',
-        last_message_time: new Date().toISOString()
+        last_message: null,
+        last_message_time: null
       },
       {
         id: '1-4',
@@ -296,15 +303,14 @@ function App() {
         with: 'ROTC Instructor',
         partnerName: 'ROTC Instructor',
         partnerId: 4,
-        last_message: 'Confirmed, Sir. The cadet officers and cadre instructors are ready on the parade grounds.',
-        last_message_time: new Date().toISOString()
+        last_message: null,
+        last_message_time: null
       }
     ];
   });
   const [messages, setMessages] = useState(() => {
     try {
-      const cached = JSON.parse(localStorage.getItem('nstp_cached_messages') || '{}');
-      if (cached && typeof cached === 'object') return cached;
+      localStorage.removeItem('nstp_cached_messages');
     } catch {}
     return {};
   });
