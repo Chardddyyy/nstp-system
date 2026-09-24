@@ -105,7 +105,7 @@ export function NstpIdCard({ student }) {
         {/* 2x2 Photo Box */}
         <div className="w-[20mm] h-[20mm] aspect-square bg-slate-50 rounded-lg border-1.5 border-emerald-900 ring-1 ring-amber-400/80 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs relative mt-0.5">
           {photoUrl ? (
-            <img src={photoUrl} alt={studentName} className="w-full h-full object-cover object-top" />
+            <img src={photoUrl} alt={studentName} className="w-full h-full object-cover object-center" />
           ) : (
             <div className="text-center p-1">
               <DeptIcon className="w-4 h-4 text-emerald-800/60 mx-auto mb-0.5" />

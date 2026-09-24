@@ -21,7 +21,9 @@ const SENSITIVE_STORAGE_KEYS = new Set([
   'nstp_cached_conversations',
   'nstp_cached_archives',
   'nstp_cached_archives_v5',
-  'nstp_archive_view_data_v5'
+  'nstp_cached_archives_v6',
+  'nstp_archive_view_data_v5',
+  'nstp_archive_view_data_v6'
 ]);
 
 const SEC_PREFIX = '__nstp_sec_v1__:';

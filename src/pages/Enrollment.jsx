@@ -194,6 +194,7 @@ function Enrollment() {
   const [cameraTarget, setCameraTarget] = useState('regform'); // 'regform' or 'idphoto'
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' or 'user'
   const videoRef = useRef(null);
+  const idPhotoGuideBoxRef = useRef(null);
   const streamRef = useRef(null);
 
   const stopCameraStream = () => {
@@ -281,12 +282,37 @@ function Enrollment() {
     const rawH = video.videoHeight || 720;
 
     if (cameraTarget === 'idphoto') {
-      // Crop true 1:1 square 2x2 portrait photo directly from center of camera stream (matches on-screen guide box)
-      const size = Math.min(rawW, rawH);
-      const srcX = (rawW - size) / 2;
-      const srcY = (rawH - size) / 2;
-      const targetSize = 480;
+      // Calculate exact pixel-perfect crop matching the on-screen guide box
+      let srcX = 0, srcY = 0, srcW = rawW, srcH = rawH;
 
+      if (idPhotoGuideBoxRef.current && video) {
+        const guideRect = idPhotoGuideBoxRef.current.getBoundingClientRect();
+        const videoRect = video.getBoundingClientRect();
+
+        if (videoRect.width > 0 && videoRect.height > 0) {
+          const scale = Math.max(rawW / videoRect.width, rawH / videoRect.height);
+          const displayedW = rawW / scale;
+          const displayedH = rawH / scale;
+          const offsetX = (videoRect.width - displayedW) / 2;
+          const offsetY = (videoRect.height - displayedH) / 2;
+
+          srcX = Math.max(0, (guideRect.left - videoRect.left - offsetX) * scale);
+          srcY = Math.max(0, (guideRect.top - videoRect.top - offsetY) * scale);
+          srcW = Math.min(rawW - srcX, guideRect.width * scale);
+          srcH = Math.min(rawH - srcY, guideRect.height * scale);
+        }
+      }
+
+      // Fallback to center square if bounding rect was unavailable
+      if (!srcW || !srcH || srcW <= 10 || srcH <= 10) {
+        const size = Math.min(rawW, rawH);
+        srcX = (rawW - size) / 2;
+        srcY = (rawH - size) / 2;
+        srcW = size;
+        srcH = size;
+      }
+
+      const targetSize = 600; // Crisp 600x600 square for digital ID card
       const canvas = document.createElement('canvas');
       canvas.width = targetSize;
       canvas.height = targetSize;
@@ -294,13 +320,10 @@ function Enrollment() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, targetSize, targetSize);
 
-      if (facingMode === 'user') {
-        ctx.translate(targetSize, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(video, srcX, srcY, size, size, 0, 0, targetSize, targetSize);
+      // What the user sees on screen inside the guide box is drawn directly
+      ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, targetSize, targetSize);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
       setIdPhoto2x2(dataUrl);
       if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
     } else {
@@ -2024,8 +2047,11 @@ function Enrollment() {
 
                       {/* Guide Box & Head Alignment Silhouette for 2x2 ID Photo */}
                       {cameraTarget === 'idphoto' && (
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                          <div className="w-56 h-56 sm:w-64 sm:h-64 aspect-square border-2 border-dashed border-amber-400/90 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] flex flex-col items-center justify-center relative overflow-hidden">
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-3 sm:p-4">
+                          <div
+                            ref={idPhotoGuideBoxRef}
+                            className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 aspect-square max-w-[85vw] max-h-[85%] border-2.5 border-dashed border-amber-400 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] flex flex-col items-center justify-center relative overflow-hidden"
+                          >
                             {/* Head & Shoulder Alignment Silhouette Overlay */}
                             <svg viewBox="0 0 200 200" className="w-full h-full text-amber-300/80 stroke-current fill-none">
                               {/* Oval Head Contour */}

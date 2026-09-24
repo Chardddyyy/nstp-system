@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, calendarAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
@@ -217,12 +217,12 @@ function App() {
   const [archivedYears, setArchivedYears] = useState(() => {
     try {
       localStorage.removeItem('nstp_cached_archives');
-      const cached = JSON.parse(localStorage.getItem('nstp_cached_archives_v5') || '[]');
+      localStorage.removeItem('nstp_cached_archives_v5');
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_archives_v6') || '[]');
       if (Array.isArray(cached) && cached.length > 0) {
-        // Bust cache if any entry is missing cwts/lts/rotc counts (stale format)
         const hasCounts = cached.every(a => a.cwts != null || a.lts != null || a.rotc != null || (a.data?.cwts != null));
         if (!hasCounts) {
-          localStorage.removeItem('nstp_cached_archives_v5');
+          localStorage.removeItem('nstp_cached_archives_v6');
           return DEFAULT_PAST_BATCHES;
         }
         return cached;
@@ -391,7 +391,8 @@ function App() {
   const [archiveViewData, setArchiveViewDataState] = useState(() => {
     try {
       localStorage.removeItem('nstp_archive_view_data');
-      const saved = localStorage.getItem('nstp_archive_view_data_v5');
+      localStorage.removeItem('nstp_archive_view_data_v5');
+      const saved = localStorage.getItem('nstp_archive_view_data_v6');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -413,8 +414,9 @@ function App() {
     setArchiveViewDataState(data);
     try {
       if (data) {
-        localStorage.setItem('nstp_archive_view_data_v5', JSON.stringify(data));
+        localStorage.setItem('nstp_archive_view_data_v6', JSON.stringify(data));
       } else {
+        localStorage.removeItem('nstp_archive_view_data_v6');
         localStorage.removeItem('nstp_archive_view_data_v5');
         localStorage.removeItem('nstp_archive_view_data');
       }
@@ -433,8 +435,15 @@ function App() {
   const seenEnrollmentIds = useRef(new Set());
   const seenSubmissionKeys = useRef(new Set());
   const seenReportIds = useRef(new Set());
+  const seenReportVersions = useRef({});
+  const seenReportReminders = useRef(new Set());
   const seenStudentIds = useRef(new Set());
   const seenConvLastMessageTime = useRef({});
+  const seenEventIds = useRef(new Set());
+  const seenEventVersions = useRef({});
+  const seenEventReminders = useRef(new Set());
+  const seenLetterIds = useRef(new Set());
+  const seenFacultyUserIds = useRef(new Set());
 
   // Global Realtime Telemetry Heartbeat Ping
   useEffect(() => {
@@ -610,6 +619,28 @@ function App() {
         };
       });
       window.dispatchEvent(new CustomEvent('nstp_socket_chat_message', { detail: payload }));
+
+      // Dispatch instant device notification if message is from another person
+      const isOwnMessage = (message.senderId === user.id) || (message.sender_id === user.id);
+      if (!isOwnMessage) {
+        const senderName = message.senderName || message.sender_name || 'Someone';
+        let preview = message.text || message.message || '';
+        if (preview.startsWith('data:')) preview = 'Sent an attachment';
+        else if (preview.startsWith('📸')) preview = 'Sent a photo';
+        else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
+        else if (preview.startsWith('📎')) preview = 'Sent a file';
+        if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+        pushNotification({
+          id: `msg-${message.id || Date.now()}`,
+          title: `New Message from ${senderName}`,
+          message: preview || 'Sent you a message',
+          type: 'message',
+          link: '/chat',
+          conversationId,
+          senderName
+        });
+      }
     };
 
     // 2. Instant Attendance Scanned Sync
@@ -675,24 +706,33 @@ function App() {
     seenEnrollmentIds.current = new Set();
     seenSubmissionKeys.current = new Set();
     seenReportIds.current = new Set();
+    seenReportVersions.current = {};
+    seenReportReminders.current = new Set();
     seenStudentIds.current = new Set();
     seenConvLastMessageTime.current = {};
+    seenEventIds.current = new Set();
+    seenEventVersions.current = {};
+    seenEventReminders.current = new Set();
+    seenLetterIds.current = new Set();
+    seenFacultyUserIds.current = new Set();
   }
 
-  function seedRealtimeBaseline(pending, reportsList, convList, studentsList, currentUser) {
+  function seedRealtimeBaseline(pending, reportsList, convList, studentsList, usersList, calendarList, lettersList, currentUser) {
     const safePending = Array.isArray(pending) ? pending : [];
     const safeStudents = Array.isArray(studentsList) ? studentsList : [];
     const safeReports = Array.isArray(reportsList) ? reportsList : [];
     const safeConvs = Array.isArray(convList) ? convList : [];
+    const safeUsers = Array.isArray(usersList) ? usersList : [];
+    const safeEvents = Array.isArray(calendarList) ? calendarList : [];
+    const safeLetters = Array.isArray(lettersList) ? lettersList : [];
 
     safePending.forEach(e => { if (e && e.id) seenEnrollmentIds.current.add(e.id); });
     safeStudents.forEach(s => { if (s && s.id) seenStudentIds.current.add(s.id); });
 
     safeReports.forEach(report => {
-      if (!report) return;
-      if (currentUser && currentUser.role === 'instructor' && (report.department === 'All' || report.department === currentUser.department)) {
-        if (report.id) seenReportIds.current.add(report.id);
-      }
+      if (!report || !report.id) return;
+      seenReportIds.current.add(report.id);
+      seenReportVersions.current[report.id] = `${report.title || ''}__${report.deadline || ''}__${report.description || ''}__${report.updated_at || ''}`;
       (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
         if (sub) seenSubmissionKeys.current.add(`${report.id}-${sub.instructor_id}-${sub.id}`);
       });
@@ -702,6 +742,23 @@ function App() {
       if (conv && conv.id && conv.last_message_time) {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
       }
+    });
+
+    safeUsers.forEach(u => {
+      if (u && u.id && (u.role === 'instructor' || u.role === 'admin')) {
+        seenFacultyUserIds.current.add(u.id);
+      }
+    });
+
+    safeEvents.forEach(ev => {
+      if (ev && ev.id) {
+        seenEventIds.current.add(ev.id);
+        seenEventVersions.current[ev.id] = `${ev.title || ''}__${ev.date || ''}__${ev.time || ''}__${ev.location || ''}`;
+      }
+    });
+
+    safeLetters.forEach(l => {
+      if (l && l.id) seenLetterIds.current.add(l.id);
     });
 
     // Persist seen IDs to storage so next login doesn't duplicate existing records
@@ -720,12 +777,15 @@ function App() {
     baselineReady.current = true;
   }
 
-  function detectRealtimeChanges(pending, reportsList, convList, studentsList, currentUser) {
+  function detectRealtimeChanges(pending, reportsList, convList, studentsList, usersList, calendarList, lettersList, currentUser) {
     if (!baselineReady.current || !currentUser) return;
 
     const safePending = Array.isArray(pending) ? pending : [];
     const safeStudents = Array.isArray(studentsList) ? studentsList : [];
     const safeReports = Array.isArray(reportsList) ? reportsList : [];
+    const safeUsers = Array.isArray(usersList) ? usersList : [];
+    const safeEvents = Array.isArray(calendarList) ? calendarList : [];
+    const safeLetters = Array.isArray(lettersList) ? lettersList : [];
 
     // Load dismissed keys to ensure dismissed notifications are never recreated
     let dismissedSet = new Set();
@@ -735,9 +795,11 @@ function App() {
     } catch {}
 
     let newlySeen = false;
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
+    // ── 1. Admin Specific Notifications ─────────────────────────────────────
     if (currentUser.role === 'admin') {
-      // 1. New Pending Enrollments
+      // New Pending Enrollments
       safePending.forEach(enrollment => {
         if (!enrollment || !enrollment.id) return;
         const eKey = `enrollment-${enrollment.id}`;
@@ -761,7 +823,7 @@ function App() {
         }
       });
 
-      // 2. New Report Submissions by Instructors
+      // New Report Submissions by Instructors
       safeReports.forEach(report => {
         if (!report) return;
         (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
@@ -788,8 +850,9 @@ function App() {
       });
     }
 
+    // ── 2. Instructor Specific Notifications ─────────────────────────────────
     if (currentUser.role === 'instructor') {
-      // 1. Check for newly approved/enrolled students assigned to this instructor's department
+      // Check for newly approved/enrolled students assigned to this instructor's department
       safeStudents.forEach(student => {
         if (!student || !student.id) return;
         const sKey = `student-${student.id}`;
@@ -814,31 +877,169 @@ function App() {
           }
         }
       });
+    }
 
-      // 2. Check for newly created report assignments targeting All or this department
-      safeReports.forEach(report => {
-        if (!report || !report.id) return;
-        const rKey = `report-${report.id}`;
-        if (dismissedSet.has(String(report.id)) || dismissedSet.has(rKey)) {
-          seenReportIds.current.add(report.id);
-          return;
-        }
-        const isTargetDept = report.department === 'All' || report.department === currentUser.department;
-        if (isTargetDept && !seenReportIds.current.has(report.id)) {
-          seenReportIds.current.add(report.id);
-          newlySeen = true;
+    // ── 3. Reports Notifications (New, Edited, 1-Day Deadline Reminder) ────────
+    safeReports.forEach(report => {
+      if (!report || !report.id) return;
+      const isTargetDept = report.department === 'All' || report.department === currentUser.department || currentUser.role === 'admin';
+      if (!isTargetDept) return;
+
+      const rKey = `report-${report.id}`;
+      if (dismissedSet.has(String(report.id)) || dismissedSet.has(rKey)) {
+        seenReportIds.current.add(report.id);
+        return;
+      }
+
+      const currentVer = `${report.title || ''}__${report.deadline || ''}__${report.description || ''}__${report.updated_at || ''}`;
+
+      // A. New Report Assignment
+      if (!seenReportIds.current.has(report.id)) {
+        seenReportIds.current.add(report.id);
+        seenReportVersions.current[report.id] = currentVer;
+        newlySeen = true;
+        pushNotification({
+          id: rKey,
+          title: report.department === 'All' ? 'New General Report Assignment' : `New ${report.department} Report Assignment`,
+          message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
+          type: 'report',
+          link: '/reports',
+          reportId: report.id,
+          reportTitle: report.title
+        });
+      } else {
+        // B. Report Edited / Modified
+        const prevVer = seenReportVersions.current[report.id];
+        if (prevVer && prevVer !== currentVer) {
+          seenReportVersions.current[report.id] = currentVer;
           pushNotification({
-            id: rKey,
-            title: report.department === 'All' ? 'New General Report Assignment' : `New ${report.department} Report Assignment`,
-            message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
+            id: `report-edit-${report.id}-${Date.now()}`,
+            title: 'Report Updated',
+            message: `Report "${report.title || 'Untitled'}" details or instructions were updated.`,
             type: 'report',
             link: '/reports',
             reportId: report.id,
             reportTitle: report.title
           });
         }
-      });
-    }
+      }
+
+      // C. 1-Day Before Deadline Reminder
+      if (report.deadline) {
+        const dStr = String(report.deadline).slice(0, 10);
+        if (dStr === tomorrow) {
+          const remindKey = `report-deadline-${report.id}-${dStr}`;
+          if (!seenReportReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
+            seenReportReminders.current.add(remindKey);
+            pushNotification({
+              id: remindKey,
+              title: 'Upcoming Report Deadline Tomorrow',
+              message: `Reminder: Report "${report.title || 'Untitled'}" is due tomorrow (${dStr})!`,
+              type: 'report',
+              link: '/reports',
+              reportId: report.id,
+              reportTitle: report.title
+            });
+          }
+        }
+      }
+    });
+
+    // ── 4. Calendar Notifications (New, Edited, 1-Day Before Reminder) ─────────
+    safeEvents.forEach(ev => {
+      if (!ev || !ev.id) return;
+      const evKey = `event-${ev.id}`;
+      if (dismissedSet.has(String(ev.id)) || dismissedSet.has(evKey)) {
+        seenEventIds.current.add(ev.id);
+        return;
+      }
+
+      const evVer = `${ev.title || ''}__${ev.date || ''}__${ev.time || ''}__${ev.location || ''}`;
+
+      // A. New Calendar Event
+      if (!seenEventIds.current.has(ev.id)) {
+        seenEventIds.current.add(ev.id);
+        seenEventVersions.current[ev.id] = evVer;
+        pushNotification({
+          id: evKey,
+          title: 'New Calendar Event Added',
+          message: `"${ev.title || 'New Event'}" scheduled on ${ev.date || 'upcoming date'}.`,
+          type: 'calendar',
+          link: '/calendar'
+        });
+      } else {
+        // B. Calendar Event Edited
+        const prevVer = seenEventVersions.current[ev.id];
+        if (prevVer && prevVer !== evVer) {
+          seenEventVersions.current[ev.id] = evVer;
+          pushNotification({
+            id: `event-edit-${ev.id}-${Date.now()}`,
+            title: 'Calendar Event Updated',
+            message: `Event "${ev.title || 'Untitled'}" schedule or details have been updated.`,
+            type: 'calendar',
+            link: '/calendar'
+          });
+        }
+      }
+
+      // C. 1-Day Before Calendar Event Reminder
+      if (ev.date) {
+        const evDateStr = String(ev.date).slice(0, 10);
+        if (evDateStr === tomorrow) {
+          const remindKey = `event-remind-${ev.id}-${evDateStr}`;
+          if (!seenEventReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
+            seenEventReminders.current.add(remindKey);
+            pushNotification({
+              id: remindKey,
+              title: 'Upcoming Calendar Event Tomorrow',
+              message: `Reminder: "${ev.title || 'Event'}" is happening tomorrow (${evDateStr})!`,
+              type: 'calendar',
+              link: '/calendar'
+            });
+          }
+        }
+      }
+    });
+
+    // ── 5. Format Letter Notifications (New Format Letter Added) ───────────────
+    safeLetters.forEach(letter => {
+      if (!letter || !letter.id) return;
+      const lKey = `letter-${letter.id}`;
+      if (!seenLetterIds.current.has(letter.id)) {
+        seenLetterIds.current.add(letter.id);
+        if (!dismissedSet.has(lKey)) {
+          pushNotification({
+            id: lKey,
+            title: 'New Letter Format Available',
+            message: `Official format template "${letter.title || 'New Letter'}" has been added.`,
+            type: 'system',
+            link: '/letter-formats'
+          });
+        }
+      }
+    });
+
+    // ── 6. Faculty Notifications (New Instructor or Admin Added) ───────────────
+    safeUsers.forEach(u => {
+      if (!u || !u.id) return;
+      if (u.id === currentUser.id) return;
+      if (u.role === 'instructor' || u.role === 'admin') {
+        const uKey = `user-${u.id}`;
+        if (!seenFacultyUserIds.current.has(u.id)) {
+          seenFacultyUserIds.current.add(u.id);
+          if (!dismissedSet.has(uKey)) {
+            const isInstructor = u.role === 'instructor';
+            pushNotification({
+              id: uKey,
+              title: isInstructor ? 'New Instructor Registered' : 'New Administrator Added',
+              message: `${u.name || 'New Faculty'} was registered as ${isInstructor ? (u.department || 'NSTP') + ' Instructor' : 'System Administrator'}.`,
+              type: 'system',
+              link: currentUser.role === 'admin' ? '/admin/dashboard' : '/chat'
+            });
+          }
+        }
+      }
+    });
 
     if (newlySeen && currentUser) {
       try {
@@ -874,6 +1075,7 @@ function App() {
             : lastMsg;
           if (preview.length > 80) preview = preview.slice(0, 80) + '…';
           pushNotification({
+            id: `msg-poll-${conv.id}-${currTime}`,
             title: 'New Message',
             message: `${senderName}: ${preview}`,
             type: 'message',
@@ -912,12 +1114,18 @@ function App() {
   async function refreshLiveData() {
     if (!user || window.__nstp_session_expired__) return;
     try {
-      const [reportsData, conversationsData, usersData, studentsData] = await Promise.all([
+      const [reportsData, conversationsData, usersData, studentsData, eventsData] = await Promise.all([
         reportsAPI.getAll().catch(() => null),
         conversationsAPI.getAll().catch(() => null),
         usersAPI.getAll().catch(() => null),
-        studentsAPI.getAll().catch(() => null)
+        studentsAPI.getAll().catch(() => null),
+        calendarAPI.getEvents().catch(() => null)
       ]);
+
+      let lettersData = null;
+      try {
+        lettersData = JSON.parse(localStorage.getItem('nstp_letter_templates') || 'null');
+      } catch {}
 
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
       if (usersData && Array.isArray(usersData) && usersData.length > 0) {
@@ -945,11 +1153,14 @@ function App() {
       const activeConvs = (conversationsData && Array.isArray(conversationsData)) ? conversationsData : conversations;
       const activeReports = (reportsData && Array.isArray(reportsData)) ? reportsData : reports;
       const activeStudents = (studentsData && Array.isArray(studentsData)) ? studentsData : students;
+      const activeUsers = (usersData && Array.isArray(usersData)) ? usersData : users;
+      const activeEvents = (eventsData && Array.isArray(eventsData)) ? eventsData : [];
+      const activeLetters = (lettersData && Array.isArray(lettersData)) ? lettersData : [];
 
       if (!baselineReady.current) {
-        seedRealtimeBaseline(pending, activeReports, activeConvs, activeStudents, user);
+        seedRealtimeBaseline(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
       } else {
-        detectRealtimeChanges(pending, activeReports, activeConvs, activeStudents, user);
+        detectRealtimeChanges(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
         await checkConversationMessages(activeConvs, user);
       }
     } catch (error) {
@@ -1153,10 +1364,10 @@ function App() {
       if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
       if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
         setArchivedYears(archivesData);
-        safeSetStorage('nstp_cached_archives_v5', archivesData);
+        safeSetStorage('nstp_cached_archives_v6', archivesData);
       } else {
         setArchivedYears(DEFAULT_PAST_BATCHES);
-        safeSetStorage('nstp_cached_archives_v5', DEFAULT_PAST_BATCHES);
+        safeSetStorage('nstp_cached_archives_v6', DEFAULT_PAST_BATCHES);
       }
       setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
       if (batchData && (batchData.start_month || batchData.end_month || batchData.startMonth || batchData.endMonth)) {

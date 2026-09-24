@@ -6,7 +6,7 @@ import {
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
-  HeartPulse, Phone, Activity, GraduationCap, Heart
+  HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -2627,7 +2627,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               
               <div className="space-y-4 mb-5">
                 <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 text-xs">
-                  <p className="text-amber-900 font-bold mb-1">📦 Current Batch Archiving Notice</p>
+                  <p className="text-amber-900 font-bold mb-1 flex items-center gap-1.5">
+                    <Archive className="w-4 h-4 text-amber-800 shrink-0" />
+                    <span>Current Batch Archiving Notice</span>
+                  </p>
                   <p className="text-amber-800 font-medium">
                     Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
                   </p>
@@ -2637,7 +2640,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                      <span>📅</span> Calendar Coverage Range (Para sa Batch)
+                      <Calendar className="w-4 h-4 text-emerald-800 shrink-0" />
+                      <span>Calendar Coverage Range (Para sa Batch)</span>
                     </p>
                     <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200/60 text-emerald-900 rounded-full">
                       Required
@@ -2751,24 +2755,27 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* Inspection Sub-Tabs Navigation */}
               <div className="flex items-center border-b border-gray-200 bg-gray-50/90 px-3 py-1.5 gap-1.5 overflow-x-auto shrink-0 select-none">
                 {[
-                  { id: 'all', label: 'All Details', icon: '📋' },
-                  { id: 'docs', label: 'Photos & COR', icon: '📄' },
-                  { id: 'academic', label: 'Personal & Academic', icon: '👤' },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setEnrollmentReviewTab(tab.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
-                      enrollmentReviewTab === tab.id
-                        ? 'bg-emerald-800 text-white shadow-xs'
-                        : 'text-gray-600 hover:text-emerald-950 hover:bg-gray-200/70'
-                    }`}
-                  >
-                    <span>{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+                  { id: 'all', label: 'All Details', icon: ClipboardList },
+                  { id: 'docs', label: 'Photos & COR', icon: FileText },
+                  { id: 'academic', label: 'Personal & Academic', icon: User },
+                ].map((tab) => {
+                  const TabIcon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEnrollmentReviewTab(tab.id)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                        enrollmentReviewTab === tab.id
+                          ? 'bg-emerald-800 text-white shadow-xs'
+                          : 'text-gray-600 hover:text-emerald-950 hover:bg-gray-200/70'
+                      }`}
+                    >
+                      <TabIcon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Scrollable body */}
@@ -2789,7 +2796,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
                             className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
                           >
-                            🔍 Expand 2x2 Fullscreen
+                            <Maximize2 className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Expand 2x2 Fullscreen</span>
                           </button>
                         )}
                       </div>
@@ -2807,8 +2815,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 alt="2x2 ID Photo" 
                                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
                               />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                                🔍 View
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                                <Eye className="w-4 h-4 text-white" />
+                                <span>View</span>
                               </div>
                             </>
                           ) : (
@@ -2857,7 +2866,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form)}
                             className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
                           >
-                            🔍 Expand Fullscreen
+                            <Maximize2 className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>Expand Fullscreen</span>
                           </button>
                         )}
                       </div>
@@ -3604,41 +3614,44 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(() => {
                       const yr = String(archiveViewData?.year || '');
-                      const events = yr.includes('2023-2024')
-                        ? (yr.includes('1st Semester')
-                            ? [
-                                { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
-                                { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
-                                { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
-                                { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
-                                { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
-                                { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
-                              ]
-                            : [
-                                { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
-                                { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
-                                { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
-                                { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
-                                { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
-                                { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
-                              ])
-                        : (yr.includes('1st Semester')
-                            ? [
-                                { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
-                                { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
-                                { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
-                                { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
-                                { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
-                                { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
-                              ]
-                            : [
-                                { date: '2025-02-08', title: 'NSTP 2 Project Launch & Field Immersion', desc: 'Mobilization of students for second semester projects in Naic.', dept: 'All' },
-                                { date: '2025-03-08', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', desc: 'Workshop on community organic composting and eco-crafts.', dept: 'CWTS' },
-                                { date: '2025-03-22', title: 'LTS Mini-Library Handover & Literacy Graduation', desc: 'Turnover of 300 children storybooks and graduation.', dept: 'LTS' },
-                                { date: '2025-04-05', title: 'ROTC Annual Tactical Inspection & Drill Review', desc: 'Annual tactical evaluation by Naval Reserve Command.', dept: 'ROTC' },
-                                { date: '2025-04-12', title: 'NSTP Final Culminating Defense & Document Audit', desc: 'Final requirements audit for CHED serial numbers.', dept: 'All' },
-                                { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Pass-in-Review', desc: 'Formal graduation pass-in-review and certificate awarding ceremony.', dept: 'All' },
-                              ]);
+                      const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
+                      const events = (Array.isArray(customCalendar) && customCalendar.length > 0)
+                        ? customCalendar
+                        : (yr.includes('2023-2024')
+                            ? (yr.includes('1st Semester')
+                                ? [
+                                    { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
+                                    { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
+                                    { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
+                                    { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
+                                    { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
+                                    { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
+                                  ]
+                                : [
+                                    { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
+                                    { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
+                                    { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
+                                    { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
+                                    { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
+                                    { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
+                                  ])
+                            : (yr.includes('1st Semester')
+                                ? [
+                                    { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
+                                    { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
+                                    { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
+                                    { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
+                                    { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
+                                    { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
+                                  ]
+                                : [
+                                    { date: '2025-02-08', title: 'NSTP 2 Project Launch & Field Immersion', desc: 'Mobilization of students for second semester projects in Naic.', dept: 'All' },
+                                    { date: '2025-03-08', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', desc: 'Workshop on community organic composting and eco-crafts.', dept: 'CWTS' },
+                                    { date: '2025-03-22', title: 'LTS Mini-Library Handover & Literacy Graduation', desc: 'Turnover of 300 children storybooks and graduation.', dept: 'LTS' },
+                                    { date: '2025-04-05', title: 'ROTC Annual Tactical Inspection & Drill Review', desc: 'Annual tactical evaluation by Naval Reserve Command.', dept: 'ROTC' },
+                                    { date: '2025-04-12', title: 'NSTP Final Culminating Defense & Document Audit', desc: 'Final requirements audit for CHED serial numbers.', dept: 'All' },
+                                    { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Pass-in-Review', desc: 'Formal graduation pass-in-review and certificate awarding ceremony.', dept: 'All' },
+                                  ]));
                       return events.map((ev, i) => (
                         <div key={i} className="bg-gray-50 rounded-xl p-3 border border-gray-200 flex flex-col justify-between">
                           <div>
@@ -3651,10 +3664,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 'bg-blue-100 text-blue-800'
                               }`}>{ev.dept}</span>
                             </div>
-                            <p className="text-[11px] text-gray-600 mb-1.5">{ev.desc}</p>
+                            <p className="text-[11px] text-gray-600 mb-1.5">{ev.desc || ev.description}</p>
                           </div>
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md inline-block w-fit">
-                            📅 {ev.date}
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md inline-flex items-center gap-1 w-fit">
+                            <Calendar className="w-3 h-3 text-emerald-700 shrink-0" />
+                            <span>{ev.date}</span>
                           </span>
                         </div>
                       ));
