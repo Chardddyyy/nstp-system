@@ -11,4 +11,11 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 10000 // send TCP keepalive every 10s
 });
 
+// Graceful pool connection event handling to avoid unhandled crashes on idle disconnects
+if (pool && typeof pool.on === 'function') {
+  pool.on('error', (err) => {
+    console.warn('[MySQL Pool Connection Notice]', err?.message || err);
+  });
+}
+
 module.exports = pool;

@@ -1360,6 +1360,29 @@ async function appendCallIce(callId, column, candidate) {
   await pool.execute(sql, [JSON.stringify(list), callId]);
 }
 
+// Production Performance Indexes (Safely checks information_schema first; idempotent & zero side-effects)
+async function ensurePerformanceIndexes() {
+  const candidateIndexes = [
+    { table: 'students', name: 'idx_students_semester', sql: 'ALTER TABLE students ADD INDEX idx_students_semester (semester)' },
+    { table: 'students', name: 'idx_students_schoolyear', sql: 'ALTER TABLE students ADD INDEX idx_students_schoolyear (schoolYear)' },
+    { table: 'students', name: 'idx_students_section', sql: 'ALTER TABLE students ADD INDEX idx_students_section (section)' },
+    { table: 'attendance_records', name: 'idx_attendance_scan_type', sql: 'ALTER TABLE attendance_records ADD INDEX idx_attendance_scan_type (scan_type, scanned_at)' }
+  ];
+
+  for (const idx of candidateIndexes) {
+    try {
+      const [existing] = await pool.query(
+        "SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ? LIMIT 1",
+        [idx.table, idx.name]
+      ).catch(() => [[]]);
+
+      if (!existing || existing.length === 0) {
+        await pool.execute(idx.sql).catch(() => {});
+      }
+    } catch (_) {}
+  }
+}
+
 async function ensureConversationSchema() {
   var alters = [
     'ALTER TABLE conversations MODIFY COLUMN participant_1_id INT NULL',
@@ -7366,7 +7389,8 @@ async function startServer() {
       ensureReportsBatchYear(),
       ensureReportComments(),
       ensureConversationLastSender(),
-      restoreCorFromEnrollments()
+      restoreCorFromEnrollments(),
+      ensurePerformanceIndexes()
     ]).catch(function(err) {
       console.warn('Schema migration warning:', err.message);
     });
