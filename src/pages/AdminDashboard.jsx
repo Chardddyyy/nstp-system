@@ -1180,6 +1180,65 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
                     </div>
 
+                    {/* Device Notification Status & Test Bar */}
+                    <div className="px-3 py-2 bg-slate-50 border-b border-gray-100 flex items-center justify-between gap-2 text-[10.5px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${
+                          typeof Notification !== 'undefined' && Notification.permission === 'granted'
+                            ? 'bg-emerald-500 animate-pulse'
+                            : typeof Notification !== 'undefined' && Notification.permission === 'denied'
+                              ? 'bg-rose-500'
+                              : 'bg-amber-400'
+                        }`} />
+                        <span className="font-semibold text-gray-700 truncate">
+                          {typeof Notification === 'undefined'
+                            ? 'Device alerts not supported'
+                            : Notification.permission === 'granted'
+                              ? 'Device alerts enabled'
+                              : Notification.permission === 'denied'
+                                ? 'Device alerts blocked'
+                                : 'Device alerts disabled'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {typeof Notification !== 'undefined' && Notification.permission === 'default' && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const p = await Notification.requestPermission();
+                                if (p === 'granted' && window.testDeviceNotification) {
+                                  window.testDeviceNotification('NSTP Notifications Enabled', 'You will now receive device alerts for new messages, deadlines, and submissions!');
+                                }
+                              } catch (_) {}
+                            }}
+                            className="px-2 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md font-bold text-[10px] transition-colors cursor-pointer shadow-2xs"
+                          >
+                            Enable Alerts
+                          </button>
+                        )}
+                        {typeof Notification !== 'undefined' && Notification.permission === 'granted' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.testDeviceNotification) {
+                                window.testDeviceNotification('NSTP Notification Test', 'Device push notifications are working properly on your device!');
+                              }
+                            }}
+                            className="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-bold text-[10px] transition-colors cursor-pointer"
+                            title="Click to test device notification banner"
+                          >
+                            Test Alert
+                          </button>
+                        )}
+                        {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
+                          <span className="text-[9.5px] text-rose-600 font-medium" title="Unblock notifications in your browser URL lock icon">
+                            Check Settings
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
                       {(!systemNotifications || systemNotifications.length === 0) ? (
                         <div className="p-4 text-center text-gray-400 text-xs font-medium">

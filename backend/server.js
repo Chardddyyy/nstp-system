@@ -2857,9 +2857,14 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     // Safely remove or dissociate all referencing child records across relational tables:
     try { await pool.execute('DELETE FROM conversation_participants WHERE user_id = ?', [id]); } catch (e1) { console.warn('Clean conversation_participants warning:', e1.message); }
     try { await pool.execute('DELETE FROM report_comments WHERE user_id = ?', [id]); } catch (e2) { console.warn('Clean report_comments warning:', e2.message); }
-    try { await pool.execute('DELETE FROM report_submissions WHERE user_id = ?', [id]); } catch (e3) { console.warn('Clean report_submissions warning:', e3.message); }
-    try { await pool.execute('UPDATE students SET instructor_id = NULL WHERE instructor_id = ?', [id]); } catch (e4) { console.warn('Clean students instructor_id warning:', e4.message); }
+    try { await pool.execute('DELETE FROM report_submissions WHERE instructor_id = ?', [id]); } catch (_) {}
+    try { await pool.execute('DELETE FROM report_submissions WHERE user_id = ?', [id]); } catch (_) {}
+    try { await pool.execute('UPDATE reports SET created_by = NULL WHERE created_by = ?', [id]); } catch (_) {}
+    try { await pool.execute('UPDATE enrollments SET reviewed_by = NULL WHERE reviewed_by = ?', [id]); } catch (_) {}
+    try { await pool.execute('UPDATE calls SET caller_id = NULL WHERE caller_id = ?', [id]); } catch (_) {}
+    try { await pool.execute('UPDATE calls SET receiver_id = NULL WHERE receiver_id = ?', [id]); } catch (_) {}
     try { await pool.execute('DELETE FROM messages WHERE sender_id = ?', [id]); } catch (e5) { console.warn('Clean messages sender_id warning:', e5.message); }
+    try { await pool.execute('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?', [id]); } catch (_) {}
     if (target[0].email) {
       try { await pool.execute('DELETE FROM password_resets WHERE LOWER(TRIM(email)) = ?', [String(target[0].email).trim().toLowerCase()]); } catch (e6) { console.warn('Clean password_resets warning:', e6.message); }
     }

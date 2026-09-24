@@ -249,18 +249,6 @@ export async function loginUser(email, password, _forceLogin = true) {
             department: 'ROTC',
             avatar: 'avatar-3'
           }
-        },
-        {
-          emails: ['juan@gmail.com'],
-          passwords: ['12345678', 'admin123'],
-          user: {
-            id: 7,
-            email: 'juan@gmail.com',
-            name: 'Juan Dela Cruz',
-            role: 'admin',
-            department: 'NSTP Office',
-            avatar: 'avatar-5'
-          }
         }
       ];
 

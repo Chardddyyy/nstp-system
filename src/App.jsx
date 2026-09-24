@@ -1333,12 +1333,38 @@ function App() {
     safeSetStorage(getNotificationStorageKey(user), notifications);
   }, [notifications, user]);
 
-  // Real-time polling while logged in
+  // Real-time polling while logged in (pauses when laptop lid is closed or tab is hidden to prevent ERR_NETWORK_IO_SUSPENDED)
   useEffect(() => {
     if (!user || loading) return;
     refreshLiveData();
-    const interval = setInterval(refreshLiveData, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      refreshLiveData();
+    }, POLL_INTERVAL_MS);
+
+    // On wake or reconnect, immediately refresh data and socket
+    const handleWakeOrOnline = () => {
+      if (document.visibilityState === 'visible' && (typeof navigator === 'undefined' || navigator.onLine)) {
+        refreshLiveData();
+        try {
+          const s = getSocket();
+          if (s && !s.connected) {
+            s.connect();
+          }
+        } catch (_) {}
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleWakeOrOnline);
+    window.addEventListener('online', handleWakeOrOnline);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleWakeOrOnline);
+      window.removeEventListener('online', handleWakeOrOnline);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
 

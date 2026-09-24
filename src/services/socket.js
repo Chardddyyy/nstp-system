@@ -45,22 +45,43 @@ export function initSocket() {
   });
 
   socket.on('disconnect', (reason) => {
-    if (reason === 'io server disconnect' && socket) {
+    if ((reason === 'io server disconnect' || reason === 'transport close' || reason === 'transport error') && socket) {
       setTimeout(() => {
         if (socket && !socket.connected) {
           socket.connect();
         }
-      }, 2000);
+      }, 1500);
     }
   });
 
-  socket.on('connect_error', () => {
-    // Handled gracefully during server restarts or cold starts
+  socket.on('connect_error', (err) => {
+    // Gracefully recover when sleep/wake or network switch invalidates old session ID
+    if (err && (err.message?.includes('400') || err.description === 400)) {
+      setTimeout(() => {
+        if (socket && !socket.connected) {
+          try { socket.connect(); } catch (_) {}
+        }
+      }, 1000);
+    }
   });
 
   socket.on('error', () => {
-    // Handled gracefully
+    // Handled gracefully without crashing
   });
+
+  // Automatically reconnect on device wake or network restoration
+  if (typeof window !== 'undefined' && !window.__nstp_socket_wake_listener__) {
+    window.__nstp_socket_wake_listener__ = true;
+    const handleWake = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        if (socket && !socket.connected) {
+          try { socket.connect(); } catch (_) {}
+        }
+      }
+    };
+    window.addEventListener('online', handleWake);
+    document.addEventListener('visibilitychange', handleWake);
+  }
 
   return socket;
 }

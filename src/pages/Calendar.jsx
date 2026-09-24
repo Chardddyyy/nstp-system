@@ -669,7 +669,7 @@ function Calendar() {
   };
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 overflow-hidden flex flex-col">
+    <div className="app-screen-height bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 overflow-hidden flex flex-col">
 
       <Sidebar
         open={sidebarOpen}
@@ -680,7 +680,7 @@ function Calendar() {
       />
 
       {/* Main Content */}
-      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-4 pb-2 sm:pb-3 lg:pb-3 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`app-screen-height flex-1 min-h-0 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-4 pb-2 sm:pb-3 lg:pb-3 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
 
         {/* Hero Header Card */}
         <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 shadow-xl border border-emerald-800/40 relative mb-2 sm:mb-3 w-full">
@@ -836,7 +836,7 @@ function Calendar() {
 
             <div
               className="flex-1 min-h-0 w-full h-full"
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'auto repeat(6, 1fr)', gap: '4px' }}
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridTemplateRows: 'auto repeat(6, minmax(0, 1fr))', gap: '4px' }}
             >
               {[
                 { full: 'Sun', short: 'S' },
@@ -863,7 +863,7 @@ function Calendar() {
                 return (
                   <div
                     key={index}
-                    className={`p-1 sm:p-1.5 border rounded-xl transition-all overflow-hidden flex flex-col justify-between min-h-[50px] sm:min-h-[70px] lg:min-h-[85px] ${
+                    className={`p-1 sm:p-1.5 border rounded-xl transition-all overflow-hidden flex flex-col justify-between h-full min-h-0 ${
                       !day ? 'border-transparent bg-transparent' : past ? 'bg-slate-50 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 cursor-pointer opacity-85' : 'bg-white hover:bg-emerald-50/30 cursor-pointer border-slate-200 hover:border-emerald-400 hover:shadow-xs'
                     } ${isToday ? '!bg-emerald-50/70 !border-emerald-500 !ring-1 !ring-emerald-400' : ''}`}
                     onClick={() => day && setSelectedDate(day)}

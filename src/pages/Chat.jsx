@@ -2032,7 +2032,7 @@ function Chat() {
   };
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] w-full overflow-hidden flex flex-col bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50">
+    <div className="app-screen-height w-full overflow-hidden flex flex-col bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50">
       {/* Simple Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {notifications.map(n => (
@@ -2063,7 +2063,7 @@ function Chat() {
       />
 
       {/* Main Content */}
-      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} h-[100dvh] max-h-[100dvh] flex flex-col overflow-hidden w-full max-w-full relative`}>
+      <main className={`${sidebarOpen ? 'lg:ml-64' : ''} app-screen-height flex flex-col overflow-hidden w-full max-w-full relative`}>
         {/* Conversations List - Hidden on mobile when chat is active */}
         <div className={`${showConversations ? 'flex' : 'hidden'} w-full bg-white/95 backdrop-blur-md border-r border-emerald-100 flex-col h-full overflow-hidden shadow-lg`}>
           <div className="p-3 sm:p-4">
@@ -2118,7 +2118,7 @@ function Chat() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 h-full overflow-y-auto overscroll-contain pb-6">
 
             {/* ── Contacts panel ── */}
             {showContacts && (() => {
@@ -2455,9 +2455,9 @@ function Chat() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full"
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full flex flex-col"
               >
-                <div className="space-y-3 w-full max-w-full">
+                <div className="space-y-3 w-full max-w-full mt-auto">
                   {currentMessages.map((message, msgIdx) => {
                     const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
                     const isNearBottom = msgIdx >= currentMessages.length - 2;

@@ -60,6 +60,26 @@ html {
   }
 }
 
+/* Full Screen Viewport Coverage adjusted for Desktop (0.75) and Mobile (0.90) Zoom */
+.app-screen-height {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+@media screen and (max-width: 767px) {
+  .app-screen-height {
+    height: calc(100dvh / 0.90);
+    max-height: calc(100dvh / 0.90);
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .app-screen-height {
+    height: calc(100dvh / 0.75);
+    max-height: calc(100dvh / 0.75);
+  }
+}
+
 
 /* Accessible High-Contrast Keyboard Focus Indicators */
 :focus-visible {
