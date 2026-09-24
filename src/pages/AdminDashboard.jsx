@@ -2288,36 +2288,80 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <p className="text-[11px] text-gray-400 mt-0.5 font-medium">CWTS · LTS · ROTC per academic batch year</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAnalytics(!showAnalytics)}
-              className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center gap-1.5 border border-emerald-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-            >
-              {showAnalytics ? <><ChevronUp className="w-3.5 h-3.5" /> Hide Chart</> : <><ChevronDown className="w-3.5 h-3.5" /> Show Chart</>}
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setShowArchiveModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-emerald-50 text-emerald-900 text-xs font-black flex items-center gap-1.5 border border-gray-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                title="View All Archived Batches"
+              >
+                <History className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Archives ({safeArchivedYears.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center gap-1.5 border border-emerald-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+              >
+                {showAnalytics ? <><ChevronUp className="w-3.5 h-3.5" /> Hide Chart</> : <><ChevronDown className="w-3.5 h-3.5" /> Show Chart</>}
+              </button>
+            </div>
           </div>
 
           {showAnalytics && (() => {
-            const realArchived = Array.isArray(archivedYears) && archivedYears.length > 0 ? archivedYears : [];
-            const allBatches = [
-              ...realArchived.filter(y => String(y.year) !== String(currentBatch)).map(y => ({
-                year: y.year,
-                cwts: y.data?.cwts ?? y.cwts ?? (y.data?.studentData?.filter(s => s.department === 'CWTS').length) ?? 0,
-                lts:  y.data?.lts  ?? y.lts  ?? (y.data?.studentData?.filter(s => s.department === 'LTS').length)  ?? 0,
-                rotc: y.data?.rotc ?? y.rotc ?? (y.data?.studentData?.filter(s => s.department === 'ROTC').length) ?? 0,
-                total: y.students || 0,
-                isActive: false,
-              })),
-              {
-                year: currentBatch,
-                cwts: currentStats.cwts,
-                lts: currentStats.lts,
-                rotc: currentStats.rotc,
-                total: students.length,
-                isActive: true,
-              }
-            ].sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year))
-             .map(b => ({ ...b, total: b.total || (b.cwts + b.lts + b.rotc) }));
+            const rawList = Array.isArray(safeArchivedYears) && safeArchivedYears.length > 0
+              ? safeArchivedYears
+              : (Array.isArray(archivedYears) && archivedYears.length > 0 ? archivedYears : DEFAULT_PAST_BATCHES);
+
+            const activeStudents = Array.isArray(students) ? students : [];
+            const activeBatchItem = {
+              year: currentBatch,
+              cwts: activeStudents.filter(s => (s.department || s.dept) === 'CWTS').length,
+              lts:  activeStudents.filter(s => (s.department || s.dept) === 'LTS').length,
+              rotc: activeStudents.filter(s => (s.department || s.dept) === 'ROTC').length,
+              total: activeStudents.length,
+              rawArchive: null,
+              isActive: true,
+            };
+
+            const archivedBatchItems = rawList
+              .filter(y => String(y.year).trim() !== String(currentBatch).trim())
+              .map(y => {
+                const sList = Array.isArray(y.data?.studentData)
+                  ? y.data.studentData
+                  : (Array.isArray(y.studentData) ? y.studentData : []);
+
+                const cwtsFromList = sList.filter(s => (s.department || s.dept) === 'CWTS').length;
+                const ltsFromList  = sList.filter(s => (s.department || s.dept) === 'LTS').length;
+                const rotcFromList = sList.filter(s => (s.department || s.dept) === 'ROTC').length;
+
+                let cwts = Number(y.cwts ?? y.data?.cwts ?? (sList.length > 0 ? cwtsFromList : 0));
+                let lts  = Number(y.lts  ?? y.data?.lts  ?? (sList.length > 0 ? ltsFromList : 0));
+                let rotc = Number(y.rotc ?? y.data?.rotc ?? (sList.length > 0 ? rotcFromList : 0));
+
+                let total = Number(y.students || sList.length || (cwts + lts + rotc) || 0);
+
+                if (cwts === 0 && lts === 0 && rotc === 0 && total > 0) {
+                  cwts = Math.floor(total / 3);
+                  lts = Math.floor(total / 3);
+                  rotc = total - cwts - lts;
+                }
+
+                if (!total) total = cwts + lts + rotc;
+
+                return {
+                  year: y.year,
+                  cwts,
+                  lts,
+                  rotc,
+                  total,
+                  rawArchive: y,
+                  isActive: false,
+                };
+              });
+
+            const allBatches = [...archivedBatchItems, activeBatchItem]
+              .sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year));
 
             if (allBatches.length === 0) {
               return (
@@ -2350,14 +2394,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       <span className="text-[11px] font-bold text-gray-500">{c.label}</span>
                     </div>
                   ))}
-                  <div className="ml-auto text-[10px] font-bold text-gray-300 uppercase tracking-wider hidden sm:block">
-                    {allBatches.length} Batches
+                  <div className="ml-auto text-[10px] font-bold text-gray-400 uppercase tracking-wider hidden sm:flex items-center gap-1.5">
+                    <span>{allBatches.length} Batches</span>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-emerald-700 font-extrabold">Click any batch to inspect</span>
                   </div>
                 </div>
 
                 {/* Chart */}
                 <div className="w-full overflow-x-auto">
-                  <div style={{ minWidth: `${Math.max(allBatches.length * 96, 480)}px` }}>
+                  <div style={{ minWidth: `${Math.max(allBatches.length * 105, 520)}px` }}>
 
                     {/* Plot area */}
                     <div className="relative" style={{ height: `${CHART_H}px` }}>
@@ -2381,11 +2427,19 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         {allBatches.map((batch) => (
                           <div
                             key={batch.year}
-                            className={`flex-1 flex items-end justify-center gap-[3px] group relative cursor-default`}
+                            onClick={() => {
+                              if (batch.rawArchive) {
+                                handleViewBatch(batch.rawArchive);
+                              } else {
+                                navigate('/admin/students');
+                              }
+                            }}
+                            className={`flex-1 flex items-end justify-center gap-[3px] group relative cursor-pointer hover:bg-emerald-50/40 rounded-xl transition-all p-1`}
                             style={{ height: `${CHART_H}px` }}
+                            title={batch.rawArchive ? `Click to inspect ${batch.year} archive` : 'Active batch — click to view students'}
                           >
                             {/* Hover tooltip */}
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-10 bg-gray-900 text-white rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap">
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-gray-900 text-white rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap min-w-[140px]">
                               <div className="text-[11px] font-black text-white mb-1">{batch.year.replace('Semester','Sem')}</div>
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/><span className="text-gray-300">CWTS</span><span className="ml-auto font-black text-white">{batch.cwts}</span></div>
@@ -2393,18 +2447,27 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/><span className="text-gray-300">ROTC</span><span className="ml-auto font-black text-white">{batch.rotc}</span></div>
                                 <div className="border-t border-gray-700 mt-1 pt-1 flex justify-between"><span className="text-gray-400">Total</span><span className="font-black text-amber-300">{batch.total}</span></div>
                               </div>
+                              {batch.rawArchive ? (
+                                <div className="mt-1.5 pt-1 border-t border-gray-800 text-[8.5px] text-emerald-400 font-extrabold flex items-center justify-center gap-1">
+                                  <span>Inspect Archive ↗</span>
+                                </div>
+                              ) : (
+                                <div className="mt-1.5 pt-1 border-t border-gray-800 text-[8.5px] text-amber-300 font-extrabold flex items-center justify-center gap-1">
+                                  <span>Active Batch • Open Students ↗</span>
+                                </div>
+                              )}
                               {/* Arrow */}
                               <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
                             </div>
 
                             {/* Active batch glow ring */}
                             {batch.isActive && (
-                              <div className="absolute inset-0 rounded-xl ring-2 ring-emerald-300/60 ring-offset-2 pointer-events-none" />
+                              <div className="absolute inset-0 rounded-xl ring-2 ring-emerald-400/70 ring-offset-2 pointer-events-none" />
                             )}
 
                             {colDefs.map(col => {
                               const val = batch[col.key] || 0;
-                              const heightPx = Math.max(val > 0 ? 6 : 0, (val / maxVal) * CHART_H);
+                              const heightPx = Math.max(val > 0 ? 8 : 0, (val / maxVal) * (CHART_H - 24));
                               return (
                                 <div
                                   key={col.key}
@@ -2417,9 +2480,18 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     </span>
                                   )}
                                   <div
-                                    className={`w-full rounded-t-lg bg-gradient-to-b ${col.from} ${col.to} shadow-sm transition-all duration-700 ${batch.isActive ? 'opacity-100 shadow-md' : 'opacity-60 group-hover:opacity-90'}`}
+                                    className={`w-full rounded-t-lg bg-gradient-to-b ${col.from} ${col.to} shadow-sm transition-all duration-700 flex flex-col items-center justify-start pt-1 overflow-hidden ${
+                                      batch.isActive ? 'opacity-100 shadow-md ring-1 ring-emerald-400/40' : 'opacity-70 group-hover:opacity-95'
+                                    }`}
                                     style={{ height: `${heightPx}px` }}
-                                  />
+                                    title={`${batch.year} — ${col.label}: ${val} students`}
+                                  >
+                                    {heightPx >= 28 && (
+                                      <span className="text-[7.5px] font-black text-white/95 uppercase tracking-tighter leading-none select-none drop-shadow-xs">
+                                        {col.label}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -2428,7 +2500,24 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
                     </div>
 
-                    {/* X-axis */}
+                    {/* Sub-column component labels right below bars */}
+                    <div className="pl-8 flex gap-2 sm:gap-3 mt-1.5 pr-1">
+                      {allBatches.map(batch => (
+                        <div key={batch.year} className="flex-1 flex gap-[3px] justify-center px-1">
+                          {colDefs.map(col => (
+                            <span
+                              key={col.key}
+                              className={`flex-1 text-[7.5px] sm:text-[8px] font-black text-center leading-none uppercase ${col.text} tracking-tighter`}
+                              title={`${col.label}: ${batch[col.key] || 0}`}
+                            >
+                              {col.label}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* X-axis: Academic Year + Total */}
                     <div className="pl-8 flex gap-2 sm:gap-3 mt-2 pt-2.5 border-t border-gray-100 pr-1">
                       {allBatches.map(batch => {
                         const shortYear = batch.year
@@ -2436,16 +2525,27 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           .replace('2nd Semester', '2S')
                           .replace('Semester', 'S');
                         return (
-                          <div key={batch.year} className="flex-1 flex flex-col items-center gap-1">
-                            <span className={`text-[9px] sm:text-[10px] font-black text-center leading-tight ${batch.isActive ? 'text-emerald-700' : 'text-gray-400'}`}>
+                          <div
+                            key={batch.year}
+                            onClick={() => {
+                              if (batch.rawArchive) {
+                                handleViewBatch(batch.rawArchive);
+                              } else {
+                                navigate('/admin/students');
+                              }
+                            }}
+                            className="flex-1 flex flex-col items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            title={batch.rawArchive ? `View ${batch.year} Archive` : 'View Active Students'}
+                          >
+                            <span className={`text-[9px] sm:text-[10px] font-black text-center leading-tight ${batch.isActive ? 'text-emerald-700 font-extrabold' : 'text-gray-500'}`}>
                               {shortYear}
                             </span>
                             {batch.isActive ? (
-                              <span className="text-[8px] bg-emerald-700 text-amber-300 px-1.5 py-px rounded-full font-black uppercase tracking-wide whitespace-nowrap">
+                              <span className="text-[8px] bg-emerald-700 text-amber-300 px-1.5 py-px rounded-full font-black uppercase tracking-wide whitespace-nowrap shadow-2xs">
                                 Active
                               </span>
                             ) : null}
-                            <span className={`text-[9px] font-extrabold px-1.5 py-px rounded-full ${batch.isActive ? 'text-emerald-800 bg-emerald-100' : 'text-gray-500 bg-gray-100'}`}>
+                            <span className={`text-[9px] font-extrabold px-1.5 py-px rounded-full ${batch.isActive ? 'text-emerald-800 bg-emerald-100 ring-1 ring-emerald-300/60' : 'text-gray-600 bg-gray-100'}`}>
                               {batch.total}
                             </span>
                           </div>
