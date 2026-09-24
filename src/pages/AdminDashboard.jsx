@@ -2349,60 +2349,58 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   ...allComparisonBatches.flatMap(b => [b.cwts || 0, b.lts || 0, b.rotc || 0]),
                   1
                 );
-                const CHART_HEIGHT = 180;
+                const CHART_HEIGHT = 140;
+                // Nice round y-axis ticks: 0, 25%, 50%, 75%, max
+                const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * globalMaxVal));
 
                 return (
                   <div className="w-full overflow-x-auto pb-2">
-                    <div style={{ minWidth: `${allComparisonBatches.length * 120}px` }} className="w-full">
+                    <div style={{ minWidth: `${allComparisonBatches.length * 80}px` }} className="w-full">
                       {/* Y-axis grid lines */}
                       <div className="relative" style={{ height: `${CHART_HEIGHT}px` }}>
-                        {[0, 25, 50, 75, 100].map(pct => (
+                        {yTicks.map((tick, i) => (
                           <div
-                            key={pct}
+                            key={i}
                             className="absolute w-full flex items-center"
-                            style={{ bottom: `${pct}%` }}
+                            style={{ bottom: `${(tick / globalMaxVal) * 100}%` }}
                           >
-                            <span className="text-[9px] text-gray-400 font-bold w-6 shrink-0 text-right pr-1">
-                              {pct === 0 ? '0' : Math.round((pct / 100) * globalMaxVal)}
+                            <span className="text-[9px] text-gray-400 font-bold w-5 shrink-0 text-right pr-1">
+                              {tick}
                             </span>
-                            <div className="flex-1 border-t border-dashed border-gray-200/80" />
+                            <div className={`flex-1 border-t ${i === 0 ? 'border-gray-300' : 'border-dashed border-gray-200/80'}`} />
                           </div>
                         ))}
 
                         {/* Columns */}
-                        <div className="absolute inset-0 pl-7 flex items-end">
+                        <div className="absolute inset-0 pl-5 flex items-end gap-1.5">
                           {allComparisonBatches.map((data) => {
                             const isActive = String(data.year) === String(currentBatch);
-                            const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
                             const cols = [
-                              { val: data.cwts || 0, grad: 'from-emerald-400 to-teal-600', label: 'CWTS' },
-                              { val: data.lts || 0, grad: 'from-purple-400 to-indigo-600', label: 'LTS' },
-                              { val: data.rotc || 0, grad: 'from-rose-400 to-red-600', label: 'ROTC' },
+                              { val: data.cwts || 0, grad: 'from-emerald-400 to-teal-600', label: 'CWTS', textColor: 'text-emerald-700' },
+                              { val: data.lts || 0, grad: 'from-purple-400 to-indigo-600', label: 'LTS', textColor: 'text-purple-700' },
+                              { val: data.rotc || 0, grad: 'from-rose-400 to-red-600', label: 'ROTC', textColor: 'text-rose-700' },
                             ];
                             return (
-                              <div key={data.year} className="flex-1 flex flex-col items-center group">
-                                {/* Grouped bars */}
-                                <div className="w-full flex items-end justify-center gap-1 px-2" style={{ height: `${CHART_HEIGHT}px` }}>
-                                  {cols.map(col => (
+                              <div key={data.year} className={`flex items-end gap-px ${isActive ? '' : 'opacity-80 hover:opacity-100'} transition-opacity duration-200`} style={{ height: `${CHART_HEIGHT}px` }}>
+                                {cols.map(col => (
+                                  <div
+                                    key={col.label}
+                                    className="flex flex-col items-center justify-end"
+                                    style={{ height: '100%', width: '10px' }}
+                                  >
+                                    {col.val > 0 && (
+                                      <span className="text-[8px] font-black text-gray-500 mb-0.5 leading-none">
+                                        {col.val}
+                                      </span>
+                                    )}
                                     <div
-                                      key={col.label}
-                                      className="flex-1 flex flex-col items-center justify-end"
-                                      style={{ height: '100%' }}
-                                    >
-                                      {col.val > 0 && (
-                                        <span className="text-[9px] font-black text-gray-600 mb-0.5 leading-none">
-                                          {col.val}
-                                        </span>
-                                      )}
-                                      <div
-                                        className={`w-full rounded-t-md bg-gradient-to-b ${col.grad} shadow-sm transition-all duration-500 ${isActive ? 'opacity-100' : 'opacity-75 group-hover:opacity-100'}`}
-                                        style={{
-                                          height: `${Math.max(col.val > 0 ? 4 : 0, (col.val / globalMaxVal) * CHART_HEIGHT)}px`,
-                                        }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
+                                      className={`w-full rounded-t-sm bg-gradient-to-b ${col.grad} shadow-sm transition-all duration-500`}
+                                      style={{
+                                        height: `${Math.max(col.val > 0 ? 3 : 0, (col.val / globalMaxVal) * CHART_HEIGHT)}px`,
+                                      }}
+                                    />
+                                  </div>
+                                ))}
                               </div>
                             );
                           })}
@@ -2410,24 +2408,33 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
 
                       {/* X-axis labels */}
-                      <div className="pl-7 flex mt-2 border-t border-gray-200/60">
+                      <div className="pl-5 flex gap-1.5 mt-1.5 border-t border-gray-200/60">
                         {allComparisonBatches.map((data) => {
                           const isActive = String(data.year) === String(currentBatch);
                           const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
-                          const yearPart = data.year.replace('Semester', 'Sem');
+                          const yearPart = data.year.replace('Semester', 'Sem').replace('1st', '1S').replace('2nd', '2S');
+                          const cols = [
+                            { label: 'C', color: 'bg-emerald-500' },
+                            { label: 'L', color: 'bg-purple-500' },
+                            { label: 'R', color: 'bg-rose-500' },
+                          ];
                           return (
-                            <div key={data.year} className="flex-1 flex flex-col items-center pt-2 px-1">
-                              <span className={`text-[9px] font-black text-center leading-tight ${isActive ? 'text-emerald-800' : 'text-gray-600'}`}>
+                            <div key={data.year} className="flex flex-col items-center pt-1.5" style={{ width: `${10 * 3 + 2}px` }}>
+                              {/* Color dots */}
+                              <div className="flex gap-px mb-0.5">
+                                {cols.map(c => (
+                                  <div key={c.label} className={`w-2 h-2 rounded-[2px] ${c.color}`} title={c.label === 'C' ? 'CWTS' : c.label === 'L' ? 'LTS' : 'ROTC'} />
+                                ))}
+                              </div>
+                              <span className={`text-[8px] font-black text-center leading-tight whitespace-nowrap ${isActive ? 'text-emerald-800' : 'text-gray-500'}`}>
                                 {yearPart}
                               </span>
                               {isActive && (
-                                <span className="mt-0.5 text-[8px] bg-emerald-800 text-amber-300 px-1.5 py-0.5 rounded-full font-black uppercase whitespace-nowrap">
+                                <span className="mt-0.5 text-[7px] bg-emerald-800 text-amber-300 px-1 py-px rounded-full font-black uppercase">
                                   Active
                                 </span>
                               )}
-                              <span className="mt-0.5 text-[9px] font-bold text-emerald-700">
-                                {totalStudents} students
-                              </span>
+                              <span className="text-[7px] font-bold text-gray-400 mt-0.5">{totalStudents}s</span>
                             </div>
                           );
                         })}
