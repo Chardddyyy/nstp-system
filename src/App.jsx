@@ -460,6 +460,7 @@ function App() {
       pingTelemetry({
         sessionId: sid,
         visitorId: vid,
+        deviceId: vid,
         user: user ? {
           name: user.name,
           role: user.role,

@@ -52,16 +52,20 @@ loadTelemetry();
  * Ping from client to record active session and genuine unique device
  */
 const pingTelemetry = catchAsync(async (req, res) => {
-  const visitorId = req.body.visitorId || req.body.visitor_id || req.body.clientId;
+  const visitorId = req.body.deviceId || req.body.visitorId || req.body.visitor_id || req.body.clientId;
   const cleanId = visitorId ? String(visitorId).slice(0, 48) : null;
   const sessionId = req.body.sessionId || cleanId || req.ip || `client_${Date.now()}`;
   const now = Date.now();
 
-  activeClients.set(sessionId, now);
+  if (cleanId) {
+    activeClients.set(cleanId, now);
+  } else {
+    activeClients.set(sessionId, now);
+  }
 
-  // Clean stale clients older than 30 seconds
+  // Clean stale clients older than 2 minutes (120 seconds)
   for (const [id, timestamp] of activeClients.entries()) {
-    if (now - timestamp > 30000) {
+    if (now - timestamp > 120000) {
       activeClients.delete(id);
     }
   }
@@ -72,10 +76,13 @@ const pingTelemetry = catchAsync(async (req, res) => {
     saveTelemetry();
   }
 
-  return ApiResponse.success(res, {
-    activeOnlineCount: Math.max(0, activeClients.size),
-    totalVisitors: Math.max(0, uniqueVisitorsSet.size)
-  }, 'Telemetry ping recorded');
+  const result = {
+    totalVisitors: Math.max(0, uniqueVisitorsSet.size),
+    activeUsers: Math.max(1, activeClients.size),
+    activeOnlineCount: Math.max(1, activeClients.size)
+  };
+
+  return res.status(200).json(Object.assign({ success: true, data: result }, result));
 });
 
 /**
@@ -83,17 +90,28 @@ const pingTelemetry = catchAsync(async (req, res) => {
  */
 const getTelemetryStats = catchAsync(async (req, res) => {
   const telemetry = loadTelemetry();
+  const now = Date.now();
+
+  // Prune clients older than 2 minutes (120 seconds)
+  for (const [id, timestamp] of activeClients.entries()) {
+    if (now - timestamp > 120000) {
+      activeClients.delete(id);
+    }
+  }
 
   // Fast count query
   const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM users').catch(() => [[{ count: 0 }]]);
   const [studentCount] = await pool.execute('SELECT COUNT(*) as count FROM students').catch(() => [[{ count: 0 }]]);
 
-  return ApiResponse.success(res, {
+  const stats = {
     totalVisitors: telemetry.totalVisitors || telemetry.totalCount || uniqueVisitorsSet.size || 0,
-    activeOnlineCount: Math.max(0, activeClients.size),
+    activeUsers: Math.max(1, activeClients.size),
+    activeOnlineCount: Math.max(1, activeClients.size),
     totalUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0),
     totalRegisteredUsers: (userCount[0]?.count || 0) + (studentCount[0]?.count || 0)
-  }, 'Telemetry stats retrieved');
+  };
+
+  return res.status(200).json(Object.assign({ success: true, data: stats }, stats));
 });
 
 module.exports = {

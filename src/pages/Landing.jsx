@@ -289,7 +289,9 @@ function Landing() {
             // Never drop or fluctuate down: monotonic progression
             const nextVisitors = rawIncomingVisitors > 0 ? Math.max(prev.totalVisitors || 44, rawIncomingVisitors) : (prev.totalVisitors || 44);
             // Real active online count (at least 1 for the current session)
-            const rawActive = typeof stats.activeOnlineCount === 'number' ? stats.activeOnlineCount : 1;
+            const rawActive = typeof stats.activeUsers === 'number'
+              ? stats.activeUsers
+              : (typeof stats.activeOnlineCount === 'number' ? stats.activeOnlineCount : 1);
             const nextActive = Math.max(1, rawActive);
             const nextUsers = Math.max(prev.totalUsers || 44, stats.totalUsers || 44, stats.totalRegisteredUsers || 44);
 
@@ -297,9 +299,7 @@ function Landing() {
             if (
               prev.totalVisitors === nextVisitors &&
               prev.activeOnlineCount === nextActive &&
-              prev.totalUsers === nextUsers &&
-              Array.isArray(prev.activeUsers) && Array.isArray(stats.activeUsers) &&
-              prev.activeUsers.length === stats.activeUsers.length
+              prev.totalUsers === nextUsers
             ) {
               return prev;
             }

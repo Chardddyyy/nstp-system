@@ -7058,16 +7058,16 @@ app.post('/api/telemetry/ping', function(req, res) {
     try { body = JSON.parse(body); } catch (_) { body = {}; }
   }
   body = body || {};
-  var sessionId = body.sessionId;
-  var visitorId = body.visitorId || body.visitor_id;
+  var visitorId = body.deviceId || body.visitorId || body.visitor_id || body.clientId;
+  var sessionId = body.sessionId || visitorId || ('sess_' + Date.now());
   var user = body.user;
   var page = body.page;
 
-  if (!sessionId || !visitorId) {
+  if (!sessionId && !visitorId) {
     return res.status(400).json({ message: 'Missing session/visitor identity' });
   }
 
-  var cleanId = String(visitorId).slice(0, 48);
+  var cleanId = String(visitorId || sessionId).slice(0, 48);
   var isGenuine = cleanId && !cleanId.startsWith('std_') && !cleanId.startsWith('enr_') && !cleanId.startsWith('usr_') && !cleanId.startsWith('audit_') && !cleanId.startsWith('vis_test_');
   var isNewVisitor = isGenuine && !totalUniqueVisitors.has(cleanId);
   if (isGenuine) {
@@ -7077,13 +7077,26 @@ app.post('/api/telemetry/ping', function(req, res) {
     }
   }
 
+  var now = Date.now();
   activeSessions.set(sessionId, {
     visitorId: cleanId,
     user: user || null,
     page: page || '/',
-    lastSeen: Date.now(),
+    lastSeen: now,
     ip: req.ip
   });
+
+  // Prune sessions older than 2 minutes (120 seconds)
+  var activeDeviceIds = new Set();
+  for (var entry of activeSessions.entries()) {
+    var sid = entry[0];
+    var sess = entry[1];
+    if (now - sess.lastSeen > 120000) {
+      activeSessions.delete(sid);
+    } else {
+      activeDeviceIds.add(sess.visitorId || sid);
+    }
+  }
 
   // Non-blocking sync to active_visitors MySQL table
   pool.execute(
@@ -7093,7 +7106,13 @@ app.post('/api/telemetry/ping', function(req, res) {
     [cleanId, String(page || '/').slice(0, 500)]
   ).catch(function() {});
 
-  res.json({ success: true, totalVisitors: totalUniqueVisitors.size, activeOnlineCount: Math.max(0, activeSessions.size) });
+  var activeCount = Math.max(1, activeDeviceIds.size);
+  res.json({
+    success: true,
+    totalVisitors: Math.max(0, totalUniqueVisitors.size),
+    activeUsers: activeCount,
+    activeOnlineCount: activeCount
+  });
 });
 
 // Telemetry statistics and real-time active user list (Public)
@@ -7102,11 +7121,15 @@ app.get('/api/telemetry/stats', async function(req, res) {
     var now = Date.now();
     var activeList = [];
     var seenUserEmails = new Set();
+    var activeDeviceIds = new Set();
 
+    // Devices active within the last 2 minutes (120 seconds)
     for (var entry of activeSessions.entries()) {
       var sid = entry[0];
       var data = entry[1];
-      if (now - data.lastSeen <= 25000) {
+      if (now - data.lastSeen <= 120000) {
+        activeDeviceIds.add(data.visitorId || sid);
+
         var name = 'Guest Visitor';
         var role = 'Guest / Student Visitor';
         var isAuth = false;
@@ -7133,6 +7156,8 @@ app.get('/api/telemetry/stats', async function(req, res) {
           isAuth: isAuth,
           lastActiveSec: Math.max(0, Math.floor((now - data.lastSeen) / 1000))
         });
+      } else {
+        activeSessions.delete(sid);
       }
     }
 
@@ -7149,16 +7174,17 @@ app.get('/api/telemetry/stats', async function(req, res) {
     ).then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
     var dbUniqueVisitors = (visitorDbRows[0] && visitorDbRows[0].count) || 0;
     var totalVisitorsCount = Math.max(0, dbUniqueVisitors, totalUniqueVisitors.size);
-    var activeOnlineCount = Math.max(0, activeSessions.size, activeList.length);
+    var activeUsersCount = Math.max(1, activeDeviceIds.size);
 
     res.json({
       totalVisitors: totalVisitorsCount,
+      activeUsers: activeUsersCount,
+      activeOnlineCount: activeUsersCount,
+      activeUsersList: activeList,
       totalRegisteredUsers: totalRegisteredUsers,
       totalEnrollments: dbEnrollments,
       totalUsers: dbStudents > 0 ? dbStudents : totalVisitorsCount,
-      totalStudents: dbStudents,
-      activeOnlineCount: activeOnlineCount,
-      activeUsers: activeList
+      totalStudents: dbStudents
     });
   } catch (err) {
     console.error('Telemetry stats error:', err);

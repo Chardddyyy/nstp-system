@@ -1801,7 +1801,7 @@ export const archivesAPI = {
 export function getPersistentVisitorId() {
   let vId = '';
   try {
-    vId = localStorage.getItem('nstp_visitor_id') || localStorage.getItem('nstp_persistent_visitor_uuid');
+    vId = localStorage.getItem('app_device_id') || localStorage.getItem('telemetry_device_id') || localStorage.getItem('nstp_visitor_id') || localStorage.getItem('nstp_persistent_visitor_uuid');
     if (!vId && typeof document !== 'undefined' && document.cookie) {
       const match = document.cookie.match(/(?:^|;\s*)nstp_visitor_id=([^;]+)/);
       if (match && match[1]) {
@@ -1809,15 +1809,19 @@ export function getPersistentVisitorId() {
       }
     }
     if (!vId) {
-      vId = 'vid_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      vId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     }
+    localStorage.setItem('app_device_id', vId);
+    localStorage.setItem('telemetry_device_id', vId);
     localStorage.setItem('nstp_visitor_id', vId);
     localStorage.setItem('nstp_persistent_visitor_uuid', vId);
     if (typeof document !== 'undefined') {
       document.cookie = `nstp_visitor_id=${encodeURIComponent(vId)}; path=/; max-age=63072000; SameSite=Lax`;
     }
   } catch (_) {
-    vId = 'vid_temp_' + Date.now();
+    vId = 'dev_temp_' + Date.now();
   }
   return vId;
 }
@@ -1837,11 +1841,11 @@ function getClientSideTelemetry() {
   
   sessions[sessionId] = now;
   
-  // Clean up sessions inactive for > 30 seconds
+  // Clean up sessions inactive for > 120 seconds
   let activeCount = 0;
   const pruned = {};
   for (const sId in sessions) {
-    if (now - sessions[sId] < 30000) {
+    if (now - sessions[sId] < 120000) {
       pruned[sId] = sessions[sId];
       activeCount++;
     }
@@ -1907,12 +1911,14 @@ function markTelemetryOnline() {
 }
 
 export function pingTelemetry(data) {
-  const visitorId = (data && (data.visitorId || data.visitor_id)) || getPersistentVisitorId();
+  const visitorId = (data && (data.deviceId || data.visitorId || data.visitor_id)) || getPersistentVisitorId();
   const sessionId = (data && data.sessionId) || window.__nstp_session_id__ || visitorId;
   const payload = Object.assign({}, typeof data === 'object' ? data : {}, {
+    deviceId: visitorId,
     visitorId: visitorId,
     visitor_id: visitorId,
-    sessionId: sessionId
+    sessionId: sessionId,
+    timestamp: Date.now()
   });
 
   if (isTelemetryCooldown()) {
@@ -1935,14 +1941,16 @@ export function pingTelemetry(data) {
     if (res.ok) {
       markTelemetryOnline();
       return res.json().then(function(resData) {
-        if (resData && typeof resData.totalVisitors === 'number') {
+        var d = resData?.data || resData || {};
+        if (typeof d.totalVisitors === 'number') {
           try {
-            localStorage.setItem('nstp_cached_total_visitors', String(resData.totalVisitors));
+            localStorage.setItem('nstp_cached_total_visitors', String(d.totalVisitors));
           } catch (_) {}
         }
-        if (resData && typeof resData.activeOnlineCount === 'number') {
+        var activeNum = d.activeUsers ?? d.activeOnlineCount;
+        if (typeof activeNum === 'number') {
           try {
-            localStorage.setItem('nstp_cached_active_online', String(Math.max(0, resData.activeOnlineCount)));
+            localStorage.setItem('nstp_cached_active_online', String(Math.max(0, activeNum)));
           } catch (_) {}
         }
         return resData;
