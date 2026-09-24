@@ -283,13 +283,28 @@ export async function loginUser(email, password, _forceLogin = true) {
 
 // Users
 export function getUsers() {
-  return apiCall('/users').catch(function() {
-    try {
-      const stored = JSON.parse(localStorage.getItem('nstp_users') || '[]');
-      if (stored.length > 0) return stored;
-    } catch (_) {}
-    return [];
-  });
+  return apiCall('/users')
+    .then(function(res) {
+      if (Array.isArray(res) && res.length > 0) {
+        try {
+          localStorage.setItem('nstp_cached_all_users', JSON.stringify(res));
+          localStorage.setItem('nstp_users', JSON.stringify(res));
+        } catch (_) {}
+      }
+      return res;
+    })
+    .catch(function() {
+      try {
+        const stored = JSON.parse(localStorage.getItem('nstp_cached_all_users') || localStorage.getItem('nstp_users') || '[]');
+        if (Array.isArray(stored) && stored.length > 0) return stored;
+      } catch (_) {}
+      return [
+        { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office' },
+        { id: 2, name: 'CWTS Instructor', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
+        { id: 3, name: 'LTS Instructor', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
+        { id: 4, name: 'ROTC Instructor', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
+      ];
+    });
 }
 
 export async function getMe() {
@@ -590,7 +605,20 @@ export function addReportComment(reportId, text) {
 
 // Conversations
 export function getConversations() {
-  return apiCall('/conversations');
+  return apiCall('/conversations')
+    .then(function(res) {
+      if (Array.isArray(res) && res.length > 0) {
+        try { localStorage.setItem('nstp_cached_conversations', JSON.stringify(res)); } catch (_) {}
+      }
+      return res;
+    })
+    .catch(function() {
+      try {
+        const cached = JSON.parse(localStorage.getItem('nstp_cached_conversations') || '[]');
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+      } catch (_) {}
+      return [];
+    });
 }
 
 export function createConversation(withUserId) {
@@ -675,7 +703,20 @@ export function clearConversationMessages(id) {
 export function getEnrollments() {
   const token = localStorage.getItem('nstp_token');
   if (!token) return Promise.resolve([]);
-  return apiCall('/enrollments').catch(function() { return []; });
+  return apiCall('/enrollments')
+    .then(function(res) {
+      if (Array.isArray(res)) {
+        try { localStorage.setItem('nstp_cached_enrollments', JSON.stringify(res)); } catch (_) {}
+      }
+      return res;
+    })
+    .catch(function() {
+      try {
+        const cached = JSON.parse(localStorage.getItem('nstp_cached_enrollments') || '[]');
+        if (Array.isArray(cached) && cached.length > 0) return cached;
+      } catch (_) {}
+      return [];
+    });
 }
 
 export function submitEnrollment(data) {

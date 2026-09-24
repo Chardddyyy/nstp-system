@@ -486,7 +486,7 @@ function Landing() {
                     </div>
                     <div>
                       <p className="font-black text-white text-xs group-hover:text-amber-300">Video Orientation</p>
-                      <p className="text-[11px] text-emerald-200/80">Official UP Diliman &amp; RA 9163 orientation</p>
+                      <p className="text-[11px] text-emerald-200/80">Cavite State University - Naic Campus</p>
                     </div>
                   </button>
                 </div>

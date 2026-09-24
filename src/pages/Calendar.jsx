@@ -680,10 +680,10 @@ function Calendar() {
       />
 
       {/* Main Content */}
-      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-5 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-4 pb-2 sm:pb-3 lg:pb-3 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
 
         {/* Hero Header Card */}
-        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-xl border border-emerald-800/40 relative mb-3 sm:mb-4 w-full">
+        <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 shadow-xl border border-emerald-800/40 relative mb-2 sm:mb-3 w-full">
           <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <button type="button"
@@ -706,20 +706,6 @@ function Calendar() {
                   <p className="text-[10px] sm:text-xs text-emerald-300 font-medium truncate">
                     {viewingArchive ? 'Historical batch activity records' : `${currentBatch || 'A.Y. 2026-2027'} • Official Schedule`}
                   </p>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-900/90 border border-emerald-700/80 text-[10px] sm:text-[11px] font-bold text-amber-300 shadow-2xs">
-                    <span>📅</span>
-                    <span>Range: {batchRange.startLabel} – {batchRange.endLabel}</span>
-                  </span>
-                  {!viewingArchive && isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => setShowEditRangeModal(true)}
-                      className="text-[10px] px-2 py-0.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-emerald-950 font-black shadow-xs transition-all cursor-pointer active:scale-95"
-                      title="Palitan o i-adjust ang sakop na buwan ng semester"
-                    >
-                      I-edit ang Range
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -802,8 +788,8 @@ function Calendar() {
 
         {/* VIEW MODE 1: MONTHLY CALENDAR GRID */}
         {viewMode === 'monthly' ? (
-          <div className="flex-1 bg-white rounded-2xl shadow-md p-2 sm:p-4 lg:p-5 flex flex-col overflow-hidden min-h-0 border border-slate-200/80">
-            <div className="flex-shrink-0 flex items-center justify-between mb-3">
+          <div className="flex-1 h-full min-h-0 bg-white rounded-2xl sm:rounded-3xl shadow-lg p-2.5 sm:p-4 lg:p-5 flex flex-col overflow-hidden border border-slate-200/80">
+            <div className="flex-shrink-0 flex items-center justify-between mb-2 sm:mb-3">
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-base sm:text-lg font-black text-slate-900">
@@ -849,7 +835,7 @@ function Calendar() {
             </div>
 
             <div
-              className="flex-1 min-h-0"
+              className="flex-1 min-h-0 w-full h-full"
               style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gridTemplateRows: 'auto repeat(6, 1fr)', gap: '4px' }}
             >
               {[
@@ -877,7 +863,7 @@ function Calendar() {
                 return (
                   <div
                     key={index}
-                    className={`p-1 sm:p-1.5 border rounded-xl transition-all overflow-hidden flex flex-col ${
+                    className={`p-1 sm:p-1.5 border rounded-xl transition-all overflow-hidden flex flex-col justify-between min-h-[50px] sm:min-h-[70px] lg:min-h-[85px] ${
                       !day ? 'border-transparent bg-transparent' : past ? 'bg-slate-50 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 cursor-pointer opacity-85' : 'bg-white hover:bg-emerald-50/30 cursor-pointer border-slate-200 hover:border-emerald-400 hover:shadow-xs'
                     } ${isToday ? '!bg-emerald-50/70 !border-emerald-500 !ring-1 !ring-emerald-400' : ''}`}
                     onClick={() => day && setSelectedDate(day)}

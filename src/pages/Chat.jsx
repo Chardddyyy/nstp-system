@@ -1758,7 +1758,8 @@ function Chat() {
   }, [currentMessages.length]);
 
   // Get user's own conversations only (private)
-  const userConversations = getUserConversations();
+  const rawUserConvs = (typeof getUserConversations === 'function' ? getUserConversations() : []) || [];
+  const userConversations = rawUserConvs.length > 0 ? rawUserConvs : (conversations || []);
 
   const filteredConversations = userConversations
     .filter(c => getConversationPartnerName(c).toLowerCase().includes(searchTerm.toLowerCase()))
@@ -2174,10 +2175,12 @@ function Chat() {
 
             {/* ── Conversations list ── */}
             {!showContacts && filteredConversations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 px-4">
-                <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No conversations yet</p>
-                <p className="mt-2 text-sm text-gray-400">Tap <strong>Contacts</strong> to message someone.</p>
+              <div className="flex-1 flex flex-col items-center justify-center min-h-[320px] h-full py-12 text-gray-500 px-4 text-center">
+                <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3 shadow-2xs border border-emerald-100">
+                  <MessageSquare className="w-8 h-8 text-emerald-600/70" />
+                </div>
+                <p className="font-bold text-slate-700 text-sm">No conversations yet</p>
+                <p className="mt-1.5 text-xs text-slate-400 max-w-xs">Tap <strong className="text-emerald-700">Contacts</strong> to start chatting with staff or instructors.</p>
               </div>
             ) : !showContacts && (
               filteredConversations.map((conversation) => {

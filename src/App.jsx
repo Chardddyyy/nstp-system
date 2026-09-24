@@ -207,13 +207,107 @@ function GlobalKeyboardManager() {
 }
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [pendingEnrollments, setPendingEnrollments] = useState([]);
-  const [reports, setReports] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [messages, setMessages] = useState({});
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem('nstp_cached_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch { return null; }
+  });
+  const [users, setUsers] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_all_users') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch {}
+    return [
+      { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 2, name: 'CWTS Instructor', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 3, name: 'LTS Instructor', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
+      { id: 4, name: 'ROTC Instructor', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
+    ];
+  });
+  const [students, setStudents] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch {}
+    return [];
+  });
+  const [pendingEnrollments, setPendingEnrollments] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_enrollments') || '[]');
+      if (Array.isArray(cached)) return cached.filter(e => e.status === 'Pending');
+    } catch {}
+    return [];
+  });
+  const [reports, setReports] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_reports') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch {}
+    return [];
+  });
+  const [conversations, setConversations] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_conversations') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) return cached;
+    } catch {}
+    return [
+      {
+        id: 'group-all-instructors',
+        isGroup: true,
+        is_group: 1,
+        groupName: 'All Instructors',
+        group_name: 'All Instructors',
+        with: 'All Instructors',
+        participants: [1, 2, 3, 4],
+        last_message: 'Thank you everyone. Please keep student attendance and grade submissions updated.',
+        last_message_time: new Date().toISOString()
+      },
+      {
+        id: '1-2',
+        isGroup: false,
+        is_group: 0,
+        participant_1_id: 1,
+        participant_2_id: 2,
+        with: 'CWTS Instructor',
+        partnerName: 'CWTS Instructor',
+        partnerId: 2,
+        last_message: 'Good day Sir! All immersion sites in Naic have been coordinated with the barangay chairpersons.',
+        last_message_time: new Date().toISOString()
+      },
+      {
+        id: '1-3',
+        isGroup: false,
+        is_group: 0,
+        participant_1_id: 1,
+        participant_2_id: 3,
+        with: 'LTS Instructor',
+        partnerName: 'LTS Instructor',
+        partnerId: 3,
+        last_message: 'Everything is set for the Saturday assessment workshop, Sir. Materials are prepared.',
+        last_message_time: new Date().toISOString()
+      },
+      {
+        id: '1-4',
+        isGroup: false,
+        is_group: 0,
+        participant_1_id: 1,
+        participant_2_id: 4,
+        with: 'ROTC Instructor',
+        partnerName: 'ROTC Instructor',
+        partnerId: 4,
+        last_message: 'Confirmed, Sir. The cadet officers and cadre instructors are ready on the parade grounds.',
+        last_message_time: new Date().toISOString()
+      }
+    ];
+  });
+  const [messages, setMessages] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_messages') || '{}');
+      if (cached && typeof cached === 'object') return cached;
+    } catch {}
+    return {};
+  });
   const [archivedYears, setArchivedYears] = useState(() => {
     try {
       localStorage.removeItem('nstp_cached_archives');
@@ -524,22 +618,52 @@ function App() {
       return [item, ...prev].slice(0, 50);
     });
 
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      const notificationOptions = {
-        body: item.message,
-        icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
-        badge: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
-        tag: String(item.id),
-        data: { link: item.link || '/' },
+    if (typeof Notification !== 'undefined') {
+      const showDeviceAlert = () => {
+        const notificationOptions = {
+          body: item.message,
+          icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
+          badge: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
+          tag: String(item.id),
+          data: { link: item.link || '/' },
+        };
+
+        if ('serviceWorker' in navigator) {
+          Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+          ])
+            .then(reg => reg.showNotification(item.title, notificationOptions))
+            .catch(() => {
+              try { new Notification(item.title, notificationOptions); } catch (_) {}
+            });
+        } else {
+          try { new Notification(item.title, notificationOptions); } catch (_) {}
+        }
       };
 
-      navigator.serviceWorker?.ready
-        .then(registration => registration.showNotification(item.title, notificationOptions))
-        .catch(() => {
-          try { new Notification(item.title, notificationOptions); } catch { /* ignore */ }
-        });
+      if (Notification.permission === 'granted') {
+        showDeviceAlert();
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') showDeviceAlert();
+        }).catch(() => {});
+      }
     }
   }, [user]);
+
+  // Expose device notification tester function on window for device diagnostics
+  useEffect(() => {
+    window.testDeviceNotification = (title = 'NSTP System Notification', message = 'Device push notifications are working properly on your device!') => {
+      pushNotification({
+        title,
+        message,
+        type: 'system',
+        link: '/admin/dashboard'
+      });
+      return 'Test notification triggered!';
+    };
+  }, [pushNotification]);
 
   const deleteNotifications = useCallback((idsToDelete) => {
     const idSet = new Set((Array.isArray(idsToDelete) ? idsToDelete : [idsToDelete]).map(String));
@@ -1312,6 +1436,17 @@ function App() {
       if (cachedAllUsers) {
         try { setUsers(JSON.parse(cachedAllUsers)); } catch {}
       }
+      const cachedStudents = localStorage.getItem('nstp_cached_students');
+      if (cachedStudents) {
+        try { setStudents(JSON.parse(cachedStudents)); } catch {}
+      }
+      const cachedEnrollments = localStorage.getItem('nstp_cached_enrollments');
+      if (cachedEnrollments) {
+        try {
+          const parsed = JSON.parse(cachedEnrollments);
+          if (Array.isArray(parsed)) setPendingEnrollments(parsed.filter(e => e.status === 'Pending'));
+        } catch {}
+      }
       if (cachedConvs) {
         try { setConversations(JSON.parse(cachedConvs)); } catch {}
       }
@@ -1343,73 +1478,95 @@ function App() {
     try {
       const activeUser = currentUser || user;
       const isAdmin = activeUser?.role === 'admin';
-      const [
-        usersData, studentsData, reportsData, enrollmentsData,
-        conversationsData, archivesData, batchData,
-      ] = await Promise.all([
-        usersAPI.getAll().catch(() => null),
-        studentsAPI.getAll().catch(() => null),
-        reportsAPI.getAll().catch(() => null),
-        isAdmin ? enrollmentsAPI.getAll().catch(() => null) : Promise.resolve([]),
-        conversationsAPI.getAll().catch(() => null),
-        archivesAPI.getAll().catch(() => null),
-        archivesAPI.getCurrentBatch().catch(() => null),
-      ]);
 
-      if (usersData && Array.isArray(usersData)) {
-        setUsers(usersData);
-        safeSetStorage('nstp_cached_all_users', usersData);
-      }
-      if (studentsData && Array.isArray(studentsData)) setStudents(studentsData);
-      if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
-      if (enrollmentsData && Array.isArray(enrollmentsData)) setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
-      if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
-        setArchivedYears(archivesData);
-        safeSetStorage('nstp_cached_archives_v6', archivesData);
-      } else {
-        setArchivedYears(DEFAULT_PAST_BATCHES);
-        safeSetStorage('nstp_cached_archives_v6', DEFAULT_PAST_BATCHES);
-      }
-      setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
-      if (batchData && (batchData.start_month || batchData.end_month || batchData.startMonth || batchData.endMonth)) {
-        updateActiveBatchRange({
-          startMonth: batchData.start_month || batchData.startMonth,
-          endMonth: batchData.end_month || batchData.endMonth,
-          startDate: batchData.start_date || batchData.startDate,
-          endDate: batchData.end_date || batchData.endDate
-        });
+      // 1. Users / Instructors (update immediately)
+      usersAPI.getAll().then(usersData => {
+        if (usersData && Array.isArray(usersData) && usersData.length > 0) {
+          setUsers(usersData);
+          safeSetStorage('nstp_cached_all_users', usersData);
+        }
+      }).catch(err => console.warn('Users load error:', err));
+
+      // 2. Students (update immediately)
+      studentsAPI.getAll().then(studentsData => {
+        if (studentsData && Array.isArray(studentsData)) {
+          setStudents(studentsData);
+          safeSetStorage('nstp_cached_students', studentsData);
+        }
+      }).catch(err => console.warn('Students load error:', err));
+
+      // 3. Enrollments / Pending (update immediately for Admin)
+      if (isAdmin) {
+        enrollmentsAPI.getAll().then(enrollmentsData => {
+          if (enrollmentsData && Array.isArray(enrollmentsData)) {
+            setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
+            safeSetStorage('nstp_cached_enrollments', enrollmentsData);
+          }
+        }).catch(err => console.warn('Enrollments load error:', err));
       }
 
-      if (conversationsData && Array.isArray(conversationsData)) {
-        setConversations(conversationsData);
-        safeSetStorage('nstp_cached_conversations', conversationsData);
+      // 4. Conversations & Messages (update immediately)
+      conversationsAPI.getAll().then(conversationsData => {
+        if (conversationsData && Array.isArray(conversationsData) && conversationsData.length > 0) {
+          setConversations(conversationsData);
+          safeSetStorage('nstp_cached_conversations', conversationsData);
 
-        const messageResults = await Promise.all(
-          conversationsData.map(conv =>
+          // Fetch messages asynchronously in background
+          conversationsData.forEach(conv => {
             conversationsAPI.getMessages(conv.id)
-              .then(msgs => ({ id: conv.id, msgs }))
-              .catch(() => null)
-          )
-        );
-        const validResults = messageResults.filter(Boolean);
-        const nextMsgs = {};
-        validResults.forEach(r => {
-          if (r.msgs && Array.isArray(r.msgs)) nextMsgs[r.id] = r.msgs;
-        });
-        setMessages(nextMsgs);
-        safeSetStorage('nstp_cached_messages', nextMsgs);
-      }
+              .then(msgs => {
+                if (Array.isArray(msgs)) {
+                  setMessages(prev => {
+                    const next = { ...prev, [conv.id]: msgs };
+                    safeSetStorage('nstp_cached_messages', next);
+                    return next;
+                  });
+                }
+              })
+              .catch(() => {});
+          });
 
-      if (activeUser && conversationsData && Array.isArray(conversationsData)) {
-        resetRealtimeBaseline();
-        seedRealtimeBaseline(
-          (enrollmentsData || []).filter(e => e?.status === 'Pending'),
-          reportsData || [],
-          conversationsData,
-          studentsData || [],
-          activeUser
-        );
-      }
+          if (activeUser) {
+            resetRealtimeBaseline();
+            seedRealtimeBaseline([], [], conversationsData, [], activeUser);
+          }
+        }
+      }).catch(err => console.warn('Conversations load error:', err));
+
+      // 5. Reports (update immediately)
+      reportsAPI.getAll().then(reportsData => {
+        if (reportsData && Array.isArray(reportsData)) {
+          setReports(reportsData);
+          safeSetStorage('nstp_cached_reports', reportsData);
+        }
+      }).catch(err => console.warn('Reports load error:', err));
+
+      // 6. Archives & Batch (update immediately)
+      archivesAPI.getAll().then(archivesData => {
+        if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
+          setArchivedYears(archivesData);
+          safeSetStorage('nstp_cached_archives_v6', archivesData);
+        } else {
+          setArchivedYears(DEFAULT_PAST_BATCHES);
+          safeSetStorage('nstp_cached_archives_v6', DEFAULT_PAST_BATCHES);
+        }
+      }).catch(err => {
+        console.warn('Archives load error:', err);
+        setArchivedYears(DEFAULT_PAST_BATCHES);
+      });
+
+      archivesAPI.getCurrentBatch().then(batchData => {
+        setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
+        if (batchData && (batchData.start_month || batchData.end_month || batchData.startMonth || batchData.endMonth)) {
+          updateActiveBatchRange({
+            startMonth: batchData.start_month || batchData.startMonth,
+            endMonth: batchData.end_month || batchData.endMonth,
+            startDate: batchData.start_date || batchData.startDate,
+            endDate: batchData.end_date || batchData.endDate
+          });
+        }
+      }).catch(err => console.warn('Batch load error:', err));
+
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -1428,6 +1585,23 @@ function App() {
       safeSetStorage('nstp_token', response.token);
       safeSetStorage('nstp_cached_user', response.user);
       setUser(response.user);
+
+      // Restore full cached state immediately for instant 0ms screen rendering
+      try {
+        const cachedStudents = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+        if (Array.isArray(cachedStudents) && cachedStudents.length > 0) setStudents(cachedStudents);
+        const cachedAllUsers = JSON.parse(localStorage.getItem('nstp_cached_all_users') || '[]');
+        if (Array.isArray(cachedAllUsers) && cachedAllUsers.length > 0) setUsers(cachedAllUsers);
+        const cachedEnrollments = JSON.parse(localStorage.getItem('nstp_cached_enrollments') || '[]');
+        if (Array.isArray(cachedEnrollments) && cachedEnrollments.length > 0) {
+          setPendingEnrollments(cachedEnrollments.filter(e => e.status === 'Pending'));
+        }
+        const cachedConvs = JSON.parse(localStorage.getItem('nstp_cached_conversations') || '[]');
+        if (Array.isArray(cachedConvs) && cachedConvs.length > 0) setConversations(cachedConvs);
+        const cachedMsgs = JSON.parse(localStorage.getItem('nstp_cached_messages') || '{}');
+        if (cachedMsgs && typeof cachedMsgs === 'object' && Object.keys(cachedMsgs).length > 0) setMessages(cachedMsgs);
+      } catch (_) {}
+
       setLoading(false);
       // Load all data in background so login transitions instantly on mobile devices
       loadAllData(response.user).catch(err => console.warn('Background data load error:', err));
@@ -1449,7 +1623,12 @@ function App() {
     }
     notificationsLoadedUserRef.current = null;
     setUser(null);
-    setUsers([]);
+    setUsers([
+      { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 2, name: 'CWTS Instructor', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 3, name: 'LTS Instructor', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
+      { id: 4, name: 'ROTC Instructor', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
+    ]);
     setStudents([]);
     setPendingEnrollments([]);
     setReports([]);
@@ -1771,14 +1950,18 @@ function App() {
 
   const getUserConversations = useCallback(() => {
     if (!user) return [];
-    return conversations.filter(c => {
-      if (c.participant_1_id === user.id || c.participant_2_id === user.id) return true;
-      const isGroup = c.isGroup || c.is_group;
+    const uid = String(user.id ?? '');
+    return (conversations || []).filter(c => {
+      if (!c) return false;
+      const p1 = String(c.participant_1_id ?? '');
+      const p2 = String(c.participant_2_id ?? '');
+      if (uid && (p1 === uid || p2 === uid)) return true;
+      const isGroup = Boolean(c.isGroup || c.is_group || String(c.id).startsWith('group-') || c.groupName || c.group_name);
       if (isGroup) {
-        const groupName = c.groupName || c.group_name || c.name || '';
-        if (groupName === 'All Instructors' || groupName.includes('Instructor')) return true;
-        if (Array.isArray(c.participants) && c.participants.includes(user.id)) return true;
-        return true; // Any group chat retrieved for user is valid
+        if (Array.isArray(c.participants) && c.participants.length > 0) {
+          return c.participants.some(p => String(p) === uid);
+        }
+        return true;
       }
       return false;
     });

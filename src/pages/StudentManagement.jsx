@@ -1152,7 +1152,7 @@ function StudentManagement() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`min-h-screen flex-1 flex flex-col transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Archive Banner */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">

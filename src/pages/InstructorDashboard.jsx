@@ -428,7 +428,7 @@ function InstructorDashboard() {
       />
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <main className={`min-h-screen flex-1 flex flex-col transition-all duration-300 p-3 sm:p-6 lg:p-8 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
         {/* Previous Report Header - Show when viewing archive (Exact matching Admin design) */}
         {viewingArchive && archiveViewData && (
           <div className="bg-amber-500/10 border border-amber-400/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 mb-3 sm:mb-6 backdrop-blur-md shadow-xs">
