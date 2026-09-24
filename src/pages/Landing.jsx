@@ -255,13 +255,13 @@ function Landing() {
     return () => observer.disconnect();
   }, []);
 
-  // Real-time Telemetry & Active Online Users state (steady, monotonic, campus-wide)
+  // Real-time Telemetry & Active Online Users state (accurate, steady, monotonic)
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 1428;
-    let cachedUsers = 84;
+    let cachedVisitors = 44;
+    let cachedUsers = 44;
     try {
       const stored = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-      if (stored >= 1428) cachedVisitors = stored;
+      if (stored > 0 && stored < 1428) cachedVisitors = stored;
       const storedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
       if (storedUsers > 0) cachedUsers = storedUsers;
     } catch (_) {}
@@ -269,7 +269,7 @@ function Landing() {
       totalVisitors: cachedVisitors,
       totalUsers: cachedUsers,
       totalRegisteredUsers: cachedUsers,
-      activeOnlineCount: 3,
+      activeOnlineCount: 1,
       activeUsers: []
     };
   });
@@ -287,11 +287,11 @@ function Landing() {
           setTelemetry(prev => {
             const rawIncomingVisitors = typeof stats.totalVisitors === 'number' ? stats.totalVisitors : 0;
             // Never drop or fluctuate down: monotonic progression
-            const nextVisitors = Math.max(prev.totalVisitors || 1428, rawIncomingVisitors || 1428);
-            // Stable realistic active online count
-            const rawActive = typeof stats.activeOnlineCount === 'number' ? stats.activeOnlineCount : 3;
-            const nextActive = Math.max(3, rawActive);
-            const nextUsers = Math.max(prev.totalUsers || 84, stats.totalUsers || 84, stats.totalRegisteredUsers || 84);
+            const nextVisitors = rawIncomingVisitors > 0 ? Math.max(prev.totalVisitors || 44, rawIncomingVisitors) : (prev.totalVisitors || 44);
+            // Real active online count (at least 1 for the current session)
+            const rawActive = typeof stats.activeOnlineCount === 'number' ? stats.activeOnlineCount : 1;
+            const nextActive = Math.max(1, rawActive);
+            const nextUsers = Math.max(prev.totalUsers || 44, stats.totalUsers || 44, stats.totalRegisteredUsers || 44);
 
             // Avoid triggering re-renders if telemetry stats are already steady
             if (
@@ -325,8 +325,8 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = Math.max(1428, telemetry.totalVisitors ?? 1428);
-  const activeOnlineCount = Math.max(3, telemetry.activeOnlineCount ?? 3);
+  const totalVisitorsCount = telemetry.totalVisitors ?? 44;
+  const activeOnlineCount = Math.max(1, telemetry.activeOnlineCount ?? 1);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -572,19 +572,9 @@ function Landing() {
           </div>
         </div>
 
-        {/* ── Mobile Backdrop Overlay (Auto-closes when tapping outside) ── */}
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 top-[56px] w-full h-[calc(100dvh-56px)] bg-black/80 z-30 lg:hidden animate-fade-in"
-            onClick={() => setMobileMenuOpen(false)}
-            onTouchStart={() => setMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
         {/* ── Mobile Slide-down Full Drawer Navigation (Solid, Sleek, Unified Aesthetic) ── */}
         {mobileMenuOpen && (
-          <div className="relative z-40 lg:hidden bg-emerald-950 border-t border-b border-emerald-800/90 px-4 py-4 space-y-3.5 shadow-2xl animate-slide-up">
+          <div className="relative z-40 lg:hidden bg-emerald-950 border-t border-b border-emerald-800/90 px-4 py-4 space-y-3.5 shadow-none animate-slide-up">
             
             {/* Quick Actions in Mobile Drawer */}
             <div className="grid grid-cols-2 gap-2.5 pb-3.5 border-b border-emerald-800/80">

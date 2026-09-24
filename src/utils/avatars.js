@@ -55,8 +55,6 @@ export const getStudentRegFormSrc = (regPhoto, dept) => {
     if (regPhoto.startsWith('/id-photos/')) return `${import.meta.env.BASE_URL}${regPhoto.slice(1)}`;
     return regPhoto;
   }
-  const track = String(dept || 'CWTS').toUpperCase();
-  if (track.includes('ROTC')) return `${import.meta.env.BASE_URL}id-photos/cor-rotc.jpg`;
-  if (track.includes('LTS')) return `${import.meta.env.BASE_URL}id-photos/cor-lts.jpg`;
-  return `${import.meta.env.BASE_URL}id-photos/cor-cwts.jpg`;
+  return `${import.meta.env.BASE_URL}id-photos/sample-cor.jpg`;
 };
+

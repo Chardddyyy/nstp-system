@@ -303,35 +303,48 @@ function App() {
   }, []);
   const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
 
-  // Desktop Display Zoom Scale (Default 78% for spacious, compact dashboard view)
+  // Desktop Display Zoom Scale (25% zoom out = 75% crisp scale)
   const [displayZoom, setDisplayZoomState] = useState(() => {
     try {
-      return localStorage.getItem('nstp_display_zoom') || '78%';
+      const saved = localStorage.getItem('nstp_display_zoom');
+      if (saved && saved !== '78%' && saved !== '100%') return saved;
+      return '75%';
     } catch (_) {
-      return '78%';
+      return '75%';
     }
   });
 
   const setDisplayZoom = useCallback((newZoom) => {
-    const clean = String(newZoom || '78%').trim();
+    const clean = String(newZoom || '75%').trim();
     setDisplayZoomState(clean);
     try {
       localStorage.setItem('nstp_display_zoom', clean);
-      document.documentElement.style.setProperty('--app-zoom', clean);
-      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-        document.documentElement.style.zoom = clean;
+      const numeric = clean.includes('%') ? String(parseFloat(clean) / 100) : clean;
+      document.documentElement.style.setProperty('--app-zoom', numeric);
+      if (typeof window !== 'undefined') {
+        document.documentElement.style.zoom = '';
+        if (window.innerWidth >= 768) {
+          document.body.style.zoom = numeric;
+        } else {
+          document.body.style.zoom = '1';
+        }
       }
     } catch (_) {}
   }, []);
 
   useEffect(() => {
     try {
-      const zoomVal = displayZoom || '78%';
-      document.documentElement.style.setProperty('--app-zoom', zoomVal);
-      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-        document.documentElement.style.zoom = zoomVal;
-      } else {
-        document.documentElement.style.zoom = '1';
+      const zoomVal = displayZoom || '75%';
+      const numeric = zoomVal.includes('%') ? String(parseFloat(zoomVal) / 100) : zoomVal;
+      document.documentElement.style.setProperty('--app-zoom', numeric);
+      // Ensure html has no conflicting zoom rule
+      document.documentElement.style.zoom = '';
+      if (typeof window !== 'undefined') {
+        if (window.innerWidth >= 768) {
+          document.body.style.zoom = numeric;
+        } else {
+          document.body.style.zoom = '1';
+        }
       }
     } catch (_) {}
   }, [displayZoom]);
