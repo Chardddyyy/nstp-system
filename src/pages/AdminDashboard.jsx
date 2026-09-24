@@ -2302,118 +2302,140 @@ function getConsecutiveBatchDetails(currentBatchStr) {
           
           {showAnalytics && (
             <div className="animate-fade-in">
-              {/* Legend & Filter */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-3 bg-gray-50/80 rounded-xl border border-gray-200/60">
+              {/* Legend */}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-5 p-3 bg-gray-50/80 rounded-xl border border-gray-200/60">
                 <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Components Legend</span>
                 <div className="flex items-center space-x-5">
                   <div className="flex items-center space-x-2">
-                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-md shadow-xs"></div>
+                    <div className="w-3.5 h-3.5 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-sm shadow-xs"></div>
                     <span className="text-xs text-gray-700 font-bold">CWTS</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-md shadow-xs"></div>
+                    <div className="w-3.5 h-3.5 bg-gradient-to-b from-purple-400 to-indigo-600 rounded-sm shadow-xs"></div>
                     <span className="text-xs text-gray-700 font-bold">LTS</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-3.5 h-3.5 bg-gradient-to-r from-rose-500 to-red-600 rounded-md shadow-xs"></div>
+                    <div className="w-3.5 h-3.5 bg-gradient-to-b from-rose-400 to-red-600 rounded-sm shadow-xs"></div>
                     <span className="text-xs text-gray-700 font-bold">ROTC</span>
                   </div>
                 </div>
               </div>
 
-              {/* Bar Chart — Fitted 100% on Mobile */}
-              <div className="w-full space-y-3 sm:space-y-4">
-                {(() => {
-                  // Use only real archived data (from DB) — archived batches + current active batch
-                  const realArchived = Array.isArray(archivedYears) && archivedYears.length > 0 ? archivedYears : [];
-                  const allComparisonBatches = [
-                    ...realArchived.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
-                      year: y.year,
-                      students: y.students || 0,
-                      cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || (y.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
-                      lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || (y.studentData?.filter(s => s.department === 'LTS').length) || 0, 
-                      rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || (y.studentData?.filter(s => s.department === 'ROTC').length) || 0 
-                    })), 
-                    { year: currentBatch, students: students.length, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
-                  ].sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year));
+              {/* Vertical Column Chart */}
+              {(() => {
+                const realArchived = Array.isArray(archivedYears) && archivedYears.length > 0 ? archivedYears : [];
+                const allComparisonBatches = [
+                  ...realArchived.filter(y => String(y.year) !== String(currentBatch)).map(y => ({
+                    year: y.year,
+                    students: y.students || 0,
+                    cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || 0,
+                    lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || 0,
+                    rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || 0,
+                  })),
+                  { year: currentBatch, students: students.length, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
+                ].sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year));
 
-                  if (allComparisonBatches.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-gray-400">
-                        <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm font-bold">No archived batch data yet</p>
-                        <p className="text-xs mt-0.5">Data will appear once batches are archived.</p>
-                      </div>
-                    );
-                  }
-
-                  const globalMaxVal = Math.max(
-                    ...allComparisonBatches.flatMap(b => [b.cwts || 0, b.lts || 0, b.rotc || 0]),
-                    1
+                if (allComparisonBatches.length === 0) {
+                  return (
+                    <div className="text-center py-10 text-gray-400">
+                      <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-bold">No archived batch data yet</p>
+                      <p className="text-xs mt-0.5">Data will appear once batches are archived.</p>
+                    </div>
                   );
+                }
 
-                  return allComparisonBatches.map((data) => {
-                    const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
-                    return (
-                      <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
-                        <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
-                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
-                            <span className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-800 transition-colors whitespace-nowrap">
-                              Batch {data.year}
+                const globalMaxVal = Math.max(
+                  ...allComparisonBatches.flatMap(b => [b.cwts || 0, b.lts || 0, b.rotc || 0]),
+                  1
+                );
+                const CHART_HEIGHT = 180;
+
+                return (
+                  <div className="w-full overflow-x-auto pb-2">
+                    <div style={{ minWidth: `${allComparisonBatches.length * 120}px` }} className="w-full">
+                      {/* Y-axis grid lines */}
+                      <div className="relative" style={{ height: `${CHART_HEIGHT}px` }}>
+                        {[0, 25, 50, 75, 100].map(pct => (
+                          <div
+                            key={pct}
+                            className="absolute w-full flex items-center"
+                            style={{ bottom: `${pct}%` }}
+                          >
+                            <span className="text-[9px] text-gray-400 font-bold w-6 shrink-0 text-right pr-1">
+                              {pct === 0 ? '0' : Math.round((pct / 100) * globalMaxVal)}
                             </span>
-                            {String(data.year) === String(currentBatch) && (
-                              <span className="text-[9.5px] sm:text-[10px] bg-emerald-800 text-amber-300 px-2 py-0.5 rounded-full font-black tracking-wide uppercase shadow-2xs whitespace-nowrap">
-                                Active Batch
-                              </span>
-                            )}
+                            <div className="flex-1 border-t border-dashed border-gray-200/80" />
                           </div>
-                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full shrink-0">
-                            {totalStudents} Students
-                          </span>
-                        </div>
-                        <div className="space-y-1.5 sm:space-y-2">
-                          {/* CWTS Bar */}
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-emerald-800 shrink-0">CWTS</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${Math.min(100, ((data.cwts || 0) / globalMaxVal) * 100)}%`, minWidth: data.cwts > 0 ? '24px' : '0' }}
-                              >
-                                {data.cwts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.cwts}</span>}
+                        ))}
+
+                        {/* Columns */}
+                        <div className="absolute inset-0 pl-7 flex items-end">
+                          {allComparisonBatches.map((data) => {
+                            const isActive = String(data.year) === String(currentBatch);
+                            const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
+                            const cols = [
+                              { val: data.cwts || 0, grad: 'from-emerald-400 to-teal-600', label: 'CWTS' },
+                              { val: data.lts || 0, grad: 'from-purple-400 to-indigo-600', label: 'LTS' },
+                              { val: data.rotc || 0, grad: 'from-rose-400 to-red-600', label: 'ROTC' },
+                            ];
+                            return (
+                              <div key={data.year} className="flex-1 flex flex-col items-center group">
+                                {/* Grouped bars */}
+                                <div className="w-full flex items-end justify-center gap-1 px-2" style={{ height: `${CHART_HEIGHT}px` }}>
+                                  {cols.map(col => (
+                                    <div
+                                      key={col.label}
+                                      className="flex-1 flex flex-col items-center justify-end"
+                                      style={{ height: '100%' }}
+                                    >
+                                      {col.val > 0 && (
+                                        <span className="text-[9px] font-black text-gray-600 mb-0.5 leading-none">
+                                          {col.val}
+                                        </span>
+                                      )}
+                                      <div
+                                        className={`w-full rounded-t-md bg-gradient-to-b ${col.grad} shadow-sm transition-all duration-500 ${isActive ? 'opacity-100' : 'opacity-75 group-hover:opacity-100'}`}
+                                        style={{
+                                          height: `${Math.max(col.val > 0 ? 4 : 0, (col.val / globalMaxVal) * CHART_HEIGHT)}px`,
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                          {/* LTS Bar */}
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-purple-800 shrink-0">LTS</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${Math.min(100, ((data.lts || 0) / globalMaxVal) * 100)}%`, minWidth: data.lts > 0 ? '24px' : '0' }}
-                              >
-                                {data.lts > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.lts}</span>}
-                              </div>
-                            </div>
-                          </div>
-                          {/* ROTC Bar */}
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 sm:w-12 text-[10px] sm:text-xs font-bold text-rose-800 shrink-0">ROTC</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-4 sm:h-6 overflow-hidden">
-                              <div 
-                                className="h-full bg-gradient-to-r from-rose-500 to-red-600 rounded-full flex items-center justify-end pr-1.5 sm:pr-2.5 transition-all duration-500 shadow-xs"
-                                style={{ width: `${Math.min(100, ((data.rotc || 0) / globalMaxVal) * 100)}%`, minWidth: data.rotc > 0 ? '24px' : '0' }}
-                              >
-                                {data.rotc > 0 && <span className="text-[9px] sm:text-xs text-white font-black">{data.rotc}</span>}
-                              </div>
-                            </div>
-                          </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    );
-                  });
-                })()}
-              </div>
+
+                      {/* X-axis labels */}
+                      <div className="pl-7 flex mt-2 border-t border-gray-200/60">
+                        {allComparisonBatches.map((data) => {
+                          const isActive = String(data.year) === String(currentBatch);
+                          const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
+                          const yearPart = data.year.replace('Semester', 'Sem');
+                          return (
+                            <div key={data.year} className="flex-1 flex flex-col items-center pt-2 px-1">
+                              <span className={`text-[9px] font-black text-center leading-tight ${isActive ? 'text-emerald-800' : 'text-gray-600'}`}>
+                                {yearPart}
+                              </span>
+                              {isActive && (
+                                <span className="mt-0.5 text-[8px] bg-emerald-800 text-amber-300 px-1.5 py-0.5 rounded-full font-black uppercase whitespace-nowrap">
+                                  Active
+                                </span>
+                              )}
+                              <span className="mt-0.5 text-[9px] font-bold text-emerald-700">
+                                {totalStudents} students
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

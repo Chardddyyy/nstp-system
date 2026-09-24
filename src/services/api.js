@@ -144,13 +144,17 @@ async function apiCall(endpoint, options) {
         throw new Error('Cloud backend is currently sleeping or suspended. If using Render, please check your Render dashboard to resume the service.');
       }
       var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
-      if (response && (response.status === 401 || error.code === 'TOKEN_EXPIRED') && token) {
-        localStorage.removeItem('nstp_token');
-        if (!window.__nstp_session_expired__) {
-          window.__nstp_session_expired__ = true;
-          window.dispatchEvent(new CustomEvent('nstp-session-expired', {
-            detail: { code: error.code, message: error.message }
-          }));
+      if (response && (response.status === 401 || response.status === 403 || error.code === 'TOKEN_EXPIRED') && token) {
+        // 401 = expired token, 403 with 'Invalid token' = token signed with old JWT_SECRET (after redeploy)
+        const isInvalidToken = response.status === 403 && (error.message === 'Invalid token' || !error.message);
+        if (response.status === 401 || isInvalidToken) {
+          localStorage.removeItem('nstp_token');
+          if (!window.__nstp_session_expired__) {
+            window.__nstp_session_expired__ = true;
+            window.dispatchEvent(new CustomEvent('nstp-session-expired', {
+              detail: { code: error.code, message: error.message }
+            }));
+          }
         }
       }
       var apiErr = new Error(error.message || (response && response.status === 404 ? 'Resource not found' : 'API request failed'));
