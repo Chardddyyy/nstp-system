@@ -69,7 +69,7 @@ export async function fetchTelemetryStats() {
       localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(stats));
     } catch (_) {}
     return stats;
-  } catch (err) {
+  } catch (_err) {
     try {
       const cached = JSON.parse(localStorage.getItem(STATS_CACHE_KEY) || '{}');
       if (cached && typeof cached.totalVisitors === 'number') return cached;

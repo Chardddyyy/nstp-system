@@ -7,7 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Sidebar from '../components/layout/Sidebar';
-import { calendarAPI } from '../services/api';
+import { calendarAPI, archivesAPI } from '../services/api';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
 const PHILIPPINE_HOLIDAYS = [

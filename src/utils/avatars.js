@@ -48,7 +48,7 @@ export const getStudentPhotoSrc = (photo, gender) => {
     : `${import.meta.env.BASE_URL}id-photos/male-1.jpg`;
 };
 
-export const getStudentRegFormSrc = (regPhoto, dept) => {
+export const getStudentRegFormSrc = (regPhoto, _dept) => {
   if (regPhoto && typeof regPhoto === 'string' && regPhoto.trim() !== '') {
     if (regPhoto.startsWith('data:') || regPhoto.startsWith('http')) return regPhoto;
     if (regPhoto.startsWith('id-photos/')) return `${import.meta.env.BASE_URL}${regPhoto}`;
