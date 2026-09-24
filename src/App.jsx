@@ -317,13 +317,13 @@ function App() {
         const hasCounts = cached.every(a => a.cwts != null || a.lts != null || a.rotc != null || (a.data?.cwts != null));
         if (!hasCounts) {
           localStorage.removeItem('nstp_cached_archives_v6');
-          return DEFAULT_PAST_BATCHES;
+          return [];
         }
         return cached;
       }
-      return DEFAULT_PAST_BATCHES;
+      return [];
     } catch {
-      return DEFAULT_PAST_BATCHES;
+      return [];
     }
   });
 
@@ -1546,13 +1546,11 @@ function App() {
         if (archivesData && Array.isArray(archivesData) && archivesData.length > 0) {
           setArchivedYears(archivesData);
           safeSetStorage('nstp_cached_archives_v6', archivesData);
-        } else {
-          setArchivedYears(DEFAULT_PAST_BATCHES);
-          safeSetStorage('nstp_cached_archives_v6', DEFAULT_PAST_BATCHES);
         }
+        // If empty, keep whatever is already in state (don't overwrite with fake data)
       }).catch(err => {
         console.warn('Archives load error:', err);
-        setArchivedYears(DEFAULT_PAST_BATCHES);
+        // Keep existing state on error — don't overwrite with fake data
       });
 
       archivesAPI.getCurrentBatch().then(batchData => {

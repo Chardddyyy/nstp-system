@@ -2324,22 +2324,36 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* Bar Chart — Fitted 100% on Mobile */}
               <div className="w-full space-y-3 sm:space-y-4">
                 {(() => {
+                  // Use only real archived data (from DB) — archived batches + current active batch
+                  const realArchived = Array.isArray(archivedYears) && archivedYears.length > 0 ? archivedYears : [];
                   const allComparisonBatches = [
-                    ...safeArchivedYears.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
-                      year: y.year, 
+                    ...realArchived.filter(y => String(y.year) !== String(currentBatch)).map(y => ({ 
+                      year: y.year,
+                      students: y.students || 0,
                       cwts: y.data?.cwts || y.cwts || (y.data?.studentData?.filter(s => s.department === 'CWTS').length) || (y.studentData?.filter(s => s.department === 'CWTS').length) || 0, 
                       lts: y.data?.lts || y.lts || (y.data?.studentData?.filter(s => s.department === 'LTS').length) || (y.studentData?.filter(s => s.department === 'LTS').length) || 0, 
                       rotc: y.data?.rotc || y.rotc || (y.data?.studentData?.filter(s => s.department === 'ROTC').length) || (y.studentData?.filter(s => s.department === 'ROTC').length) || 0 
                     })), 
-                    { year: currentBatch, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
+                    { year: currentBatch, students: students.length, cwts: currentStats.cwts, lts: currentStats.lts, rotc: currentStats.rotc }
                   ].sort((a, b) => parseBatchSortKey(a.year) - parseBatchSortKey(b.year));
+
+                  if (allComparisonBatches.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-400">
+                        <BarChart3 className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm font-bold">No archived batch data yet</p>
+                        <p className="text-xs mt-0.5">Data will appear once batches are archived.</p>
+                      </div>
+                    );
+                  }
 
                   const globalMaxVal = Math.max(
                     ...allComparisonBatches.flatMap(b => [b.cwts || 0, b.lts || 0, b.rotc || 0]),
-                    20
+                    1
                   );
 
                   return allComparisonBatches.map((data) => {
+                    const totalStudents = data.students || (data.cwts || 0) + (data.lts || 0) + (data.rotc || 0);
                     return (
                       <div key={data.year} className="bg-gray-50/70 hover:bg-emerald-50/40 border border-gray-200/60 hover:border-emerald-300 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 transition-all duration-200 group">
                         <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
@@ -2353,6 +2367,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               </span>
                             )}
                           </div>
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full shrink-0">
+                            {totalStudents} Students
+                          </span>
                         </div>
                         <div className="space-y-1.5 sm:space-y-2">
                           {/* CWTS Bar */}
@@ -2586,7 +2603,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-emerald-800 shrink-0" />
-                      <span>Calendar Coverage Range (Para sa Batch)</span>
+                      <span>Calendar Coverage Range (For this Batch)</span>
                     </p>
                     <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200/60 text-emerald-900 rounded-full">
                       Required
@@ -2624,19 +2641,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     </div>
                   </div>
                   <p className="text-[10px] text-emerald-800 font-medium italic">
-                    Ang sakop na buwan o petsa na ito ang magiging batayan ng academic calendar, schedule matrix, at mga reports para sa batch na ito.
+                    The selected month range will serve as the basis for the academic calendar, schedule matrix, and all reports for this batch.
                   </p>
                 </div>
 
-                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between">
-                  <div>
-                    <span className="block text-xs font-bold text-gray-700">Incoming Consecutive Batch:</span>
-                    <span className="text-[10px] text-emerald-800 font-medium">Awtomatikong itinalaga base sa nakaraang semester</span>
-                  </div>
-                  <span className="text-xs font-black text-emerald-950 bg-white px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs">
-                    {newBatchName || `${newBatchYearInput} ${newBatchSem}`}
-                  </span>
-                </div>
 
                 <div>
                   <label htmlFor="confirm-batch" className="block text-xs font-bold text-gray-700 mb-1.5">

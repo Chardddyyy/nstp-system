@@ -985,7 +985,6 @@ function Landing() {
           {/* Section Header */}
           <div className="text-center mb-6 sm:mb-8">
             <span className="inline-flex items-center gap-1.5 text-emerald-800 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100/70 border border-emerald-200">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-700" />
               <span>Help &amp; Knowledge Base</span>
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2 tracking-tight">Frequently Asked Questions</h2>
