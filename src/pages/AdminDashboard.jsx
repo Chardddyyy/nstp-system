@@ -2288,24 +2288,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <p className="text-[11px] text-gray-400 mt-0.5 font-medium">CWTS · LTS · ROTC per academic batch year</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setShowArchiveModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-emerald-50 text-emerald-900 text-xs font-black flex items-center gap-1.5 border border-gray-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-                title="View All Archived Batches"
-              >
-                <History className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Archives ({safeArchivedYears.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center gap-1.5 border border-emerald-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-              >
-                {showAnalytics ? <><ChevronUp className="w-3.5 h-3.5" /> Hide Chart</> : <><ChevronDown className="w-3.5 h-3.5" /> Show Chart</>}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-extrabold flex items-center gap-1.5 border border-emerald-200/80 shadow-2xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+            >
+              {showAnalytics ? <><ChevronUp className="w-3.5 h-3.5" /> Hide Chart</> : <><ChevronDown className="w-3.5 h-3.5" /> Show Chart</>}
+            </button>
           </div>
 
           {showAnalytics && (() => {
