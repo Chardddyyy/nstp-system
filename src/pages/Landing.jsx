@@ -1023,42 +1023,46 @@ function Landing() {
             </div>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="mb-5">
-            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
-              {[
-                { name: 'All', count: FAQ_ITEMS.length },
-                { name: 'Enrollment', count: FAQ_ITEMS.filter(f => f.category === 'Enrollment').length },
-                { name: 'CWTS', count: FAQ_ITEMS.filter(f => f.category === 'CWTS').length },
-                { name: 'ROTC', count: FAQ_ITEMS.filter(f => f.category === 'ROTC').length },
-                { name: 'LTS', count: FAQ_ITEMS.filter(f => f.category === 'LTS').length },
-                { name: 'Academics', count: FAQ_ITEMS.filter(f => f.category === 'Academics').length },
-                { name: 'Policies', count: FAQ_ITEMS.filter(f => f.category === 'Policies').length }
-              ].map((cat) => {
-                const isActive = faqCategory === cat.name;
-                return (
-                  <button
-                    key={cat.name}
-                    type="button"
-                    onClick={() => {
-                      setFaqCategory(cat.name);
-                      setOpenFaqs(new Set([0]));
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 select-none ${
-                      isActive
-                        ? 'bg-emerald-800 text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:text-emerald-800'
-                    }`}
-                  >
-                    <span>{cat.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      isActive ? 'bg-emerald-900/60 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {cat.count}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* Category Filter Bar (Modern Segmented Frosted Bar) */}
+          <div className="mb-6">
+            <div className="p-1.5 sm:p-2 bg-slate-100/90 rounded-2xl sm:rounded-full border border-slate-200/90 shadow-inner max-w-4xl mx-auto">
+              <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
+                {[
+                  { name: 'All', icon: Sparkles, count: FAQ_ITEMS.length },
+                  { name: 'Enrollment', icon: CheckCircle2, count: FAQ_ITEMS.filter(f => f.category === 'Enrollment').length },
+                  { name: 'CWTS', icon: Users, count: FAQ_ITEMS.filter(f => f.category === 'CWTS').length },
+                  { name: 'ROTC', icon: Shield, count: FAQ_ITEMS.filter(f => f.category === 'ROTC').length },
+                  { name: 'LTS', icon: BookOpen, count: FAQ_ITEMS.filter(f => f.category === 'LTS').length },
+                  { name: 'Academics', icon: GraduationCap, count: FAQ_ITEMS.filter(f => f.category === 'Academics').length },
+                  { name: 'Policies', icon: FileText, count: FAQ_ITEMS.filter(f => f.category === 'Policies').length }
+                ].map((cat) => {
+                  const isActive = faqCategory === cat.name;
+                  const Icon = cat.icon;
+                  return (
+                    <button
+                      key={cat.name}
+                      type="button"
+                      onClick={() => {
+                        setFaqCategory(cat.name);
+                        setOpenFaqs(new Set([0]));
+                      }}
+                      className={`group px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-full text-xs font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 select-none ${
+                        isActive
+                          ? 'bg-gradient-to-r from-emerald-800 to-teal-800 text-white shadow-sm shadow-emerald-950/20 scale-[1.02]'
+                          : 'bg-white text-slate-600 hover:text-emerald-900 hover:bg-emerald-50/60 border border-slate-200/80 hover:border-emerald-300/80 shadow-2xs hover:shadow-xs active:scale-95'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 transition-colors shrink-0 ${isActive ? 'text-amber-300' : 'text-slate-400 group-hover:text-emerald-600'}`} />
+                      <span>{cat.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black tracking-tight transition-colors ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-800'
+                      }`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Quick Action Toolbar */}

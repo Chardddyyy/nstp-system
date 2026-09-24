@@ -11,13 +11,13 @@ initSecurityProtection();
 if (typeof window !== 'undefined') {
   window.name = 'nstp_system_tab';
 
-  // Enforce 75% compact zoom on desktop & laptop screens so layout looks spacious and crisp at standard 100% browser zoom
+  // Enforce 75% compact zoom on desktop and 10% zoom out (0.90) on mobile screens
   const applyResponsiveAppZoom = () => {
     try {
       if (window.innerWidth >= 768) {
         document.body.style.zoom = '0.75';
       } else {
-        document.body.style.zoom = '1';
+        document.body.style.zoom = '0.90';
       }
     } catch (_) {}
   };

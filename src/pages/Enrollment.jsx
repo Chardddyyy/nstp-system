@@ -1721,14 +1721,6 @@ function Enrollment() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowSampleCorModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-xs transition-all cursor-pointer shadow-2xs self-start sm:self-auto"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-amber-600" />
-                        <span>View Official Sample COR</span>
-                      </button>
                     </div>
                     <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
                   </div>
@@ -1903,37 +1895,9 @@ function Enrollment() {
                       <Camera className="w-7 h-7" />
                     </div>
                     <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Photo</h4>
-                    <p className="text-xs text-gray-500 mb-3 max-w-sm mx-auto">
-                      First, check the correct 2x2 format below. The photo must have a plain white background and a white/collared shirt.
+                    <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
+                      Please upload a formal 2x2 photo with a plain white background and a collared shirt.
                     </p>
-                    <div className="mb-4 flex flex-col sm:flex-row items-center justify-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setShowSample2x2Modal(true)}
-                        className="group flex items-center gap-2.5 p-1.5 pr-3.5 bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-200/90 rounded-2xl cursor-pointer transition-all shadow-xs"
-                        title="Click to view full 2x2 guidelines"
-                      >
-                        <div className="flex -space-x-2.5 overflow-hidden p-0.5">
-                          <img
-                            src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-female.jpg`}
-                            alt="Sample Female 2x2"
-                            className="inline-block h-9 w-9 rounded-xl ring-2 ring-white object-cover shadow-2xs"
-                          />
-                          <img
-                            src={`${import.meta.env.BASE_URL}id-photos/sample-2x2-male.jpg`}
-                            alt="Sample Male 2x2"
-                            className="inline-block h-9 w-9 rounded-xl ring-2 ring-white object-cover shadow-2xs"
-                          />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-[11px] sm:text-xs font-black text-emerald-950 flex items-center gap-1">
-                            <span>Official 2x2 Photo Specimens</span>
-                            <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                          </p>
-                          <p className="text-[10px] text-emerald-800/80 font-semibold">Tignan ang Tamang 2x2 Format</p>
-                        </div>
-                      </button>
-                    </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
                         type="button"
@@ -2214,56 +2178,65 @@ function Enrollment() {
             {/* Body */}
             <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-xs sm:text-sm text-gray-700 leading-relaxed">
               {/* Terms Section */}
-              <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100/80">
+              <div className="bg-emerald-50/60 rounded-2xl p-5 border border-emerald-200/80 shadow-2xs">
                 <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-emerald-700" />
-                  1. Terms of Service &amp; Student Undertaking
+                  1. Terms of Service &amp; Student Undertaking (R.A. 9163 &amp; University Regulations)
                 </h4>
-                <ul className="space-y-2.5 text-gray-600 font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Truthful Submission:</strong> All personal, academic, and contact details submitted through this portal must be authentic and strictly match the student's official Certificate of Registration (COR).</span>
+                <ul className="space-y-3 text-gray-700 font-medium">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Statutory Mandatory Requirement:</strong> In accordance with Republic Act No. 9163 (National Service Training Program Act of 2001) and CHED regulations, all students enrolled in baccalaureate degree programs must satisfactorily complete two (2) consecutive semesters of one (1) chosen NSTP component (CWTS, LTS, or ROTC) as an indispensable prerequisite for graduation.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Course Requirements &amp; Attendance:</strong> Under Republic Act No. 9163 (NSTP Act of 2001), enrolled students are required to complete 54 to 90 training hours per semester across two consecutive semesters in their chosen component (CWTS, LTS, or ROTC).</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Authenticity of Information:</strong> The student solemnly affirms that all personal identity data, academic records, contact numbers, and uploaded files (2x2 ID Photo and official Certificate of Registration) are true, accurate, and completely authentic. Any misrepresentation or fraudulent submission constitutes an offense under the Cavite State University Student Handbook and will subject the student to disciplinary action and revocation of course credits.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Component Continuity:</strong> Shifting between NSTP components across semesters is strictly prohibited under CHED regulations, except under formally approved medical or administrative petitions.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Component Continuity &amp; Required Training Hours:</strong> Under the Revised NSTP Implementing Rules and Regulations (IRR), students are required to complete fifty-four (54) training hours per semester. Shifting between components (e.g., CWTS to ROTC) between semesters is strictly disallowed unless covered by an officially approved petition under meritorious medical or administrative grounds.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Code of Discipline:</strong> Students must adhere to the Cavite State University Student Handbook, respecting university property, community members, faculty, and training personnel.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Attendance &amp; Academic Performance:</strong> Students must maintain a minimum of 80% attendance in all scheduled classroom lectures, military drills, and community service immersions. Unexcused absences exceeding the maximum allowable threshold will automatically result in a failing grade of 5.0 or Dropped (DRP).</span>
                   </li>
                 </ul>
               </div>
 
               {/* Privacy Policy Section */}
-              <div className="bg-gray-50 rounded-2xl p-5 border border-gray-200/80">
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-2xs">
                 <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-emerald-700" />
-                  2. Data Privacy Policy (Republic Act No. 10173 Compliance)
+                  2. Official Data Privacy Notice (Republic Act No. 10173 Compliance)
                 </h4>
-                <p className="text-gray-600 font-medium mb-3">
-                  In compliance with Republic Act No. 10173 (Data Privacy Act of 2012) and National Privacy Commission regulations, Cavite State University - Naic Campus is committed to safeguarding personal information:
+                <p className="text-gray-700 font-medium mb-3.5 leading-relaxed">
+                  Cavite State University (CvSU) - Naic Campus recognizes its responsibilities under <strong>Republic Act No. 10173</strong>, also known as the <strong>Data Privacy Act of 2012</strong>, and National Privacy Commission (NPC) Circulars. The personal and sensitive personal data collected through this portal are processed with strict confidentiality, adherence to proportionality, transparency, and legitimate university purposes:
                 </p>
-                <ul className="space-y-2.5 text-gray-600 font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Scope and Purpose of Collection:</strong> The portal collects personal data (complete name, student ID, birthdate, sex, blood type, contact numbers, address, 2x2 ID picture, and Certificate of Registration) strictly for NSTP course registration, grading evaluation, and national accreditation.</span>
+                <ul className="space-y-3 text-gray-700 font-medium">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Scope and Categories of Data Collected:</strong> Under Sections 3 and 13 of R.A. 10173, the portal processes:
+                      <ul className="list-disc ml-5 mt-1.5 space-y-1 text-gray-600 font-normal">
+                        <li><strong>Personal Information:</strong> Full legal name, official student ID number, degree program/course, academic year and section, home address, personal contact number, email address, and emergency contact details.</li>
+                        <li><strong>Sensitive Personal Information:</strong> Date of birth, sex, civil status, blood type, declared medical history or physical limitations (collected solely to guarantee student safety during field training, community immersion, and military drills), high-resolution 2x2 ID photograph, and official Certificate of Registration (COR).</li>
+                      </ul>
+                    </span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Confidentiality and Security Controls:</strong> All records and digital documents are secured with encryption and access controls. Processing is restricted exclusively to authorized university administrators, NSTP coordinators, and department heads.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Specific and Legitimate Purpose of Processing:</strong> Data collected shall be utilized solely for: (1) authenticating student eligibility for tertiary enrollment under R.A. 10931; (2) official enlistment into CWTS, LTS, or ROTC tracks; (3) generating attendance sheets, safety liability manifests, and grade reports; (4) endorsement to the <strong>Commission on Higher Education (CHED)</strong> and <strong>Department of National Defense / Armed Forces of the Philippines (DND/AFP)</strong> for the issuance of permanent <strong>National NSTP Serial Numbers</strong>; and (5) accreditation into the National Service Reserve Corps (NSRC) or AFP Citizen Armed Force.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Authorized Government Reporting:</strong> Information is disclosed only to the Commission on Higher Education (CHED) or Department of National Defense / Armed Forces of the Philippines (DND/AFP) for issuance of National NSTP Serial Numbers.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Security, Storage &amp; Non-Disclosure:</strong> Technical, physical, and organizational security measures are enforced. Data transmissions are encrypted via SSL/TLS protocols and stored in secure, access-restricted institutional databases. Under no circumstances will personal data be sold, leased, or disclosed to commercial third parties or unauthorized personnel.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Data Subject Rights:</strong> Enrolled students hold the right to be informed, access, and request correction of their personal data upon written request to the CvSU Naic NSTP Office.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Data Subject Rights (Section 16, R.A. 10173):</strong> As a data subject, enrolled students possess the right to: (a) be informed of data collection; (b) access their recorded data; (c) rectify or update inaccurate or outdated information; (d) object to processing outside statutory academic requirements; and (e) lodge a complaint before the National Privacy Commission (NPC) if rights are compromised.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span><strong>Institutional Inquiries &amp; Data Protection Officer (DPO):</strong> For questions, data inspection requests, or privacy concerns, you may contact the <strong>CvSU Data Protection Officer (DPO)</strong> at <strong className="text-emerald-800">dpo@cvsu.edu.ph</strong>, or the <strong>CvSU Naic Campus NSTP Office</strong> at <strong className="text-emerald-800">naic@cvsu.edu.ph</strong>.</span>
                   </li>
                 </ul>
               </div>

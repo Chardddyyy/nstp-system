@@ -326,7 +326,7 @@ function App() {
         if (window.innerWidth >= 768) {
           document.body.style.zoom = numeric;
         } else {
-          document.body.style.zoom = '1';
+          document.body.style.zoom = '0.90';
         }
       }
     } catch (_) {}
@@ -343,7 +343,7 @@ function App() {
         if (window.innerWidth >= 768) {
           document.body.style.zoom = numeric;
         } else {
-          document.body.style.zoom = '1';
+          document.body.style.zoom = '0.90';
         }
       }
     } catch (_) {}

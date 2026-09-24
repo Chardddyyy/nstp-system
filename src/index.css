@@ -23,6 +23,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* 10% Zoom Out on Mobile (< 768px) for spacious, comfortable phone viewing */
+@media screen and (max-width: 767px) {
+  body {
+    zoom: 0.90;
+  }
+}
+
 /* Compact 75% Desktop & Laptop Scale for crisp, spacious dashboard viewing */
 @media screen and (min-width: 768px) {
   body {
