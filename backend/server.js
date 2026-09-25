@@ -3777,10 +3777,18 @@ const handleBatchSaveGrades = async (req, res) => {
       const remarks = g.remarks || (finalGrade ? (['1.00','1.25','1.50','1.75','2.00','2.25','2.50','2.75','3.00','Passed'].includes(finalGrade) ? 'Passed' : finalGrade === 'INC' ? 'Incomplete' : finalGrade === 'DRP' ? 'Dropped' : 'Failed') : null);
       const studentName = g.student_name || g.name || null;
 
-      if (!studentId) continue;
-
-      if (req.user.role !== 'admin' && String(dept).toUpperCase() !== String(req.user.department).toUpperCase()) {
-        continue;
+      if (req.user.role !== 'admin') {
+        if (String(dept).toUpperCase() !== String(req.user.department).toUpperCase()) {
+          continue;
+        }
+        // Protect past / completed students from grade tampering
+        const [stRows] = await pool.execute(
+          'SELECT status, is_archived FROM students WHERE studentId = ? OR id = ?',
+          [String(studentId), dbStudentId]
+        ).catch(() => [[]]);
+        if (stRows && stRows.length > 0 && (stRows[0].is_archived || stRows[0].status === 'Completed')) {
+          continue;
+        }
       }
 
       await pool.execute(
@@ -4551,7 +4559,18 @@ app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) =
       ORDER BY latest.created_at ASC
     `, targetConvIds);
 
-    res.json(messages);
+    const currentUserId = Number(req.user.id);
+    const visibleMessages = (messages || []).filter(m => {
+      if (!m.deleted_for) return true;
+      try {
+        const arr = typeof m.deleted_for === 'string' ? JSON.parse(m.deleted_for) : m.deleted_for;
+        return !(Array.isArray(arr) && arr.includes(currentUserId));
+      } catch (_) {
+        return true;
+      }
+    });
+
+    res.json(visibleMessages);
   } catch (error) {
     console.error('Get messages error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -4795,6 +4814,7 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
       const msgObj = messages[0];
       const messagePayload = {
         conversationId: targetConvId,
+        conversationIds: [String(targetConvId)],
         message: msgObj,
         sender: {
           id: req.user.id,
@@ -4815,10 +4835,25 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
           io.to(`user_${p.user_id}`).emit('new_message', messagePayload);
         });
       } else if (cRows && cRows[0]) {
-        const otherId = cRows[0].participant_1_id === req.user.id ? cRows[0].participant_2_id : cRows[0].participant_1_id;
+        const p1 = Number(cRows[0].participant_1_id);
+        const p2 = Number(cRows[0].participant_2_id);
+        const myId = Number(req.user.id);
+        const otherId = p1 === myId ? p2 : p1;
+        messagePayload.conversationIds = Array.from(new Set([String(targetConvId), `${p1}-${p2}`, `${p2}-${p1}`]));
         if (otherId) {
           io.to(`user_${otherId}`).emit('new_message', messagePayload);
         }
+        // Also emit to sender's other connected tabs
+        io.to(`user_${myId}`).emit('new_message', messagePayload);
+      } else if (typeof targetConvId === 'string' && targetConvId.includes('-')) {
+        const [u1, u2] = targetConvId.split('-').map(Number);
+        const myId = Number(req.user.id);
+        const otherId = u1 === myId ? u2 : u1;
+        messagePayload.conversationIds = Array.from(new Set([String(targetConvId), `${u1}-${u2}`, `${u2}-${u1}`]));
+        if (otherId) {
+          io.to(`user_${otherId}`).emit('new_message', messagePayload);
+        }
+        io.to(`user_${myId}`).emit('new_message', messagePayload);
       }
     } catch (sockErr) {
       console.warn('[Socket Dispatcher] new_message broadcast error:', sockErr.message);
@@ -5124,28 +5159,62 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Clear all messages in a conversation (keeps conversation, clears last_message preview)
+// Clear messages in a conversation FOR THE CURRENT USER (does not delete messages for other participants)
 app.delete('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const [conversationCheck] = await pool.execute(
-      'SELECT id FROM conversations WHERE id = ?',
-      [id]
-    ).catch(() => [[]]);
-    if (!conversationCheck || conversationCheck.length === 0) {
-      // If conversation is only on client or already deleted, resolve gracefully
-      return res.json({ message: 'Messages cleared' });
+    let targetConvIds = [id];
+
+    if (typeof id === 'string' && id.includes('-') && !isNaN(parseInt(id.split('-')[0]))) {
+      const parts = id.split('-').map(p => parseInt(p));
+      const u1 = parts[0];
+      const u2 = parts[1];
+      const [convs] = await pool.execute(
+        'SELECT id FROM conversations WHERE (participant_1_id = ? AND participant_2_id = ?) OR (participant_1_id = ? AND participant_2_id = ?)',
+        [u1, u2, u2, u1]
+      ).catch(() => [[]]);
+      if (convs && convs.length > 0) {
+        targetConvIds = Array.from(new Set([id, `${u1}-${u2}`, `${u2}-${u1}`, ...convs.map(c => String(c.id))]));
+      } else {
+        targetConvIds = Array.from(new Set([id, `${u1}-${u2}`, `${u2}-${u1}`]));
+      }
+    } else {
+      const [conv] = await pool.execute('SELECT participant_1_id, participant_2_id FROM conversations WHERE id = ?', [id]).catch(() => [[]]);
+      if (conv && conv.length > 0 && conv[0].participant_1_id && conv[0].participant_2_id) {
+        targetConvIds = Array.from(new Set([id, `${conv[0].participant_1_id}-${conv[0].participant_2_id}`, `${conv[0].participant_2_id}-${conv[0].participant_1_id}`]));
+      }
     }
+
     const isAuthorized = await userCanAccessConversation(id, req.user.id, req.user.role);
     if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    await pool.execute('DELETE FROM messages WHERE conversation_id = ?', [id]).catch(() => {});
-    await pool.execute(
-      'UPDATE conversations SET last_message = NULL, last_message_time = NULL, last_sender_id = NULL WHERE id = ?',
-      [id]
-    ).catch(() => {});
-    res.json({ message: 'Messages cleared' });
+
+    // Instead of deleting messages from the database, append req.user.id to deleted_for so messages are only hidden for the user who cleared
+    const placeholders = targetConvIds.map(() => '?').join(',');
+    const [msgs] = await pool.execute(
+      `SELECT id, deleted_for FROM messages WHERE conversation_id IN (${placeholders})`,
+      targetConvIds
+    ).catch(() => [[]]);
+
+    const currentUserId = Number(req.user.id);
+    for (const msg of (msgs || [])) {
+      let deletedFor = [];
+      if (msg.deleted_for) {
+        try {
+          deletedFor = typeof msg.deleted_for === 'string' ? JSON.parse(msg.deleted_for) : msg.deleted_for;
+          if (!Array.isArray(deletedFor)) deletedFor = [];
+        } catch (_) {
+          deletedFor = [];
+        }
+      }
+      if (!deletedFor.includes(currentUserId)) {
+        deletedFor.push(currentUserId);
+        await pool.execute('UPDATE messages SET deleted_for = ? WHERE id = ?', [JSON.stringify(deletedFor), msg.id]).catch(() => {});
+      }
+    }
+
+    res.json({ message: 'Messages cleared for you' });
   } catch (error) {
     console.error('Clear messages error:', error);
     res.status(500).json({ message: 'Server error' });

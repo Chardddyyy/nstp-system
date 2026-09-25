@@ -25,9 +25,8 @@ const NSTP_SECTIONS = [
 ];
 
 export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser, onSaved }) {
-  const { showToast } = useAuth();
+  const { showToast, viewingArchive, currentBatch } = useAuth();
   const isAdmin = currentUser?.role === 'admin';
-  const canEditGrades = !isAdmin; // Only instructors encode grades
   const defaultDept = isAdmin ? 'All' : (currentUser?.department || 'CWTS');
   const defaultSemester = isAdmin ? 'Whole Academic Year' : '1st Semester';
 
@@ -36,6 +35,12 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const [selectedSchoolYear, setSelectedSchoolYear] = useState('2026-2027');
   const [selectedNstpSection, setSelectedNstpSection] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const isPastBatch = Boolean(
+    viewingArchive ||
+    (selectedSchoolYear && currentBatch && !currentBatch.startsWith(selectedSchoolYear))
+  );
+  const canEditGrades = !isAdmin && !isPastBatch;
 
   // Form A & Form B Export Modals & Full Screen Previews
   const [showFormAModal, setShowFormAModal] = useState(false);
@@ -791,6 +796,21 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
         {/* Grades Table Area */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+          {isPastBatch && (
+            <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shrink-0">🔒</span>
+                <div>
+                  <p className="text-xs font-black text-amber-950">Official Grades Finalized &amp; Locked</p>
+                  <p className="text-[11px] text-amber-800">Records for completed academic semesters are permanently locked for encoding. Viewing and printing enabled.</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-200 text-amber-950 border border-amber-300 shrink-0">
+                Read-Only
+              </span>
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-16">
               <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin mx-auto mb-2" />
@@ -974,7 +994,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
                         {/* Final Grade Input / Badge */}
                         <td className="p-2.5 sm:p-3 text-center">
-                          {canEditGrades ? (
+                          {canEditGrades && !st.is_archived && st.status !== 'Completed' ? (
                             <select
                               value={g.final_grade || ''}
                               onChange={(e) => handleGradeChange(sid, 'final_grade', e.target.value)}
@@ -987,7 +1007,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                               ))}
                             </select>
                           ) : (
-                            <div className="px-2 py-1 text-xs font-black text-center text-emerald-950 bg-emerald-50/80 rounded-xl border border-emerald-200">
+                            <div className="px-2 py-1 text-xs font-black text-center text-emerald-950 bg-emerald-50/80 rounded-xl border border-emerald-200" title={st.is_archived || st.status === 'Completed' ? 'Completed/Archived Student: Record is locked.' : ''}>
                               {g.final_grade || '-'}
                             </div>
                           )}

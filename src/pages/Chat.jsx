@@ -1,6 +1,7 @@
 
 import { useAuth } from '../context/AuthContext';
 import { callsAPI, conversationsAPI } from '../services/api';
+import { getSocket } from '../services/socket';
 import heic2any from 'heic2any';
 import {
   User, Users, Send, Search,
@@ -108,6 +109,67 @@ function Chat() {
       try { localStorage.setItem('nstp_active_chat', convId); } catch (_) {}
     }
   }, [searchParams]);
+
+  // Join socket room & keep active conversation messages updated in real-time without page reload
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    // 1. Join socket room
+    const s = getSocket();
+    if (s && s.connected) {
+      s.emit('join_conversation', activeConversationId);
+    }
+
+    // 2. Fetch latest messages immediately
+    const fetchActiveMessages = async () => {
+      try {
+        const msgs = await conversationsAPI.getMessages(activeConversationId);
+        if (msgs && Array.isArray(msgs)) {
+          setMessages(prev => {
+            const currentList = prev[activeConversationId] || [];
+            if (currentList.length === msgs.length && currentList[currentList.length - 1]?.id === msgs[msgs.length - 1]?.id) {
+              return prev;
+            }
+            return { ...prev, [activeConversationId]: msgs };
+          });
+        }
+      } catch (_) {}
+    };
+
+    fetchActiveMessages();
+
+    // 3. Fast background poll (every 3 seconds) for the active conversation when tab is visible
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      fetchActiveMessages();
+    }, 3000);
+
+    // 4. Listen to incoming chat message custom event dispatched from App.jsx
+    const handleChatMessageEvent = (e) => {
+      const data = e.detail;
+      if (!data || !data.message) return;
+      const cId = data.conversationId;
+      const ids = Array.isArray(data.conversationIds) ? data.conversationIds : [cId];
+      if (ids.some(id => String(id) === String(activeConversationId))) {
+        setMessages(prev => {
+          const list = prev[activeConversationId] || [];
+          if (list.some(m => String(m.id) === String(data.message.id))) return prev;
+          return { ...prev, [activeConversationId]: [...list, data.message] };
+        });
+      }
+    };
+
+    window.addEventListener('nstp_chat_message', handleChatMessageEvent);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('nstp_chat_message', handleChatMessageEvent);
+      if (s && s.connected) {
+        s.emit('leave_conversation', activeConversationId);
+      }
+    };
+  }, [activeConversationId, setMessages]);
 
   const [showContacts, setShowContacts] = useState(false);
   const [readConversations, setReadConversations] = useState(() => {
@@ -1825,14 +1887,16 @@ function Chat() {
     if (!activeConversation || isGroupConversation(activeConversation)) return;
     setConfirmModalData({
       title: 'Clear Chat',
-      message: `Clear all messages with ${activeConversation.with}?`,
-      confirmText: 'Clear',
+      message: `Clear chat history with ${activeConversation.with}? This will clear messages for your account without removing them for ${activeConversation.with}.`,
+      confirmText: 'Clear For Me',
       cancelText: 'Cancel',
       isDanger: false,
-      onConfirm: () => {
-        clearMessages(activeConversation.id);
-        setShowChatMenu(false);
-        addNotification('Chat cleared', 'success');
+      onConfirm: async () => {
+        try {
+          await clearMessages(activeConversation.id);
+          setShowChatMenu(false);
+          addNotification('Chat cleared for you', 'success');
+        } catch (_) {}
         setShowConfirmModal(false);
       }
     });

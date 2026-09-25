@@ -899,8 +899,20 @@ function StudentManagement() {
 
   const [sendingIdFor, setSendingIdFor] = useState(null);
 
+  const isPastBatchOrStudent = useCallback((student) => {
+    if (viewingArchive) return true;
+    if (!student) return false;
+    if (student.is_archived || student.status === 'Completed') return true;
+    if (student.academic_year && currentBatch && student.academic_year !== currentBatch) return true;
+    return false;
+  }, [viewingArchive, currentBatch]);
+
   const handleSendDigitalId = async (student) => {
     if (!student) return;
+    if (isPastBatchOrStudent(student)) {
+      showToast('Cannot send Digital ID: Digital IDs cannot be issued for completed or past academic batches.', 'warning');
+      return;
+    }
     const sKey = student.id || student.studentId;
     const studentEmail = (student.email || '').trim();
     if (!studentEmail || !studentEmail.includes('@')) {
@@ -1272,16 +1284,16 @@ function StudentManagement() {
                 </button>
               )}
 
-              {/* Encode Grades Button (Instructors Only) */}
+              {/* Encode / View Grades Button (Instructors Only) */}
               {!isAdmin && (
                 <button type="button"
                   onClick={() => setShowGradesModal(true)}
-                  title="Encode and submit student semester grades and print official grade sheet"
+                  title={viewingArchive ? "View official grades for past academic batch (locked)" : "Encode and submit student semester grades and print official grade sheet"}
                   className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
                 >
-                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />
-                  <span className="hidden sm:inline">Encode Grades</span>
-                  <span className="sm:hidden">Grades</span>
+                  {viewingArchive ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 shrink-0" /> : <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />}
+                  <span className="hidden sm:inline">{viewingArchive ? 'View Official Grades' : 'Encode Grades'}</span>
+                  <span className="sm:hidden">{viewingArchive ? 'View Grades' : 'Grades'}</span>
                 </button>
               )}
 
@@ -1552,13 +1564,15 @@ function StudentManagement() {
                         <button
                           type="button"
                           onClick={() => handleSendDigitalId(student)}
-                          disabled={sendingIdFor === (student.id || student.studentId)}
+                          disabled={isPastBatchOrStudent(student) || sendingIdFor === (student.id || student.studentId)}
                           className={`p-1.5 px-2 rounded-lg border font-bold text-[10.5px] flex items-center gap-1 transition-all ${
-                            sendingIdFor === (student.id || student.studentId)
+                            isPastBatchOrStudent(student)
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                              : sendingIdFor === (student.id || student.studentId)
                               ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
                               : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-700 hover:text-white'
                           }`}
-                          title={`Send / Resend Digital ID to ${student.email || student.name}`}
+                          title={isPastBatchOrStudent(student) ? 'Cannot send Digital ID to past or archived students' : `Send / Resend Digital ID to ${student.email || student.name}`}
                         >
                           <CreditCard className="w-3 h-3" />
                           <span>{sendingIdFor === (student.id || student.studentId) ? 'Sending...' : 'Send ID'}</span>
@@ -1829,12 +1843,14 @@ function StudentManagement() {
                             <button
                               type="button"
                               onClick={() => handleSendDigitalId(student)}
-                              disabled={sendingIdFor === (student.id || student.studentId)}
-                              title={`Send / Resend Digital ID to ${student.email || student.name}`}
-                              className={`p-1.5 px-2.5 rounded-xl border transition-all active:scale-90 flex items-center gap-1 font-bold text-xs shadow-2xs hover:shadow-xs cursor-pointer ${
-                                sendingIdFor === (student.id || student.studentId)
+                              disabled={isPastBatchOrStudent(student) || sendingIdFor === (student.id || student.studentId)}
+                              title={isPastBatchOrStudent(student) ? 'Cannot send Digital ID to past or archived students' : `Send / Resend Digital ID to ${student.email || student.name}`}
+                              className={`p-1.5 px-2.5 rounded-xl border transition-all flex items-center gap-1 font-bold text-xs shadow-2xs ${
+                                isPastBatchOrStudent(student)
+                                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                                  : sendingIdFor === (student.id || student.studentId)
                                   ? 'bg-amber-100 text-amber-800 border-amber-300 animate-pulse'
-                                  : 'text-emerald-800 bg-emerald-50/90 border-emerald-300 hover:bg-emerald-700 hover:text-white hover:border-emerald-700'
+                                  : 'text-emerald-800 bg-emerald-50/90 border-emerald-300 hover:bg-emerald-700 hover:text-white hover:border-emerald-700 cursor-pointer active:scale-90 hover:shadow-xs'
                               }`}
                             >
                               <CreditCard className="w-3.5 h-3.5" />
@@ -3392,13 +3408,15 @@ function StudentManagement() {
                 <button
                   type="button"
                   onClick={() => handleSendDigitalId(currentViewStudent)}
-                  disabled={sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)}
-                  className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95 border ${
-                    sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)
+                  disabled={isPastBatchOrStudent(currentViewStudent) || sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)}
+                  className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 border ${
+                    isPastBatchOrStudent(currentViewStudent)
+                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                      : sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)
                       ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300 cursor-pointer active:scale-95'
                   }`}
-                  title={`Send Official Digital ID to ${currentViewStudent.email || currentViewStudent.name}`}
+                  title={isPastBatchOrStudent(currentViewStudent) ? 'Cannot send Digital ID to past or archived students' : `Send Official Digital ID to ${currentViewStudent.email || currentViewStudent.name}`}
                 >
                   <CreditCard className="w-4 h-4 text-emerald-700" />
                   <span>{sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId) ? 'Sending ID...' : 'Send Digital ID to Email'}</span>

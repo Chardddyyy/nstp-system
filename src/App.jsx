@@ -1466,19 +1466,33 @@ function App() {
         senderName
       });
 
-      // 4. Update messages store in real-time
-      if (convId) {
+      // 4. Update messages store in real-time across all matching conversation alias IDs
+      const targetConvIds = Array.isArray(data.conversationIds) && data.conversationIds.length > 0
+        ? data.conversationIds
+        : (convId ? [convId] : []);
+
+      if (targetConvIds.length > 0) {
         setMessages(prev => {
-          const list = prev[convId] || [];
-          if (list.some(m => String(m.id) === String(msg.id))) return prev;
-          const updated = [...list, msg];
-          safeSetStorage('nstp_cached_messages', { ...prev, [convId]: updated });
-          return { ...prev, [convId]: updated };
+          let hasChanges = false;
+          const next = { ...prev };
+          targetConvIds.forEach(id => {
+            const list = next[id] || [];
+            if (!list.some(m => String(m.id) === String(msg.id))) {
+              next[id] = [...list, msg];
+              hasChanges = true;
+            }
+          });
+          if (hasChanges) {
+            safeSetStorage('nstp_cached_messages', next);
+            return next;
+          }
+          return prev;
         });
 
         setConversations(prev => {
           const updated = (prev || []).map(c => {
-            if (String(c.id) === String(convId)) {
+            const isMatch = targetConvIds.some(id => String(c.id) === String(id));
+            if (isMatch) {
               return {
                 ...c,
                 last_message: rawText,
@@ -1493,6 +1507,11 @@ function App() {
           return updated;
         });
       }
+
+      // 5. Dispatch event for active Chat page to immediately update viewport
+      try {
+        window.dispatchEvent(new CustomEvent('nstp_chat_message', { detail: data }));
+      } catch (_) {}
     };
 
     s.on('new_message', handleIncomingChatMessage);
