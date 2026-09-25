@@ -155,6 +155,7 @@ export default function LetterFormats() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('All');
@@ -267,16 +268,22 @@ export default function LetterFormats() {
     setShowAddModal(false);
   };
 
-  const handleDeleteTemplate = (id) => {
-    const item = templates.find(t => t.id === id);
+  const requestDeleteTemplate = (item) => {
     if (!item) return;
     if (user?.role === 'instructor' && item.department !== user.department) {
       showToast(`You can only delete letter formats for your own department (${user.department}).`, 'error');
       return;
     }
-    const updated = templates.filter(t => t.id !== id);
+    setTemplateToDelete(item);
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (!templateToDelete) return;
+    const target = templateToDelete;
+    const updated = templates.filter(t => t.id !== target.id);
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
+    setTemplateToDelete(null);
     showToast('Letter format deleted successfully.', 'info');
   };
 
@@ -540,9 +547,9 @@ export default function LetterFormats() {
 
                         <button
                           type="button"
-                          onClick={() => handleDeleteTemplate(item.id)}
+                          onClick={() => requestDeleteTemplate(item)}
                           className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                          title="Delete"
+                          title="Delete Format"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -743,6 +750,51 @@ export default function LetterFormats() {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Delete Format Confirmation Modal in Strict English */}
+        {templateToDelete && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in"
+            onClick={() => setTemplateToDelete(null)}
+          >
+            <div 
+              className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-rose-200 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center space-x-3 text-rose-600 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-6 h-6 text-rose-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-gray-900">Delete Letter Format</h3>
+                    <p className="text-xs text-gray-500 font-medium">This action will remove this official letter template.</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+                  Are you sure you want to delete <strong className="text-gray-900">"{templateToDelete.title}"</strong> ({templateToDelete.department})? This action cannot be undone.
+                </p>
+
+                <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setTemplateToDelete(null)}
+                    className="px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteTemplate}
+                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    Delete Format
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -9,6 +9,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useMemo, useEffect } from 'react';
 
+function formatReportDate(d) {
+  if (!d) return 'Recently';
+  try {
+    const parsed = new Date(d);
+    if (isNaN(parsed.getTime())) return String(d);
+    return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (_) {
+    return String(d);
+  }
+}
+
 function Reports() {
   const { user, logout, reports, addReport, updateReport, deleteReport, submitReport, addReportComment, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, showToast } = useAuth();
   const navigate = useNavigate();
@@ -465,28 +476,35 @@ function Reports() {
                     </span>
                   </div>
                   <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-2">{report.description}</p>
-                  <div className="flex flex-wrap items-center text-[10px] sm:text-sm text-gray-500 gap-x-3 gap-y-1">
-                    <span className="flex items-center">
-                      <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 shrink-0" />
-                      By: {report.createdBy}
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-600 mt-2">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100/90 text-slate-700 font-medium border border-slate-200">
+                      <User className="w-3 h-3 mr-1 text-slate-500 shrink-0" />
+                      <span className="text-slate-400 font-normal mr-0.5">By:</span>
+                      <strong className="font-semibold text-slate-800">{report.created_by_name || report.createdBy || report.author || 'NSTP Admin'}</strong>
                     </span>
-                    <span className="flex items-center">
-                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 shrink-0" />
-                      {report.createdAt}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100/90 text-slate-600 font-medium border border-slate-200">
+                      <Calendar className="w-3 h-3 mr-1 text-emerald-700 shrink-0" />
+                      {formatReportDate(report.created_at || report.createdAt || report.date)}
                     </span>
-                    {report.dueDate && (
-                      <span className="flex items-center px-1.5 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-medium">
-                        <Clock className="w-3 h-3 mr-1 shrink-0" />
-                        Due: {report.dueDate}
+                    {(report.due_date || report.dueDate) && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+                        <Clock className="w-3 h-3 mr-1 text-rose-600 shrink-0" />
+                        Due: {formatReportDate(report.due_date || report.dueDate)}
                       </span>
                     )}
-                    <span className="flex items-center">
-                      <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 shrink-0" />
-                      {(report.comments || []).length} replies
+                    {Array.isArray(report.submissions) && report.submissions.length > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">
+                        <CheckCircle className="w-3 h-3 mr-1 text-emerald-600 shrink-0" />
+                        {report.submissions.length} submitted
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 text-slate-600 font-medium border border-slate-200 hover:bg-slate-100 transition-colors">
+                      <MessageCircle className="w-3 h-3 mr-1 text-blue-500 shrink-0" />
+                      {(report.comments || []).length} {(report.comments || []).length === 1 ? 'reply' : 'replies'}
                     </span>
                     {(report.reference_file_data || report.reference_file_name || report.referenceFile) && (
-                      <span className="flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-medium">
-                        <File className="w-3 h-3 mr-1 shrink-0" />
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-medium border border-indigo-200">
+                        <File className="w-3 h-3 mr-1 text-indigo-600 shrink-0" />
                         Ref attached
                       </span>
                     )}
@@ -907,7 +925,9 @@ function Reports() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-xl font-bold text-gray-800">{selectedReport.title}</h3>
-                  <p className="text-sm text-gray-500">Created by {selectedReport.createdBy}</p>
+                  <p className="text-sm text-gray-500">
+                    Created by <strong className="text-gray-800 font-semibold">{selectedReport.created_by_name || selectedReport.createdBy || selectedReport.author || 'NSTP Admin'}</strong> • {formatReportDate(selectedReport.created_at || selectedReport.createdAt || selectedReport.date)}
+                  </p>
                 </div>
                 <button type="button"
 

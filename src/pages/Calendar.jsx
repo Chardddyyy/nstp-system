@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import { calendarAPI, archivesAPI } from '../services/api';
+import { getSocket } from '../services/socket';
 
 // Philippine Holidays 2024-2030 (Static top-level constant)
 const PHILIPPINE_HOLIDAYS = [
@@ -248,10 +249,46 @@ function Calendar() {
   }, []);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
 
-  // Summary view filters
-  const [summarySemester, setSummarySemester] = useState('all'); // 'all' | '1st' | '2nd'
+  // Summary view filters - Default aligned strictly with active academic batch semester
+  const [summarySemester, setSummarySemester] = useState(() => {
+    const b = String(currentBatch || '');
+    if (b.includes('2nd')) return '2nd';
+    return '1st';
+  });
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
+  const [eventToDelete, setEventToDelete] = useState(null);
+
+  // Keep summarySemester synchronized whenever active batch changes
+  useEffect(() => {
+    if (currentBatch && !viewingArchive) {
+      const b = String(currentBatch || '');
+      setSummarySemester(b.includes('2nd') ? '2nd' : '1st');
+    }
+  }, [currentBatch, viewingArchive]);
+
+  // Real-time synchronization of deleted events across users
+  useEffect(() => {
+    const s = getSocket();
+    if (!s) return;
+    const handleRemoteDelete = (data) => {
+      if (data && data.id) {
+        setEvents(prev => prev.filter(e => e.id !== data.id));
+        if (typeof pushNotification === 'function' && (!user || user.name !== data.deletedBy)) {
+          pushNotification({
+            title: 'Calendar Event Cancelled',
+            message: `The scheduled event "${data.title}" for ${data.date} has been cancelled by ${data.deletedBy || 'the Administrator'}.`,
+            type: 'calendar',
+            link: '/calendar'
+          });
+        }
+      }
+    };
+    s.on('calendar_event_deleted', handleRemoteDelete);
+    return () => {
+      s.off('calendar_event_deleted', handleRemoteDelete);
+    };
+  }, [pushNotification, user]);
 
   // Jump calendar to batch start month once upon entering archive or returning to current
   const lastActiveBatchKey = useRef(null);
@@ -564,15 +601,51 @@ function Calendar() {
     setShowAddEventModal(true);
   };
 
-  const handleDeleteEvent = (eventId) => {
+  const requestDeleteEvent = (eventOrId) => {
     if (viewingArchive) return;
-    const updatedEvents = events.filter(e => e.id !== eventId);
+    const target = typeof eventOrId === 'object' && eventOrId !== null
+      ? eventOrId
+      : events.find(e => e.id === eventOrId);
+    if (target) {
+      setEventToDelete(target);
+    }
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete || viewingArchive) return;
+    const target = eventToDelete;
+    const updatedEvents = events.filter(e => e.id !== target.id);
     setEvents(updatedEvents);
     try { localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents)); } catch (_) {}
-    // Delete from backend
-    calendarAPI.deleteEvent(eventId).catch(err =>
+    setEventToDelete(null);
+
+    // Delete from backend database
+    calendarAPI.deleteEvent(target.id).catch(err =>
       console.warn('[Calendar] Delete event backend error:', err)
     );
+
+    // Broadcast device push notification
+    if (typeof pushNotification === 'function') {
+      pushNotification({
+        title: 'Calendar Event Cancelled',
+        message: `The scheduled event "${target.title}" for ${target.date} has been cancelled by the Administrator.`,
+        type: 'calendar',
+        link: '/calendar',
+      });
+    }
+
+    // Broadcast via socket to all other devices
+    try {
+      const s = getSocket();
+      if (s && s.connected) {
+        s.emit('calendar_event_deleted', {
+          id: target.id,
+          title: target.title,
+          date: target.date,
+          deletedBy: user?.name || 'Administrator'
+        });
+      }
+    } catch (_) {}
   };
 
   const canPrev = useMemo(() => {
@@ -930,15 +1003,19 @@ function Calendar() {
                   <div className="flex items-center gap-2 min-w-0">
                     <BookOpen className="w-5 h-5 text-emerald-700 shrink-0" />
                     <h2 className="text-sm sm:text-lg font-black text-slate-900 leading-tight">
-                      {viewingArchive && archiveViewData?.year ? `Archived Events Summary — Batch ${archiveViewData.year}` : 'Annual Events Summary & Whole Year Schedule'}
+                      {viewingArchive && archiveViewData?.year
+                        ? `Archived Schedule — Batch ${archiveViewData.year}`
+                        : `Academic Schedule — ${currentBatch || 'A.Y. 2026-2027 1st Semester'}`}
                     </h2>
                   </div>
                   <span className="self-start sm:self-auto text-[10px] sm:text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300 whitespace-nowrap ml-7 sm:ml-0">
-                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : 'A.Y. 2026-2027'}
+                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : (currentBatch || 'A.Y. 2026-2027 1st Sem')}
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 ml-7 sm:ml-0">
-                  Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.
+                  {summarySemester === 'all'
+                    ? 'Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.'
+                    : `Active schedule matrix for ${summarySemester === '1st' ? '1st Semester' : '2nd Semester'} of ${currentBatch || 'A.Y. 2026-2027'}.`}
                 </p>
               </div>
             </div>
@@ -1054,7 +1131,7 @@ function Calendar() {
                         <span>{monthYear}</span>
                       </h3>
                       <span className="text-[11px] font-bold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
-                        {evList.length} activity{evList.length !== 1 ? 'ies' : ''}
+                        {evList.length} {evList.length === 1 ? 'activity' : 'activities'}
                       </span>
                     </div>
 
@@ -1065,14 +1142,19 @@ function Calendar() {
                         const dayNum = evDate.getDate();
                         const dayName = evDate.toLocaleDateString('en-US', { weekday: 'short' });
                         const isPast = ev.date < todayStr;
+                        const isToday = ev.date === todayStr;
 
                         return (
                           <div
                             key={ev.id || idx}
-                            className={`bg-white rounded-xl p-3 border transition-all hover:shadow-sm flex items-start gap-3 ${
+                            className={`rounded-xl p-3 border transition-all hover:shadow-sm flex items-start gap-3 ${
                               ev.type === 'holiday'
-                                ? 'border-red-200 hover:border-red-300'
-                                : 'border-slate-200 hover:border-emerald-400'
+                                ? 'bg-white border-red-200 hover:border-red-300'
+                                : isPast
+                                  ? 'bg-slate-50/60 border-slate-200/90 hover:border-slate-300'
+                                  : isToday
+                                    ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400 shadow-xs'
+                                    : 'bg-white border-slate-200 hover:border-emerald-400'
                             }`}
                           >
                             {/* Date Badge */}
@@ -1080,8 +1162,10 @@ function Calendar() {
                               ev.type === 'holiday'
                                 ? 'bg-red-50 text-red-800 border-red-200'
                                 : isPast
-                                  ? 'bg-slate-100 text-slate-600 border-slate-200'
-                                  : 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                                  ? 'bg-slate-100 text-slate-500 border-slate-200'
+                                  : isToday
+                                    ? 'bg-amber-100 text-amber-950 border-amber-300'
+                                    : 'bg-emerald-50 text-emerald-900 border-emerald-200'
                             }`}>
                               <span className="block text-[9px] font-black uppercase tracking-wide">{dayName}</span>
                               <span className="block text-base font-black leading-tight">{dayNum}</span>
@@ -1090,6 +1174,21 @@ function Calendar() {
                             {/* Event Details */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                {/* Completion / Timing Status Badge */}
+                                {isPast ? (
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600 border border-slate-300 flex items-center gap-1 uppercase">
+                                    <CheckCircle className="w-2.5 h-2.5 text-slate-500" /> Completed
+                                  </span>
+                                ) : isToday ? (
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-400 text-emerald-950 border border-amber-500 flex items-center gap-1 uppercase animate-pulse">
+                                    ● Today
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                                    Upcoming
+                                  </span>
+                                )}
+
                                 {ev.category && (
                                   <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-md border uppercase ${getCategoryBadgeClass(ev.category)}`}>
                                     {ev.category}
@@ -1107,7 +1206,7 @@ function Calendar() {
                                 )}
                               </div>
 
-                              <h4 className="text-xs sm:text-sm font-black text-slate-900 leading-snug truncate">
+                              <h4 className={`text-xs sm:text-sm font-black leading-snug truncate ${isPast ? 'text-slate-700' : 'text-slate-900'}`}>
                                 {ev.title}
                               </h4>
                               
@@ -1132,8 +1231,8 @@ function Calendar() {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleDeleteEvent(ev.id)}
-                                      className="p-1 hover:bg-red-50 text-red-600 rounded transition-colors"
+                                      onClick={() => requestDeleteEvent(ev)}
+                                      className="p-1 hover:bg-red-50 text-red-600 rounded transition-colors cursor-pointer"
                                       title="Delete Event"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -1252,10 +1351,10 @@ function Calendar() {
                             <button
                               type="button"
                               onClick={() => {
-                                handleDeleteEvent(event.id);
+                                requestDeleteEvent(event);
                                 setSelectedDate(null);
                               }}
-                              className="p-1 hover:bg-white rounded-lg text-gray-500 hover:text-red-700 transition-colors"
+                              className="p-1 hover:bg-white rounded-lg text-gray-500 hover:text-red-700 transition-colors cursor-pointer"
                               title="Delete Event"
                             >
                               <X className="w-4 h-4" />
@@ -1443,8 +1542,8 @@ function Calendar() {
                     <CalendarDays className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-black tracking-tight">I-set ang Sakop ng Semester</h3>
-                    <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{currentBatch || 'Aktibong Academic Batch'}</p>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight">Set Semester Coverage Range</h3>
+                    <p className="text-[10px] sm:text-xs text-emerald-200 font-medium">{currentBatch || 'Active Academic Batch'}</p>
                   </div>
                 </div>
                 <button
@@ -1459,7 +1558,7 @@ function Calendar() {
               {/* Form Body */}
               <form onSubmit={handleSaveSemesterRange} className="p-5 space-y-4">
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-950 leading-relaxed font-medium">
-                  Ang coverage dates na ito ang maglilimita sa buwanang pag-navigate at pagsusumite ng schedule para sa kasalukuyang semester.
+                  These coverage dates establish the monthly navigation window and scheduling timeline for the active semester.
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1498,17 +1597,63 @@ function Calendar() {
                     onClick={() => setShowEditRangeModal(false)}
                     className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    Kanselahin
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={rangeSaving || !editRangeStart || !editRangeEnd}
                     className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
                   >
-                    {rangeSaving ? 'Saving...' : 'I-save ang Coverage'}
+                    {rangeSaving ? 'Saving...' : 'Save Coverage'}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Event Confirmation Modal */}
+        {eventToDelete && (
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in"
+            onClick={() => setEventToDelete(null)}
+          >
+            <div 
+              className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-red-200 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex items-center space-x-3 text-red-600 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-gray-900">Delete Calendar Event</h3>
+                    <p className="text-xs text-gray-500 font-medium">This will notify all users that this event is cancelled.</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+                  Are you sure you want to delete the scheduled event <strong className="text-gray-900">"{eventToDelete.title}"</strong> set for <span className="font-bold text-emerald-800">{eventToDelete.date}</span>?
+                </p>
+
+                <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setEventToDelete(null)}
+                    className="px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmDeleteEvent}
+                    className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-black transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    Delete Event
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -135,6 +135,38 @@ function getSeenEntitiesStorageKey(userOrRole, maybeId) {
   return `nstp_seen_entities_${role}${uid}`;
 }
 
+function getReadNotificationsStorageKey(userOrRole, maybeId) {
+  if (typeof userOrRole === 'object' && userOrRole !== null) {
+    const role = userOrRole.role || 'user';
+    const uid = userOrRole.id ? `_${userOrRole.id}` : '';
+    return `nstp_read_notifications_${role}${uid}`;
+  }
+  const role = userOrRole || 'admin';
+  const uid = maybeId ? `_${maybeId}` : '';
+  return `nstp_read_notifications_${role}${uid}`;
+}
+
+// Hardware tone generator using Web Audio API (cross-device: iOS, Android, macOS, Windows)
+function playNotificationSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    // Gentle warm chime: 880Hz (A5) -> 1174Hz (D6)
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1174, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.28);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+}
+
 function GlobalKeyboardManager() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -612,10 +644,20 @@ function App() {
       } catch {}
     }
 
+    // Check if this notification key was already marked as read by the user
+    let isAlreadyRead = false;
+    if (user) {
+      try {
+        const readStorageKey = getReadNotificationsStorageKey(user);
+        const readSet = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]').map(String));
+        if (readSet.has(String(notifKey))) isAlreadyRead = true;
+      } catch {}
+    }
+
     const item = {
       id: notifKey,
       time: notif.time || 'Just now',
-      read: false,
+      read: isAlreadyRead ? true : Boolean(notif.read),
       title: notif.title,
       message: notif.message,
       type: notif.type || 'system',
@@ -707,14 +749,43 @@ function App() {
   }, [user, notifications]);
 
   const markAllNotificationsRead = useCallback((idsToMark = null) => {
+    let updatedNotifs = [];
     setNotifications(prev => {
       if (Array.isArray(idsToMark) && idsToMark.length > 0) {
         const idSet = new Set(idsToMark.map(String));
-        return (prev || []).map(n => idSet.has(String(n.id)) ? { ...n, read: true } : n);
+        updatedNotifs = (prev || []).map(n => idSet.has(String(n.id)) ? { ...n, read: true } : n);
+      } else {
+        updatedNotifs = (prev || []).map(n => ({ ...n, read: true }));
       }
-      return (prev || []).map(n => ({ ...n, read: true }));
+      return updatedNotifs;
     });
-  }, []);
+
+    if (user) {
+      // Immediately write updated notifications to storage
+      const notifKey = getNotificationStorageKey(user);
+      safeSetStorage(notifKey, updatedNotifs);
+
+      // Persist read IDs Set so restart and background re-poll never restore them as unread
+      try {
+        const readStorageKey = getReadNotificationsStorageKey(user);
+        const existing = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+        const readSet = new Set(existing.map(String));
+        if (Array.isArray(idsToMark) && idsToMark.length > 0) {
+          idsToMark.forEach(id => readSet.add(String(id)));
+        } else {
+          notifications.forEach(n => readSet.add(String(n.id)));
+          updatedNotifs.forEach(n => readSet.add(String(n.id)));
+        }
+        safeSetStorage(readStorageKey, Array.from(readSet).slice(-1000));
+      } catch {}
+
+      // Clean up legacy keys to prevent resurrection of unread state
+      try {
+        localStorage.removeItem('nstp_admin_notifications');
+        localStorage.removeItem('nstp_instructor_notifications');
+      } catch {}
+    }
+  }, [user, notifications]);
 
   const dismissToast = useCallback((toastId) => {
     setToasts(prev => prev.filter(t => t.id !== toastId));
@@ -1327,6 +1398,19 @@ function App() {
     } catch {
       loaded = [];
     }
+    
+    // Cross-check with read notifications registry so read state persists across browser restarts
+    try {
+      const readStorageKey = getReadNotificationsStorageKey(user);
+      const readSet = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]').map(String));
+      loaded = (Array.isArray(loaded) ? loaded : []).map(n => {
+        if (n && (n.read || readSet.has(String(n.id)))) {
+          return { ...n, read: true };
+        }
+        return n;
+      });
+    } catch {}
+
     setNotifications(Array.isArray(loaded) ? loaded : []);
     notificationsLoadedUserRef.current = user.id;
 
@@ -1343,6 +1427,79 @@ function App() {
       Notification.requestPermission().catch(() => {});
     }
   }, [user]);
+
+  // Real-time incoming chat message socket listener & device alert
+  useEffect(() => {
+    if (!user) return;
+    const s = getSocket();
+    if (!s) return;
+
+    const handleIncomingChatMessage = (data) => {
+      if (!data || !data.message) return;
+      const msg = data.message;
+      const senderId = msg.sender_id || data.sender?.id;
+      if (String(senderId) === String(user.id)) return; // Don't notify own messages
+
+      const senderName = msg.sender_name || data.sender?.name || 'Someone';
+      const convId = data.conversationId;
+      const rawText = msg.text || (msg.type === 'image' ? 'Sent a photo' : msg.type === 'file' ? 'Sent a file' : msg.type === 'voice' ? 'Sent a voice message' : 'Sent a message');
+      const preview = rawText.length > 80 ? rawText.slice(0, 80) + '…' : rawText;
+
+      // 1. Play chime tone on device
+      playNotificationSound();
+
+      // 2. Hardware vibration
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([120, 80, 120]);
+        }
+      } catch (_) {}
+
+      // 3. Dispatch system notification & OS device banner
+      pushNotification({
+        id: `msg-sock-${msg.id || Date.now()}`,
+        title: `Message from ${senderName}`,
+        message: `${senderName}: ${preview}`,
+        type: 'message',
+        link: '/chat',
+        conversationId: convId,
+        senderName
+      });
+
+      // 4. Update messages store in real-time
+      if (convId) {
+        setMessages(prev => {
+          const list = prev[convId] || [];
+          if (list.some(m => String(m.id) === String(msg.id))) return prev;
+          const updated = [...list, msg];
+          safeSetStorage('nstp_cached_messages', { ...prev, [convId]: updated });
+          return { ...prev, [convId]: updated };
+        });
+
+        setConversations(prev => {
+          const updated = (prev || []).map(c => {
+            if (String(c.id) === String(convId)) {
+              return {
+                ...c,
+                last_message: rawText,
+                last_message_time: msg.created_at || new Date().toISOString(),
+                last_sender_id: senderId,
+                last_sender_name: senderName
+              };
+            }
+            return c;
+          });
+          safeSetStorage('nstp_cached_conversations', updated);
+          return updated;
+        });
+      }
+    };
+
+    s.on('new_message', handleIncomingChatMessage);
+    return () => {
+      s.off('new_message', handleIncomingChatMessage);
+    };
+  }, [user, pushNotification]);
 
   // Persist notifications to storage ONLY AFTER they have been loaded for this active user
   useEffect(() => {

@@ -1418,7 +1418,13 @@ function parseDeletedFor(deletedFor) {
   }
 }
 
-async function userCanAccessConversation(conversationId, userId) {
+async function userCanAccessConversation(conversationId, userId, userRole = null) {
+  if (userRole === 'admin' || userRole === 'coordinator') return true;
+  try {
+    const [u] = await pool.execute('SELECT role FROM users WHERE id = ? LIMIT 1', [userId]);
+    if (u && u[0] && (u[0].role === 'admin' || u[0].role === 'coordinator')) return true;
+  } catch (_) {}
+
   const [conversationCheck] = await pool.execute(
     'SELECT is_group FROM conversations WHERE id = ?',
     [conversationId]
@@ -4074,8 +4080,21 @@ app.put('/api/calendar/events/:id', authenticateToken, requireAdmin, async (req,
 app.delete('/api/calendar/events/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const [existing] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [id]).catch(() => [[]]);
+    const eventData = existing && existing[0];
     await pool.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
-    res.json({ success: true });
+
+    // Broadcast deletion so all users get notified in real time on their devices
+    try {
+      io.emit('calendar_event_deleted', {
+        id,
+        title: eventData?.title || 'Scheduled Event',
+        date: eventData?.date,
+        deletedBy: req.user?.name || 'Administrator'
+      });
+    } catch (_) {}
+
+    res.json({ success: true, message: 'Event deleted' });
   } catch (err) {
     console.error('[Calendar] Delete event error:', err.message);
     res.status(500).json({ message: 'Failed to delete calendar event' });
@@ -4771,6 +4790,40 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
       WHERE m.id = ?
     `, [result.insertId]);
 
+    // Real-time Socket.io broadcast to recipients for instant device notification and live chat
+    try {
+      const msgObj = messages[0];
+      const messagePayload = {
+        conversationId: targetConvId,
+        message: msgObj,
+        sender: {
+          id: req.user.id,
+          name: msgObj.sender_name,
+          role: msgObj.sender_role,
+          department: msgObj.sender_department
+        }
+      };
+
+      // Emit to conversation room
+      io.to(`conv_${targetConvId}`).emit('new_message', messagePayload);
+
+      // Emit directly to recipients' private rooms
+      const [cRows] = await pool.execute('SELECT is_group, participant_1_id, participant_2_id FROM conversations WHERE id = ?', [targetConvId]).catch(() => [[]]);
+      if (cRows && cRows[0] && cRows[0].is_group) {
+        const [parts] = await pool.execute('SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id != ?', [targetConvId, req.user.id]).catch(() => [[]]);
+        (parts || []).forEach(p => {
+          io.to(`user_${p.user_id}`).emit('new_message', messagePayload);
+        });
+      } else if (cRows && cRows[0]) {
+        const otherId = cRows[0].participant_1_id === req.user.id ? cRows[0].participant_2_id : cRows[0].participant_1_id;
+        if (otherId) {
+          io.to(`user_${otherId}`).emit('new_message', messagePayload);
+        }
+      }
+    } catch (sockErr) {
+      console.warn('[Socket Dispatcher] new_message broadcast error:', sockErr.message);
+    }
+
     // Dispatch SMS notification if admin is sending message
     if (req.user && req.user.role === 'admin') {
       (async () => {
@@ -5075,15 +5128,23 @@ app.delete('/api/conversations/:id', authenticateToken, async (req, res) => {
 app.delete('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const isAuthorized = await userCanAccessConversation(id, req.user.id);
+    const [conversationCheck] = await pool.execute(
+      'SELECT id FROM conversations WHERE id = ?',
+      [id]
+    ).catch(() => [[]]);
+    if (!conversationCheck || conversationCheck.length === 0) {
+      // If conversation is only on client or already deleted, resolve gracefully
+      return res.json({ message: 'Messages cleared' });
+    }
+    const isAuthorized = await userCanAccessConversation(id, req.user.id, req.user.role);
     if (!isAuthorized) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    await pool.execute('DELETE FROM messages WHERE conversation_id = ?', [id]);
+    await pool.execute('DELETE FROM messages WHERE conversation_id = ?', [id]).catch(() => {});
     await pool.execute(
       'UPDATE conversations SET last_message = NULL, last_message_time = NULL, last_sender_id = NULL WHERE id = ?',
       [id]
-    );
+    ).catch(() => {});
     res.json({ message: 'Messages cleared' });
   } catch (error) {
     console.error('Clear messages error:', error);

@@ -145,18 +145,24 @@ async function apiCall(endpoint, options) {
       }
       var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
       var isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/register';
-      if (response && !isAuthEndpoint && (response.status === 401 || response.status === 403 || error.code === 'TOKEN_EXPIRED')) {
-        // 401 = expired token, 403 with 'Invalid token' = token signed with old JWT_SECRET (after redeploy)
-        const isInvalidToken = response.status === 403 && (error.message === 'Invalid token' || !error.message);
-        if (response.status === 401 || isInvalidToken) {
-          localStorage.removeItem('nstp_token');
-          localStorage.removeItem('nstp_cached_user');
-          if (!window.__nstp_session_expired__) {
-            window.__nstp_session_expired__ = true;
-            window.dispatchEvent(new CustomEvent('nstp-session-expired', {
-              detail: { code: error.code, message: error.message }
-            }));
-          }
+      if (response && !isAuthEndpoint && (response.status === 401 || error.code === 'TOKEN_EXPIRED')) {
+        localStorage.removeItem('nstp_token');
+        localStorage.removeItem('nstp_cached_user');
+        if (!window.__nstp_session_expired__) {
+          window.__nstp_session_expired__ = true;
+          window.dispatchEvent(new CustomEvent('nstp-session-expired', {
+            detail: { code: error.code || 'TOKEN_EXPIRED', message: error.message || 'Session expired. Please log in again.' }
+          }));
+        }
+      } else if (response && !isAuthEndpoint && response.status === 403 && (error.message === 'Invalid token' || error.code === 'INVALID_TOKEN')) {
+        // Only trigger session expiration when server explicitly rejects JWT token signature
+        localStorage.removeItem('nstp_token');
+        localStorage.removeItem('nstp_cached_user');
+        if (!window.__nstp_session_expired__) {
+          window.__nstp_session_expired__ = true;
+          window.dispatchEvent(new CustomEvent('nstp-session-expired', {
+            detail: { code: 'INVALID_TOKEN', message: 'Invalid authentication token. Please log in again.' }
+          }));
         }
       }
       var apiErr = new Error(error.message || (response && response.status === 404 ? 'Resource not found' : 'API request failed'));
@@ -1765,17 +1771,21 @@ export async function sendStudentDigitalId(studentOrId) {
   `;
 
   const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
-  await fetch(defaultWebhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      to: deliveryEmail,
-      subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
-      text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
-      html: htmlContent
-    }),
-    redirect: 'follow'
-  });
+  try {
+    await fetch(defaultWebhookUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        to: deliveryEmail,
+        subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
+        text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
+        html: htmlContent
+      })
+    });
+  } catch (webhookErr) {
+    console.warn('[API] Webhook delivery note:', webhookErr);
+  }
 
   return { success: true, message: `Digital ID sent successfully to ${deliveryEmail}` };
 }
