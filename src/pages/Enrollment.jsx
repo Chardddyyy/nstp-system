@@ -1829,8 +1829,8 @@ function Enrollment() {
                       className="flex items-center gap-4 min-w-0 cursor-pointer group hover:opacity-95"
                       title="Click to expand / inspect full Registration Form"
                     >
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center relative">
-                        <img src={registrationPhoto} alt="Registration Form" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center relative bg-white">
+                        <img src={registrationPhoto} alt="Registration Form" className="w-full h-full object-contain p-0.5 group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <Eye className="w-5 h-5 drop-shadow" />
                         </div>
@@ -1951,8 +1951,8 @@ function Enrollment() {
                       className="flex items-center gap-4 min-w-0 cursor-pointer group hover:opacity-95"
                       title="Click to expand / inspect full 2x2 ID Photo"
                     >
-                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm relative">
-                        <img src={idPhoto2x2} alt="2x2 ID Photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="w-16 h-20 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-sm flex items-center justify-center relative bg-white">
+                        <img src={idPhoto2x2} alt="2x2 ID Photo" className="w-full h-full object-contain p-0.5 group-hover:scale-105 transition-transform" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <Eye className="w-5 h-5 drop-shadow" />
                         </div>
@@ -2363,16 +2363,17 @@ function Enrollment() {
             </div>
 
             {/* Image Body */}
-            <div className="p-4 sm:p-6 bg-gray-950 flex-1 overflow-auto flex items-center justify-center min-h-[300px] max-h-[60vh]">
+            <div className="p-2 sm:p-4 bg-gray-950 flex-1 overflow-auto flex items-center justify-center min-h-[320px] max-h-[72vh] touch-pan-x touch-pan-y">
               {typeof previewPhotoModal.src === 'string' && previewPhotoModal.src.startsWith('data:application/pdf') ? (
                 <div className="w-full h-full min-h-[400px]">
-                  <iframe src={previewPhotoModal.src} title="PDF Document Preview" className="w-full h-[50vh] rounded-2xl border border-white/10" />
+                  <iframe src={previewPhotoModal.src} title="PDF Document Preview" className="w-full h-[65vh] rounded-2xl border border-white/10" />
                 </div>
               ) : (
                 <img
                   src={previewPhotoModal.src}
                   alt={previewPhotoModal.title}
-                  className="max-h-[55vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/10"
+                  className="max-h-[70vh] sm:max-h-[72vh] max-w-full w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/10"
+                  style={{ touchAction: 'pinch-zoom' }}
                 />
               )}
             </div>

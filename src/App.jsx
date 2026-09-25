@@ -52,19 +52,24 @@ const BASE_URL_WITH_SLASH = BASE_PATH ? (BASE_PATH.endsWith('/') ? BASE_PATH : B
 // React from unmounting+remounting page children on every polling tick.
 function ProtectedRoute({ children, allowedRoles }) {
   const { loading, user } = useContext(AuthContext);
+  const token = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Verifying security credentials...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  // Strictly require BOTH active user in memory and an unexpired JWT token in storage
+  if (!user || !token) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to={user.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace />;
   }
@@ -209,6 +214,11 @@ function GlobalKeyboardManager() {
 function App() {
   const [user, setUser] = useState(() => {
     try {
+      const token = localStorage.getItem('nstp_token');
+      if (!token) {
+        localStorage.removeItem('nstp_cached_user');
+        return null;
+      }
       const cached = localStorage.getItem('nstp_cached_user');
       return cached ? JSON.parse(cached) : null;
     } catch { return null; }
@@ -1243,7 +1253,8 @@ function App() {
   }
 
   async function refreshLiveData() {
-    if (!user || window.__nstp_session_expired__) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
+    if (!user || !token || window.__nstp_session_expired__) return;
     try {
       const [reportsData, conversationsData, usersData, studentsData, eventsData] = await Promise.all([
         reportsAPI.getAll().catch(() => null),
@@ -1341,10 +1352,13 @@ function App() {
 
   // Real-time polling while logged in (pauses when laptop lid is closed or tab is hidden to prevent ERR_NETWORK_IO_SUSPENDED)
   useEffect(() => {
-    if (!user || loading) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
+    if (!user || !token || loading) return;
     refreshLiveData();
 
     const interval = setInterval(() => {
+      const activeToken = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
+      if (!activeToken || !user) return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       refreshLiveData();
@@ -1352,6 +1366,8 @@ function App() {
 
     // On wake or reconnect, immediately refresh data and socket
     const handleWakeOrOnline = () => {
+      const activeToken = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
+      if (!activeToken || !user) return;
       if (document.visibilityState === 'visible' && (typeof navigator === 'undefined' || navigator.onLine)) {
         refreshLiveData();
         try {
@@ -1502,6 +1518,17 @@ function App() {
       await loadAllData(userData);
     } catch (error) {
       console.error('Failed to load user:', error);
+      if (
+        error?.status === 401 ||
+        error?.status === 403 ||
+        error?.code === 'TOKEN_EXPIRED' ||
+        String(error?.message).toLowerCase().includes('token') ||
+        String(error?.message).toLowerCase().includes('unauthorized')
+      ) {
+        localStorage.removeItem('nstp_token');
+        localStorage.removeItem('nstp_cached_user');
+        setUser(null);
+      }
       setLoading(false);
     }
   }

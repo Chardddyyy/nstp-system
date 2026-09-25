@@ -2877,10 +2877,10 @@ function StudentManagement() {
                   </div>
 
                   {/* Birthdate, Age, Civil Status, Sex, Registered Voter */}
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
-                    <div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
+                    <div className="col-span-2 sm:col-span-1">
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
-                      <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                      <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs whitespace-nowrap overflow-x-auto scrollbar-none">
                         {(() => {
                           if (currentViewStudent.birthDate || currentViewStudent.birth_date) {
                             try {
@@ -3327,7 +3327,7 @@ function StudentManagement() {
                                           alt="Registration Form (COR)" 
                                           loading="lazy"
                                           decoding="async"
-                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                                          className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform" 
                                         />
                                         <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
                                           <Eye className="w-4 h-4" />
@@ -4237,11 +4237,11 @@ function StudentManagement() {
 
           return (
             <div 
-              className="fixed inset-0 bg-black/90 backdrop-blur-md z-[110] flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+              className="fixed inset-0 bg-black/95 backdrop-blur-md z-[110] flex items-center justify-center p-2 sm:p-4 animate-fade-in"
               onClick={() => setPhotoViewer(null)}
             >
               <div 
-                className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl p-4 sm:p-5 flex flex-col items-center max-h-[92vh]"
+                className="bg-slate-900 border border-emerald-600/40 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl p-3 sm:p-5 flex flex-col items-center max-h-[96vh]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="w-full flex items-center justify-between mb-3 text-white">
@@ -4255,11 +4255,16 @@ function StudentManagement() {
                   </button>
                 </div>
 
-                <div className="w-full max-h-[70vh] bg-black/60 rounded-2xl overflow-hidden border-2 border-emerald-500/80 shadow-xl flex items-center justify-center p-1">
+                <div className="w-full max-h-[78vh] bg-black/60 rounded-2xl overflow-hidden border-2 border-emerald-500/80 shadow-xl flex items-center justify-center p-1 touch-pan-x touch-pan-y">
                   {isPdf ? (
-                    <iframe src={viewerUrl} title={viewerTitle} className="w-full h-[65vh] rounded-xl" />
+                    <iframe src={viewerUrl} title={viewerTitle} className="w-full h-[70vh] rounded-xl" />
                   ) : (
-                    <img src={viewerUrl} alt={viewerTitle} className="w-full max-h-[68vh] object-contain rounded-xl" />
+                    <img 
+                      src={viewerUrl} 
+                      alt={viewerTitle} 
+                      className="w-auto h-auto max-w-full max-h-[76vh] object-contain rounded-xl select-none" 
+                      style={{ touchAction: 'pinch-zoom' }}
+                    />
                   )}
                 </div>
 

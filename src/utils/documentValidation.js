@@ -41,7 +41,11 @@ export function analyzeDocumentFile(fileOrDataUrl) {
         const height = img.naturalHeight || img.height;
         const aspectRatio = width / (height || 1);
 
-        // Perform canvas pixel sample analysis for document paper texture (high white/light background ratio)
+        // Visual analysis based on official CvSU Naic COR specimen (sample-cor.jpg):
+        // 1. Paper background: White/light printed bond paper (high lightness ratio)
+        // 2. Paper neutrality: Low color chroma/saturation (black ink on white paper, very low color variance)
+        // 3. Ink marks: Contains dark print/table strokes (luminance < 115) against light paper (luminance > 140)
+        // NOTE: Does NOT discriminate based on aspect ratio or square/rectangular size ("wag lang sa size, sa mismong itsura ng papel")
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = Math.min(width, 100);
@@ -50,9 +54,10 @@ export function analyzeDocumentFile(fileOrDataUrl) {
 
         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imgData.data;
-        let lightPixelCount = 0;
+        let lightPaperCount = 0;
+        let darkInkCount = 0;
         let totalSampled = 0;
-        let highSaturationCount = 0;
+        let highChromaCount = 0;
 
         for (let i = 0; i < data.length; i += 16) {
           const r = data[i];
@@ -60,50 +65,48 @@ export function analyzeDocumentFile(fileOrDataUrl) {
           const b = data[i + 2];
           totalSampled++;
 
-          // Light pixel typical of printed white document paper
-          if (r > 175 && g > 175 && b > 175) {
-            lightPixelCount++;
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+
+          // Paper pixel: light background typical of white bond paper
+          if (lum > 140) {
+            lightPaperCount++;
           }
-
-          // Measure color saturation variance (faces, shirts, colorful scenery have higher variance than black text on white paper)
-          const max = Math.max(r, g, b);
-          const min = Math.min(r, g, b);
-          if (max - min > 45) {
-            highSaturationCount++;
+          // Printed text/grid ink
+          if (lum < 115) {
+            darkInkCount++;
           }
-        }
-
-        const lightRatio = lightPixelCount / (totalSampled || 1);
-        const saturationRatio = highSaturationCount / (totalSampled || 1);
-
-        // Standard paper documents (Letter/A4 portrait ~0.65 to 0.84, landscape ~1.22 to 1.60)
-        // Square selfies / 2x2 portrait photos have aspect ratio ~0.86 to 1.16
-        const isSquarePhotoRatio = aspectRatio >= 0.86 && aspectRatio <= 1.16;
-
-        // If square ratio (like 2x2 ID portrait or selfie):
-        if (isSquarePhotoRatio) {
-          // Square photos with non-paper color variance or typical selfie framing
-          if (saturationRatio > 0.25 || lightRatio < 0.65) {
-            return resolve({
-              isDocument: false,
-              isSuspicious: true,
-              badgeLabel: '⚠️ Not a RegForm',
-              reason: 'The uploaded file appears to be a 2x2 portrait photo, selfie, or square image rather than a printed Certificate of Registration (COR).'
-            });
-          }
-        } else {
-          // For rectangular document aspect ratios: only flag if strongly non-document (very dark or heavily saturated image)
-          if (lightRatio < 0.18 && saturationRatio > 0.55) {
-            return resolve({
-              isDocument: false,
-              isSuspicious: true,
-              badgeLabel: '⚠️ Check Document',
-              reason: 'The uploaded file appears too dark or colorful for a printed paper Certificate of Registration (COR).'
-            });
+          // High chroma: colorful pixels typical of portraits, selfies, clothing, scenery (COR is predominantly neutral white/grey)
+          if (chroma > 36) {
+            highChromaCount++;
           }
         }
 
-        resolve({ isDocument: true, isSuspicious: false, reason: 'Valid document characteristics' });
+        const paperRatio = lightPaperCount / (totalSampled || 1);
+        const chromaRatio = highChromaCount / (totalSampled || 1);
+
+        // A valid COR paper document has a dominant light paper background and low overall color saturation
+        // If image is heavily colored (selfie, clothing, nature, portrait photo) or lacks paper background:
+        if (chromaRatio > 0.38) {
+          return resolve({
+            isDocument: false,
+            isSuspicious: true,
+            badgeLabel: '⚠️ Check RegForm Paper',
+            reason: 'The uploaded file does not match the official Certificate of Registration (COR) paper appearance. It contains high color photographic saturation (selfie/photo) rather than printed white paper with tabular courses and registrar markings (see official specimen).'
+          });
+        }
+
+        // If extremely dark (not a paper document on white bond paper)
+        if (paperRatio < 0.22) {
+          return resolve({
+            isDocument: false,
+            isSuspicious: true,
+            badgeLabel: '⚠️ Non-Paper Image',
+            reason: 'The uploaded file appears too dark to be an official printed paper Certificate of Registration (COR).'
+          });
+        }
+
+        resolve({ isDocument: true, isSuspicious: false, reason: 'Matches official paper document characteristics' });
       } catch (_) {
         resolve({ isDocument: true, isSuspicious: false });
       }

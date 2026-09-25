@@ -139,8 +139,10 @@ function Landing() {
   // Navigation Dropdown & Mobile Menu State
   const [openDropdown, setOpenDropdown] = useState(null); // 'resources' | null
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef(null);
+  const mobileToggleBtnRef = useRef(null);
 
-  // Close mobile drawer on Escape key, resize, or back navigation
+  // Close mobile drawer on Escape key, resize, back navigation, or clicking outside
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const handleKeyDown = (e) => {
@@ -152,13 +154,25 @@ function Landing() {
     const handleResize = () => {
       if (window.innerWidth >= 1024) setMobileMenuOpen(false);
     };
+    const handlePointerDown = (e) => {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(e.target) &&
+        mobileToggleBtnRef.current &&
+        !mobileToggleBtnRef.current.contains(e.target)
+      ) {
+        setMobileMenuOpen(false);
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('resize', handleResize);
+    document.addEventListener('pointerdown', handlePointerDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [mobileMenuOpen]);
   const headerNavRef = useRef(null);
@@ -562,6 +576,7 @@ function Landing() {
 
             {/* Mobile Hamburger Toggle Button */}
             <button
+              ref={mobileToggleBtnRef}
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700/80 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
@@ -574,7 +589,17 @@ function Landing() {
 
         {/* ── Mobile Slide-down Full Drawer Navigation (Solid, Sleek, Unified Aesthetic) ── */}
         {mobileMenuOpen && (
-          <div className="relative z-40 lg:hidden bg-emerald-950 border-t border-b border-emerald-800/90 px-4 py-4 space-y-3.5 shadow-none animate-slide-up">
+          <>
+            {/* Click-outside backdrop overlay */}
+            <div
+              className="fixed inset-0 top-[52px] sm:top-[64px] bg-black/60 backdrop-blur-xs z-30 lg:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              ref={mobileMenuRef}
+              className="relative z-40 lg:hidden bg-emerald-950 border-t border-b border-emerald-800/90 px-4 py-4 space-y-3.5 shadow-2xl animate-slide-up"
+            >
             
             {/* Quick Actions in Mobile Drawer */}
             <div className="grid grid-cols-2 gap-2.5 pb-3.5 border-b border-emerald-800/80">
@@ -658,7 +683,8 @@ function Landing() {
               </button>
             </div>
           </div>
-        )}
+        </>
+      )}
       </header>
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen Coverage) ───── */}

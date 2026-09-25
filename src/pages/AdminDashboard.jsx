@@ -2568,10 +2568,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     {/* X-axis: Academic Year + Total */}
                     <div className="pl-8 flex gap-2 sm:gap-3 mt-2 pt-2.5 border-t border-gray-100 pr-1">
                       {allBatches.map(batch => {
-                        const shortYear = batch.year
-                          .replace('1st Semester', '1S')
-                          .replace('2nd Semester', '2S')
-                          .replace('Semester', 'S');
+                        let academicYear = batch.year;
+                        let semesterName = '';
+
+                        if (/1st\s*sem(?:ester)?|1s\b/i.test(batch.year)) {
+                          semesterName = '1st Semester';
+                          academicYear = batch.year.replace(/1st\s*sem(?:ester)?|1s\b/gi, '').trim();
+                        } else if (/2nd\s*sem(?:ester)?|2s\b/i.test(batch.year)) {
+                          semesterName = '2nd Semester';
+                          academicYear = batch.year.replace(/2nd\s*sem(?:ester)?|2s\b/gi, '').trim();
+                        } else if (/summer|midyear/i.test(batch.year)) {
+                          semesterName = 'Midyear / Summer';
+                          academicYear = batch.year.replace(/summer|midyear/gi, '').trim();
+                        }
+
                         return (
                           <div
                             key={batch.year}
@@ -2582,14 +2592,19 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 navigate('/admin/students');
                               }
                             }}
-                            className="flex-1 flex flex-col items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                            className="flex-1 flex flex-col items-center gap-0.5 cursor-pointer hover:opacity-80 transition-opacity"
                             title={batch.rawArchive ? `View ${batch.year} Archive` : 'View Active Students'}
                           >
-                            <span className={`text-[9px] sm:text-[10px] font-black text-center leading-tight ${batch.isActive ? 'text-emerald-700 font-extrabold' : 'text-gray-500'}`}>
-                              {shortYear}
+                            <span className={`text-[9px] sm:text-[10px] font-black text-center leading-tight ${batch.isActive ? 'text-emerald-700 font-extrabold' : 'text-gray-700'}`}>
+                              {academicYear}
                             </span>
+                            {semesterName && (
+                              <span className={`text-[8px] sm:text-[9px] font-bold text-center leading-tight ${batch.isActive ? 'text-emerald-600 font-black' : 'text-gray-500'}`}>
+                                {semesterName}
+                              </span>
+                            )}
                             {batch.isActive ? (
-                              <span className="text-[8px] bg-emerald-700 text-amber-300 px-1.5 py-px rounded-full font-black uppercase tracking-wide whitespace-nowrap shadow-2xs">
+                              <span className="text-[8px] bg-emerald-700 text-amber-300 px-1.5 py-px rounded-full font-black uppercase tracking-wide whitespace-nowrap shadow-2xs mt-0.5">
                                 Active
                               </span>
                             ) : null}
@@ -2953,7 +2968,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               <img 
                                 src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
                                 alt="2x2 ID Photo" 
-                                className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
+                                className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform" 
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
                                 <Eye className="w-4 h-4 text-white" />
@@ -2985,31 +3000,53 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         const audit = getRegformAuditStatus(selectedEnrollment, regformAudits);
                         if (audit.isSuspicious) {
                           return (
-                            <div className="mb-3 p-3 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-2.5 shadow-sm">
+                            <div className="mb-3 p-3 sm:p-3.5 bg-amber-50 border-2 border-amber-400 rounded-2xl flex items-start gap-2.5 shadow-sm">
                               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                              <div>
-                                <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>
-                                <p className="text-[11.5px] text-amber-800 font-medium mt-0.5 leading-relaxed">{audit.reason}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                                  <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Document Verification Alert</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPhotoViewer(`${import.meta.env.BASE_URL}id-photos/sample-cor.jpg`)}
+                                    className="text-[10px] sm:text-[11px] font-black text-emerald-900 bg-white hover:bg-emerald-50 border border-emerald-400 px-2.5 py-1 rounded-xl shadow-2xs transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                                    title="Tingnan ang official CvSU Naic COR specimen"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Tingnan ang Halimbawang COR (Specimen)</span>
+                                  </button>
+                                </div>
+                                <p className="text-[11.5px] text-amber-800 font-medium leading-relaxed">{audit.reason}</p>
                               </div>
                             </div>
                           );
                         }
                         return null;
                       })()}
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
                         <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                           <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form
                         </p>
-                        {(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form) && (
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form)}
-                            className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                            onClick={() => setPhotoViewer(`${import.meta.env.BASE_URL}id-photos/sample-cor.jpg`)}
+                            className="text-[10.5px] font-bold text-gray-700 hover:text-emerald-900 bg-white px-2.5 py-1 rounded-lg border border-gray-300 shadow-2xs hover:bg-emerald-50 transition-colors cursor-pointer flex items-center gap-1"
+                            title="Tingnan ang official CvSU Naic COR specimen"
                           >
-                            <Maximize2 className="w-3.5 h-3.5 text-emerald-700" />
-                            <span>Expand Fullscreen</span>
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Example COR</span>
                           </button>
-                        )}
+                          {(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form) && (
+                            <button
+                              type="button"
+                              onClick={() => setPhotoViewer(selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto || selectedEnrollment.reg_form)}
+                              className="text-[10.5px] font-bold text-emerald-800 hover:text-emerald-950 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5 text-emerald-700" />
+                              <span>Expand Fullscreen</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <RegistrationDocumentPreview
@@ -3125,10 +3162,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         </div>
 
                         {/* Birthdate, Age, Civil Status, Sex, Registered Voter */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
-                          <div className="min-w-0">
-                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Birthdate</label>
-                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
+                          <div className="min-w-0 col-span-2 sm:col-span-1">
+                            <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs whitespace-nowrap overflow-x-auto scrollbar-none">
                               {birthDateStr}
                             </div>
                           </div>
@@ -3369,23 +3406,31 @@ function getConsecutiveBatchDetails(currentBatchStr) {
         {/* Full-screen photo lightbox */}
         {photoViewer && (
           <div
-            className="fixed inset-0 bg-black z-[9999] flex flex-col"
+            className="fixed inset-0 bg-black/95 z-[9999] flex flex-col p-0 sm:p-2 animate-fade-in"
             onClick={() => setPhotoViewer(null)}
           >
-            <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-black/70">
-              <span className="text-white text-sm font-medium">Registration Form</span>
-              <button type="button"
-                
+            <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 bg-black/80 border-b border-white/10">
+              <span className="text-white text-xs sm:text-sm font-black flex items-center gap-2 truncate pr-2">
+                <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate">
+                  {typeof photoViewer === 'string' && photoViewer.includes('sample-cor')
+                    ? 'Official CvSU Naic COR Document Specimen (Halimbawa)'
+                    : 'Document & Photo Full View'}
+                </span>
+              </span>
+              <button 
+                type="button"
                 onClick={() => setPhotoViewer(null)}
-                className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+                title="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 flex flex-col items-center justify-center overflow-auto p-2" onClick={e => e.stopPropagation()}>
+            <div className="flex-1 w-full h-full flex flex-col items-center justify-center overflow-auto p-1.5 sm:p-3 touch-pan-x touch-pan-y" onClick={e => e.stopPropagation()}>
               {typeof photoViewer === 'string' && (photoViewer.startsWith('data:application/pdf') || photoViewer.endsWith('.pdf')) ? (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 rounded-xl p-2 sm:p-4">
-                  <div className="flex-1 w-full max-h-[82vh] overflow-auto flex items-center justify-center">
+                  <div className="flex-1 w-full max-h-[85vh] overflow-auto flex items-center justify-center">
                     <RegistrationDocumentPreview
                       documentUrl={photoViewer}
                       isFullscreen={true}
@@ -3402,12 +3447,25 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </div>
                 </div>
               ) : (
-                <img
-                  src={photoViewer}
-                  alt="Registration form"
-                  className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
-                  style={{ touchAction: 'pinch-zoom' }}
-                />
+                <div className="w-full h-full flex flex-col items-center justify-center overflow-auto">
+                  <img
+                    src={photoViewer}
+                    alt="Document full preview"
+                    className="max-w-full max-h-[82vh] sm:max-h-[88vh] w-auto h-auto object-contain rounded-xl shadow-2xl mx-auto select-none"
+                    style={{ touchAction: 'pinch-zoom' }}
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      href={photoViewer}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold rounded-xl border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Open Full Quality in New Tab</span>
+                    </a>
+                  </div>
+                </div>
               )}
             </div>
           </div>
