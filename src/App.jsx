@@ -3,7 +3,7 @@ import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
 import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, calendarAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
-import { initSocket, disconnectSocket } from './services/socket';
+import { initSocket, disconnectSocket, getSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
 import Landing from './pages/Landing';
