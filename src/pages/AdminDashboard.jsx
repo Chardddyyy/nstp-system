@@ -1794,7 +1794,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               </div>
 
                               {/* Bars Container */}
-                              <div className="relative z-10 h-full flex items-end justify-around gap-2 sm:gap-6 px-2 sm:px-4">
+                              <div className="relative z-10 h-full flex items-end justify-center gap-6 sm:gap-14 px-2 sm:px-4">
                                 {programDeptStats.map(item => {
                                   const totalForFilter = selectedComponentFilter === 'CWTS'
                                     ? item.cwts
@@ -1812,7 +1812,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     <div
                                       key={item.program}
                                       onClick={() => setSelectedProgramFocus(prev => prev === item.program ? null : item.program)}
-                                      className={`flex-1 max-w-[120px] flex flex-col items-center h-full justify-end group cursor-pointer transition-transform ${selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40' : ''}`}
+                                      className={`w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-transform ${selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40' : ''}`}
                                       title={`Click to filter or focus on ${item.program}`}
                                     >
                                       {/* Bar Cluster on Baseline */}
@@ -1894,30 +1894,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                   );
                                 })}
                               </div>
-                            </div>
-                          </div>
-
-                          {/* Quick Student Navigation Footer */}
-                          <div className="pt-3 mt-2 border-t border-gray-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <span className="text-gray-500 font-medium">
-                              💡 Hover over any bar column to view exact track numbers. Click a program to view students:
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {programDeptStats.map(p => (
-                                <button
-                                  key={p.program}
-                                  type="button"
-                                  onClick={() => {
-                                    const q = [];
-                                    if (p.program) q.push(`course=${encodeURIComponent(p.program)}`);
-                                    if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
-                                    navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
-                                  }}
-                                  className="text-[11px] font-bold text-emerald-800 bg-white hover:bg-emerald-100/80 border border-gray-200 px-2 py-0.5 rounded-lg transition-colors shadow-2xs"
-                                >
-                                  View {p.program} →
-                                </button>
-                              ))}
                             </div>
                           </div>
                         </div>
