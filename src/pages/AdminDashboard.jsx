@@ -247,7 +247,7 @@ function AdminDashboard() {
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([]);
 
-  const isMessageNotification = (n) => n?.type === 'message' || n?.link === '/chat' || Boolean(n?.conversationId);
+  const isMessageNotification = (n) => n?.type === 'message';
 
   const [activeNotifTab, setActiveNotifTab] = useState('all');
 

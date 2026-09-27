@@ -139,7 +139,7 @@ function InstructorDashboard() {
     return (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
   }, [viewingArchive, archiveViewData, reports, user?.department]);
 
-  const isMessageNotification = (n) => n?.type === 'message' || n?.link === '/chat' || Boolean(n?.conversationId);
+  const isMessageNotification = (n) => n?.type === 'message';
 
   const [activeNotifTab, setActiveNotifTab] = useState('all');
 

@@ -594,6 +594,8 @@ function App() {
   }, []);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const notificationsRef = useRef([]);
+  notificationsRef.current = notifications;
   const [toasts, setToasts] = useState([]);
   const [incomingCall, setIncomingCall] = useState(null);
   const [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
@@ -645,6 +647,55 @@ function App() {
     sendPing();
     const interval = setInterval(sendPing, 25000);
     return () => clearInterval(interval);
+  }, [user]);
+
+  // Native hardware device notification helper (only fires when user is authenticated in this browser)
+  const triggerDeviceNotification = useCallback((title, body, link = '/', tag = null) => {
+    // 1. Strict authentication guard: only fire device notification if user is logged into their account in this browser
+    const activeToken = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
+    if (!activeToken || !user || !user.id) return;
+
+    if (typeof Notification === 'undefined') return;
+
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const iconPath = `${baseUrl}icons/icon-192x192.png`.replace(/\/\//g, '/');
+    const options = {
+      body,
+      icon: iconPath,
+      badge: iconPath,
+      tag: tag ? String(tag) : `nstp-notif-${Date.now()}`,
+      data: { link: link || '/' },
+      renotify: true,
+      vibrate: [200, 100, 200]
+    };
+
+    const fire = () => {
+      if ('serviceWorker' in navigator) {
+        Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
+        ])
+          .then(reg => {
+            if (reg && reg.showNotification) {
+              return reg.showNotification(title, options);
+            }
+            try { new Notification(title, options); } catch (_) {}
+          })
+          .catch(() => {
+            try { new Notification(title, options); } catch (_) {}
+          });
+      } else {
+        try { new Notification(title, options); } catch (_) {}
+      }
+    };
+
+    if (Notification.permission === 'granted') {
+      fire();
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted') fire();
+      }).catch(() => {});
+    }
   }, [user]);
 
   const pushNotification = useCallback((notif) => {
@@ -707,39 +758,9 @@ function App() {
     // Play subtle audio alert chime
     playNotificationSound();
 
-    if (typeof Notification !== 'undefined') {
-      const showDeviceAlert = () => {
-        const notificationOptions = {
-          body: item.message,
-          icon: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
-          badge: `${import.meta.env.BASE_URL}icons/icon-192x192.png`,
-          tag: String(item.id),
-          data: { link: item.link || '/' },
-        };
-
-        if ('serviceWorker' in navigator) {
-          Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
-          ])
-            .then(reg => reg.showNotification(item.title, notificationOptions))
-            .catch(() => {
-              try { new Notification(item.title, notificationOptions); } catch (_) {}
-            });
-        } else {
-          try { new Notification(item.title, notificationOptions); } catch (_) {}
-        }
-      };
-
-      if (Notification.permission === 'granted') {
-        showDeviceAlert();
-      } else if (Notification.permission === 'default') {
-        Notification.requestPermission().then(perm => {
-          if (perm === 'granted') showDeviceAlert();
-        }).catch(() => {});
-      }
-    }
-  }, [user]);
+    // Trigger native OS device notification
+    triggerDeviceNotification(item.title, item.message, item.link, item.id);
+  }, [user, triggerDeviceNotification]);
 
   // Expose device notification tester function on window for device diagnostics
   useEffect(() => {
@@ -860,31 +881,64 @@ function App() {
 
     // 1. Instant Real-time Chat Messages (0ms latency without waiting for polling)
     const handleChatMessage = (payload) => {
-      if (!payload || !payload.conversationId || !payload.message) return;
-      const { conversationId, message } = payload;
+      if (!payload || !payload.message) return;
+      const conversationId = payload.conversationId || payload.convId || payload.message?.conversation_id;
+      const message = payload.message;
+      if (!conversationId) return;
+
+      const convKey = String(conversationId);
       setMessages(prev => {
-        const existing = prev[conversationId] || [];
+        const existing = prev[convKey] || [];
         if (existing.some(m => String(m.id) === String(message.id))) return prev;
         return {
           ...prev,
-          [conversationId]: [...existing, message]
+          [convKey]: [...existing, message]
         };
       });
+
+      // Update conversations list with latest message preview
+      const senderName = message.senderName || message.sender_name || payload.sender?.name || 'Someone';
+      let preview = message.text || message.message || '';
+      if (preview.startsWith('data:')) preview = 'Sent an attachment';
+      else if (preview.startsWith('📸') || message.type === 'image') preview = 'Sent a photo';
+      else if (preview.startsWith('🎤') || message.type === 'voice') preview = 'Sent a voice message';
+      else if (preview.startsWith('📎') || message.type === 'file') preview = 'Sent a file';
+      if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+      const senderId = message.senderId || message.sender_id || payload.sender?.id;
+      setConversations(prev => {
+        const targetIds = Array.isArray(payload.conversationIds) && payload.conversationIds.length > 0
+          ? payload.conversationIds.map(String)
+          : [convKey];
+        const updated = (prev || []).map(c => {
+          const isMatch = targetIds.some(id => String(c.id) === String(id));
+          if (isMatch) {
+            return {
+              ...c,
+              last_message: preview,
+              last_message_time: message.created_at || new Date().toISOString(),
+              last_sender_id: senderId,
+              last_sender_name: senderName
+            };
+          }
+          return c;
+        });
+        safeSetStorage('nstp_cached_conversations', updated);
+        return updated;
+      });
+
       window.dispatchEvent(new CustomEvent('nstp_socket_chat_message', { detail: payload }));
+      window.dispatchEvent(new CustomEvent('nstp_chat_message', { detail: payload }));
 
       // Dispatch instant device notification and on-screen toast if message is from another person
-      const isOwnMessage = (message.senderId === user.id) || (message.sender_id === user.id);
+      const isOwnMessage = String(senderId || '') === String(user.id || user._id || '');
       if (!isOwnMessage) {
-        const senderName = message.senderName || message.sender_name || 'Someone';
-        let preview = message.text || message.message || '';
-        if (preview.startsWith('data:')) preview = 'Sent an attachment';
-        else if (preview.startsWith('📸')) preview = 'Sent a photo';
-        else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
-        else if (preview.startsWith('📎')) preview = 'Sent a file';
-        if (preview.length > 80) preview = preview.slice(0, 80) + '…';
-
-        // Play audible hardware chime
-        playNotificationSound();
+        // Hardware vibration
+        try {
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([120, 80, 120]);
+          }
+        } catch (_) {}
 
         // Show immediate visual in-app toast regardless of browser permission state
         showToast(preview || 'Sent you a message', 'info', `💬 ${senderName}`);
@@ -892,7 +946,7 @@ function App() {
         pushNotification({
           id: `msg-${message.id || Date.now()}`,
           title: `New Message from ${senderName}`,
-          message: preview || 'Sent you a message',
+          message: `${senderName}: ${preview || 'Sent you a message'}`,
           type: 'message',
           link: `/chat?convId=${conversationId}`,
           conversationId,
@@ -945,6 +999,7 @@ function App() {
     };
 
     socket.on('chat:message', handleChatMessage);
+    socket.on('new_message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
     socket.on('call:incoming', handleIncomingCall);
@@ -952,6 +1007,7 @@ function App() {
 
     return () => {
       socket.off('chat:message', handleChatMessage);
+      socket.off('new_message', handleChatMessage);
       socket.off('attendance:scanned', handleAttendanceScanned);
       socket.off('enrollment:new', handleNewEnrollment);
       socket.off('call:incoming', handleIncomingCall);
@@ -1296,7 +1352,7 @@ function App() {
               title: isInstructor ? 'New Instructor Registered' : 'New Administrator Added',
               message: `${u.name || 'New Faculty'} was registered as ${isInstructor ? (u.department || 'NSTP') + ' Instructor' : 'System Administrator'}.`,
               type: 'system',
-              link: currentUser.role === 'admin' ? '/admin/dashboard' : '/chat'
+              link: currentUser.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'
             });
           }
         }
@@ -1316,7 +1372,7 @@ function App() {
     }
   }
 
-  function reconcileUnreadConversationMessages(convList, currentUser, isInitialBaseline = false) {
+  async function reconcileUnreadConversationMessages(convList, currentUser, isInitialBaseline = false) {
     if (!currentUser || !Array.isArray(convList) || convList.length === 0) return;
 
     let readMap = {};
@@ -1339,65 +1395,133 @@ function App() {
 
     const newNotifs = [];
 
-    convList.forEach(conv => {
-      if (!conv || !conv.id || !conv.last_message_time || !conv.last_message) return;
+    for (const conv of convList) {
+      if (!conv || !conv.id || !conv.last_message_time) continue;
 
       const lastSenderId = conv.last_sender_id;
-      const isOwnMessage = lastSenderId && (String(lastSenderId) === String(currentUser.id) || Number(lastSenderId) === Number(currentUser.id));
-      if (isOwnMessage) {
-        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-        return;
-      }
-
-      const msgTime = new Date(conv.last_message_time).getTime();
+      const isOwnLastMessage = lastSenderId && (String(lastSenderId) === String(currentUser.id) || Number(lastSenderId) === Number(currentUser.id));
+      const lastMsgTime = new Date(conv.last_message_time).getTime();
       const lastReadTime = readMap[conv.id] ? new Date(readMap[conv.id]).getTime() : 0;
-      const notifId = `msg-conv-${conv.id}-${msgTime}`;
 
-      // If user has read this conversation at or after the last message was sent, skip
-      if (lastReadTime && lastReadTime >= msgTime) {
+      // If user already read this conversation at or after latest message, skip
+      if (lastReadTime && lastReadTime >= lastMsgTime) {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-        return;
+        continue;
       }
 
-      // If user dismissed this notification or all alerts for this conversation, skip
-      if (dismissedSet.has(notifId) || dismissedSet.has(`conv-${conv.id}`)) {
+      // If conversation alerts are dismissed entirely, skip
+      if (dismissedSet.has(`conv-${conv.id}`)) {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-        return;
+        continue;
       }
 
-      // Check if already in notifications list
-      const alreadyInList = (notifications || []).some(n => String(n.id) === String(notifId));
-      if (alreadyInList) {
-        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-        return;
+      // Fetch the actual message history of this conversation to extract ALL unread messages
+      try {
+        const msgs = await conversationsAPI.getMessages(conv.id);
+        if (Array.isArray(msgs) && msgs.length > 0) {
+          // Update messages store in memory
+          setMessages(prev => {
+            const local = prev[conv.id] || [];
+            const fetchedIds = new Set(msgs.map(m => String(m.id)));
+            const cutoff = Date.now() - 10000;
+            const localOnly = local.filter(m =>
+              !fetchedIds.has(String(m.id)) &&
+              new Date(m.created_at || 0).getTime() > cutoff
+            );
+            return { ...prev, [conv.id]: [...msgs, ...localOnly] };
+          });
+
+          // Find ALL messages sent by someone else after lastReadTime
+          const unreadMsgs = msgs.filter(m => {
+            const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
+            const isOwn = m.sender_id && (String(m.sender_id) === String(currentUser.id) || Number(m.sender_id) === Number(currentUser.id));
+            return mTime > lastReadTime && !isOwn;
+          });
+
+          if (unreadMsgs.length > 0) {
+            unreadMsgs.forEach(m => {
+              const notifId = `msg-${m.id}`;
+              if (dismissedSet.has(notifId)) return;
+
+              // Prevent duplicate notification
+              const alreadyInList = (notificationsRef.current || []).some(n => String(n.id) === String(notifId));
+              if (alreadyInList) return;
+
+              const senderName = m.sender_name || conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
+              let preview = m.text || m.content || '';
+              if (preview.startsWith('data:')) preview = 'Sent an attachment';
+              else if (preview.startsWith('📸') || m.type === 'image') preview = 'Sent a photo';
+              else if (preview.startsWith('🎤') || m.type === 'voice') preview = 'Sent a voice message';
+              else if (preview.startsWith('📎') || m.type === 'file') preview = 'Sent a file';
+              if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+              const isMarkedRead = readNotifSet.has(notifId);
+
+              newNotifs.push({
+                id: notifId,
+                messageId: m.id,
+                title: `New Message from ${senderName}`,
+                message: `${senderName}: ${preview}`,
+                type: 'message',
+                link: `/chat?convId=${conv.id}`,
+                conversationId: conv.id,
+                senderName,
+                time: formatRelativeTime(m.created_at),
+                read: isMarkedRead ? true : false,
+                created_at: m.created_at
+              });
+            });
+          }
+        } else if (!isOwnLastMessage && conv.last_message) {
+          // Fallback if getMessages returned empty or direct last_message only
+          const notifId = `msg-conv-${conv.id}-${lastMsgTime}`;
+          if (!dismissedSet.has(notifId) && !(notificationsRef.current || []).some(n => String(n.id) === String(notifId))) {
+            const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
+            let preview = conv.last_message;
+            if (preview.startsWith('data:')) preview = 'Sent an attachment';
+            else if (preview.startsWith('📸')) preview = 'Sent a photo';
+            else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
+            else if (preview.startsWith('📎')) preview = 'Sent a file';
+            if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+            newNotifs.push({
+              id: notifId,
+              title: `New Message from ${senderName}`,
+              message: `${senderName}: ${preview}`,
+              type: 'message',
+              link: `/chat?convId=${conv.id}`,
+              conversationId: conv.id,
+              senderName,
+              time: formatRelativeTime(conv.last_message_time),
+              read: readNotifSet.has(notifId),
+              created_at: conv.last_message_time
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch messages for unread inspection in conv', conv.id, err);
+        if (!isOwnLastMessage && conv.last_message) {
+          const notifId = `msg-conv-${conv.id}-${lastMsgTime}`;
+          if (!dismissedSet.has(notifId) && !(notificationsRef.current || []).some(n => String(n.id) === String(notifId))) {
+            const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
+            newNotifs.push({
+              id: notifId,
+              title: `New Message from ${senderName}`,
+              message: `${senderName}: ${conv.last_message}`,
+              type: 'message',
+              link: `/chat?convId=${conv.id}`,
+              conversationId: conv.id,
+              senderName,
+              time: formatRelativeTime(conv.last_message_time),
+              read: readNotifSet.has(notifId),
+              created_at: conv.last_message_time
+            });
+          }
+        }
       }
 
-      const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
-      let preview = conv.last_message || '';
-      if (preview.startsWith('data:')) preview = 'Sent an attachment';
-      else if (preview.startsWith('📸')) preview = 'Sent a photo';
-      else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
-      else if (preview.startsWith('📎')) preview = 'Sent a file';
-      if (preview.length > 80) preview = preview.slice(0, 80) + '…';
-
-      const isMarkedRead = readNotifSet.has(notifId);
-
-      const notifItem = {
-        id: notifId,
-        title: `New Message from ${senderName}`,
-        message: `${senderName}: ${preview}`,
-        type: 'message',
-        link: `/chat?convId=${conv.id}`,
-        conversationId: conv.id,
-        senderName,
-        time: formatRelativeTime(conv.last_message_time),
-        read: isMarkedRead ? true : false,
-        created_at: conv.last_message_time
-      };
-
-      newNotifs.push(notifItem);
       seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-    });
+    }
 
     if (newNotifs.length > 0) {
       setNotifications(prev => {
@@ -1412,9 +1536,13 @@ function App() {
       const unreadItems = newNotifs.filter(n => !n.read);
       if (unreadItems.length > 0) {
         const top = unreadItems[0];
-        showToast(top.message, 'info', `💬 ${top.title}`);
+        const extra = unreadItems.length > 1 ? ` (+${unreadItems.length - 1} more)` : '';
+        showToast(`${top.message}${extra}`, 'info', `💬 ${top.title}`);
         if (!isInitialBaseline) {
           playNotificationSound();
+          unreadItems.slice(0, 3).forEach(item => {
+            triggerDeviceNotification(item.title, item.message, item.link, item.id);
+          });
         }
       }
     }
@@ -1423,33 +1551,10 @@ function App() {
   async function checkConversationMessages(convList, currentUser) {
     if (!currentUser) return;
     const safeConvs = Array.isArray(convList) ? convList : [];
-    reconcileUnreadConversationMessages(safeConvs, currentUser, false);
+    await reconcileUnreadConversationMessages(safeConvs, currentUser, false);
 
     for (const conv of safeConvs) {
       const currTime = conv.last_message_time ? String(conv.last_message_time) : null;
-      const prevTime = seenConvLastMessageTime.current[conv.id];
-
-      if (currTime && prevTime && currTime !== prevTime) {
-        try {
-          const msgs = await conversationsAPI.getMessages(conv.id);
-          if (msgs.length > 0) {
-            const convId = conv.id;
-            setMessages(prev => {
-              const local = prev[convId] || [];
-              const fetchedIds = new Set(msgs.map(m => String(m.id)));
-              const cutoff = Date.now() - 10000;
-              const localOnly = local.filter(m =>
-                !fetchedIds.has(String(m.id)) &&
-                new Date(m.created_at || 0).getTime() > cutoff
-              );
-              return { ...prev, [convId]: [...msgs, ...localOnly] };
-            });
-          }
-        } catch {
-          console.warn('Failed to refresh messages for conversation', conv.id);
-        }
-      }
-
       if (currTime) {
         seenConvLastMessageTime.current[conv.id] = currTime;
       }
@@ -1561,105 +1666,13 @@ function App() {
     }
   }, [user]);
 
-  // Real-time incoming chat message socket listener & device alert
-  useEffect(() => {
-    if (!user) return;
-    const s = getSocket();
-    if (!s) return;
-
-    const handleIncomingChatMessage = (data) => {
-      if (!data || !data.message) return;
-      const msg = data.message;
-      const senderId = msg.sender_id || data.sender?.id;
-      if (String(senderId) === String(user.id)) return; // Don't notify own messages
-
-      const senderName = msg.sender_name || data.sender?.name || 'Someone';
-      const convId = data.conversationId;
-      const rawText = msg.text || (msg.type === 'image' ? 'Sent a photo' : msg.type === 'file' ? 'Sent a file' : msg.type === 'voice' ? 'Sent a voice message' : 'Sent a message');
-      const preview = rawText.length > 80 ? rawText.slice(0, 80) + '…' : rawText;
-
-      // 1. Play chime tone on device
-      playNotificationSound();
-
-      // 2. Hardware vibration
-      try {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([120, 80, 120]);
-        }
-      } catch (_) {}
-
-      // 3. Dispatch system notification & OS device banner
-      pushNotification({
-        id: `msg-sock-${msg.id || Date.now()}`,
-        title: `Message from ${senderName}`,
-        message: `${senderName}: ${preview}`,
-        type: 'message',
-        link: `/chat?convId=${convId}`,
-        conversationId: convId,
-        senderName
-      });
-
-      // 4. Update messages store in real-time across all matching conversation alias IDs
-      const targetConvIds = Array.isArray(data.conversationIds) && data.conversationIds.length > 0
-        ? data.conversationIds
-        : (convId ? [convId] : []);
-
-      if (targetConvIds.length > 0) {
-        setMessages(prev => {
-          let hasChanges = false;
-          const next = { ...prev };
-          targetConvIds.forEach(id => {
-            const list = next[id] || [];
-            if (!list.some(m => String(m.id) === String(msg.id))) {
-              next[id] = [...list, msg];
-              hasChanges = true;
-            }
-          });
-          if (hasChanges) {
-            safeSetStorage('nstp_cached_messages', next);
-            return next;
-          }
-          return prev;
-        });
-
-        setConversations(prev => {
-          const updated = (prev || []).map(c => {
-            const isMatch = targetConvIds.some(id => String(c.id) === String(id));
-            if (isMatch) {
-              return {
-                ...c,
-                last_message: rawText,
-                last_message_time: msg.created_at || new Date().toISOString(),
-                last_sender_id: senderId,
-                last_sender_name: senderName
-              };
-            }
-            return c;
-          });
-          safeSetStorage('nstp_cached_conversations', updated);
-          return updated;
-        });
-      }
-
-      // 5. Dispatch event for active Chat page to immediately update viewport
-      try {
-        window.dispatchEvent(new CustomEvent('nstp_chat_message', { detail: data }));
-      } catch (_) {}
-    };
-
-    s.on('new_message', handleIncomingChatMessage);
-    return () => {
-      s.off('new_message', handleIncomingChatMessage);
-    };
-  }, [user, pushNotification]);
-
   // Persist notifications to storage ONLY AFTER they have been loaded for this active user
   useEffect(() => {
     if (!user || notificationsLoadedUserRef.current !== user.id) return;
     safeSetStorage(getNotificationStorageKey(user), notifications);
   }, [notifications, user]);
 
-  // Real-time polling while logged in (pauses when laptop lid is closed or tab is hidden to prevent ERR_NETWORK_IO_SUSPENDED)
+  // Real-time polling while logged in (runs continuously in background as long as user is logged in)
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
     if (!user || !token || loading) return;
@@ -1668,7 +1681,6 @@ function App() {
     const interval = setInterval(() => {
       const activeToken = typeof window !== 'undefined' ? localStorage.getItem('nstp_token') : null;
       if (!activeToken || !user) return;
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       refreshLiveData();
     }, POLL_INTERVAL_MS);
