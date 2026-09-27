@@ -52,7 +52,7 @@ Makapagdisenyo, makabuo, at makapag-deploy ng isang web-based at cloud-native **
 2. **Dynamic Digital ID Card with Anti-Tamper QR Code:** Makapag-generate ng opisyal na printable at downloadable Digital ID Card na may encrypted payload para sa bawat lehitimong estudyante.
 3. **Real-Time Attendance Scanner with Track Isolation:** Makabuo ng QR scanner gamit ang camera o manual input na nagpapatupad ng mahigpit na track isolation (halimbawa: hindi kailanman mairerekord ng ROTC instructor ang CWTS student).
 4. **Automated Lateness Detection & Grace Period Engine:** Makapag-kalkula nang awtomatiko kung "On-Time" o "Late" ang estudyante batay sa class start time at napiling grace period (10, 15, o 30 minuto).
-5. **Real-Time WebSockets Communication & Audio Alerts:** Makapagbigay ng zero-latency chat at WebRTC communication sa pagitan ng Admin at Instructors na may instant hardware audio chime at visual notification.
+5. **Real-Time WebSockets Communication, Voice Messages & Device Notifications:** Makapagbigay ng zero-latency messaging, interactive voice notes, at instant browser/device notifications na may kasamang hardware audio chime sa pagitan ng Admin at Instructors nang hindi na kailangang mag-refresh ng pahina.
 6. **CHED & OSDS Compliance Reporting:** Makapag-export ng OSDS-NSTP Form 2-A, Form 2-B, at CHED masterlist sa Excel at PDF format sa isang pindot lamang.
 7. **Automated Disaster Recovery & Dual Cloud Redundancy:** Makapagtatag ng automated daily compressed database backup papunta sa Google Drive at Aiven Cloud.
 
@@ -104,10 +104,10 @@ Makapagdisenyo, makabuo, at makapag-deploy ng isang web-based at cloud-native **
                ┌───────────────────┴───────────────────┐
                ▼                                       ▼
   ┌─────────────────────────┐             ┌─────────────────────────┐
-  │   AIVEN CLOUD MYSQL     │             │ THIRD-PARTY INTEGRATIONS│
-  │ • TLS/SSL Encrypted     │             │ • Cloudinary (Storage)  │
+  │   AIVEN CLOUD MYSQL     │             │ CLOUD & DEVICE SERVICES │
+  │ • TLS/SSL Encrypted     │             │ • Cloudinary (Media/COR)│
   │ • Keep-Alive Pool (10)  │             │ • Google Drive Webhook  │
-  │ • Auto-failover & Dumps │             │ • Semaphore SMS API     │
+  │ • Auto-failover & Dumps │             │ • Device Push Alerts    │
   └─────────────────────────┘             └─────────────────────────┘
 ```
 
@@ -119,7 +119,7 @@ Makapagdisenyo, makabuo, at makapag-deploy ng isang web-based at cloud-native **
 | **Build Tool** | `Vite 7` | Mas mabilis ang HMR (Hot Module Replacement) at optimized production builds kumpara sa lumang Webpack o Create-React-App. |
 | **Styling** | `Tailwind CSS v4` | Modernong utility-first styling engine na nagbibigay ng mataas na UI/UX polish, glassmorphism, at responsive mobile layouts nang walang mabigat na CSS bundles. |
 | **Runtime & Backend** | `Node.js & Express` | Non-blocking, event-driven I/O model na kayang humawak ng sabay-sabay na concurrent requests at socket connections sa mababang memory footprint. |
-| **Realtime Gateway** | `Socket.io v4.8` | Real-time full-duplex communication para sa 0ms instant messaging, live attendance broadcast, at instant incoming call signals. |
+| **Realtime Gateway** | `Socket.io v4.8` | Real-time full-duplex communication para sa 0ms instant text messaging, voice messages, live attendance broadcast, at instant device notification alerts. |
 | **Database** | `Aiven Cloud MySQL` | Managed, enterprise-grade relational database na may automated high-availability, continuous TLS encryption, at standardized SQL structure. |
 | **Hardware Audio** | `Web Audio API` | 100% self-contained synthesized frequency oscillator na nagpapatunog ng malinaw na chimes nang hindi nangangailangan ng panlabas na mp3 files. |
 | **Security Layer** | `Helmet & Rate-Limit` | Pinoprotektahan ang server laban sa HTTP header vulnerabilities, clickjacking, brute-force login attacks, at DoS attempts. |
@@ -192,10 +192,11 @@ Makapagdisenyo, makabuo, at makapag-deploy ng isang web-based at cloud-native **
 * May interactive toggle para sa All Tracks, CWTS-only, LTS-only, at ROTC-only.
 * Puwedeng i-click ang kahit anong column para mag-focus at mag-filter sa naturang kurso.
 
-### 5. Instant Real-Time Chat & Virtual Calling
-* Powered by Socket.io at WebRTC signaling.
-* May instant in-app toast notification at audio chime kapag may nagpadala ng mensahe.
-* Nagpapadala ng SMS alert via Semaphore kapag nagpadala ang Admin ng urgent memo.
+### 5. Instant Real-Time Chat, Voice Messages & Device Notifications
+* Powered by Socket.io real-time engine (zero-latency message delivery).
+* **Text Chat & Voice Messaging:** Suportado ang direct at group chat, file/photo attachments, at **Voice Messages** (Audio recording gamit ang microphone ng device at embedded audio player).
+* **Device & In-App Alerts:** May synthesized hardware audio chime gamit ang Web Audio API, visual in-app toast, at browser/device push notification kapag may bagong mensahe nang hindi na kailangang mag-refresh ng page.
+* Walang dependency sa magastos na SMS gateway at walang video/voice call features—nakatuon sa magaan, mabilis, at libreng web chat at voice notes.
 
 ### 6. Automated Document & Report Generation
 * **Digital ID Cards:** Isang pindot para mag-generate ng standardized high-resolution PDF ID na may QR code.
@@ -288,10 +289,10 @@ Sundin ang pagkakasunod-sunod na ito sa harap ng defense panel para sa isang per
  └─ Test B (Matched Track): I-scan ang ID ni Juan (ROTC student).
     ↳ Resulta: Tutunog ang audio beep, lalabas si Juan bilang "Timed In".
 
-[ Hakbang 7: Real-Time Chat & Announcements ]
+[ Hakbang 7: Real-Time Chat, Voice Messages & Device Notifications ]
  └─ Magbukas ng dalawang magkaibang browser window (Admin at Instructor).
- └─ Mag-chat mula sa Admin.
-    ↳ Resulta: Agad itong tutunog (chime) at magpapakita ng visual toast sa Instructor window nang walang page reload!
+ └─ Mag-chat o magpadala ng Voice Message mula sa Admin.
+    ↳ Resulta: Agad itong tutunog (hardware chime) at magpapakita ng visual toast at device notification sa Instructor window nang walang page reload!
 
 [ Hakbang 8: Official Reports & CHED Export ]
  └─ Ipakita ang CHED Masterlist Export sa Excel at OSDS Form 2-A/2-B.
