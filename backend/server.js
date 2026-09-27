@@ -4832,16 +4832,14 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
         }
       };
 
-      // Emit to conversation room
-      io.to(`conv_${targetConvId}`).emit('new_message', messagePayload);
+      // Emit to conversation room using standardized chat:message event
       io.to(`conv_${targetConvId}`).emit('chat:message', messagePayload);
 
-      // Emit directly to recipients' private rooms
+      // Emit directly to recipients' private rooms (for background notifications)
       const [cRows] = await pool.execute('SELECT is_group, participant_1_id, participant_2_id FROM conversations WHERE id = ?', [targetConvId]).catch(() => [[]]);
       if (cRows && cRows[0] && cRows[0].is_group) {
         const [parts] = await pool.execute('SELECT user_id FROM conversation_participants WHERE conversation_id = ? AND user_id != ?', [targetConvId, req.user.id]).catch(() => [[]]);
         (parts || []).forEach(p => {
-          io.to(`user_${p.user_id}`).emit('new_message', messagePayload);
           io.to(`user_${p.user_id}`).emit('chat:message', messagePayload);
         });
       } else if (cRows && cRows[0]) {
@@ -4851,26 +4849,19 @@ app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) 
         const otherId = p1 === myId ? p2 : p1;
         messagePayload.conversationIds = Array.from(new Set([String(targetConvId), `${p1}-${p2}`, `${p2}-${p1}`]));
         if (otherId) {
-          io.to(`user_${otherId}`).emit('new_message', messagePayload);
           io.to(`user_${otherId}`).emit('chat:message', messagePayload);
         }
-        // Also emit to sender's other connected tabs
-        io.to(`user_${myId}`).emit('new_message', messagePayload);
-        io.to(`user_${myId}`).emit('chat:message', messagePayload);
       } else if (typeof targetConvId === 'string' && targetConvId.includes('-')) {
         const [u1, u2] = targetConvId.split('-').map(Number);
         const myId = Number(req.user.id);
         const otherId = u1 === myId ? u2 : u1;
         messagePayload.conversationIds = Array.from(new Set([String(targetConvId), `${u1}-${u2}`, `${u2}-${u1}`]));
         if (otherId) {
-          io.to(`user_${otherId}`).emit('new_message', messagePayload);
           io.to(`user_${otherId}`).emit('chat:message', messagePayload);
         }
-        io.to(`user_${myId}`).emit('new_message', messagePayload);
-        io.to(`user_${myId}`).emit('chat:message', messagePayload);
       }
     } catch (sockErr) {
-      console.warn('[Socket Dispatcher] new_message broadcast error:', sockErr.message);
+      console.warn('[Socket Dispatcher] chat:message broadcast error:', sockErr.message);
     }
 
     // Dispatch SMS notification if admin is sending message

@@ -341,7 +341,7 @@ function AdminDashboard() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(true);
-  const [barChartMode, setBarChartMode] = useState('vertical'); // 'vertical' | 'horizontal'
+  const [barChartMode] = useState('vertical');
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
@@ -1581,34 +1581,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
               {showProgramAnalytics && (
                 <>
-                  {/* Graph Orientation Toggle */}
-                  <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setBarChartMode('vertical')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        barChartMode === 'vertical'
-                          ? 'bg-white text-emerald-900 shadow-2xs'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                      title="Vertical Grouped Column Bar Graph"
-                    >
-                      📊 Bar Graph
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBarChartMode('horizontal')}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        barChartMode === 'horizontal'
-                          ? 'bg-white text-emerald-900 shadow-2xs'
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                      title="Horizontal Stacked Breakdown"
-                    >
-                      📈 List View
-                    </button>
-                  </div>
-
                   {/* Component Track Filter */}
                   <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
                     {['ALL', 'CWTS', 'LTS', 'ROTC'].map(filter => (

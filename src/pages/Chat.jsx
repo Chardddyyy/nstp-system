@@ -1725,7 +1725,19 @@ function Chat() {
 
   // Get messages for active conversation - MUST be declared AFTER activeConversation
   const currentMessages = useMemo(() => {
-    return activeConversation ? (messages[activeConversation.id] || []) : [];
+    if (!activeConversation) return [];
+    const rawList = messages[activeConversation.id] || [];
+    const seenIds = new Set();
+    const unique = [];
+    for (const m of rawList) {
+      if (!m) continue;
+      const key = String(m.id ?? `${m.created_at || ''}_${m.text || ''}`);
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        unique.push(m);
+      }
+    }
+    return unique;
   }, [activeConversation, messages]);
 
   // Extract all media, documents, and voice notes from the active conversation (Messenger-style Backreader)

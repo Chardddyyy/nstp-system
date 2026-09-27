@@ -836,7 +836,7 @@ function App() {
       const { conversationId, message } = payload;
       setMessages(prev => {
         const existing = prev[conversationId] || [];
-        if (existing.some(m => m.id === message.id)) return prev;
+        if (existing.some(m => String(m.id) === String(message.id))) return prev;
         return {
           ...prev,
           [conversationId]: [...existing, message]
@@ -916,7 +916,6 @@ function App() {
       }
     };
 
-    socket.on('new_message', handleChatMessage);
     socket.on('chat:message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
@@ -924,7 +923,6 @@ function App() {
     socket.on('call:ended', handleCallEnded);
 
     return () => {
-      socket.off('new_message', handleChatMessage);
       socket.off('chat:message', handleChatMessage);
       socket.off('attendance:scanned', handleAttendanceScanned);
       socket.off('enrollment:new', handleNewEnrollment);
@@ -2142,10 +2140,16 @@ function App() {
       sender_id: newMsg.sender_id ?? user?.id,
     };
 
-    setMessages(prev => ({
-      ...prev,
-      [conversationId]: [...(prev[conversationId] || []), msgWithTime],
-    }));
+    setMessages(prev => {
+      const existing = prev[conversationId] || [];
+      if (existing.some(m => String(m.id) === String(msgWithTime.id))) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [conversationId]: [...existing, msgWithTime],
+      };
+    });
 
     setConversations(prev => prev.map(c => {
       if (c.id !== conversationId) return c;
