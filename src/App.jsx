@@ -676,6 +676,9 @@ function App() {
       return [item, ...prev].slice(0, 50);
     });
 
+    // Play subtle audio alert chime
+    playNotificationSound();
+
     if (typeof Notification !== 'undefined') {
       const showDeviceAlert = () => {
         const notificationOptions = {
@@ -818,7 +821,16 @@ function App() {
     const socket = initSocket();
     if (!socket) return;
 
-    // 1. Instant Real-time Chat Messages (0ms latency without waiting for 8s polling)
+    // Explicitly authenticate current socket with user profile
+    if (user.id || user._id) {
+      socket.emit('authenticate', {
+        userId: Number(user.id || user._id),
+        department: user.department,
+        role: user.role
+      });
+    }
+
+    // 1. Instant Real-time Chat Messages (0ms latency without waiting for polling)
     const handleChatMessage = (payload) => {
       if (!payload || !payload.conversationId || !payload.message) return;
       const { conversationId, message } = payload;
@@ -832,7 +844,7 @@ function App() {
       });
       window.dispatchEvent(new CustomEvent('nstp_socket_chat_message', { detail: payload }));
 
-      // Dispatch instant device notification if message is from another person
+      // Dispatch instant device notification and on-screen toast if message is from another person
       const isOwnMessage = (message.senderId === user.id) || (message.sender_id === user.id);
       if (!isOwnMessage) {
         const senderName = message.senderName || message.sender_name || 'Someone';
@@ -842,6 +854,12 @@ function App() {
         else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
         else if (preview.startsWith('📎')) preview = 'Sent a file';
         if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+        // Play audible hardware chime
+        playNotificationSound();
+
+        // Show immediate visual in-app toast regardless of browser permission state
+        showToast(preview || 'Sent you a message', 'info', `💬 ${senderName}`);
 
         pushNotification({
           id: `msg-${message.id || Date.now()}`,
@@ -898,6 +916,7 @@ function App() {
       }
     };
 
+    socket.on('new_message', handleChatMessage);
     socket.on('chat:message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
@@ -905,13 +924,14 @@ function App() {
     socket.on('call:ended', handleCallEnded);
 
     return () => {
+      socket.off('new_message', handleChatMessage);
       socket.off('chat:message', handleChatMessage);
       socket.off('attendance:scanned', handleAttendanceScanned);
       socket.off('enrollment:new', handleNewEnrollment);
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
     };
-  }, [user, pushNotification]);
+  }, [user, pushNotification, showToast]);
 
   function resetRealtimeBaseline() {
     baselineReady.current = false;

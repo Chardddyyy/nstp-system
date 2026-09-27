@@ -4,7 +4,6 @@ import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGene
 import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
-import StudentGradesModal from '../components/StudentGradesModal';
 import OSDSNSTPForm from '../components/OSDSNSTPForm';
 import OSDSNSTPForm2B from '../components/OSDSNSTPForm2B';
 import {
@@ -79,7 +78,6 @@ function StudentManagement() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showBatchIdModal, setShowBatchIdModal] = useState(false);
   const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
-  const [showGradesModal, setShowGradesModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Form A & Form B Export and Preview Modals state
@@ -1113,10 +1111,6 @@ function StudentManagement() {
           setShowAttendanceMatrix(false);
           return;
         }
-        if (showGradesModal) {
-          setShowGradesModal(false);
-          return;
-        }
         if (showFormAPreview) {
           setShowFormAPreview(false);
           return;
@@ -1139,7 +1133,7 @@ function StudentManagement() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     confirmDialog, showCameraModal, showViewModal, showAddModal, showEditModal, 
-    showExportModal, showBatchIdModal, showAttendanceMatrix, showGradesModal,
+    showExportModal, showBatchIdModal, showAttendanceMatrix,
     showFormAPreview, showFormBPreview, showFormAModal, showFormBModal
   ]);
 
@@ -1284,18 +1278,6 @@ function StudentManagement() {
                 </button>
               )}
 
-              {/* Encode / View Grades Button (Instructors Only) */}
-              {!isAdmin && (
-                <button type="button"
-                  onClick={() => setShowGradesModal(true)}
-                  title={viewingArchive ? "View official grades for past academic batch (locked)" : "Encode and submit student semester grades and print official grade sheet"}
-                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-emerald-600/50 whitespace-nowrap"
-                >
-                  {viewingArchive ? <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200 shrink-0" /> : <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 shrink-0" />}
-                  <span className="hidden sm:inline">{viewingArchive ? 'View Official Grades' : 'Encode Grades'}</span>
-                  <span className="sm:hidden">{viewingArchive ? 'View Grades' : 'Grades'}</span>
-                </button>
-              )}
 
               {/* View Attendance & Absences Matrix Button */}
               {!isAdmin && !viewingArchive && (
@@ -4323,21 +4305,6 @@ function StudentManagement() {
           />
         )}
 
-        {/* Student Semester Grades Encoding & Grading Sheet Modal */}
-        <StudentGradesModal
-          isOpen={showGradesModal}
-          onClose={() => {
-            setShowGradesModal(false);
-            loadGradesData();
-            try { refreshData?.(); } catch (_) {}
-          }}
-          onSaved={() => {
-            loadGradesData();
-            try { refreshData?.(); } catch (_) {}
-          }}
-          students={sourceStudents}
-          currentUser={user}
-        />
 
         {/* ── FORM B EXPORT & CONFIGURATION MODAL ───────────────────────── */}
         {showFormBModal && (

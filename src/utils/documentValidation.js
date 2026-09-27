@@ -39,13 +39,11 @@ export function analyzeDocumentFile(fileOrDataUrl) {
       try {
         const width = img.naturalWidth || img.width;
         const height = img.naturalHeight || img.height;
-        const aspectRatio = width / (height || 1);
 
         // Visual analysis based on official CvSU Naic COR specimen (sample-cor.jpg):
         // 1. Paper background: White/light printed bond paper (high lightness ratio)
         // 2. Paper neutrality: Low color chroma/saturation (black ink on white paper, very low color variance)
         // 3. Ink marks: Contains dark print/table strokes (luminance < 115) against light paper (luminance > 140)
-        // NOTE: Does NOT discriminate based on aspect ratio or square/rectangular size ("wag lang sa size, sa mismong itsura ng papel")
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = Math.min(width, 100);
@@ -84,6 +82,7 @@ export function analyzeDocumentFile(fileOrDataUrl) {
 
         const paperRatio = lightPaperCount / (totalSampled || 1);
         const chromaRatio = highChromaCount / (totalSampled || 1);
+        const inkRatio = darkInkCount / (totalSampled || 1);
 
         // A valid COR paper document has a dominant light paper background and low overall color saturation
         // If image is heavily colored (selfie, clothing, nature, portrait photo) or lacks paper background:
@@ -103,6 +102,16 @@ export function analyzeDocumentFile(fileOrDataUrl) {
             isSuspicious: true,
             badgeLabel: '⚠️ Non-Paper Image',
             reason: 'The uploaded file appears too dark to be an official printed paper Certificate of Registration (COR).'
+          });
+        }
+
+        // If paper has virtually zero ink/printed text (blank white image)
+        if (inkRatio < 0.005) {
+          return resolve({
+            isDocument: false,
+            isSuspicious: true,
+            badgeLabel: '⚠️ Blank Document',
+            reason: 'The uploaded document contains no detectable printed text, table grids, or registrar markings.'
           });
         }
 

@@ -1899,30 +1899,17 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  // Accurate Monotonic Visitor Count: Genuine CvSU Naic portal visits
+  // Genuine CvSU Naic portal visitors tracked from server telemetry
   let cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-  // Sanitize away old hardcoded 1428 baseline if previously stored
   if (cachedVisitors >= 1428) {
-    cachedVisitors = 44; // 39 enrolled students + 5 instructors/admins
+    cachedVisitors = 21;
     try {
       localStorage.setItem('nstp_cached_total_visitors', String(cachedVisitors));
     } catch (_) {}
   }
   if (!cachedVisitors || cachedVisitors < 1) {
-    cachedVisitors = 44;
-    try {
-      localStorage.setItem('nstp_cached_total_visitors', String(cachedVisitors));
-    } catch (_) {}
+    cachedVisitors = 21;
   }
-
-  // Increment once per browser session
-  try {
-    if (!sessionStorage.getItem('nstp_session_visit_counted')) {
-      sessionStorage.setItem('nstp_session_visit_counted', 'true');
-      cachedVisitors += 1;
-      localStorage.setItem('nstp_cached_total_visitors', String(cachedVisitors));
-    }
-  } catch (_) {}
 
   const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '44', 10);
   // Accurate active online count (at least 1 for the current active visitor)
@@ -2102,7 +2089,12 @@ export const attendanceAPI = {
       }
       return res;
     } catch (err) {
-      // Local client-side fallback if server is unreachable or degraded
+      // If server returned 403 Forbidden (e.g. Instructor of ROTC scanning CWTS student), do NOT fall back to local logging!
+      if (err && (err.status === 403 || (err.message && err.message.toLowerCase().includes('unauthorized')))) {
+        throw err;
+      }
+
+      // Local client-side fallback ONLY if server is unreachable and department matches
       try {
         const cached = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
         const cleanInput = (data.tokenOrId || '').trim();
@@ -2113,6 +2105,20 @@ export const attendanceAPI = {
           (s.name && s.name.toLowerCase().includes(cleanInput.toLowerCase()))
         );
         if (st) {
+          // Strict department validation even in offline mode:
+          let currentUser = null;
+          try {
+            currentUser = JSON.parse(localStorage.getItem('nstp_user') || 'null');
+          } catch (_) {}
+
+          if (currentUser && currentUser.role === 'instructor' && currentUser.department) {
+            const sDept = (st.department || st.component || '').toUpperCase();
+            const uDept = String(currentUser.department).toUpperCase();
+            if (sDept && uDept && sDept !== uDept && !sDept.includes(uDept)) {
+              throw new Error(`Unauthorized: Student belongs to ${st.department}, but your account is assigned to ${currentUser.department}`);
+            }
+          }
+
           const actName = data.activity_name || 'NSTP Field Session';
           const sType = data.scan_type || 'TIME_IN';
           const rec = {
@@ -2138,7 +2144,11 @@ export const attendanceAPI = {
             record: rec
           };
         }
-      } catch (_) {}
+      } catch (innerErr) {
+        if (innerErr && innerErr.message && innerErr.message.includes('Unauthorized')) {
+          throw innerErr;
+        }
+      }
       throw err;
     }
   },

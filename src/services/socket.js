@@ -41,7 +41,20 @@ export function initSocket() {
   });
 
   socket.on('connect', () => {
-    // Successfully connected
+    // Authenticate socket connection so user room and department room are joined immediately
+    try {
+      const stored = localStorage.getItem('nstp_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && (u.id || u._id)) {
+          socket.emit('authenticate', {
+            userId: Number(u.id || u._id),
+            department: u.department,
+            role: u.role
+          });
+        }
+      }
+    } catch (_) {}
   });
 
   socket.on('disconnect', (reason) => {

@@ -17,6 +17,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: DATABASE_URL
+        sync: false
       - key: DB_HOST
         sync: false
       - key: DB_PORT
@@ -30,7 +32,7 @@ services:
       - key: DB_SSL
         value: "true"
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: ALLOWED_ORIGINS
         value: "https://chardddyyy.github.io,http://localhost:5173,http://localhost:3000"
       - key: GDRIVE_WEBHOOK_URL

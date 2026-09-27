@@ -269,9 +269,9 @@ function Landing() {
     return () => observer.disconnect();
   }, []);
 
-  // Real-time Telemetry & Active Online Users state (accurate, steady, monotonic)
+  // Real-time Telemetry & Active Online Users state (accurate, steady)
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 44;
+    let cachedVisitors = 21;
     let cachedUsers = 44;
     try {
       const stored = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
@@ -300,8 +300,8 @@ function Landing() {
         if (stats && isMounted) {
           setTelemetry(prev => {
             const rawIncomingVisitors = typeof stats.totalVisitors === 'number' ? stats.totalVisitors : 0;
-            // Never drop or fluctuate down: monotonic progression
-            const nextVisitors = rawIncomingVisitors > 0 ? Math.max(prev.totalVisitors || 44, rawIncomingVisitors) : (prev.totalVisitors || 44);
+            // Genuine total visitors from backend telemetry
+            const nextVisitors = rawIncomingVisitors > 0 ? rawIncomingVisitors : (prev.totalVisitors || 21);
             // Real active online count (at least 1 for the current session)
             const rawActive = typeof stats.activeUsers === 'number'
               ? stats.activeUsers
@@ -339,7 +339,7 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = telemetry.totalVisitors ?? 44;
+  const totalVisitorsCount = telemetry.totalVisitors ?? 21;
   const activeOnlineCount = Math.max(1, telemetry.activeOnlineCount ?? 1);
 
   const startTimer = useCallback(() => {

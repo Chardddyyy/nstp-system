@@ -340,8 +340,8 @@ function AdminDashboard() {
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showProgramAnalytics, setShowProgramAnalytics] = useState(false);
+  const [showProgramAnalytics, setShowProgramAnalytics] = useState(true);
+  const [barChartMode, setBarChartMode] = useState('vertical'); // 'vertical' | 'horizontal'
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
@@ -417,9 +417,9 @@ function AdminDashboard() {
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
   const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
   const [selectedProgramFocus, setSelectedProgramFocus] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(true);
   const [enrollmentSortCol, setEnrollmentSortCol] = useState(null);
   const [enrollmentSortDir, setEnrollmentSortDir] = useState('asc');
-  const [analyticsViewMode, setAnalyticsViewMode] = useState('chart');
 
   const handleSortEnrollment = (col) => {
     if (enrollmentSortCol === col) {
@@ -472,21 +472,6 @@ function AdminDashboard() {
     }
     return stats;
   }, [viewingArchive, archiveViewData, stats]);
-
-  const currentStats = useMemo(() => {
-    const total = displayStats.totalStudents;
-    const completedCount = viewingArchive && archiveViewData 
-      ? (archiveViewData.completed || 0) 
-      : students.filter(s => s.status === 'completed').length;
-    const rate = total > 0 ? Math.round((completedCount / total) * 100) : 0;
-    return {
-      total: displayStats.totalStudents,
-      cwts: displayStats.cwtsStudents,
-      lts: displayStats.ltsStudents,
-      rotc: displayStats.rotcStudents,
-      completionRate: rate
-    };
-  }, [displayStats, viewingArchive, archiveViewData, students]);
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
@@ -1184,64 +1169,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
                     </div>
 
-                    {/* Device Notification Status & Test Bar */}
-                    <div className="px-3 py-2 bg-slate-50 border-b border-gray-100 flex items-center justify-between gap-2 text-[10.5px]">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${
-                          typeof Notification !== 'undefined' && Notification.permission === 'granted'
-                            ? 'bg-emerald-500 animate-pulse'
-                            : typeof Notification !== 'undefined' && Notification.permission === 'denied'
-                              ? 'bg-rose-500'
-                              : 'bg-amber-400'
-                        }`} />
-                        <span className="font-semibold text-gray-700 truncate">
-                          {typeof Notification === 'undefined'
-                            ? 'Device alerts not supported'
-                            : Notification.permission === 'granted'
-                              ? 'Device alerts enabled'
-                              : Notification.permission === 'denied'
-                                ? 'Device alerts blocked'
-                                : 'Device alerts disabled'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {typeof Notification !== 'undefined' && Notification.permission === 'default' && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                const p = await Notification.requestPermission();
-                                if (p === 'granted' && window.testDeviceNotification) {
-                                  window.testDeviceNotification('NSTP Notifications Enabled', 'You will now receive device alerts for new messages, deadlines, and submissions!');
-                                }
-                              } catch (_) {}
-                            }}
-                            className="px-2 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md font-bold text-[10px] transition-colors cursor-pointer shadow-2xs"
-                          >
-                            Enable Alerts
-                          </button>
-                        )}
-                        {typeof Notification !== 'undefined' && Notification.permission === 'granted' && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (window.testDeviceNotification) {
-                                window.testDeviceNotification('NSTP Notification Test', 'Device push notifications are working properly on your device!');
-                              }
-                            }}
-                            className="px-2 py-0.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-bold text-[10px] transition-colors cursor-pointer"
-                            title="Click to test device notification banner"
-                          >
-                            Test Alert
-                          </button>
-                        )}
-                        {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
-                          <span className="text-[9.5px] text-rose-600 font-medium" title="Unblock notifications in your browser URL lock icon">
-                            Check Settings
-                          </span>
-                        )}
-                      </div>
-                    </div>
 
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
                       {(!systemNotifications || systemNotifications.length === 0) ? (
@@ -1616,7 +1543,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
           </div>
         )}
 
-        {/* Interactive Analytics & Program Distribution Panel */}
+        {/* Interactive Analytics & Program Distribution Bar Graph Panel */}
         <div className={`rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6 transition-all ${viewingArchive ? 'bg-gray-100' : 'bg-white'}`}>
           <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${showProgramAnalytics ? 'mb-5 pb-4 border-b border-gray-100' : ''}`}>
             <div>
@@ -1629,10 +1556,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   Total Students: {displayStats.totalStudents}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Interactive student enrollment metrics across degree programs and NSTP components</p>
+              <p className="text-xs text-gray-500 mt-1">Interactive student enrollment bar graph across degree programs and NSTP components</p>
             </div>
 
-            {/* Interactive View Toggles & Component Filter & Hide Button */}
+            {/* Interactive Controls & Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -1653,35 +1580,66 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               </button>
 
               {showProgramAnalytics && (
-                <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
-                  {['ALL', 'CWTS', 'LTS', 'ROTC'].map(filter => (
+                <>
+                  {/* Graph Orientation Toggle */}
+                  <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
                     <button
-                      key={filter}
                       type="button"
-                      onClick={() => setSelectedComponentFilter(filter)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                        selectedComponentFilter === filter
-                          ? filter === 'CWTS'
-                            ? 'bg-emerald-600 text-white shadow-2xs'
-                            : filter === 'LTS'
-                            ? 'bg-purple-600 text-white shadow-2xs'
-                            : filter === 'ROTC'
-                            ? 'bg-rose-600 text-white shadow-2xs'
-                            : 'bg-white text-emerald-900 shadow-2xs'
+                      onClick={() => setBarChartMode('vertical')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        barChartMode === 'vertical'
+                          ? 'bg-white text-emerald-900 shadow-2xs'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
+                      title="Vertical Grouped Column Bar Graph"
                     >
-                      {filter === 'ALL' ? 'All Tracks' : filter}
+                      📊 Bar Graph
                     </button>
-                  ))}
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setBarChartMode('horizontal')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        barChartMode === 'horizontal'
+                          ? 'bg-white text-emerald-900 shadow-2xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                      title="Horizontal Stacked Breakdown"
+                    >
+                      📈 List View
+                    </button>
+                  </div>
+
+                  {/* Component Track Filter */}
+                  <div className="flex items-center bg-gray-100 p-1 rounded-xl shrink-0">
+                    {['ALL', 'CWTS', 'LTS', 'ROTC'].map(filter => (
+                      <button
+                        key={filter}
+                        type="button"
+                        onClick={() => setSelectedComponentFilter(filter)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                          selectedComponentFilter === filter
+                            ? filter === 'CWTS'
+                              ? 'bg-emerald-600 text-white shadow-2xs'
+                              : filter === 'LTS'
+                              ? 'bg-purple-600 text-white shadow-2xs'
+                              : filter === 'ROTC'
+                              ? 'bg-rose-600 text-white shadow-2xs'
+                              : 'bg-white text-emerald-900 shadow-2xs'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {filter === 'ALL' ? 'All Tracks' : filter}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
 
           {showProgramAnalytics && (
-            <div className="space-y-5 animate-fade-in">
-              {/* 3 Component Summary Cards */}
+            <div className="space-y-6 animate-fade-in">
+              {/* 3 Component Summary Cards with Progress Bars */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div
                   onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'CWTS' ? 'ALL' : 'CWTS')}
@@ -1693,13 +1651,21 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> CWTS
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> CWTS Track
                     </span>
                     <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
                       {displayStats.totalStudents > 0 ? Math.round((displayStats.cwtsStudents / displayStats.totalStudents) * 100) : 0}%
                     </span>
                   </div>
-                  <p className="text-xl font-black text-emerald-950 mt-1.5">{displayStats.cwtsStudents} <span className="text-xs font-normal text-gray-500">students</span></p>
+                  <p className="text-xl font-black text-emerald-950 mt-1.5">
+                    {displayStats.cwtsStudents} <span className="text-xs font-normal text-gray-500">students</span>
+                  </p>
+                  <div className="w-full bg-gray-200/80 rounded-full h-2 mt-2 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${displayStats.totalStudents > 0 ? (displayStats.cwtsStudents / displayStats.totalStudents) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
 
                 <div
@@ -1712,13 +1678,21 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-800 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> LTS
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> LTS Track
                     </span>
                     <span className="text-[11px] font-semibold text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-md">
                       {displayStats.totalStudents > 0 ? Math.round((displayStats.ltsStudents / displayStats.totalStudents) * 100) : 0}%
                     </span>
                   </div>
-                  <p className="text-xl font-black text-purple-950 mt-1.5">{displayStats.ltsStudents} <span className="text-xs font-normal text-gray-500">students</span></p>
+                  <p className="text-xl font-black text-purple-950 mt-1.5">
+                    {displayStats.ltsStudents} <span className="text-xs font-normal text-gray-500">students</span>
+                  </p>
+                  <div className="w-full bg-gray-200/80 rounded-full h-2 mt-2 overflow-hidden">
+                    <div
+                      className="bg-purple-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${displayStats.totalStudents > 0 ? (displayStats.ltsStudents / displayStats.totalStudents) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
 
                 <div
@@ -1731,165 +1705,349 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> ROTC
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span> ROTC Track
                     </span>
                     <span className="text-[11px] font-semibold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md">
                       {displayStats.totalStudents > 0 ? Math.round((displayStats.rotcStudents / displayStats.totalStudents) * 100) : 0}%
                     </span>
                   </div>
-                  <p className="text-xl font-black text-rose-950 mt-1.5">{displayStats.rotcStudents} <span className="text-xs font-normal text-gray-500">students</span></p>
+                  <p className="text-xl font-black text-rose-950 mt-1.5">
+                    {displayStats.rotcStudents} <span className="text-xs font-normal text-gray-500">students</span>
+                  </p>
+                  <div className="w-full bg-gray-200/80 rounded-full h-2 mt-2 overflow-hidden">
+                    <div
+                      className="bg-rose-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${displayStats.totalStudents > 0 ? (displayStats.rotcStudents / displayStats.totalStudents) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Bar Chart Header & Legend */}
-              <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Program Enrollment Breakdown {selectedComponentFilter !== 'ALL' && `(${selectedComponentFilter} Only)`}
-                </span>
-                <div className="flex items-center gap-3 text-xs font-semibold">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-gray-800 uppercase tracking-wider">
+                    Program Enrollment Bar Graph {selectedComponentFilter !== 'ALL' && `(${selectedComponentFilter} Only)`}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-semibold bg-gray-100 px-2 py-0.5 rounded-full">
+                    {programDeptStats.length} Programs Registered
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-bold">
                   {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'CWTS') && (
-                    <span className="flex items-center gap-1 text-emerald-800">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> CWTS
+                    <span className="flex items-center gap-1.5 text-emerald-800">
+                      <span className="w-3 h-3 rounded-md bg-emerald-500 shadow-2xs"></span> CWTS
                     </span>
                   )}
                   {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'LTS') && (
-                    <span className="flex items-center gap-1 text-purple-800">
-                      <span className="w-2 h-2 rounded-full bg-purple-500"></span> LTS
+                    <span className="flex items-center gap-1.5 text-purple-800">
+                      <span className="w-3 h-3 rounded-md bg-purple-500 shadow-2xs"></span> LTS
                     </span>
                   )}
                   {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'ROTC') && (
-                    <span className="flex items-center gap-1 text-rose-800">
-                      <span className="w-2 h-2 rounded-full bg-rose-500"></span> ROTC
+                    <span className="flex items-center gap-1.5 text-rose-800">
+                      <span className="w-3 h-3 rounded-md bg-rose-500 shadow-2xs"></span> ROTC
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* Bar Chart Bars Container */}
-              <div className="space-y-4">
-                {programDeptStats.length > 0 ? (
-                  programDeptStats.map(item => {
-                    const displayedTotal = selectedComponentFilter === 'CWTS'
-                      ? item.cwts
-                      : selectedComponentFilter === 'LTS'
-                      ? item.lts
-                      : selectedComponentFilter === 'ROTC'
-                      ? item.rotc
-                      : item.total;
+              {/* ── BAR GRAPH VISUALIZATION ───────────────────────────────────── */}
+              {programDeptStats.length > 0 ? (
+                barChartMode === 'vertical' ? (
+                  /* Vertical Column Bar Graph with Y-Axis Gridlines */
+                  <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 sm:p-6 shadow-2xs">
+                    {(() => {
+                      // Determine max scale for Y-axis (at least 4)
+                      const maxTrackVal = Math.max(
+                        ...programDeptStats.map(p =>
+                          selectedComponentFilter === 'CWTS'
+                            ? p.cwts
+                            : selectedComponentFilter === 'LTS'
+                            ? p.lts
+                            : selectedComponentFilter === 'ROTC'
+                            ? p.rotc
+                            : Math.max(p.cwts, p.lts, p.rotc, 1)
+                        ),
+                        2
+                      );
+                      const yTicks = Array.from({ length: maxTrackVal + 1 }, (_, i) => maxTrackVal - i);
 
-                    const maxProgramVal = Math.max(
-                      ...programDeptStats.map(p =>
-                        selectedComponentFilter === 'CWTS'
-                          ? p.cwts
-                          : selectedComponentFilter === 'LTS'
-                          ? p.lts
-                          : selectedComponentFilter === 'ROTC'
-                          ? p.rotc
-                          : p.total
-                      ),
-                      1
-                    );
+                      return (
+                        <div className="relative">
+                          {/* Y-Axis Gridlines & Plot Area */}
+                          <div className="relative h-64 sm:h-72 w-full flex">
+                            {/* Y-Axis Numerical Labels */}
+                            <div className="w-8 sm:w-10 flex flex-col justify-between items-end pr-2 text-[10px] sm:text-xs font-black text-gray-400 select-none pb-7">
+                              {yTicks.map(val => (
+                                <span key={val}>{val}</span>
+                              ))}
+                            </div>
 
-                    const sharePercent = displayStats.totalStudents > 0
-                      ? Math.round((displayedTotal / displayStats.totalStudents) * 100)
-                      : 0;
+                            {/* Main Bar Plot Area */}
+                            <div className="relative flex-1 flex flex-col justify-between pb-7">
+                              {/* Horizontal Background Gridlines */}
+                              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7">
+                                {yTicks.map(val => (
+                                  <div key={val} className="w-full border-b border-gray-200/70"></div>
+                                ))}
+                              </div>
 
-                    return (
-                      <div
-                        key={item.program}
-                        className="bg-gray-50/70 border border-gray-200/70 rounded-xl p-3.5 sm:p-4 hover:border-emerald-300 transition-all hover:bg-emerald-50/20"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-extrabold text-gray-900">{item.program}</span>
-                            <span className="text-[11px] font-semibold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
-                              {sharePercent}% of total
-                            </span>
+                              {/* Bars Container */}
+                              <div className="relative z-10 h-full flex items-end justify-around gap-2 sm:gap-6 px-2 sm:px-4">
+                                {programDeptStats.map(item => {
+                                  const totalForFilter = selectedComponentFilter === 'CWTS'
+                                    ? item.cwts
+                                    : selectedComponentFilter === 'LTS'
+                                    ? item.lts
+                                    : selectedComponentFilter === 'ROTC'
+                                    ? item.rotc
+                                    : item.total;
+
+                                  const pct = displayStats.totalStudents > 0
+                                    ? Math.round((totalForFilter / displayStats.totalStudents) * 100)
+                                    : 0;
+
+                                  return (
+                                    <div
+                                      key={item.program}
+                                      onClick={() => setSelectedProgramFocus(prev => prev === item.program ? null : item.program)}
+                                      className={`flex-1 max-w-[120px] flex flex-col items-center h-full justify-end group cursor-pointer transition-transform ${selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40' : ''}`}
+                                      title={`Click to filter or focus on ${item.program}`}
+                                    >
+                                      {/* Bar Cluster on Baseline */}
+                                      <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-full pb-1">
+                                        {/* CWTS Bar */}
+                                        {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'CWTS') && (
+                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                            <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
+                                              item.cwts > 0 ? 'text-emerald-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                            }`}>
+                                              {item.cwts}
+                                            </span>
+                                            <div
+                                              style={{ height: `${maxTrackVal > 0 ? Math.max(item.cwts > 0 ? 6 : 0, (item.cwts / maxTrackVal) * 100) : 0}%` }}
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                                item.cwts > 0
+                                                  ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover:from-emerald-500 group-hover:to-emerald-300'
+                                                  : 'bg-gray-200/50 h-1'
+                                              }`}
+                                              title={`${item.program} - CWTS: ${item.cwts} student${item.cwts !== 1 ? 's' : ''}`}
+                                            />
+                                          </div>
+                                        )}
+
+                                        {/* LTS Bar */}
+                                        {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'LTS') && (
+                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                            <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
+                                              item.lts > 0 ? 'text-purple-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                            }`}>
+                                              {item.lts}
+                                            </span>
+                                            <div
+                                              style={{ height: `${maxTrackVal > 0 ? Math.max(item.lts > 0 ? 6 : 0, (item.lts / maxTrackVal) * 100) : 0}%` }}
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                                item.lts > 0
+                                                  ? 'bg-gradient-to-t from-purple-600 to-purple-400 group-hover:from-purple-500 group-hover:to-purple-300'
+                                                  : 'bg-gray-200/50 h-1'
+                                              }`}
+                                              title={`${item.program} - LTS: ${item.lts} student${item.lts !== 1 ? 's' : ''}`}
+                                            />
+                                          </div>
+                                        )}
+
+                                        {/* ROTC Bar */}
+                                        {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'ROTC') && (
+                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                            <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
+                                              item.rotc > 0 ? 'text-rose-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                            }`}>
+                                              {item.rotc}
+                                            </span>
+                                            <div
+                                              style={{ height: `${maxTrackVal > 0 ? Math.max(item.rotc > 0 ? 6 : 0, (item.rotc / maxTrackVal) * 100) : 0}%` }}
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                                item.rotc > 0
+                                                  ? 'bg-gradient-to-t from-rose-600 to-rose-400 group-hover:from-rose-500 group-hover:to-rose-300'
+                                                  : 'bg-gray-200/50 h-1'
+                                              }`}
+                                              title={`${item.program} - ROTC: ${item.rotc} student${item.rotc !== 1 ? 's' : ''}`}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Baseline Divider */}
+                                      <div className="w-full border-t-2 border-gray-400 mt-0.5"></div>
+
+                                      {/* X-Axis Program Label & Pill */}
+                                      <div className="pt-2 text-center w-full">
+                                        <div className="text-xs sm:text-sm font-black text-gray-900 truncate">
+                                          {item.program}
+                                        </div>
+                                        <div className="text-[10.5px] font-extrabold text-emerald-800 bg-white border border-gray-200 rounded-md px-1.5 py-0.5 shadow-2xs mt-1 inline-block">
+                                          {totalForFilter} std ({pct}%)
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-gray-800 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 shadow-2xs">
-                              {displayedTotal} student{displayedTotal !== 1 ? 's' : ''}
+
+                          {/* Quick Student Navigation Footer */}
+                          <div className="pt-3 mt-2 border-t border-gray-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="text-gray-500 font-medium">
+                              💡 Hover over any bar column to view exact track numbers. Click a program to view students:
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const q = [];
-                                if (item.program) q.push(`course=${encodeURIComponent(item.program)}`);
-                                if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
-                                navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
-                              }}
-                              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-0.5 rounded-md transition-colors"
-                            >
-                              View Students &rarr;
-                            </button>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {programDeptStats.map(p => (
+                                <button
+                                  key={p.program}
+                                  type="button"
+                                  onClick={() => {
+                                    const q = [];
+                                    if (p.program) q.push(`course=${encodeURIComponent(p.program)}`);
+                                    if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
+                                    navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
+                                  }}
+                                  className="text-[11px] font-bold text-emerald-800 bg-white hover:bg-emerald-100/80 border border-gray-200 px-2 py-0.5 rounded-lg transition-colors shadow-2xs"
+                                >
+                                  View {p.program} →
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
-
-                        {selectedComponentFilter === 'ALL' ? (
-                          /* Grouped Component Bars */
-                          <div className="space-y-1.5 pt-1">
-                            {/* CWTS Bar */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-emerald-800 w-12 shrink-0">CWTS</span>
-                              <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
-                                <div
-                                  style={{ width: `${maxProgramVal > 0 ? (item.cwts / maxProgramVal) * 100 : 0}%` }}
-                                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                                />
-                              </div>
-                              <span className="text-xs font-black text-emerald-800 w-8 text-right shrink-0">{item.cwts}</span>
-                            </div>
-
-                            {/* LTS Bar */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-purple-800 w-12 shrink-0">LTS</span>
-                              <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
-                                <div
-                                  style={{ width: `${maxProgramVal > 0 ? (item.lts / maxProgramVal) * 100 : 0}%` }}
-                                  className="h-full bg-purple-500 rounded-full transition-all duration-500"
-                                />
-                              </div>
-                              <span className="text-xs font-black text-purple-800 w-8 text-right shrink-0">{item.lts}</span>
-                            </div>
-
-                            {/* ROTC Bar */}
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-rose-800 w-12 shrink-0">ROTC</span>
-                              <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
-                                <div
-                                  style={{ width: `${maxProgramVal > 0 ? (item.rotc / maxProgramVal) * 100 : 0}%` }}
-                                  className="h-full bg-rose-500 rounded-full transition-all duration-500"
-                                />
-                              </div>
-                              <span className="text-xs font-black text-rose-800 w-8 text-right shrink-0">{item.rotc}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          /* Single Focused Component Bar */
-                          <div className="flex items-center gap-2 pt-1">
-                            <span className="text-xs font-bold text-gray-700 w-12 shrink-0">{selectedComponentFilter}</span>
-                            <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden flex items-center">
-                              <div
-                                style={{ width: `${maxProgramVal > 0 ? (displayedTotal / maxProgramVal) * 100 : 0}%` }}
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  selectedComponentFilter === 'CWTS'
-                                    ? 'bg-emerald-500'
-                                    : selectedComponentFilter === 'LTS'
-                                    ? 'bg-purple-500'
-                                    : 'bg-rose-500'
-                                }`}
-                              />
-                            </div>
-                            <span className="text-xs font-black text-gray-900 w-8 text-right shrink-0">{displayedTotal}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                      );
+                    })()}
+                  </div>
                 ) : (
-                  <div className="py-6 text-center text-xs text-gray-500">No enrollment records available for analysis</div>
-                )}
-              </div>
+                  /* Horizontal Stacked Bar Breakdown View */
+                  <div className="space-y-3.5">
+                    {programDeptStats.map(item => {
+                      const displayedTotal = selectedComponentFilter === 'CWTS'
+                        ? item.cwts
+                        : selectedComponentFilter === 'LTS'
+                        ? item.lts
+                        : selectedComponentFilter === 'ROTC'
+                        ? item.rotc
+                        : item.total;
+
+                      const maxProgramVal = Math.max(
+                        ...programDeptStats.map(p =>
+                          selectedComponentFilter === 'CWTS'
+                            ? p.cwts
+                            : selectedComponentFilter === 'LTS'
+                            ? p.lts
+                            : selectedComponentFilter === 'ROTC'
+                            ? p.rotc
+                            : p.total
+                        ),
+                        1
+                      );
+
+                      const sharePercent = displayStats.totalStudents > 0
+                        ? Math.round((displayedTotal / displayStats.totalStudents) * 100)
+                        : 0;
+
+                      return (
+                        <div
+                          key={item.program}
+                          className="rounded-xl p-3.5 sm:p-4 bg-gray-50/70 border border-gray-200/70 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-extrabold text-gray-900">{item.program}</span>
+                              <span className="text-[11px] font-semibold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-full">
+                                {sharePercent}% of total
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-800 bg-white px-2.5 py-0.5 rounded-md border border-gray-200 shadow-2xs">
+                                {displayedTotal} student{displayedTotal !== 1 ? 's' : ''}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const q = [];
+                                  if (item.program) q.push(`course=${encodeURIComponent(item.program)}`);
+                                  if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
+                                  navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
+                                }}
+                                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-0.5 rounded-md transition-colors"
+                              >
+                                View Students &rarr;
+                              </button>
+                            </div>
+                          </div>
+
+                          {selectedComponentFilter === 'ALL' ? (
+                            <div className="space-y-1.5 pt-1">
+                              {/* CWTS Bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-emerald-800 w-12 shrink-0">CWTS</span>
+                                <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
+                                  <div
+                                    style={{ width: `${maxProgramVal > 0 ? (item.cwts / maxProgramVal) * 100 : 0}%` }}
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                  />
+                                </div>
+                                <span className="text-xs font-black text-emerald-800 w-8 text-right shrink-0">{item.cwts}</span>
+                              </div>
+
+                              {/* LTS Bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-purple-800 w-12 shrink-0">LTS</span>
+                                <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
+                                  <div
+                                    style={{ width: `${maxProgramVal > 0 ? (item.lts / maxProgramVal) * 100 : 0}%` }}
+                                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                  />
+                                </div>
+                                <span className="text-xs font-black text-purple-800 w-8 text-right shrink-0">{item.lts}</span>
+                              </div>
+
+                              {/* ROTC Bar */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-rose-800 w-12 shrink-0">ROTC</span>
+                                <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
+                                  <div
+                                    style={{ width: `${maxProgramVal > 0 ? (item.rotc / maxProgramVal) * 100 : 0}%` }}
+                                    className="h-full bg-rose-500 rounded-full transition-all duration-500"
+                                  />
+                                </div>
+                                <span className="text-xs font-black text-rose-800 w-8 text-right shrink-0">{item.rotc}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-xs font-bold text-gray-700 w-12 shrink-0">{selectedComponentFilter}</span>
+                              <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden flex items-center">
+                                <div
+                                  style={{ width: `${maxProgramVal > 0 ? (displayedTotal / maxProgramVal) * 100 : 0}%` }}
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    selectedComponentFilter === 'CWTS'
+                                      ? 'bg-emerald-500'
+                                      : selectedComponentFilter === 'LTS'
+                                      ? 'bg-purple-500'
+                                      : 'bg-rose-500'
+                                  }`}
+                                />
+                              </div>
+                              <span className="text-xs font-black text-gray-900 w-8 text-right shrink-0">{displayedTotal}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="py-6 text-center text-xs text-gray-500">No enrollment records available for analysis</div>
+              )}
             </div>
           )}
         </div>

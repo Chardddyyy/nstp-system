@@ -385,7 +385,38 @@ export function AttendanceScannerModal({
       return;
     }
 
-    // Check if scanning TIME_IN and calculate lateness against scheduled session start time
+    // Strict Department / Track Isolation for Instructors:
+    // If an ROTC instructor scans/types a student ID of a CWTS student,
+    // nothing should show up (no record logged, no student shown in roster, no crash).
+    const effectiveInstructorDept = (currentDepartment && currentDepartment !== 'All' && currentDepartment !== 'NSTP Office')
+      ? currentDepartment
+      : (currentUser?.department && ['CWTS', 'ROTC', 'LTS'].includes(currentUser.department) ? currentUser.department : null);
+
+    if (currentUser?.role === 'instructor' && effectiveInstructorDept) {
+      const targetDeptUpper = effectiveInstructorDept.toUpperCase();
+      let allCached = [];
+      try {
+        allCached = (propStudents && propStudents.length > 0) ? propStudents : JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+      } catch (_) {}
+
+      const foundStudent = allCached.find(s => isStudentMatch(s, null, cleanCode));
+      if (foundStudent) {
+        const studentDept = (foundStudent.department || foundStudent.component || foundStudent.nstp_program || '').toUpperCase();
+        if (studentDept && !studentDept.includes(targetDeptUpper) && studentDept !== targetDeptUpper) {
+          playScanBeep(false);
+          setScanStatus({
+            type: 'error',
+            message: `⚠️ Student ${foundStudent.name || foundStudent.studentId || ''} belongs to ${studentDept}, not ${targetDeptUpper}. Attendance cannot be recorded.`
+          });
+          setTimeout(() => {
+            isProcessingRef.current = false;
+          }, 1500);
+          return; // Strictly stop: "walang lalabas", no student added to attendance roster
+        }
+      }
+    }
+
+    // Determine whether student timed in after cutoff
     const isLateNow = scanType === 'TIME_IN' ? checkIsLate(sessionStartTime, gracePeriod) : false;
 
     try {
@@ -482,7 +513,7 @@ export function AttendanceScannerModal({
         isProcessingRef.current = false;
       }, 1500); // Cooldown to avoid duplicate burst reads
     }
-  }, [fullActivityTitle, scanType, selectedDay, sessionLogs, sessionStartTime, gracePeriod, currentDepartment]);
+  }, [fullActivityTitle, scanType, selectedDay, sessionLogs, sessionStartTime, gracePeriod, currentDepartment, currentUser?.department, currentUser?.role, propStudents]);
 
   // Stop QR Camera Scanner
   const stopCamera = useCallback(async () => {

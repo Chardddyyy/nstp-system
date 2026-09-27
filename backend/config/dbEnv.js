@@ -44,8 +44,15 @@ function getDbConfig(options) {
     (config.host && config.host.includes('aivencloud.com'));
 
   if (isAivenOrSsl) {
+    const envCaCert = process.env.DB_CA_CERT || process.env.AIVEN_CA_CERT;
     const caPath = path.join(__dirname, 'ca.pem');
-    if (fs.existsSync(caPath)) {
+
+    if (envCaCert && envCaCert.trim() !== '') {
+      config.ssl = {
+        ca: envCaCert,
+        rejectUnauthorized: false
+      };
+    } else if (fs.existsSync(caPath)) {
       try {
         config.ssl = {
           ca: fs.readFileSync(caPath),
