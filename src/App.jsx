@@ -146,6 +146,34 @@ function getReadNotificationsStorageKey(userOrRole, maybeId) {
   return `nstp_read_notifications_${role}${uid}`;
 }
 
+function getReadConversationsKey(userOrRole, maybeId) {
+  if (typeof userOrRole === 'object' && userOrRole !== null) {
+    const uid = userOrRole.id ? `_${userOrRole.id}` : '';
+    return `nstp_read_conversations${uid}`;
+  }
+  const uid = maybeId ? `_${maybeId}` : '';
+  return `nstp_read_conversations${uid}`;
+}
+
+function formatRelativeTime(dateInput) {
+  if (!dateInput) return 'Just now';
+  try {
+    const diffMs = Date.now() - new Date(dateInput).getTime();
+    if (isNaN(diffMs) || diffMs < 0) return 'Just now';
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return new Date(dateInput).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  } catch {
+    return 'Just now';
+  }
+}
+
 // Hardware tone generator using Web Audio API (cross-device: iOS, Android, macOS, Windows)
 function playNotificationSound() {
   try {
@@ -866,7 +894,7 @@ function App() {
           title: `New Message from ${senderName}`,
           message: preview || 'Sent you a message',
           type: 'message',
-          link: '/chat',
+          link: `/chat?convId=${conversationId}`,
           conversationId,
           senderName
         });
@@ -973,6 +1001,10 @@ function App() {
         seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
       }
     });
+
+    if (currentUser) {
+      reconcileUnreadConversationMessages(safeConvs, currentUser, true);
+    }
 
     safeUsers.forEach(u => {
       if (u && u.id && (u.role === 'instructor' || u.role === 'admin')) {
@@ -1284,37 +1316,120 @@ function App() {
     }
   }
 
+  function reconcileUnreadConversationMessages(convList, currentUser, isInitialBaseline = false) {
+    if (!currentUser || !Array.isArray(convList) || convList.length === 0) return;
+
+    let readMap = {};
+    try {
+      const readKey = getReadConversationsKey(currentUser);
+      readMap = JSON.parse(localStorage.getItem(readKey) || '{}');
+    } catch {}
+
+    const dismissedKey = getDismissedStorageKey(currentUser);
+    let dismissedSet = new Set();
+    try {
+      dismissedSet = new Set(JSON.parse(localStorage.getItem(dismissedKey) || '[]').map(String));
+    } catch {}
+
+    const readKey = getReadNotificationsStorageKey(currentUser);
+    let readNotifSet = new Set();
+    try {
+      readNotifSet = new Set(JSON.parse(localStorage.getItem(readKey) || '[]').map(String));
+    } catch {}
+
+    const newNotifs = [];
+
+    convList.forEach(conv => {
+      if (!conv || !conv.id || !conv.last_message_time || !conv.last_message) return;
+
+      const lastSenderId = conv.last_sender_id;
+      const isOwnMessage = lastSenderId && (String(lastSenderId) === String(currentUser.id) || Number(lastSenderId) === Number(currentUser.id));
+      if (isOwnMessage) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+        return;
+      }
+
+      const msgTime = new Date(conv.last_message_time).getTime();
+      const lastReadTime = readMap[conv.id] ? new Date(readMap[conv.id]).getTime() : 0;
+      const notifId = `msg-conv-${conv.id}-${msgTime}`;
+
+      // If user has read this conversation at or after the last message was sent, skip
+      if (lastReadTime && lastReadTime >= msgTime) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+        return;
+      }
+
+      // If user dismissed this notification or all alerts for this conversation, skip
+      if (dismissedSet.has(notifId) || dismissedSet.has(`conv-${conv.id}`)) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+        return;
+      }
+
+      // Check if already in notifications list
+      const alreadyInList = (notifications || []).some(n => String(n.id) === String(notifId));
+      if (alreadyInList) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+        return;
+      }
+
+      const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
+      let preview = conv.last_message || '';
+      if (preview.startsWith('data:')) preview = 'Sent an attachment';
+      else if (preview.startsWith('📸')) preview = 'Sent a photo';
+      else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
+      else if (preview.startsWith('📎')) preview = 'Sent a file';
+      if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+
+      const isMarkedRead = readNotifSet.has(notifId);
+
+      const notifItem = {
+        id: notifId,
+        title: `New Message from ${senderName}`,
+        message: `${senderName}: ${preview}`,
+        type: 'message',
+        link: `/chat?convId=${conv.id}`,
+        conversationId: conv.id,
+        senderName,
+        time: formatRelativeTime(conv.last_message_time),
+        read: isMarkedRead ? true : false,
+        created_at: conv.last_message_time
+      };
+
+      newNotifs.push(notifItem);
+      seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+    });
+
+    if (newNotifs.length > 0) {
+      setNotifications(prev => {
+        const existingIds = new Set((prev || []).map(n => String(n.id)));
+        const toAdd = newNotifs.filter(n => !existingIds.has(String(n.id)));
+        if (toAdd.length === 0) return prev;
+        const updated = [...toAdd, ...(prev || [])].slice(0, 50);
+        safeSetStorage(getNotificationStorageKey(currentUser), updated);
+        return updated;
+      });
+
+      const unreadItems = newNotifs.filter(n => !n.read);
+      if (unreadItems.length > 0) {
+        const top = unreadItems[0];
+        showToast(top.message, 'info', `💬 ${top.title}`);
+        if (!isInitialBaseline) {
+          playNotificationSound();
+        }
+      }
+    }
+  }
+
   async function checkConversationMessages(convList, currentUser) {
-    if (!baselineReady.current || !currentUser) return;
+    if (!currentUser) return;
     const safeConvs = Array.isArray(convList) ? convList : [];
+    reconcileUnreadConversationMessages(safeConvs, currentUser, false);
 
     for (const conv of safeConvs) {
       const currTime = conv.last_message_time ? String(conv.last_message_time) : null;
       const prevTime = seenConvLastMessageTime.current[conv.id];
 
       if (currTime && prevTime && currTime !== prevTime) {
-        const lastMsg = conv.last_message || '';
-        const isOwnMessage = conv.last_sender_id === currentUser.id;
-
-        if (!isOwnMessage && lastMsg) {
-          const senderName = conv.last_sender_name || conv.with || 'Someone';
-          let preview = lastMsg.startsWith('data:') ? 'Sent a file'
-            : lastMsg.startsWith('📸') ? 'Sent a photo'
-            : lastMsg.startsWith('🎤') ? 'Sent a voice message'
-            : lastMsg.startsWith('📎') ? 'Sent a file'
-            : lastMsg;
-          if (preview.length > 80) preview = preview.slice(0, 80) + '…';
-          pushNotification({
-            id: `msg-poll-${conv.id}-${currTime}`,
-            title: 'New Message',
-            message: `${senderName}: ${preview}`,
-            type: 'message',
-            link: '/chat',
-            conversationId: conv.id,
-            senderName
-          });
-        }
-
         try {
           const msgs = await conversationsAPI.getMessages(conv.id);
           if (msgs.length > 0) {
@@ -1479,7 +1594,7 @@ function App() {
         title: `Message from ${senderName}`,
         message: `${senderName}: ${preview}`,
         type: 'message',
-        link: '/chat',
+        link: `/chat?convId=${convId}`,
         conversationId: convId,
         senderName
       });
@@ -1781,7 +1896,7 @@ function App() {
 
           if (activeUser) {
             resetRealtimeBaseline();
-            seedRealtimeBaseline([], [], conversationsData, [], activeUser);
+            seedRealtimeBaseline([], [], conversationsData, [], [], [], [], activeUser);
           }
         }
       }).catch(err => console.warn('Conversations load error:', err));

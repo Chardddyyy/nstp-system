@@ -20,7 +20,7 @@ function InstructorDashboard() {
     students = [], 
     reports = [], 
     conversations = [], 
-    messages = {}, 
+    _messages = {}, 
     notifications = [], 
     setNotifications,
     deleteNotifications,
@@ -141,6 +141,8 @@ function InstructorDashboard() {
 
   const isMessageNotification = (n) => n?.type === 'message' || n?.link === '/chat' || Boolean(n?.conversationId);
 
+  const [activeNotifTab, setActiveNotifTab] = useState('all');
+
   const systemNotifications = useMemo(() => {
     return (notifications || []).filter(n => !isMessageNotification(n));
   }, [notifications]);
@@ -149,9 +151,19 @@ function InstructorDashboard() {
     return (notifications || []).filter(n => isMessageNotification(n));
   }, [notifications]);
 
+  const totalUnreadCount = useMemo(() => {
+    return (notifications || []).filter(n => !n.read).length;
+  }, [notifications]);
+
+  const activeBellNotifications = useMemo(() => {
+    if (activeNotifTab === 'system') return systemNotifications;
+    if (activeNotifTab === 'messages') return messageNotifications;
+    return notifications || [];
+  }, [activeNotifTab, systemNotifications, messageNotifications, notifications]);
+
   const unreadCount = useMemo(() => {
-    return systemNotifications.filter(n => !n.read).length;
-  }, [systemNotifications]);
+    return totalUnreadCount;
+  }, [totalUnreadCount]);
 
   const messageUnreadCount = useMemo(() => {
     return messageNotifications.filter(n => !n.read).length;
@@ -198,7 +210,7 @@ function InstructorDashboard() {
       e.preventDefault();
       e.stopPropagation();
     }
-    const list = systemNotifications;
+    const list = activeBellNotifications;
     setSelectedNotifications(function(prev) {
       const allSelected = list.length > 0 && list.every(function(n) {
         return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
@@ -283,7 +295,7 @@ function InstructorDashboard() {
 
   function handleMarkAllRead(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    const targets = selectedNotifications.length > 0 ? selectedNotifications : systemNotifications.map(n => n.id);
+    const targets = selectedNotifications.length > 0 ? selectedNotifications : activeBellNotifications.map(n => n.id);
     if (markAllNotificationsRead) {
       markAllNotificationsRead(targets.length > 0 ? targets : null);
     } else {
@@ -388,21 +400,21 @@ function InstructorDashboard() {
 
   // Count unread messages across all conversations
   const readConversations = (() => {
-    try { return JSON.parse(localStorage.getItem('nstp_read_conversations') || '{}'); }
-    catch { return {}; }
+    try {
+      const key = user?.id ? `nstp_read_conversations_${user.id}` : 'nstp_read_conversations';
+      return JSON.parse(localStorage.getItem(key) || '{}');
+    } catch { return {}; }
   })();
 
   const pendingMessages = (conversations || []).reduce((total, conv) => {
     if (!conv) return total;
-    const convMessages = (messages && messages[conv.id]) || [];
-    const lastReadTime = readConversations[conv.id] || 0;
-    return total + convMessages.filter(msg => {
-      if (!msg) return false;
-      const msgTime = new Date(msg.created_at || 0).getTime();
-      const isOwn = msg.senderId === user?.id || msg.sender_id === user?.id;
-      const isSystem = msg.type === 'system' || msg.message_type === 'system';
-      return msgTime > lastReadTime && !isOwn && !isSystem;
-    }).length;
+    const lastMsgTime = conv.last_message_time ? new Date(conv.last_message_time).getTime() : 0;
+    const lastReadTime = readConversations[conv.id] ? new Date(readConversations[conv.id]).getTime() : 0;
+    const isOwn = conv.last_sender_id && (String(conv.last_sender_id) === String(user?.id) || Number(conv.last_sender_id) === Number(user?.id));
+    if (!isOwn && lastMsgTime > lastReadTime) {
+      return total + 1;
+    }
+    return total;
   }, 0);
 
   // Statistics based on instructor's students
@@ -529,10 +541,10 @@ function InstructorDashboard() {
                       <div className="flex items-center space-x-1.5 sm:space-x-2">
                         <button type="button"
                           onClick={handleSelectAll}
-                          title={selectedNotifications.length === (systemNotifications || []).length && systemNotifications.length > 0 ? 'Deselect all' : 'Select all'}
+                          title={selectedNotifications.length === activeBellNotifications.length && activeBellNotifications.length > 0 ? 'Deselect all' : 'Select all'}
                           className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
-                          {selectedNotifications.length === (systemNotifications || []).length && systemNotifications.length > 0
+                          {selectedNotifications.length === activeBellNotifications.length && activeBellNotifications.length > 0
                             ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
                             : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                         </button>
@@ -543,8 +555,8 @@ function InstructorDashboard() {
                           onClick={handleMarkAllRead}
                           disabled={
                             selectedNotifications.length > 0
-                              ? !(systemNotifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
-                              : (systemNotifications || []).every(n => n.read)
+                              ? !activeBellNotifications.some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                              : activeBellNotifications.every(n => n.read)
                           }
                           className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
                           title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
@@ -568,15 +580,38 @@ function InstructorDashboard() {
                       </div>
                     </div>
 
+                    {/* Filter Tabs for Bell Dropdown */}
+                    <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-gray-50 border-b border-gray-100 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('all'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'all' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        All ({(notifications || []).length})
+                      </button>
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('system'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'system' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        System ({systemNotifications.length})
+                      </button>
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('messages'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'messages' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        Messages ({messageNotifications.length})
+                      </button>
+                    </div>
 
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
-                      {(!systemNotifications || systemNotifications.length === 0) ? (
+                      {(!activeBellNotifications || activeBellNotifications.length === 0) ? (
                         <div className="p-4 text-center text-gray-400 text-xs font-medium">
                           <Bell className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-emerald-800" />
-                          No system notifications yet
+                          No notifications yet
                         </div>
                       ) : (
-                        systemNotifications.map((notification) => (
+                        activeBellNotifications.map((notification) => {
+                          const isMsg = isMessageNotification(notification);
+                          return (
                           <div
                             key={notification.id}
                             className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
@@ -601,8 +636,9 @@ function InstructorDashboard() {
                               onClick={() => handleNotificationItemClick(notification)}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <h4 className={`text-[11px] sm:text-xs font-bold truncate ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                  {notification.title}
+                                <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1 ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                  {isMsg && <MessageSquare className="w-3 h-3 text-emerald-600 shrink-0" />}
+                                  <span className="truncate">{notification.title}</span>
                                 </h4>
                                 <div className="flex items-center gap-1 shrink-0">
                                   {!notification.read && (
@@ -629,7 +665,7 @@ function InstructorDashboard() {
                               </p>
                             </div>
                           </div>
-                        ))
+                        );})
                       )}
                     </div>
                   </div>
@@ -739,7 +775,7 @@ function InstructorDashboard() {
                                 handleMarkOneRead(null, notification.id);
                                 setShowMessages(false);
                                 if (notification.conversationId) {
-                                  navigate(`/chat?conv=${notification.conversationId}`);
+                                  navigate(`/chat?convId=${notification.conversationId}`);
                                 } else {
                                   navigate('/chat');
                                 }

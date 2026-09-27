@@ -83,19 +83,25 @@ const compressImage = (dataUrl, maxWidth = 800, maxHeight = 800, quality = 0.7) 
   });
 };
 
+function getReadConversationsStorageKey(currentUser) {
+  return currentUser?.id ? `nstp_read_conversations_${currentUser.id}` : 'nstp_read_conversations';
+}
+
 function Chat() {
   const { user, logout, allUsers, students, conversations, messages, sendMessage, getUserConversations,
     editMessage, deleteMessage, addReaction, clearMessages, deleteConversation, startConversation,
     _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
     setMessages,
-    pendingAnsweredCall, setPendingAnsweredCall, showToast } = useAuth();
+    pendingAnsweredCall, setPendingAnsweredCall, showToast,
+    notifications: globalNotifications, markAllNotificationsRead } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
 
   const [activeConversationId, setActiveConversationId] = useState(() => {
     try {
-      return localStorage.getItem('nstp_active_chat') || null;
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('convId') || sp.get('conv') || localStorage.getItem('nstp_active_chat') || null;
     } catch {
       return null;
     }
@@ -103,9 +109,10 @@ function Chat() {
 
   // Deep-link from notification
   useEffect(() => {
-    const convId = searchParams.get('convId');
+    const convId = searchParams.get('convId') || searchParams.get('conv');
     if (convId) {
       setActiveConversationId(convId);
+      setShowConversations(false);
       try { localStorage.setItem('nstp_active_chat', convId); } catch (_) {}
     }
   }, [searchParams]);
@@ -173,10 +180,46 @@ function Chat() {
 
   const [showContacts, setShowContacts] = useState(false);
   const [readConversations, setReadConversations] = useState(() => {
-    // Load read state from localStorage
-    const saved = localStorage.getItem('nstp_read_conversations');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const key = getReadConversationsStorageKey(user);
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
   });
+
+  // Sync user-scoped readConversations whenever active user switches
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const key = getReadConversationsStorageKey(user);
+      const saved = localStorage.getItem(key);
+      setReadConversations(saved ? JSON.parse(saved) : {});
+    } catch {}
+  }, [user]);
+
+  // Keep active conversation marked as read and clear matching message notifications
+  useEffect(() => {
+    if (!activeConversationId || !user) return;
+
+    setReadConversations(prev => {
+      const updated = { ...prev, [activeConversationId]: Date.now() };
+      try {
+        localStorage.setItem(getReadConversationsStorageKey(user), JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    if (markAllNotificationsRead && Array.isArray(globalNotifications)) {
+      const targetNotifs = globalNotifications
+        .filter(n => (n.type === 'message' || n.conversationId) && String(n.conversationId) === String(activeConversationId) && !n.read)
+        .map(n => n.id);
+      if (targetNotifs.length > 0) {
+        markAllNotificationsRead(targetNotifs);
+      }
+    }
+  }, [activeConversationId, user, globalNotifications, markAllNotificationsRead]);
   const [messageText, setMessageText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [editingMessage, setEditingMessage] = useState(null);
@@ -406,9 +449,18 @@ function Chat() {
     // Mark conversation as read
     setReadConversations(prev => {
       const updated = { ...prev, [id]: Date.now() };
-      try { localStorage.setItem('nstp_read_conversations', JSON.stringify(updated)); } catch { }
+      try { localStorage.setItem(getReadConversationsStorageKey(user), JSON.stringify(updated)); } catch { }
       return updated;
     });
+
+    if (markAllNotificationsRead && Array.isArray(globalNotifications)) {
+      const targetNotifs = globalNotifications
+        .filter(n => (n.type === 'message' || n.conversationId) && String(n.conversationId) === String(id) && !n.read)
+        .map(n => n.id);
+      if (targetNotifs.length > 0) {
+        markAllNotificationsRead(targetNotifs);
+      }
+    }
 
     // Fetch messages IMMEDIATELY for this conversation so user doesn't wait 8 seconds!
     try {
@@ -2263,15 +2315,19 @@ function Chat() {
                 const partner = getConversationPartner(conversation);
                 const conversationMessages = messages[conversation.id] || [];
                 const lastReadTime = readConversations[conversation.id] || 0;
-                const userCreatedTime = user?.created_at ? new Date(user.created_at).getTime() : 0;
-                const effectiveReadTime = lastReadTime || userCreatedTime || Date.now();
-
-                // Count unread messages (messages that arrived after effective read time and not from current user)
-                const unreadCount = conversationMessages.filter(msg => {
-                  const msgTime = new Date(msg.created_at || msg.timestamp || Date.now()).getTime();
-                  const isOwnMessage = msg.senderId === user?.id || msg.sender_id === user?.id;
-                  return msgTime > effectiveReadTime && !isOwnMessage;
-                }).length;
+                let unreadCount = 0;
+                if (conversationMessages.length > 0) {
+                  unreadCount = conversationMessages.filter(msg => {
+                    const msgTime = new Date(msg.created_at || msg.timestamp || 0).getTime();
+                    const isOwnMessage = String(msg.senderId || msg.sender_id) === String(user?.id);
+                    return msgTime > lastReadTime && !isOwnMessage;
+                  }).length;
+                } else if (conversation.last_message_time && conversation.last_sender_id && String(conversation.last_sender_id) !== String(user?.id)) {
+                  const lastMsgTime = new Date(conversation.last_message_time).getTime();
+                  if (lastMsgTime > lastReadTime) {
+                    unreadCount = 1;
+                  }
+                }
 
                 // Check if there are new messages (red dot indicator)
                 const hasNewMessages = unreadCount > 0 && activeConversationId !== conversation.id;

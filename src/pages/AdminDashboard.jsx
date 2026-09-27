@@ -249,6 +249,8 @@ function AdminDashboard() {
 
   const isMessageNotification = (n) => n?.type === 'message' || n?.link === '/chat' || Boolean(n?.conversationId);
 
+  const [activeNotifTab, setActiveNotifTab] = useState('all');
+
   const systemNotifications = useMemo(() => {
     return (notifications || []).filter(n => !isMessageNotification(n));
   }, [notifications]);
@@ -257,9 +259,19 @@ function AdminDashboard() {
     return (notifications || []).filter(n => isMessageNotification(n));
   }, [notifications]);
 
+  const totalUnreadCount = useMemo(() => {
+    return (notifications || []).filter(n => !n.read).length;
+  }, [notifications]);
+
+  const activeBellNotifications = useMemo(() => {
+    if (activeNotifTab === 'system') return systemNotifications;
+    if (activeNotifTab === 'messages') return messageNotifications;
+    return notifications || [];
+  }, [activeNotifTab, systemNotifications, messageNotifications, notifications]);
+
   const unreadCount = useMemo(() => {
-    return systemNotifications.filter(n => !n.read).length;
-  }, [systemNotifications]);
+    return totalUnreadCount;
+  }, [totalUnreadCount]);
 
   const messageUnreadCount = useMemo(() => {
     return messageNotifications.filter(n => !n.read).length;
@@ -572,7 +584,7 @@ function AdminDashboard() {
       e.preventDefault();
       e.stopPropagation();
     }
-    const list = systemNotifications;
+    const list = activeBellNotifications;
     setSelectedNotifications(function(prev) {
       const allSelected = list.length > 0 && list.every(function(n) {
         return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
@@ -657,7 +669,7 @@ function AdminDashboard() {
 
   function handleMarkAllRead(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    const targets = selectedNotifications.length > 0 ? selectedNotifications : systemNotifications.map(n => n.id);
+    const targets = selectedNotifications.length > 0 ? selectedNotifications : activeBellNotifications.map(n => n.id);
     if (markAllNotificationsRead) {
       markAllNotificationsRead(targets.length > 0 ? targets : null);
     } else {
@@ -1133,7 +1145,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           onClick={handleSelectAll}
                           className="text-gray-400 hover:text-emerald-600 transition-colors cursor-pointer"
                         >
-                          {selectedNotifications.length === (systemNotifications || []).length && systemNotifications.length > 0
+                          {selectedNotifications.length === activeBellNotifications.length && activeBellNotifications.length > 0
                             ? <CheckSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
                             : <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                         </button>
@@ -1144,8 +1156,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           onClick={handleMarkAllRead}
                           disabled={
                             selectedNotifications.length > 0
-                              ? !(systemNotifications || []).some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
-                              : (systemNotifications || []).every(n => n.read)
+                              ? !activeBellNotifications.some(n => selectedNotifications.some(sid => notificationIdsMatch(sid, n.id)) && !n.read)
+                              : activeBellNotifications.every(n => n.read)
                           }
                           className="text-emerald-700 hover:text-emerald-800 disabled:opacity-30 transition-colors cursor-pointer p-0.5"
                           title={selectedNotifications.length > 0 ? "Mark selected as read" : "Mark all as read"}
@@ -1169,16 +1181,38 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
                     </div>
 
+                    {/* Filter Tabs for Bell Dropdown */}
+                    <div className="px-2.5 py-1 sm:px-3 sm:py-1.5 bg-gray-50 border-b border-gray-100 flex items-center gap-1.5 text-[10px] sm:text-[11px]">
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('all'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'all' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        All ({(notifications || []).length})
+                      </button>
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('system'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'system' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        System ({systemNotifications.length})
+                      </button>
+                      <button type="button"
+                        onClick={() => { setActiveNotifTab('messages'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'messages' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                      >
+                        Messages ({messageNotifications.length})
+                      </button>
+                    </div>
 
                     <div className="max-h-[38vh] sm:max-h-72 overflow-y-auto divide-y divide-gray-100">
-                      {(!systemNotifications || systemNotifications.length === 0) ? (
+                      {(!activeBellNotifications || activeBellNotifications.length === 0) ? (
                         <div className="p-4 text-center text-gray-400 text-xs font-medium">
                           <Bell className="w-6 h-6 mx-auto mb-1.5 opacity-30 text-emerald-800" />
-                          No system notifications yet
+                          No notifications yet
                         </div>
                       ) : (
-                        systemNotifications.map((n) => {
+                        activeBellNotifications.map((n) => {
                           const isSelected = selectedNotifications.some(sid => notificationIdsMatch(sid, n.id));
+                          const isMsg = isMessageNotification(n);
                           return (
                             <div
                               key={n.id}
@@ -1204,8 +1238,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 onClick={() => handleNotificationItemClick(n)}
                               >
                                 <div className="flex items-center justify-between gap-1">
-                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                    {n.title}
+                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1 ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                    {isMsg && <MessageSquare className="w-3 h-3 text-emerald-600 shrink-0" />}
+                                    <span className="truncate">{n.title}</span>
                                   </h4>
                                   <div className="flex items-center gap-1 shrink-0">
                                     {!n.read && (
@@ -1345,7 +1380,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                   handleMarkOneRead(null, n.id);
                                   setShowMessages(false);
                                   if (n.conversationId) {
-                                    navigate(`/chat?conv=${n.conversationId}`);
+                                    navigate(`/chat?convId=${n.conversationId}`);
                                   } else {
                                     navigate('/chat');
                                   }
