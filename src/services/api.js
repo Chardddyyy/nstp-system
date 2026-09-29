@@ -281,6 +281,29 @@ export async function loginUser(email, password, _forceLogin = true) {
   }
 }
 
+export async function verifyAdmin2FA(email, otp, tempToken) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanOtp = String(otp || '').trim();
+
+  const res = await apiCall('/auth/verify-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ email: cleanEmail, otp: cleanOtp, tempToken })
+  });
+
+  if (res && res.token) {
+    localStorage.setItem('nstp_token', res.token);
+  }
+  return res;
+}
+
+export async function resendAdmin2FA(email, tempToken) {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  return await apiCall('/auth/resend-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ email: cleanEmail, tempToken })
+  });
+}
+
 // Users
 export function getUsers() {
   return apiCall('/users')
@@ -1520,6 +1543,8 @@ export function confirmPasswordReset(email, otp_code, new_password) {
 // Old style exports for compatibility
 export const authAPI = {
   login: loginUser,
+  verify2FA: verifyAdmin2FA,
+  resend2FA: resendAdmin2FA,
   logout: logoutUser,
   verifySession: verifySession,
   requestPasswordReset: requestPasswordReset,

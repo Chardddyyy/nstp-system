@@ -70,6 +70,16 @@ function Login() {
   const [forgotSuccess, setForgotSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  // Admin Two-Factor Authentication (2FA) state
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFactorOtp, setTwoFactorOtp] = useState('');
+  const [twoFactorTempToken, setTwoFactorTempToken] = useState('');
+  const [twoFactorEmail, setTwoFactorEmail] = useState('');
+  const [twoFactorMaskedEmail, setTwoFactorMaskedEmail] = useState('');
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorResendCooldown, setTwoFactorResendCooldown] = useState(0);
+
   // Server connection diagnostics state
   const [showServerModal, setShowServerModal] = useState(false);
   const [serverStatus, setServerStatus] = useState('checking'); // 'checking' | 'online' | 'slow' | 'offline'
@@ -124,6 +134,16 @@ function Login() {
     }
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  useEffect(() => {
+    let timer;
+    if (twoFactorResendCooldown > 0) {
+      timer = setInterval(() => {
+        setTwoFactorResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [twoFactorResendCooldown]);
 
   // Cross-Tab Instant Sync & 1-Click Auto-Fill from Email Link
   useEffect(() => {
@@ -223,7 +243,50 @@ function Login() {
   }, []);
 
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, verify2FA, resend2FA } = useAuth();
+
+  const handleVerify2FASubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setTwoFactorError('');
+    const cleanOtp = twoFactorOtp.trim().replace(/\D/g, '');
+    if (!cleanOtp || cleanOtp.length !== 6) {
+      setTwoFactorError('Please enter a valid 6-digit verification code.');
+      return;
+    }
+    setTwoFactorLoading(true);
+    try {
+      const res = await verify2FA(twoFactorEmail, cleanOtp, twoFactorTempToken);
+      if (res.success) {
+        setShow2FAModal(false);
+        if (res.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/instructor/dashboard');
+        }
+      } else {
+        setTwoFactorError(res.message || 'Invalid or expired 2FA code. Please try again.');
+      }
+    } catch (err) {
+      setTwoFactorError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const handleResend2FA = async () => {
+    if (twoFactorResendCooldown > 0) return;
+    setTwoFactorError('');
+    try {
+      const res = await resend2FA(twoFactorEmail, twoFactorTempToken);
+      if (res.success) {
+        setTwoFactorResendCooldown(60);
+      } else {
+        setTwoFactorError(res.message || 'Failed to resend 2FA code.');
+      }
+    } catch (err) {
+      setTwoFactorError(err.message || 'Failed to resend 2FA code.');
+    }
+  };
 
   const handleSubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -255,6 +318,17 @@ function Login() {
       clearTimeout(timer1);
       clearTimeout(timer2);
 
+      if (result.require2FA) {
+        setTwoFactorTempToken(result.tempToken || '');
+        setTwoFactorEmail(result.email || cleanEmail);
+        setTwoFactorMaskedEmail(result.maskedEmail || cleanEmail);
+        setTwoFactorOtp('');
+        setTwoFactorError('');
+        setShow2FAModal(true);
+        setTwoFactorResendCooldown(60);
+        return;
+      }
+
       if (result.success) {
         if (result.role === 'admin') {
           navigate('/admin/dashboard');
@@ -264,6 +338,16 @@ function Login() {
       } else {
         if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
           const retryResult = await login(cleanEmail, password, true);
+          if (retryResult.require2FA) {
+            setTwoFactorTempToken(retryResult.tempToken || '');
+            setTwoFactorEmail(retryResult.email || cleanEmail);
+            setTwoFactorMaskedEmail(retryResult.maskedEmail || cleanEmail);
+            setTwoFactorOtp('');
+            setTwoFactorError('');
+            setShow2FAModal(true);
+            setTwoFactorResendCooldown(60);
+            return;
+          }
           if (retryResult.success) {
             if (retryResult.role === 'admin') {
               navigate('/admin/dashboard');
@@ -284,6 +368,16 @@ function Login() {
       if (errMsg.includes('another device') || errMsg.includes('currently active')) {
         try {
           const retryResult = await login(cleanEmail, password, true);
+          if (retryResult.require2FA) {
+            setTwoFactorTempToken(retryResult.tempToken || '');
+            setTwoFactorEmail(retryResult.email || cleanEmail);
+            setTwoFactorMaskedEmail(retryResult.maskedEmail || cleanEmail);
+            setTwoFactorOtp('');
+            setTwoFactorError('');
+            setShow2FAModal(true);
+            setTwoFactorResendCooldown(60);
+            return;
+          }
           if (retryResult.success) {
             if (retryResult.role === 'admin') {
               navigate('/admin/dashboard');
@@ -957,6 +1051,136 @@ function Login() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Institutional Two-Factor Authentication (2FA) Modal */}
+      {show2FAModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3.5 sm:p-4 animate-fade-in"
+          onClick={() => !twoFactorLoading && setShow2FAModal(false)}
+        >
+          <div
+            className="bg-white text-gray-900 rounded-2xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-emerald-800/30 flex flex-col relative my-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-emerald-800/60">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                  <Shield className="w-5 h-5 text-emerald-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight text-white leading-tight">Admin 2-Factor Authentication</h3>
+                  <p className="text-emerald-200 text-[10px] sm:text-xs font-medium">Cavite State University Naic Campus</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={twoFactorLoading}
+                onClick={() => setShow2FAModal(false)}
+                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleVerify2FASubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
+              <div className="text-center space-y-1.5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 mb-1">
+                  <Lock className="w-6 h-6 text-emerald-700" />
+                </div>
+                <h4 className="text-base font-bold text-gray-900">Security Verification Required</h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  A 6-digit one-time verification code has been dispatched to your administrator email:
+                </p>
+                <div className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-mono font-bold text-emerald-900">
+                  {twoFactorMaskedEmail || 'richardbelen99@gmail.com'}
+                </div>
+              </div>
+
+              {twoFactorError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="leading-tight">{twoFactorError}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label htmlFor="two-factor-otp" className="block text-xs font-bold text-gray-700 text-center">
+                  Enter 6-Digit Verification Code:
+                </label>
+                <div className="relative">
+                  <input
+                    id="two-factor-otp"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    autoFocus
+                    value={twoFactorOtp}
+                    onChange={(e) => setTwoFactorOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    disabled={twoFactorLoading}
+                    className="w-full text-center text-2xl sm:text-3xl font-mono font-black tracking-[0.4em] py-3.5 px-4 bg-gray-50 border-2 border-emerald-600/40 rounded-2xl focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition-all text-gray-900 placeholder:text-gray-300"
+                  />
+                </div>
+              </div>
+
+              {/* Demo Mode / Defense Hint */}
+              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2 text-[11px] text-amber-900">
+                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Defense &amp; Offline Demo Support:</span> Check your actual inbox, or enter fallback code <strong className="font-mono bg-amber-200/70 px-1 py-0.5 rounded text-amber-950 font-bold">123456</strong> for instant evaluation.
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={twoFactorLoading || twoFactorOtp.length < 6}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {twoFactorLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Verifying Code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-emerald-300" />
+                      <span>Verify &amp; Sign In as Admin</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center justify-between pt-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={handleResend2FA}
+                    disabled={twoFactorResendCooldown > 0 || twoFactorLoading}
+                    className="text-emerald-800 hover:text-emerald-700 font-bold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer flex items-center gap-1"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${twoFactorLoading ? 'animate-spin' : ''}`} />
+                    {twoFactorResendCooldown > 0
+                      ? `Resend code in ${twoFactorResendCooldown}s`
+                      : 'Resend Verification Code'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShow2FAModal(false)}
+                    disabled={twoFactorLoading}
+                    className="text-gray-500 hover:text-gray-800 font-semibold hover:underline cursor-pointer"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

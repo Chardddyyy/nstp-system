@@ -1967,6 +1967,16 @@ function App() {
       if (response && response.warning && response.activeSession && !response.token) {
         response = await authAPI.login(email, password, true);
       }
+      if (response && response.require2FA) {
+        return {
+          success: false,
+          require2FA: true,
+          tempToken: response.tempToken,
+          email: response.email,
+          maskedEmail: response.maskedEmail,
+          message: response.message || 'Two-factor authentication code required'
+        };
+      }
       if (!response || !response.token) return { success: false, message: response?.message || 'Invalid server response' };
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
@@ -1996,6 +2006,50 @@ function App() {
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: error.message || 'Invalid email or password' };
+    }
+  }
+
+  async function verify2FA(email, otp, tempToken) {
+    try {
+      const response = await authAPI.verify2FA(email, otp, tempToken);
+      if (!response || !response.token) {
+        return { success: false, message: response?.message || 'Verification failed' };
+      }
+      window.__nstp_session_expired__ = false;
+      safeSetStorage('nstp_token', response.token);
+      safeSetStorage('nstp_cached_user', response.user);
+      setUser(response.user);
+
+      try {
+        const cachedStudents = JSON.parse(localStorage.getItem('nstp_cached_students') || '[]');
+        if (Array.isArray(cachedStudents) && cachedStudents.length > 0) setStudents(cachedStudents);
+        const cachedAllUsers = JSON.parse(localStorage.getItem('nstp_cached_all_users') || '[]');
+        if (Array.isArray(cachedAllUsers) && cachedAllUsers.length > 0) setUsers(cachedAllUsers);
+        const cachedEnrollments = JSON.parse(localStorage.getItem('nstp_cached_enrollments') || '[]');
+        if (Array.isArray(cachedEnrollments) && cachedEnrollments.length > 0) {
+          setPendingEnrollments(cachedEnrollments.filter(e => e.status === 'Pending'));
+        }
+        const cachedConvs = JSON.parse(localStorage.getItem('nstp_cached_conversations') || '[]');
+        if (Array.isArray(cachedConvs) && cachedConvs.length > 0) setConversations(cachedConvs);
+        const cachedMsgs = JSON.parse(localStorage.getItem('nstp_cached_messages') || '{}');
+        if (cachedMsgs && typeof cachedMsgs === 'object' && Object.keys(cachedMsgs).length > 0) setMessages(cachedMsgs);
+      } catch (_) {}
+
+      setLoading(false);
+      loadAllData(response.user).catch(err => console.warn('Background data load error:', err));
+      return { success: true, role: response.user.role };
+    } catch (error) {
+      console.error('2FA verification error:', error);
+      return { success: false, message: error.message || 'Invalid authentication code' };
+    }
+  }
+
+  async function resend2FA(email, tempToken) {
+    try {
+      const response = await authAPI.resend2FA(email, tempToken);
+      return { success: true, message: response?.message || 'Verification code resent successfully' };
+    } catch (error) {
+      return { success: false, message: error.message || 'Failed to resend code' };
     }
   }
 
@@ -2369,7 +2423,7 @@ function App() {
   const userConversations = useMemo(() => getUserConversations(), [getUserConversations]);
 
   const contextValue = {
-    user, login, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
+    user, login, verify2FA, resend2FA, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
     students, setStudents, reports, conversations: userConversations, messages, pendingEnrollments,
     archivedYears, currentBatch,
     viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData,
