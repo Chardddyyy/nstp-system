@@ -73,8 +73,13 @@ async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) 
 async function notifyBackupFailure(activity, errorDetails) {
   try {
     const nodemailer = require('nodemailer');
-    const adminEmail = process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com';
-    const emailPass = process.env.EMAIL_PASS || 'yahzxgygoemkvuxw';
+    const adminEmail = (process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com').trim().toLowerCase();
+    const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '').trim();
+
+    if (!emailPass) {
+      console.warn('[GDRIVE ALERT NOTICE] EMAIL_PASS environment variable not set. Skipping email alert.');
+      return;
+    }
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',

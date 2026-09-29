@@ -1543,8 +1543,10 @@ function getSharedMailTransporter() {
   if (sharedMailPool) return sharedMailPool;
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || '';
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
+
+  if (!emailPass) return null;
 
   sharedMailPool = nodemailer.createTransport({
     pool: true,
@@ -1552,10 +1554,13 @@ function getSharedMailTransporter() {
     maxMessages: 100,
     rateDelta: 1000,
     rateLimit: 5,
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '465', 10),
+    secure: (process.env.SMTP_PORT || '465') === '465',
     auth: { user: emailUser, pass: emailPass },
+    connectionTimeout: 4000,
+    greetingTimeout: 4000,
+    socketTimeout: 8000,
     tls: { rejectUnauthorized: false }
   });
   return sharedMailPool;
@@ -1564,8 +1569,8 @@ function getSharedMailTransporter() {
 async function send2FAEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || '';
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
 
   var deliveryEmail = targetEmail;
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -1669,29 +1674,115 @@ CvSU NSTP Security Portal`,
 </html>`
   };
 
-  // Primary: Use pooled SSL transport for instant sub-second delivery
-  try {
-    var transporter = getSharedMailTransporter();
-    var info = await transporter.sendMail(mailOptions);
-    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
-    return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
-  } catch (err1) {
-    console.warn('[ADMIN 2FA EMAIL] Primary pooled send notice:', err1.message);
-    sharedMailPool = null; // Recreate pool on connection break
+  // Method 1: Google Apps Script Webhook (Port 443 HTTPS - immune to cloud SMTP port blocks)
+  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
+  if (webhookUrl) {
     try {
-      var directTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: emailUser, pass: emailPass },
-        tls: { rejectUnauthorized: false }
+      var hookRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to: deliveryEmail,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html
+        }),
+        redirect: 'follow'
       });
-      var info2 = await directTransporter.sendMail(mailOptions);
-      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
-      return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
-    } catch (err2) {
-      console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code:', err2.message);
-      return { sent: false, error: err2.message, refId: refId };
+      if (hookRes.ok) {
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Google Script Webhook (Ref: #${refId})`);
+        return { sent: true, method: 'https-webhook', refId: refId };
+      }
+    } catch (whErr) {
+      console.warn('[ADMIN 2FA EMAIL] Webhook relay notice:', whErr.message);
     }
   }
+
+  // Method 2: Brevo HTTPS API (Port 443 HTTPS - Free 300 emails/day)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      var brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'CvSU Naic NSTP Security', email: emailUser },
+          to: [{ email: deliveryEmail }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+          textContent: mailOptions.text
+        })
+      });
+      if (brevoRes.ok) {
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Brevo HTTPS API (Ref: #${refId})`);
+        return { sent: true, method: 'brevo-https', refId: refId };
+      }
+    } catch (brErr) {
+      console.warn('[ADMIN 2FA EMAIL] Brevo API notice:', brErr.message);
+    }
+  }
+
+  // Method 3: Resend HTTPS API (Port 443 HTTPS - Free 3000 emails/month)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      var resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: `CvSU Naic NSTP Security <${emailUser}>`,
+          to: [deliveryEmail],
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          text: mailOptions.text
+        })
+      });
+      if (resendRes.ok) {
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Resend HTTPS API (Ref: #${refId})`);
+        return { sent: true, method: 'resend-https', refId: refId };
+      }
+    } catch (rsErr) {
+      console.warn('[ADMIN 2FA EMAIL] Resend API notice:', rsErr.message);
+    }
+  }
+
+  // Method 4: SMTP Transporter via Connection Pool or Direct Transport (with 4s timeout)
+  if (emailPass) {
+    try {
+      var transporter = getSharedMailTransporter();
+      if (transporter) {
+        var info = await transporter.sendMail(mailOptions);
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
+      }
+    } catch (err1) {
+      console.warn('[ADMIN 2FA EMAIL] Primary pooled send notice:', err1.message);
+      sharedMailPool = null;
+      try {
+        var directTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: emailUser, pass: emailPass },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 8000,
+          tls: { rejectUnauthorized: false }
+        });
+        var info2 = await directTransporter.sendMail(mailOptions);
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
+      } catch (err2) {
+        console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code:', err2.message);
+        return { sent: false, error: err2.message, refId: refId };
+      }
+    }
+  }
+
+  return { sent: false, error: 'Email service credentials not configured', refId: refId };
 }
 
 // Login
@@ -1916,36 +2007,33 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
     var deliveryEmail = (decoded.deliveryEmail || decoded.email || email).toLowerCase();
     var record = inMemory2FA.get(deliveryEmail) || inMemory2FA.get(email.toLowerCase()) || (decoded.email && inMemory2FA.get(decoded.email.toLowerCase()));
 
-    // Master Emergency Recovery PIN for Administrator (992026)
-    var isMasterPin = (otp === '992026' || otp === '000000');
-
-    if (!record && !isMasterPin) {
+    if (!record) {
       return res.status(400).json({ message: '2FA verification code has expired. Please log in again.' });
     }
 
-    if (record && Date.now() > record.expiresAt && !isMasterPin) {
-      inMemory2FA.delete(email);
+    if (Date.now() > record.expiresAt) {
+      inMemory2FA.delete(deliveryEmail);
       return res.status(400).json({ message: '2FA verification code has expired. Please log in again.' });
     }
 
-    if (record && record.attempts >= 5 && !isMasterPin) {
-      inMemory2FA.delete(email);
+    if (record.attempts >= 5) {
+      inMemory2FA.delete(deliveryEmail);
       auditLog('admin_2fa_locked', record.userId, 'Too many incorrect attempts', ip);
       return res.status(429).json({ message: 'Too many incorrect attempts. For security, please log in again.' });
     }
 
-    // Verify OTP strictly against genuine code dispatched to Gmail OR Master Recovery PIN
-    var isMatch = isMasterPin || (record && record.otp === otp);
+    // Verify OTP strictly against genuine code dispatched to admin's Gmail
+    var isMatch = (record.otp === otp);
 
     if (!isMatch) {
-      if (record) record.attempts += 1;
-      auditLog('admin_2fa_failed', (record && record.userId) || decoded.id, `Wrong OTP attempt ${(record && record.attempts) || 1}`, ip);
-      return res.status(400).json({ message: `Incorrect 2FA code. ${(record ? 5 - record.attempts : 4)} attempt(s) remaining.` });
+      record.attempts += 1;
+      auditLog('admin_2fa_failed', record.userId, `Wrong OTP attempt ${record.attempts}`, ip);
+      return res.status(400).json({ message: `Incorrect 2FA code. ${5 - record.attempts} attempt(s) remaining.` });
     }
 
     // Success! Clear 2FA record and issue full session token
-    inMemory2FA.delete(email);
-    var user = (record && record.user) || { id: decoded.id || 1, email: deliveryEmail, role: 'admin', name: 'NSTP Administrator', department: 'All' };
+    inMemory2FA.delete(deliveryEmail);
+    var user = record.user;
 
     var sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
     await pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
@@ -2101,8 +2189,8 @@ async function ensurePasswordResetsTable() {
 async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || '';
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
 
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var deliveryEmail = targetEmail;
@@ -2198,35 +2286,121 @@ CvSU NSTP Security Portal`,
 </html>`
   };
 
-  // Primary: Use pooled SSL transport for instant sub-second delivery
-  try {
-    var transporter = getSharedMailTransporter();
-    var info = await transporter.sendMail(mailOptions);
-    console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
-    return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
-  } catch (err1) {
-    console.warn('[AUTH] Primary pooled send notice:', err1.message);
-    sharedMailPool = null; // Recreate pool on connection break
+  // Method 1: Google Apps Script Webhook (Port 443 HTTPS)
+  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
+  if (webhookUrl) {
     try {
-      var directTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user: emailUser, pass: emailPass },
-        tls: { rejectUnauthorized: false }
+      var hookRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to: deliveryEmail,
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html
+        }),
+        redirect: 'follow'
       });
-      var info2 = await directTransporter.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
-      return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
-    } catch (err2) {
-      console.error('[AUTH] All email dispatch methods failed:', err2.message);
-      return { sent: false, error: err2.message, refId: refId };
+      if (hookRes.ok) {
+        console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Google Script Webhook (Ref #${refId})`);
+        return { sent: true, method: 'https-webhook', refId: refId };
+      }
+    } catch (whErr) {
+      console.warn('[AUTH] Webhook relay notice:', whErr.message);
     }
   }
+
+  // Method 2: Brevo HTTPS API (Port 443 HTTPS)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      var brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'CvSU Naic NSTP Security', email: emailUser },
+          to: [{ email: deliveryEmail }],
+          subject: mailOptions.subject,
+          htmlContent: mailOptions.html,
+          textContent: mailOptions.text
+        })
+      });
+      if (brevoRes.ok) {
+        console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Brevo HTTPS API (Ref #${refId})`);
+        return { sent: true, method: 'brevo-https', refId: refId };
+      }
+    } catch (brErr) {
+      console.warn('[AUTH] Brevo API notice:', brErr.message);
+    }
+  }
+
+  // Method 3: Resend HTTPS API (Port 443 HTTPS)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      var resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: `CvSU Naic NSTP Security <${emailUser}>`,
+          to: [deliveryEmail],
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          text: mailOptions.text
+        })
+      });
+      if (resendRes.ok) {
+        console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Resend HTTPS API (Ref #${refId})`);
+        return { sent: true, method: 'resend-https', refId: refId };
+      }
+    } catch (rsErr) {
+      console.warn('[AUTH] Resend API notice:', rsErr.message);
+    }
+  }
+
+  // Method 4: SMTP Transporter via Connection Pool or Direct Transport (with 4s timeout)
+  if (emailPass) {
+    try {
+      var transporter = getSharedMailTransporter();
+      if (transporter) {
+        var info = await transporter.sendMail(mailOptions);
+        console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
+      }
+    } catch (err1) {
+      console.warn('[AUTH] Primary pooled send notice:', err1.message);
+      sharedMailPool = null;
+      try {
+        var directTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: { user: emailUser, pass: emailPass },
+          connectionTimeout: 4000,
+          greetingTimeout: 4000,
+          socketTimeout: 8000,
+          tls: { rejectUnauthorized: false }
+        });
+        var info2 = await directTransporter.sendMail(mailOptions);
+        console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
+      } catch (err2) {
+        console.error('[AUTH] All email dispatch methods failed:', err2.message);
+        return { sent: false, error: err2.message, refId: refId };
+      }
+    }
+  }
+
+  return { sent: false, error: 'Email service credentials not configured', refId: refId };
 }
 
 // Automated Enrollment Approval & Digital ID Email Dispatcher
 async function sendEnrollmentApprovalEmail(studentData) {
-  const emailUser = process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || 'yahzxgygoemkvuxw';
+  const emailUser = (process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com').trim().toLowerCase();
+  const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '').trim();
   const webhookUrl = process.env.GMAIL_WEBHOOK_URL;
   const deliveryEmail = (studentData.email || '').trim();
 
@@ -2484,7 +2658,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const deliveryEmail = (overrideEmail || studentData.email || '').trim();
   const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   const emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
+  const emailPass = (process.env.EMAIL_PASS || process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
 
   if (!deliveryEmail || !deliveryEmail.includes('@')) {
     console.log('[DIGITAL ID EMAIL] Skipping email: invalid student email address', deliveryEmail);
@@ -2977,32 +3151,28 @@ const handleVerifyOtp = async (req, res) => {
       }
     }
 
-    // Check DB record or Master PIN
+    // Check DB record
     if (!isValid) {
-      if (cleanOtp === '992026' || cleanOtp === '000000') {
-        isValid = true;
-      } else {
-        try {
-          var [resets] = await pool.execute(
-            `SELECT id, email, otp_code FROM password_resets 
-             WHERE LOWER(TRIM(email)) = ? 
-             AND otp_code = ? 
-             AND used = 0 
-             AND (expires_at IS NULL OR expires_at > NOW())
-             ORDER BY id DESC LIMIT 1`,
-            [cleanEmail, cleanOtp]
-          );
-          if (resets.length > 0) {
-            isValid = true;
-          }
-        } catch (dbErr) {
-          console.warn('Verify reset OTP DB check failed:', dbErr.message);
+      try {
+        var [resets] = await pool.execute(
+          `SELECT id, email, otp_code FROM password_resets 
+           WHERE LOWER(TRIM(email)) = ? 
+           AND otp_code = ? 
+           AND used = 0 
+           AND (expires_at IS NULL OR expires_at > NOW())
+           ORDER BY id DESC LIMIT 1`,
+          [cleanEmail, cleanOtp]
+        );
+        if (resets.length > 0) {
+          isValid = true;
         }
+      } catch (dbErr) {
+        console.warn('Verify reset OTP DB check failed:', dbErr.message);
       }
     }
 
     if (!isValid) {
-      return res.status(400).json({ message: 'Invalid or expired verification code. Please check the 6-digit code sent to your email inbox or enter your Admin Master PIN.' });
+      return res.status(400).json({ message: 'Invalid or expired verification code. Please check the 6-digit code sent to your email inbox.' });
     }
 
     res.json({ success: true, message: 'Verification code verified successfully.' });
@@ -3034,10 +3204,6 @@ const handleResetPassword = async (req, res) => {
     var cleanEmail = String(email).trim().toLowerCase();
     var cleanOtp = String(otp_code).trim();
     var isValid = false;
-
-    if (cleanOtp === '992026' || cleanOtp === '000000') {
-      isValid = true;
-    }
 
     var memRecord = inMemoryResetOtps.get(cleanEmail);
     if (memRecord && memRecord.otp === cleanOtp && !memRecord.used && memRecord.expiresAt > Date.now()) {
