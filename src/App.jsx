@@ -261,7 +261,7 @@ function GlobalKeyboardManager() {
           navigate('/letter-formats');
         } else if (key === 'g' && user.role === 'admin') {
           e.preventDefault();
-          window.open('https://drive.google.com/drive/folders/19yefzA-HIg7TqBe74PlpH_bJn1KzXnsX?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto', '_blank', 'noopener,noreferrer');
+          window.open('https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3', '_blank', 'noopener,noreferrer');
         }
       }
     };

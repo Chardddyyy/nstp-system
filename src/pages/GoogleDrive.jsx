@@ -18,7 +18,7 @@ import {
   Info
 } from 'lucide-react';
 
-const GDRIVE_URL = 'https://drive.google.com/drive/folders/19yefzA-HIg7TqBe74PlpH_bJn1KzXnsX?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto';
+const GDRIVE_URL = 'https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
 
 export function GoogleDriveIcon({ className = "w-6 h-6" }) {
   return (
