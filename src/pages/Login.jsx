@@ -1137,11 +1137,11 @@ function Login() {
                 </div>
               </div>
 
-              {/* Demo Mode / Defense Hint */}
-              <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-start gap-2 text-[11px] text-amber-900">
-                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold">Defense &amp; Offline Demo Support:</span> Check your actual inbox, or enter fallback code <strong className="font-mono bg-amber-200/70 px-1 py-0.5 rounded text-amber-950 font-bold">123456</strong> for instant evaluation.
+              {/* Official Email Notice */}
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-[11.5px] text-emerald-900">
+                <Shield className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <div className="leading-snug">
+                  <span className="font-bold">Official Email Code Verification:</span> Ang 6-digit security code ay ipinadala sa iyong Gmail inbox (<strong className="font-mono text-emerald-950 font-bold">{twoFactorMaskedEmail || 'richardbelen99@gmail.com'}</strong>). Buksan ang iyong Gmail at ilagay ang natanggap na code.
                 </div>
               </div>
 

@@ -2031,29 +2031,10 @@ function App() {
 
   async function verify2FA(email, otp, tempToken) {
     try {
-      let response = null;
-      try {
-        response = await authAPI.verify2FA(email, otp, tempToken);
-      } catch (backendErr) {
-        if (window.__nstp_pending_admin_auth__ && (otp === '123456' || otp.length === 6)) {
-          response = {
-            token: window.__nstp_pending_admin_auth__.token,
-            user: window.__nstp_pending_admin_auth__.user
-          };
-        } else {
-          throw backendErr;
-        }
-      }
-
-      if ((!response || !response.token) && window.__nstp_pending_admin_auth__ && (otp === '123456' || otp.length === 6)) {
-        response = {
-          token: window.__nstp_pending_admin_auth__.token,
-          user: window.__nstp_pending_admin_auth__.user
-        };
-      }
+      const response = await authAPI.verify2FA(email, otp, tempToken);
 
       if (!response || !response.token) {
-        return { success: false, message: response?.message || 'Verification failed' };
+        return { success: false, message: response?.message || 'Invalid or expired 2FA code.' };
       }
       window.__nstp_pending_admin_auth__ = null;
       window.__nstp_session_expired__ = false;

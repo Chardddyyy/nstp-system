@@ -1552,16 +1552,56 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
     `
   };
 
-  var transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: emailUser,
-      pass: emailPass
-    },
-    tls: { rejectUnauthorized: false }
-  });
-
-  return transporter.sendMail(mailOptions);
+  try {
+    var transporter1 = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: emailUser, pass: emailPass },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 6000,
+      greetingTimeout: 3000,
+      socketTimeout: 6000
+    });
+    var info = await transporter1.sendMail(mailOptions);
+    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info.messageId})`);
+    return { sent: true, method: 'gmail-service', messageId: info.messageId };
+  } catch (err1) {
+    console.warn('[ADMIN 2FA EMAIL] Primary Gmail service notice:', err1.message);
+    try {
+      var transporter2 = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: { user: emailUser, pass: emailPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 6000,
+        greetingTimeout: 3000,
+        socketTimeout: 6000
+      });
+      var info2 = await transporter2.sendMail(mailOptions);
+      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info2.messageId})`);
+      return { sent: true, method: 'smtp-465', messageId: info2.messageId };
+    } catch (err2) {
+      console.warn('[ADMIN 2FA EMAIL] SSL 465 fallback notice:', err2.message);
+      try {
+        var transporter3 = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 587,
+          secure: false,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 6000,
+          greetingTimeout: 3000,
+          socketTimeout: 6000
+        });
+        var info3 = await transporter3.sendMail(mailOptions);
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId})`);
+        return { sent: true, method: 'smtp-587', messageId: info3.messageId };
+      } catch (err3) {
+        console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code via any SMTP transport:', err3.message);
+        return { sent: false, error: err3.message };
+      }
+    }
+  }
 }
 
 // Login
@@ -1769,8 +1809,8 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
       return res.status(429).json({ message: 'Too many incorrect attempts. For security, please log in again.' });
     }
 
-    // Verify OTP (accepts generated OTP or defense fallback '123456')
-    var isMatch = (record.otp === otp || otp === '123456');
+    // Verify OTP strictly against the genuine code dispatched to Gmail
+    var isMatch = (record.otp === otp);
 
     if (!isMatch) {
       record.attempts += 1;
