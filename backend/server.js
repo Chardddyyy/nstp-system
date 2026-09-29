@@ -940,7 +940,7 @@ async function seedPastBatches() {
 
 
 
-// ── Audit log ─────────────────────────────────────────────────────────────────
+// ── Audit log (Immutable Activity & Security Trail) ─────────────────────────
 async function ensureAuditLogs() {
   try {
     await pool.execute(`
@@ -950,10 +950,45 @@ async function ensureAuditLogs() {
         user_id INT NULL,
         detail TEXT NULL,
         ip VARCHAR(45) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_audit_action (action),
+        INDEX idx_audit_user (user_id),
+        INDEX idx_audit_created (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
-  } catch (_) {}
+
+    // Ensure query optimization indexes exist on existing deployments
+    try { await pool.execute('ALTER TABLE audit_logs ADD INDEX idx_audit_action (action);'); } catch (_) {}
+    try { await pool.execute('ALTER TABLE audit_logs ADD INDEX idx_audit_user (user_id);'); } catch (_) {}
+    try { await pool.execute('ALTER TABLE audit_logs ADD INDEX idx_audit_created (created_at);'); } catch (_) {}
+
+    // Enforce database-level immutability: block UPDATE and DELETE via triggers
+    try {
+      await pool.query(`
+        CREATE TRIGGER IF NOT EXISTS trg_audit_logs_no_update
+        BEFORE UPDATE ON audit_logs
+        FOR EACH ROW
+        BEGIN
+          SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Audit logs are immutable: UPDATE operations are strictly prohibited.';
+        END
+      `);
+    } catch (_) {}
+
+    try {
+      await pool.query(`
+        CREATE TRIGGER IF NOT EXISTS trg_audit_logs_no_delete
+        BEFORE DELETE ON audit_logs
+        FOR EACH ROW
+        BEGIN
+          SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Audit logs are immutable: DELETE operations are strictly prohibited.';
+        END
+      `);
+    } catch (_) {}
+  } catch (err) {
+    console.warn('ensureAuditLogs notice:', err.message);
+  }
 }
 
 // ── Accurate Web Telemetry: active_visitors table ────────────────────────────
@@ -976,11 +1011,16 @@ async function ensureActiveVisitorsTable() {
 // Creates the table if missing, then writes a single log row. Non-blocking.
 async function auditLog(action, userId, detail, ip) {
   try {
+    const serializedDetail = detail
+      ? (typeof detail === 'object' ? JSON.stringify(detail) : String(detail)).slice(0, 4000)
+      : null;
     await pool.execute(
       'INSERT INTO audit_logs (action, user_id, detail, ip) VALUES (?, ?, ?, ?)',
-      [action, userId || null, detail ? String(detail).slice(0, 4000) : null, ip || null]
+      [action, userId || null, serializedDetail, ip || null]
     );
-  } catch (_) { /* non-fatal */ }
+  } catch (err) {
+    console.warn('[AUDIT_LOG_ERROR]', err.message);
+  }
 }
 
 async function ensureMessageRestoreColumns() {
@@ -2870,9 +2910,9 @@ const handleDownloadIdPdf = async (req, res) => {
     res.status(500).json({ message: 'Error generating PDF ID card' });
   }
 };
-app.get('/api/students/:id/download-id-pdf', handleDownloadIdPdf);
-app.get('/api/students/download-id-pdf', handleDownloadIdPdf);
-app.get('/download-id-pdf', handleDownloadIdPdf);
+app.get('/api/students/:id/download-id-pdf', authenticateToken, handleDownloadIdPdf);
+app.get('/api/students/download-id-pdf', authenticateToken, handleDownloadIdPdf);
+app.get('/download-id-pdf', authenticateToken, handleDownloadIdPdf);
 
 // Diagnostic test endpoint to test email delivery in real-time (Admin Only)
 app.get('/api/auth/test-email', authenticateToken, requireAdmin, async (req, res) => {
@@ -3291,13 +3331,24 @@ app.delete('/api/users/:id', authenticateToken, async (req, res) => {
     try { await pool.execute('UPDATE enrollments SET reviewed_by = NULL WHERE reviewed_by = ?', [id]); } catch (_) {}
     try { await pool.execute('UPDATE calls SET caller_id = NULL WHERE caller_id = ?', [id]); } catch (_) {}
     try { await pool.execute('UPDATE calls SET receiver_id = NULL WHERE receiver_id = ?', [id]); } catch (_) {}
-    try { await pool.execute('DELETE FROM messages WHERE sender_id = ?', [id]); } catch (e5) { console.warn('Clean messages sender_id warning:', e5.message); }
-    try { await pool.execute('UPDATE audit_logs SET user_id = NULL WHERE user_id = ?', [id]); } catch (_) {}
+    // Note: audit_logs are immutable and permanently retain original user_id for forensic integrity
     if (target[0].email) {
       try { await pool.execute('DELETE FROM password_resets WHERE LOWER(TRIM(email)) = ?', [String(target[0].email).trim().toLowerCase()]); } catch (e6) { console.warn('Clean password_resets warning:', e6.message); }
     }
 
     await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+    auditLog(
+      'user_account_deleted',
+      req.user.id,
+      JSON.stringify({
+        deletedUserId: id,
+        deletedRole: target[0].role,
+        deletedEmail: target[0].email,
+        deletedName: target[0].name || target[0].email,
+        deletedByAdminId: req.user.id
+      }),
+      req.ip || 'unknown'
+    );
     console.log(`[USER DELETED] ${target[0].role.toUpperCase()} ID ${id} (${target[0].email}) successfully removed by Admin ID ${req.user.id}`);
     res.json({ success: true, message: `${target[0].role === 'admin' ? 'Admin' : 'Instructor'} account "${target[0].name || target[0].email}" deleted successfully.` });
   } catch (error) {
@@ -3898,6 +3949,32 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     ).catch(() => {});
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
+    auditLog(
+      'serial_number_generated',
+      req.user?.id || 1,
+      JSON.stringify({
+        source: 'manual_student_registration',
+        studentId: studentId,
+        serialNumber: matriculationNumber,
+        department: dept,
+        year: currentYear,
+        registeredBy: req.user?.name || req.user?.email || 'Admin'
+      }),
+      req.ip || 'unknown'
+    );
+    auditLog(
+      'student_created',
+      req.user?.id || 1,
+      JSON.stringify({
+        studentId: studentId,
+        name: finalName,
+        department: dept,
+        section: n(section),
+        serialNumber: matriculationNumber,
+        registeredBy: req.user?.name || req.user?.email || 'Admin'
+      }),
+      req.ip || 'unknown'
+    );
     autoSaveToGDrive('Add_Student_' + studentId);
     res.status(201).json(students[0]);
   } catch (error) {
@@ -4023,6 +4100,22 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
 
     const [updatedRows] = await pool.execute('SELECT * FROM students WHERE id = ? LIMIT 1', [current.id]);
     
+    auditLog(
+      'student_updated',
+      req.user.id,
+      JSON.stringify({
+        studentId: finalStudentId,
+        name: finalName,
+        department: finalDept,
+        section: finalSection,
+        nstp_section: finalNstpSection,
+        program: finalProgram,
+        modifiedBy: req.user.name || req.user.email,
+        role: req.user.role
+      }),
+      req.ip || 'unknown'
+    );
+
     try {
       autoSaveToGDrive('Edit_Student_' + (finalStudentId || id));
     } catch (e) {
@@ -4065,10 +4158,13 @@ app.delete('/api/students/:id', authenticateToken, async (req, res) => {
     const snapshot = JSON.stringify({
       studentId: s.studentId, name: s.name, department: s.department,
       email: s.email, program: s.program, section: s.section, year: s.year,
+      nstp_section: s.nstp_section, nstp_serial_id: s.nstp_serial_id,
       contactNumber: s.contactNumber, address: s.address, gender: s.gender,
       birthDate: s.birthDate, age: s.age, civilStatus: s.civilStatus,
       emergencyContact: s.emergencyContact, emergencyNumber: s.emergencyNumber,
       status: s.status, created_at: s.created_at,
+      deletedBy: req.user.name || req.user.email,
+      deletedByAdminId: req.user.id
     });
     await pool.execute('DELETE FROM students WHERE id = ?', [id]);
     auditLog('student_deleted', req.user.id, snapshot, req.ip || 'unknown');
@@ -4259,6 +4355,24 @@ const handleBatchSaveGrades = async (req, res) => {
       }
 
       savedCount++;
+    }
+
+    if (savedCount > 0) {
+      const sampleIds = grades.slice(0, 5).map(g => g.studentId || g.student_id).filter(Boolean);
+      auditLog(
+        'grade_batch_update',
+        req.user.id,
+        JSON.stringify({
+          action: 'batch_save_grades',
+          savedCount: savedCount,
+          semester: grades[0]?.semester || '1st Semester',
+          schoolYear: grades[0]?.school_year || grades[0]?.schoolYear || '2025-2026',
+          sampleStudents: sampleIds,
+          instructor: instructorName,
+          role: req.user.role
+        }),
+        req.ip || 'unknown'
+      );
     }
 
     autoSaveToGDrive('Save_Batch_Grades_' + (grades[0]?.semester || 'Sem') + '_' + savedCount);
@@ -6076,6 +6190,17 @@ app.post('/api/clear-batch', authenticateToken, requireAdmin, async (req, res) =
     await pool.execute('DELETE FROM report_submissions');
     await pool.execute('DELETE FROM reports');
     await pool.execute('DELETE FROM students');
+    auditLog(
+      'students_batch_cleared',
+      req.user.id,
+      JSON.stringify({
+        action: 'clear_batch',
+        clearedBy: req.user.name || req.user.email,
+        role: req.user.role,
+        scope: 'students, reports, report_submissions'
+      }),
+      req.ip || 'unknown'
+    );
     res.json({ message: 'Batch cleared' });
   } catch (error) {
     console.error('Clear batch error:', error);
@@ -6530,6 +6655,21 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               `UPDATE enrollments SET nstp_serial_id = COALESCE(nstp_serial_id, ?), qr_token = COALESCE(qr_token, ?) WHERE id = ?`,
               [matriculationNumber, token, id]
             ).catch(() => {});
+
+            auditLog(
+              'serial_number_generated',
+              req.user?.id || 1,
+              JSON.stringify({
+                source: 'enrollment_approval',
+                enrollmentId: id,
+                studentId: studentIdVal,
+                serialNumber: matriculationNumber,
+                department: dept,
+                year: year,
+                approvedBy: req.user?.name || req.user?.email || 'Admin'
+              }),
+              req.ip || 'unknown'
+            );
           }
         } catch (insertError) {
           console.error('Error inserting student during enrollment approval:', insertError);

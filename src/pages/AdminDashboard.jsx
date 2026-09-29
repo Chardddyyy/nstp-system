@@ -4429,9 +4429,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <strong className="text-blue-900 font-bold">Active &amp; Monitored</strong>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  <span className="text-gray-600">Query Cache:</span>
-                  <strong className="text-amber-900 font-bold">In-Memory TTL</strong>
+                  <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                  <span className="text-gray-600">Ledger Status:</span>
+                  <strong className="text-emerald-950 font-bold">Immutable (Write-Once)</strong>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-teal-500"></span>
@@ -4465,9 +4465,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
                   {[
                     { id: 'all', label: 'All Actions' },
-                    { id: 'login', label: 'Logins' },
+                    { id: 'login', label: 'Logins & 2FA' },
+                    { id: 'grade', label: 'Grade Updates' },
+                    { id: 'serial', label: 'Serial Generation' },
+                    { id: 'student', label: 'Student Records' },
                     { id: 'enrollment', label: 'Enrollments' },
-                    { id: 'student', label: 'Students' },
                     { id: 'attendance', label: 'Attendance' }
                   ].map((tab) => (
                     <button
@@ -4502,7 +4504,19 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     const ip = String(log.ip || '').toLowerCase();
                     const q = auditSearch.toLowerCase().trim();
 
-                    if (auditFilter !== 'all' && !act.includes(auditFilter)) {
+                    if (auditFilter === 'login' && !act.includes('login') && !act.includes('2fa')) {
+                      return false;
+                    } else if (auditFilter === 'grade' && !act.includes('grade')) {
+                      return false;
+                    } else if (auditFilter === 'serial' && !act.includes('serial')) {
+                      return false;
+                    } else if (auditFilter === 'student' && !act.includes('student')) {
+                      return false;
+                    } else if (auditFilter === 'enrollment' && !act.includes('enroll')) {
+                      return false;
+                    } else if (auditFilter === 'attendance' && !act.includes('attendance')) {
+                      return false;
+                    } else if (auditFilter !== 'all' && !act.includes(auditFilter)) {
                       return false;
                     }
                     if (q) {
@@ -4537,8 +4551,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           {filtered.map((log) => {
                             const action = String(log.action || '');
                             let badgeStyle = 'bg-gray-100 text-gray-800 border-gray-200';
-                            if (action.includes('login_success')) badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-                            else if (action.includes('login_failed') || action.includes('deleted')) badgeStyle = 'bg-red-100 text-red-800 border-red-300';
+                            if (action.includes('login_success') || action.includes('2fa_success')) badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                            else if (action.includes('login_failed') || action.includes('deleted') || action.includes('cleared')) badgeStyle = 'bg-rose-100 text-rose-800 border-rose-300';
+                            else if (action.includes('grade')) badgeStyle = 'bg-purple-100 text-purple-800 border-purple-300';
+                            else if (action.includes('serial')) badgeStyle = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+                            else if (action.includes('student_updated')) badgeStyle = 'bg-sky-100 text-sky-800 border-sky-300';
+                            else if (action.includes('student_created')) badgeStyle = 'bg-cyan-100 text-cyan-800 border-cyan-300';
                             else if (action.includes('approved') || action.includes('enrolled')) badgeStyle = 'bg-blue-100 text-blue-800 border-blue-300';
                             else if (action.includes('schedule') || action.includes('password')) badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300';
                             else if (action.includes('attendance')) badgeStyle = 'bg-teal-100 text-teal-800 border-teal-300';
