@@ -659,7 +659,7 @@ function Login() {
                   spellCheck="false"
                   data-lpignore="true"
                   className="w-full min-h-[46px] pl-10 pr-3 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                  placeholder="richardbelen99@gmail.com / admin"
+                  placeholder="admin@cvsu.edu.ph / admin"
                   autoComplete="off"
                   required
                 />
@@ -757,7 +757,7 @@ function Login() {
 
             <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
               {[
-                { role: 'Admin', email: 'richardbelen99@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                { role: 'Admin', email: 'admin@cvsu.edu.ph', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
                 { role: 'CWTS', email: 'cwts@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
                 { role: 'LTS', email: 'lts@gmail.com', pass: 'lts123', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
                 { role: 'ROTC', email: 'rotc@gmail.com', pass: 'rotc123', badge: 'bg-red-100 text-red-800 border-red-300' },

@@ -25,6 +25,8 @@ const fs = require('fs');
 const { generateStudentIdPdf } = require('./utils/pdfIdGenerator');
 const smsService = require('./services/smsService');
 const app = express();
+// Enable reverse proxy trust (critical for accurate client IP in rate limiting & logs behind Render/Cloudflare)
+app.set('trust proxy', 1);
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
@@ -135,10 +137,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// ── Helmet: sets 15+ security headers ────────────────────────────────────────
+// ── Helmet: sets comprehensive defensive HTTP security headers ──────────────
 app.use(helmet({
-  contentSecurityPolicy: false, // disabled — frontend is a Vite SPA on a different port
+  contentSecurityPolicy: false, // disabled — frontend is a Vite SPA on a separate domain/port
   crossOriginEmbedderPolicy: false,
+  xContentTypeOptions: true, // Prevents MIME-type sniffing attacks
+  xFrameOptions: { action: 'sameorigin' }, // Prevents clickjacking
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // Protects referrer leakage
+  hidePoweredBy: true // Masks Express framework header from attacker fingerprinting
 }));
 
 // ── Private Network Access (Chrome loopback request header) ────────────────
@@ -1687,6 +1693,7 @@ CvSU NSTP Security Portal`,
           text: mailOptions.text,
           html: mailOptions.html
         }),
+        signal: AbortSignal.timeout(3000),
         redirect: 'follow'
       });
       if (hookRes.ok) {
@@ -1893,7 +1900,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
     if (user.role === 'admin') {
       // deliveryEmail is the admin's actual registered email (receives the 2FA code)
       // cvsunaicnstp@gmail.com is only the SMTP sender account (used in FROM field)
-      var deliveryEmail = user.email || 'richardbelen99@gmail.com';
+      var deliveryEmail = user.email || 'admin@cvsu.edu.ph';
 
       var userKey = deliveryEmail.toLowerCase();
       var existing2FA = inMemory2FA.get(userKey) || inMemory2FA.get(user.email.toLowerCase());
@@ -2299,6 +2306,7 @@ CvSU NSTP Security Portal`,
           text: mailOptions.text,
           html: mailOptions.html
         }),
+        signal: AbortSignal.timeout(3000),
         redirect: 'follow'
       });
       if (hookRes.ok) {
@@ -2941,6 +2949,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(webhookPayload),
+        signal: AbortSignal.timeout(3000),
         redirect: 'follow'
       });
       if (hookRes.ok) {
@@ -6444,6 +6453,21 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       return res.status(400).json({ message: 'Official 2x2 ID Picture is required. Please attach your 2x2 ID photo (white background).' });
     }
 
+    // Defensive File Type & Format Security Validation (Anti-Malicious Upload)
+    if (typeof finalRegPhoto === 'string' && finalRegPhoto.startsWith('data:')) {
+      const isAllowedDoc = /^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/.test(finalRegPhoto);
+      if (!isAllowedDoc) {
+        return res.status(400).json({ message: 'Security Warning: Only valid PDF, PNG, or JPEG files are permitted for the Certificate of Registration (COR).' });
+      }
+    }
+
+    if (typeof finalIdPhoto === 'string' && finalIdPhoto.startsWith('data:')) {
+      const isAllowedImg = /^data:image\/(jpeg|png|webp);base64,/.test(finalIdPhoto);
+      if (!isAllowedImg) {
+        return res.status(400).json({ message: 'Security Warning: Only valid JPEG, PNG, or WebP image files are permitted for the 2x2 ID Picture.' });
+      }
+    }
+
     const resolved2x2 = finalIdPhoto;
 
     // Anti-Troll Security: Rate Limit by IP Address (Max 4 submissions per 15 minutes)
@@ -8072,6 +8096,15 @@ app.post('/api/upload/media', authenticateToken, async (req, res) => {
   try {
     const { file, folder } = req.body || {};
     if (!file) return res.status(400).json({ message: 'File payload is required' });
+    
+    // Security Guard: validate media type to block executables or arbitrary script payloads
+    if (typeof file === 'string' && file.startsWith('data:')) {
+      const isAllowed = /^data:(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|audio\/(webm|mp3|wav|ogg|m4a)|application\/pdf);base64,/.test(file);
+      if (!isAllowed) {
+        return res.status(400).json({ message: 'Security Warning: Unsupported or insecure media payload type.' });
+      }
+    }
+
     const result = await uploadMedia(file, folder || 'nstp/uploads');
     res.json({ success: true, ...result });
   } catch (err) {

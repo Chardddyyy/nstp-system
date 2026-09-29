@@ -212,11 +212,11 @@ export async function loginUser(email, password, _forceLogin = true) {
       
       const offlineAccounts = [
         {
-          emails: ['richardbelen99@gmail.com', 'admin@gmail.com', 'admin@cvsu.edu.ph', 'admin'],
+          emails: ['admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com', 'admin'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'richardbelen99@gmail.com',
+            email: 'admin@cvsu.edu.ph',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -323,7 +323,7 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
+        { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office' },
         { id: 2, name: 'CWTS Facilitator', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },

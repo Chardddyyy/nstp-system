@@ -1134,19 +1134,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
-              {/* Security & Audit Logs Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAuditLogModal(true);
-                  fetchAuditLogs();
-                }}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white rounded-xl sm:rounded-2xl transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs border border-emerald-700/60"
-                title="System Security & Audit Trail"
-              >
-                <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-                <span className="hidden md:inline text-[11px] sm:text-xs font-black tracking-tight">Audit Logs</span>
-              </button>
 
               {/* System Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
@@ -4421,7 +4408,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span className="text-gray-600">Admin Account:</span>
-                  <strong className="text-emerald-950 font-bold truncate">richardbelen99@gmail.com</strong>
+                  <strong className="text-emerald-950 font-bold truncate">{user?.email || 'admin@cvsu.edu.ph'}</strong>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500"></span>
