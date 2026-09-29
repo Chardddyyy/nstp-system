@@ -1536,44 +1536,52 @@ function maskEmail(email) {
   return name.slice(0, 2) + '***' + name.slice(-2) + '@' + domain;
 }
 
+// Persistent SMTP Connection Pool for lightning-fast email dispatch (<1s)
+var sharedMailPool = null;
+
+function getSharedMailTransporter() {
+  if (sharedMailPool) return sharedMailPool;
+  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
+  var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
+
+  sharedMailPool = nodemailer.createTransport({
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+    rateDelta: 1000,
+    rateLimit: 5,
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: { user: emailUser, pass: emailPass },
+    tls: { rejectUnauthorized: false }
+  });
+  return sharedMailPool;
+}
+
 async function send2FAEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
   var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
-  if (!emailPass || emailPass.length < 8) {
-    emailPass = 'yahzxgygoemkvuxw';
-  }
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
 
   var deliveryEmail = targetEmail;
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var now = new Date();
   var manilaTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   var manilaDate = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
-  var uniqueMessageId = `<nstp-admin-2fa-${refId.toLowerCase()}-${Date.now()}@cvsu-naic.edu.ph>`;
 
   console.log(`\n======================================================`);
   console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${targetEmail}: [ ${otpCode} ] (Ref #${refId}) (Valid 10 mins)`);
   console.log(`======================================================\n`);
 
+  // Clean, RFC-compliant headers: Omit custom Message-ID & spam flags so Gmail DKIM signs properly
   var mailOptions = {
     from: `"CvSU Naic NSTP Security" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `CvSU NSTP Security Code: [ ${otpCode} ] (Ref #${refId}) • ${manilaTime}`,
-    headers: {
-      'Message-ID': uniqueMessageId,
-      'X-Entity-Ref-ID': `NSTP-2FA-${refId}-${Date.now()}`,
-      'X-Ticket-ID': refId,
-      'X-Priority': '1',
-      'Priority': 'urgent',
-      'Importance': 'high',
-      'Auto-Submitted': 'auto-generated',
-      'X-Auto-Response-Suppress': 'All',
-      'X-Mailer': 'CvSU-NSTP-SecurityGateway/2.4',
-      'Precedence': 'bulk',
-      'References': '',
-      'In-Reply-To': ''
-    },
+    subject: `CvSU Naic NSTP Security Code: ${otpCode} (Ref #${refId})`,
     text: `CvSU Naic NSTP - Administrator Two-Factor Authentication (2FA)
 
 Security Code: ${otpCode}
@@ -1661,55 +1669,27 @@ CvSU NSTP Security Portal`,
 </html>`
   };
 
-  // Method 1 (Primary & Fastest): Direct SSL Port 465 (Direct TLS handshake, ~1.5s on cloud/Render)
+  // Primary: Use pooled SSL transport for instant sub-second delivery
   try {
-    var transporter1 = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: { user: emailUser, pass: emailPass },
-      tls: { rejectUnauthorized: false },
-      connectionTimeout: 12000,
-      greetingTimeout: 9000,
-      socketTimeout: 12000
-    });
-    var info = await transporter1.sendMail(mailOptions);
-    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info.messageId}, Ref: #${refId})`);
-    return { sent: true, method: 'smtp-465', messageId: info.messageId, refId: refId };
+    var transporter = getSharedMailTransporter();
+    var info = await transporter.sendMail(mailOptions);
+    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
+    return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
   } catch (err1) {
-    console.warn('[ADMIN 2FA EMAIL] Primary SSL 465 notice:', err1.message);
+    console.warn('[ADMIN 2FA EMAIL] Primary pooled send notice:', err1.message);
+    sharedMailPool = null; // Recreate pool on connection break
     try {
-      var transporter2 = nodemailer.createTransport({
+      var directTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
-        tls: { rejectUnauthorized: false },
-        connectionTimeout: 12000,
-        greetingTimeout: 9000,
-        socketTimeout: 12000
+        tls: { rejectUnauthorized: false }
       });
-      var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
+      var info2 = await directTransporter.sendMail(mailOptions);
+      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
       return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
     } catch (err2) {
-      console.warn('[ADMIN 2FA EMAIL] Gmail service fallback notice:', err2.message);
-      try {
-        var transporter3 = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 587,
-          secure: false,
-          auth: { user: emailUser, pass: emailPass },
-          tls: { rejectUnauthorized: false },
-          connectionTimeout: 12000,
-          greetingTimeout: 9000,
-          socketTimeout: 12000
-        });
-        var info3 = await transporter3.sendMail(mailOptions);
-        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId}, Ref: #${refId})`);
-        return { sent: true, method: 'smtp-587', messageId: info3.messageId, refId: refId };
-      } catch (err3) {
-        console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code via any SMTP transport:', err3.message);
-        return { sent: false, error: err3.message, refId: refId };
-      }
+      console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code:', err2.message);
+      return { sent: false, error: err2.message, refId: refId };
     }
   }
 }
@@ -1828,32 +1808,14 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       var existing2FA = inMemory2FA.get(userKey) || inMemory2FA.get(user.email.toLowerCase());
       var now = Date.now();
 
-      // Guard: If a code was sent less than 60 seconds ago and hasn't expired, reuse active code and tell client exact remaining seconds
-      if (existing2FA && existing2FA.sentAt && (now - existing2FA.sentAt < 60 * 1000) && (existing2FA.expiresAt > now)) {
-        var remainingSeconds = Math.max(1, Math.ceil((existing2FA.sentAt + 60 * 1000 - now) / 1000));
-        console.log(`[ADMIN 2FA RATE GUARD] Active 2FA session exists for ${user.email} -> ${deliveryEmail}. Reusing active OTP [ ${existing2FA.otp} ] (${remainingSeconds}s cooldown remaining).`);
-        return res.json({
-          require2FA: true,
-          tempToken: existing2FA.tempToken,
-          email: user.email,
-          deliveryEmail: deliveryEmail,
-          maskedEmail: maskEmail(deliveryEmail),
-          ticketId: existing2FA.ticketId,
-          cooldownRemaining: remainingSeconds,
-          reused: true,
-          message: `Two-Factor Authentication required. A verification code was recently sent (Ticket #${existing2FA.ticketId || 'ACTIVE'}). Please check your email or wait ${remainingSeconds}s to resend.`
-        });
-      }
-
-      var otp2fa = crypto.randomInt(100000, 1000000).toString();
-      var tempToken = jwt.sign(
+      // If an unexpired session exists, reuse the active code for consistency, but ALWAYS dispatch the email so the user receives it
+      var otp2fa = (existing2FA && existing2FA.expiresAt > now) ? existing2FA.otp : crypto.randomInt(100000, 1000000).toString();
+      var refId = (existing2FA && existing2FA.ticketId) || crypto.randomBytes(3).toString('hex').toUpperCase();
+      var tempToken = (existing2FA && existing2FA.tempToken) || jwt.sign(
         { id: user.id, email: user.email, deliveryEmail: deliveryEmail, temp2FA: true },
         JWT_SECRET,
         { expiresIn: '10m' }
       );
-
-      // Generate a refId upfront so we can include it in the response immediately
-      var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
 
       var record = {
         otp: otp2fa,
@@ -1863,7 +1825,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
         user: user,
         deliveryEmail: deliveryEmail,
         sentAt: Date.now(),
-        expiresAt: Date.now() + 10 * 60 * 1000,
+        expiresAt: (existing2FA && existing2FA.expiresAt > now) ? existing2FA.expiresAt : Date.now() + 10 * 60 * 1000,
         attempts: 0
       };
       inMemory2FA.set(userKey, record);
@@ -2132,10 +2094,7 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
   var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
-  var emailPass = String(rawPass).replace(/\s+/g, '').trim();
-  if (!emailPass || emailPass.length < 8) {
-    emailPass = 'yahzxgygoemkvuxw';
-  }
+  var emailPass = String(rawPass).replace(/\s+/g, '').trim() || 'yahzxgygoemkvuxw';
 
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var deliveryEmail = targetEmail;
@@ -2143,28 +2102,14 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   var dateStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
   var resetLink = `https://chardddyyy.github.io/nstp-system/#/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}`;
-  var uniqueMessageId = `<nstp-reset-${refId.toLowerCase()}-${Date.now()}@cvsu-naic.edu.ph>`;
 
   console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Ref #${refId}) (Valid for 10 minutes)`);
 
+  // Clean, RFC-compliant headers: Omit custom Message-ID & spam flags so Gmail DKIM signs properly
   var mailOptions = {
     from: `"CvSU Naic NSTP Security" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `CvSU NSTP Password Reset Code: [ ${otpCode} ] (Ref #${refId}) • ${timeStr}`,
-    headers: {
-      'Message-ID': uniqueMessageId,
-      'X-Entity-Ref-ID': `NSTP-RESET-${refId}-${Date.now()}`,
-      'X-Ticket-ID': refId,
-      'X-Priority': '1',
-      'Priority': 'urgent',
-      'Importance': 'high',
-      'Auto-Submitted': 'auto-generated',
-      'X-Auto-Response-Suppress': 'All',
-      'X-Mailer': 'CvSU-NSTP-SecurityGateway/2.4',
-      'Precedence': 'bulk',
-      'References': '',
-      'In-Reply-To': ''
-    },
+    subject: `CvSU Naic NSTP Password Reset Code: ${otpCode} (Ref #${refId})`,
     text: `CvSU Naic NSTP - Password Reset Verification
 
 Security Code: ${otpCode}
@@ -2245,55 +2190,27 @@ CvSU NSTP Security Portal`,
 </html>`
   };
 
-  // Method 1 (Primary & Fastest): Direct SSL Port 465 (Direct TLS handshake, ~1.5s on cloud/Render)
+  // Primary: Use pooled SSL transport for instant sub-second delivery
   try {
-    var transporter1 = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 465,
-      secure: true,
-      auth: { user: emailUser, pass: emailPass },
-      tls: { rejectUnauthorized: false },
-      connectionTimeout: 12000,
-      greetingTimeout: 9000,
-      socketTimeout: 12000
-    });
-    var info = await transporter1.sendMail(mailOptions);
-    console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info.messageId}, Ref: #${refId})`);
-    return { sent: true, method: 'smtp-465', messageId: info.messageId, refId: refId };
+    var transporter = getSharedMailTransporter();
+    var info = await transporter.sendMail(mailOptions);
+    console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} via connection pool (MessageId: ${info.messageId}, Ref: #${refId})`);
+    return { sent: true, method: 'smtp-pool', messageId: info.messageId, refId: refId };
   } catch (err1) {
-    console.warn('[AUTH] Primary SSL 465 dispatch notice:', err1.message);
+    console.warn('[AUTH] Primary pooled send notice:', err1.message);
+    sharedMailPool = null; // Recreate pool on connection break
     try {
-      var transporter2 = nodemailer.createTransport({
+      var directTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
-        tls: { rejectUnauthorized: false },
-        connectionTimeout: 12000,
-        greetingTimeout: 9000,
-        socketTimeout: 12000
+        tls: { rejectUnauthorized: false }
       });
-      var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email successfully delivered via Gmail service to ${deliveryEmail} (MessageId: ${info2.messageId}, Ref: #${refId})`);
+      var info2 = await directTransporter.sendMail(mailOptions);
+      console.log(`[AUTH] Password reset email delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
       return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
     } catch (err2) {
-      console.warn('[AUTH] Gmail service fallback notice:', err2.message);
-      try {
-        var transporter3 = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 587,
-          secure: false,
-          auth: { user: emailUser, pass: emailPass },
-          tls: { rejectUnauthorized: false },
-          connectionTimeout: 12000,
-          greetingTimeout: 9000,
-          socketTimeout: 12000
-        });
-        var info3 = await transporter3.sendMail(mailOptions);
-        console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId}, Ref: #${refId})`);
-        return { sent: true, method: 'smtp-587', messageId: info3.messageId, refId: refId };
-      } catch (err3) {
-        console.error('[AUTH] All email dispatch methods failed:', err3.message);
-        return { sent: false, error: err3.message, refId: refId };
-      }
+      console.error('[AUTH] All email dispatch methods failed:', err2.message);
+      return { sent: false, error: err2.message, refId: refId };
     }
   }
 }
@@ -2960,32 +2877,18 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
     var now = Date.now();
     var existingReset = inMemoryResetOtps.get(cleanEmail) || inMemoryResetOtps.get(targetDeliveryEmail);
 
-    // Guard: 60-second cooldown rate limit for forgot-password
-    if (existingReset && existingReset.sentAt && (now - existingReset.sentAt < 60 * 1000) && (existingReset.expiresAt > now) && !existingReset.used) {
-      var remainingSeconds = Math.max(1, Math.ceil((existingReset.sentAt + 60 * 1000 - now) / 1000));
-      console.log(`[FORGOT PASSWORD RATE GUARD] Active OTP exists for ${cleanEmail} -> ${targetDeliveryEmail} (${remainingSeconds}s cooldown remaining). Reusing active code [ ${existingReset.otp} ].`);
-      return res.json({
-        success: true,
-        reused: true,
-        ticketId: existingReset.ticketId,
-        cooldownRemaining: remainingSeconds,
-        message: `A verification code was recently dispatched to ${targetDeliveryEmail} (Ticket #${existingReset.ticketId || 'ACTIVE'}). Please check your inbox or wait ${remainingSeconds}s to request a new code.`
-      });
-    }
-    
-    // Cryptographically secure 6-digit OTP generation (prevents Math.random predictability)
-    var otp = crypto.randomInt(100000, 1000000).toString();
-
-    // Dispatch email directly with Port 465 SSL and await completion
-    // Generate refId upfront so we can respond instantly
-    var resetRefId = crypto.randomBytes(3).toString('hex').toUpperCase();
+    // If an active unexpired reset code exists, reuse it for code consistency, but ALWAYS dispatch the email so the user receives it
+    var otp = (existingReset && existingReset.expiresAt > now && !existingReset.used)
+      ? existingReset.otp
+      : crypto.randomInt(100000, 1000000).toString();
+    var resetRefId = (existingReset && existingReset.ticketId) || crypto.randomBytes(3).toString('hex').toUpperCase();
 
     // Save in-memory with attempt tracking, sentAt, and ticketId — BEFORE sending email
     var resetRecord = {
       otp: otp,
       ticketId: resetRefId,
       sentAt: Date.now(),
-      expiresAt: Date.now() + 10 * 60 * 1000,
+      expiresAt: (existingReset && existingReset.expiresAt > now && !existingReset.used) ? existingReset.expiresAt : Date.now() + 10 * 60 * 1000,
       used: false,
       attempts: 0
     };
