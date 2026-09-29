@@ -179,6 +179,27 @@ function Landing() {
 
   const timerRef = useRef(null);
 
+  // Weak Internet & Data-Saver Detection for Students
+  const [isSlowConnection, setIsSlowConnection] = useState(() => {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return Boolean(conn?.saveData || (conn?.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType)));
+  });
+  const [dataSaverEnabled, setDataSaverEnabled] = useState(() => {
+    return localStorage.getItem('nstp_datasaver') === 'true' || Boolean(navigator.connection?.saveData);
+  });
+
+  useEffect(() => {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && conn.addEventListener) {
+      const handleConnChange = () => {
+        setIsSlowConnection(Boolean(conn.saveData || (conn.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType))));
+      };
+      conn.addEventListener('change', handleConnChange);
+      return () => conn.removeEventListener('change', handleConnChange);
+    }
+  }, []);
+
+
   // Live Enrollment Timed Schedule Status
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
 
@@ -344,10 +365,11 @@ function Landing() {
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (dataSaverEnabled || isSlowConnection) return; // Prevent heavy background photo cycling on slow cellular networks
     timerRef.current = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
     }, 6000);
-  }, []);
+  }, [dataSaverEnabled, isSlowConnection]);
 
   useEffect(() => {
     startTimer();
@@ -411,6 +433,38 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white relative antialiased">
+
+      {/* ── Weak Internet & Data-Saver Notice Bar ──────── */}
+      {(isSlowConnection || dataSaverEnabled) && (
+        <aside aria-label="Data Saver Notice" className="bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-emerald-950 px-3 py-1.5 text-xs font-bold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/40 shadow-xs z-50 relative">
+          <div className="flex items-center gap-2 max-w-full">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-950 animate-ping shrink-0"></span>
+            <span className="text-[11px] sm:text-xs">
+              <strong>📶 Data-Saver Active:</strong> Naka-optimize ang portal para sa mahinang internet. Pwede kang mag-enroll agad nang mabilis:
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/enrollment"
+              className="bg-emerald-950 hover:bg-emerald-900 text-amber-300 px-3 py-1 rounded-full text-[10.5px] font-black tracking-wide shadow-xs active:scale-95 transition-all flex items-center gap-1"
+            >
+              <span>🚀 Mag-enroll Agad (Lite Track)</span>
+              <span>&rarr;</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !dataSaverEnabled;
+                setDataSaverEnabled(next);
+                localStorage.setItem('nstp_datasaver', String(next));
+              }}
+              className="text-[10px] text-emerald-950/80 hover:text-emerald-950 underline cursor-pointer"
+            >
+              {dataSaverEnabled ? 'I-off' : 'I-on'}
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* ── Executive Glassmorphic Header with Dropdown Navigation ──────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all w-full">
@@ -743,6 +797,12 @@ function Landing() {
                     <BookOpen className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
                     <span>How to Enroll</span>
                   </button>
+                </div>
+
+                {/* Low-Data / Weak Connection Reassurance */}
+                <div className="mt-3 xs:mt-3.5 sm:mt-4 flex items-center gap-2 text-[10.5px] xs:text-xs text-emerald-200/90 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                  <span>Mahina ang data o signal? Naka-optimize ang portal at may auto-save ang form upang hindi mawala ang sinagutan.</span>
                 </div>
               </div>
             </div>

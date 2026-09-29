@@ -293,7 +293,7 @@ function App() {
       if (Array.isArray(cached) && cached.length > 0) return cached;
     } catch {}
     return [
-      { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
@@ -2011,7 +2011,7 @@ function App() {
     notificationsLoadedUserRef.current = null;
     setUser(null);
     setUsers([
-      { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },

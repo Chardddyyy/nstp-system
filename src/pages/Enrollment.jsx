@@ -312,7 +312,7 @@ function Enrollment() {
         srcH = size;
       }
 
-      const targetSize = 600; // Crisp 600x600 square for digital ID card
+      const targetSize = 400; // Crisp 400x400 square for digital ID card (~30KB payload)
       const canvas = document.createElement('canvas');
       canvas.width = targetSize;
       canvas.height = targetSize;
@@ -323,12 +323,12 @@ function Enrollment() {
       // What the user sees on screen inside the guide box is drawn directly
       ctx.drawImage(video, srcX, srcY, srcW, srcH, 0, 0, targetSize, targetSize);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
       setIdPhoto2x2(dataUrl);
       if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
     } else {
-      // Normal HD Document / COR Capture
-      const MAX = 1200;
+      // Normal HD Document / COR Capture (Optimized for weak cellular data: ~60KB)
+      const MAX = 850;
       let w = rawW, h = rawH;
       if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
       if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
@@ -344,17 +344,120 @@ function Enrollment() {
       }
       ctx.drawImage(video, 0, 0, w, h);
 
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
       setRegistrationPhoto(dataUrl);
       if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
     }
     closeCameraModal();
   };
 
-  // True when there is saved progress from a previous session
-  const hasSavedData = false;
+  // ── Weak Internet & Auto-Save Draft System ──────────────────────────────────
+  const DRAFT_STORAGE_KEY = 'nstp_enrollment_draft_v2';
+  const [hasSavedData, setHasSavedData] = useState(false);
+  const [draftPromptVisible, setDraftPromptVisible] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isSlowConnection, setIsSlowConnection] = useState(() => {
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return Boolean(conn?.saveData || (conn?.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType)));
+  });
+  const [submitStatusMessage, setSubmitStatusMessage] = useState('');
+  const [submitErrorNotice, setSubmitErrorNotice] = useState('');
+
+  // Detect network conditions (online, offline, slow 2G/3G)
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast('Konektado ka na muli sa Internet.', 'success');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast('Nawalan ng koneksyon sa Internet. Naka-save ang iyong mga sinagutan sa iyong device.', 'error');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn && conn.addEventListener) {
+      const updateConn = () => {
+        setIsSlowConnection(Boolean(conn.saveData || (conn.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType))));
+      };
+      conn.addEventListener('change', updateConn);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        conn.removeEventListener('change', updateConn);
+      };
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Check for saved draft on initial mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY) || localStorage.getItem('enrollmentFormData');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const data = parsed.formData || parsed;
+        const hasMeaningfulData = Boolean(
+          data.lastName || data.firstName || data.studentId || data.email || data.contactNumber
+        );
+        if (hasMeaningfulData) {
+          setHasSavedData(true);
+          setDraftPromptVisible(true);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
+  // Auto-save form inputs continuously so nothing is ever lost on page refresh or mobile drop
+  useEffect(() => {
+    const hasAnyField = Boolean(
+      formData.lastName || formData.firstName || formData.studentId || formData.email || formData.contactNumber || formData.program
+    );
+    if (!hasAnyField) return;
+
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+          formData,
+          heightInput,
+          heightUnit,
+          weightInput,
+          weightUnit,
+          savedAt: Date.now()
+        }));
+      } catch (_) {}
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [formData, heightInput, heightUnit, weightInput, weightUnit]);
+
+  const handleRestoreDraft = () => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY) || localStorage.getItem('enrollmentFormData');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const data = parsed.formData || parsed;
+        setFormData(prev => ({ ...prev, ...data }));
+        if (parsed.heightInput) setHeightInput(parsed.heightInput);
+        if (parsed.heightUnit) setHeightUnit(parsed.heightUnit);
+        if (parsed.weightInput) setWeightInput(parsed.weightInput);
+        if (parsed.weightUnit) setWeightUnit(parsed.weightUnit);
+        setDraftPromptVisible(false);
+        showToast('Naibalik ang iyong dating draft! Maaari mo nang ipagpatuloy.', 'success');
+      }
+    } catch (e) {
+      console.warn('Restore draft error:', e);
+    }
+  };
 
   const handleStartFresh = () => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
     localStorage.removeItem('enrollmentFormData');
     setFormData({
       lastName: '', firstName: '', middleName: '', suffix: '', studentId: '',
@@ -366,9 +469,15 @@ function Enrollment() {
     });
     setHeightInput('');
     setWeightInput('');
+    setRegistrationPhoto(null);
+    setIdPhoto2x2(null);
     setErrors({});
     setAgreedToTerms(false);
+    setHasSavedData(false);
+    setDraftPromptVisible(false);
+    showToast('Nalinis ang form. Maaari nang mag-umpisa ng bago.', 'info');
   };
+
 
   // Refs for auto-focus functionality
   const fieldRefs = useRef({});
@@ -583,7 +692,7 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 900; // Ultra-fast lightweight document resolution (~50KB)
+        const MAX = isSlowConnection ? 800 : 850; // Ultra-fast lightweight document resolution (~40KB-70KB)
         let w = img.width, h = img.height;
         if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
         if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
@@ -593,7 +702,7 @@ function Enrollment() {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.70);
+        const dataUrl = canvas.toDataURL('image/jpeg', isSlowConnection ? 0.60 : 0.65);
         setRegistrationPhoto(dataUrl);
         if (errors.registrationPhoto) setErrors(prev => ({ ...prev, registrationPhoto: '' }));
 
@@ -625,7 +734,7 @@ function Enrollment() {
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
-        const TARGET = 480; // Standard 2x2 ID photo dimension
+        const TARGET = 400; // Standard 2x2 ID photo dimension (~30KB)
         // Crop 1:1 center-square for true 2x2 ID photo
         const size = Math.min(img.width, img.height);
         const srcX = (img.width - size) / 2;
@@ -640,7 +749,7 @@ function Enrollment() {
         ctx.fillRect(0, 0, TARGET, TARGET);
         ctx.drawImage(img, srcX, srcY, size, size, 0, 0, TARGET, TARGET);
 
-        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.82));
+        setIdPhoto2x2(canvas.toDataURL('image/jpeg', 0.75));
         if (errors.idPhoto2x2) setErrors(prev => ({ ...prev, idPhoto2x2: '' }));
       };
       img.onerror = () => {
@@ -782,23 +891,60 @@ function Enrollment() {
         recaptchaToken: googleRecaptchaToken || null,
       };
 
-      await submitEnrollment(enrollmentData);
-      showToast('Enrollment submitted successfully! Redirecting...', 'success');
-      
+      setSubmitStatusMessage('Ipinapadala ang iyong enrollment... (Maaaring tumagal kung mahina ang signal)');
+      setSubmitErrorNotice('');
+
+      // Auto-retry with backoff for unstable / weak mobile signals
+      let submitSuccess = false;
+      let lastSubmitError = null;
+      const MAX_RETRIES = 3;
+
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (attempt > 1) {
+            setSubmitStatusMessage(`Muling sinusubukan ipadala (Attempt ${attempt} ng ${MAX_RETRIES})... Huwag isara ang browser.`);
+            await new Promise(r => setTimeout(r, attempt * 1200));
+          }
+
+          await submitEnrollment(enrollmentData);
+          submitSuccess = true;
+          break;
+        } catch (subErr) {
+          lastSubmitError = subErr;
+          const msg = String(subErr?.message || '').toLowerCase();
+          // If server rejects with validation / duplicate error, do not retry
+          if (msg.includes('already exists') || msg.includes('duplicate') || msg.includes('required') || msg.includes('invalid') || msg.includes('short') || msg.includes('long')) {
+            break;
+          }
+          console.warn(`Submission attempt ${attempt} failed on unstable network:`, subErr);
+        }
+      }
+
+      if (!submitSuccess) {
+        throw lastSubmitError;
+      }
+
+      showToast('Enrollment submitted successfully! Ligtas na naipadala ang iyong application.', 'success');
       setSubmitted(true);
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
       localStorage.removeItem('enrollmentFormData');
       
     } catch (error) {
       console.error('❌ Enrollment submission failed:', error);
       const raw = error?.message || '';
+      const isNet = raw.toLowerCase().includes('fetch') || raw.toLowerCase().includes('network') || raw.toLowerCase().includes('timeout') || !navigator.onLine;
       const friendly = raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate')
-        ? `Student ID "${formData.studentId}" is already enrolled. Please check your Student ID.`
-        : raw
-          ? `Submission failed: ${raw}`
-          : 'Submission failed. Please check your internet connection and try again.';
+        ? `Ang Student ID "${formData.studentId}" ay rehistrado na sa sistema. Pakisuri ang iyong Student ID.`
+        : isNet
+          ? 'Nawalan ng sapat na signal ng internet habang nag-susubmit. Nananatiling ligtas at buo ang iyong mga sinagutan. Pindutin ang "Subukang I-submit Muli" sa ibaba.'
+          : raw
+            ? `Submission Notice: ${raw}`
+            : 'Hindi maipadala ang form dahil mahina ang koneksyon. Nananatiling ligtas ang iyong mga sinagutan. Paki-click muli ang Submit kapag lumakas ang signal.';
       showToast(friendly, 'error');
+      setSubmitErrorNotice(friendly);
     } finally {
       setIsSubmitting(false);
+      setSubmitStatusMessage('');
     }
   };
 
@@ -942,19 +1088,86 @@ function Enrollment() {
           </div>
 
           <div className="p-4 sm:p-8 space-y-5 sm:space-y-8">
-            {hasSavedData && (
-              <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-sm">
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-emerald-900">
-                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Continuing from a previous session. Your form progress was automatically saved.</span>
+            {/* Real-time Network Status Indicator */}
+            {!isOnline ? (
+              <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-red-900">
+                  <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                  <div>
+                    <p className="font-black text-red-950">⚠️ Offline Mode: Walang Koneksyon sa Internet</p>
+                    <p className="text-[11px] sm:text-xs text-red-800 font-medium">Huwag mag-alala, ligtas at awtomatikong naka-save ang lahat ng iyong mga tinype sa iyong device upang hindi mawala.</p>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleStartFresh}
-                  className="shrink-0 text-xs font-black text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer"
-                >
-                  Start Fresh
-                </button>
+              </div>
+            ) : isSlowConnection ? (
+              <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-amber-950">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping shrink-0"></span>
+                  <div>
+                    <p className="font-extrabold text-amber-950 text-xs sm:text-sm">📶 Mahinang Signal / Data-Saver Active</p>
+                    <p className="text-[10.5px] sm:text-xs text-amber-850 font-medium">Naka-compress ang litrato at Certificate of Registration (COR) upang makapasok ang iyong enrollment kahit mahina ang data o 2G/3G signal.</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
+                  Lite Mode
+                </span>
+              </div>
+            ) : null}
+
+            {/* Saved Progress / Draft Restoration Banner */}
+            {draftPromptVisible && (
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-fade-in">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600/10 flex items-center justify-center text-emerald-800 shrink-0 mt-0.5 sm:mt-0">
+                    <CheckCircle className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                      May Natagpuang Naka-save na Draft
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-emerald-800 font-medium leading-relaxed">
+                      May natagpuan kaming impormasyon mula sa iyong huling pag-fill up. Nais mo ba itong ituloy?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end pt-1 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={handleStartFresh}
+                    className="flex-1 sm:flex-none text-xs font-extrabold text-gray-700 hover:text-red-700 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer active:scale-95 text-center"
+                  >
+                    Simulan Muli
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRestoreDraft}
+                    className="flex-1 sm:flex-none text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 text-center"
+                  >
+                    Ipagpatuloy ang Draft ✓
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Submission Error & Instant Retry Notice */}
+            {submitErrorNotice && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 shadow-sm animate-shake">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-xs sm:text-sm font-black text-red-950">Paunawa sa Pag-submit</h4>
+                    <p className="text-xs text-red-800 font-medium mt-0.5 leading-relaxed">{submitErrorNotice}</p>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      className="mt-3 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Subukang I-submit Muli (Retry Submission)</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2160,7 +2373,7 @@ function Enrollment() {
                 {isSubmitting ? (
                   <>
                     <div className="w-5 h-5 border-2 border-emerald-950/40 border-t-emerald-950 rounded-full animate-spin"></div>
-                    <span>Processing Enrollment Submission...</span>
+                    <span className="text-xs sm:text-sm font-black">{submitStatusMessage || 'Processing Enrollment Submission...'}</span>
                   </>
                 ) : (
                   <span>Submit NSTP Enrollment Application</span>

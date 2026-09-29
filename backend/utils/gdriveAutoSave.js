@@ -59,9 +59,37 @@ async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) 
       console.log(`[GDRIVE AUTO-SAVE SUCCESS] Complete 100% Database Dump (${tableNames.length} tables) saved directly to Google Drive! Trigger: "${activity}" (File ID: ${resJson.fileId || 'Created'})`);
     } else {
       console.warn(`[GDRIVE AUTO-SAVE WARNING] Webhook HTTP status ${response.status}`);
+      await notifyBackupFailure(activity, `Google Drive Webhook HTTP Status ${response.status}`);
     }
   } catch (err) {
     console.error('[GDRIVE AUTO-SAVE ERROR]:', err.message);
+    await notifyBackupFailure(activity, err.message);
+  }
+}
+
+/**
+ * Sends emergency email notification to Admin if Google Drive backup fails
+ */
+async function notifyBackupFailure(activity, errorDetails) {
+  try {
+    const nodemailer = require('nodemailer');
+    const adminEmail = process.env.EMAIL_USER || 'richardbelen99@gmail.com';
+    const emailPass = process.env.EMAIL_PASS || 'dbusndgszozlgttd';
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: adminEmail, pass: emailPass }
+    });
+
+    await transporter.sendMail({
+      from: `"CvSU NSTP System Alert" <${adminEmail}>`,
+      to: adminEmail,
+      subject: `🚨 [ALERT] Google Drive Backup Snapshot Failure - ${activity}`,
+      text: `Administrator Alert:\n\nAn automated Google Drive database snapshot failed.\nActivity: ${activity}\nTimestamp: ${new Date().toISOString()}\nDetails: ${errorDetails}\n\nPlease inspect the Aiven MySQL database and Google Drive webhook connection.`,
+    });
+    console.log('[GDRIVE ALERT SENT] Email failure notice dispatched to Administrator.');
+  } catch (e) {
+    console.warn('[GDRIVE ALERT NOTICE] Could not dispatch email alert:', e.message);
   }
 }
 

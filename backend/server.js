@@ -7,6 +7,8 @@ const rateLimit = require('express-rate-limit');
 const pool = require('./config/database');
 const { getDbConfig } = require('./config/dbEnv');
 const { autoSaveToGDrive } = require('./utils/gdriveAutoSave');
+const memoryCache = require('./utils/cacheManager');
+
 
 const http = require('http');
 const { Server: SocketIOServer } = require('socket.io');
@@ -7003,7 +7005,7 @@ app.delete('/api/archives/:year', authenticateToken, requireAdmin, async (req, r
 });
 
 // Audit log viewer — admin only
-app.get('/api/audit-logs', authenticateToken, requireAdmin, async (req, res) => {
+app.get(['/api/audit-logs', '/api/admin/audit-logs'], authenticateToken, requireAdmin, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 100, 500);
     const [logs] = await pool.execute(
@@ -7324,18 +7326,37 @@ app.get('/api/telemetry/stats', async function(req, res) {
       }
     }
 
-    var studentRows = await pool.query('SELECT COUNT(*) as count FROM students').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
-    var enrollRows = await pool.query('SELECT COUNT(*) as count FROM enrollments').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
-    var userRows = await pool.query('SELECT COUNT(*) as count FROM users').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+    // Use in-memory cache to prevent pounding Aiven MySQL on high-frequency telemetry polling
+    var cachedCounts = memoryCache.get('telemetry_db_counts');
+    var dbStudents = 0, dbEnrollments = 0, dbUsers = 0, dbUniqueVisitors = 0;
 
-    var dbStudents = (studentRows[0] && studentRows[0].count) || 0;
-    var dbEnrollments = (enrollRows[0] && enrollRows[0].count) || 0;
-    var dbUsers = (userRows[0] && userRows[0].count) || 0;
+    if (cachedCounts) {
+      dbStudents = cachedCounts.dbStudents;
+      dbEnrollments = cachedCounts.dbEnrollments;
+      dbUsers = cachedCounts.dbUsers;
+      dbUniqueVisitors = cachedCounts.dbUniqueVisitors;
+    } else {
+      var studentRows = await pool.query('SELECT COUNT(*) as count FROM students').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+      var enrollRows = await pool.query('SELECT COUNT(*) as count FROM enrollments').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+      var userRows = await pool.query('SELECT COUNT(*) as count FROM users').then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+      var visitorDbRows = await pool.query(
+        "SELECT COUNT(DISTINCT visitor_id) as count FROM active_visitors WHERE visitor_id NOT LIKE 'vis_test_%' AND visitor_id NOT LIKE 'std_%' AND visitor_id NOT LIKE 'enr_%' AND visitor_id NOT LIKE 'usr_%' AND visitor_id NOT LIKE 'audit_%'"
+      ).then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
+
+      dbStudents = (studentRows[0] && studentRows[0].count) || 0;
+      dbEnrollments = (enrollRows[0] && enrollRows[0].count) || 0;
+      dbUsers = (userRows[0] && userRows[0].count) || 0;
+      dbUniqueVisitors = (visitorDbRows[0] && visitorDbRows[0].count) || 0;
+
+      memoryCache.set('telemetry_db_counts', {
+        dbStudents,
+        dbEnrollments,
+        dbUsers,
+        dbUniqueVisitors
+      }, 25);
+    }
+
     var totalRegisteredUsers = dbStudents + dbUsers;
-    var visitorDbRows = await pool.query(
-      "SELECT COUNT(DISTINCT visitor_id) as count FROM active_visitors WHERE visitor_id NOT LIKE 'vis_test_%' AND visitor_id NOT LIKE 'std_%' AND visitor_id NOT LIKE 'enr_%' AND visitor_id NOT LIKE 'usr_%' AND visitor_id NOT LIKE 'audit_%'"
-    ).then(function(r) { return r[0]; }).catch(function() { return [{ count: 0 }]; });
-    var dbUniqueVisitors = (visitorDbRows[0] && visitorDbRows[0].count) || 0;
     var totalVisitorsCount = Math.max(0, dbUniqueVisitors, totalUniqueVisitors.size);
     var activeUsersCount = Math.max(1, activeDeviceIds.size);
 

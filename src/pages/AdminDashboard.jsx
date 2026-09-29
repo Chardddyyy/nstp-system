@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext';
-import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
+import { archivesAPI, auditLogsAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import Sidebar from '../components/layout/Sidebar';
 import {
   Users, FileText, MessageSquare,
@@ -303,6 +303,26 @@ function AdminDashboard() {
     window.addEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
     return () => window.removeEventListener('nstp_enrollment_schedule_changed', handleScheduleChange);
   }, []);
+
+  // System Audit & Security Trail State
+  const [showAuditLogModal, setShowAuditLogModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditFilter, setAuditFilter] = useState('all');
+
+  const fetchAuditLogs = async () => {
+    setLoadingAuditLogs(true);
+    try {
+      const logs = await auditLogsAPI.getLogs(150);
+      setAuditLogs(Array.isArray(logs) ? logs : []);
+    } catch (e) {
+      console.warn('Error fetching audit logs:', e);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  };
+
 
   const handleSaveSchedule = async (newConfig) => {
     setScheduleConfig(newConfig);
@@ -1114,6 +1134,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
+              {/* Security & Audit Logs Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuditLogModal(true);
+                  fetchAuditLogs();
+                }}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white rounded-xl sm:rounded-2xl transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs border border-emerald-700/60"
+                title="System Security & Audit Trail"
+              >
+                <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="hidden md:inline text-[11px] sm:text-xs font-black tracking-tight">Audit Logs</span>
+              </button>
+
               {/* System Notification Bell & Interactive Dropdown Panel */}
               <div className="relative notification-container">
                 <button type="button"
@@ -4331,6 +4365,226 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     Save Changes
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Institutional System Security & Audit Trail Modal */}
+        {showAuditLogModal && (
+          <div
+            className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-2 sm:p-4 animate-fade-in"
+            onClick={() => setShowAuditLogModal(false)}
+          >
+            <div
+              className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-emerald-800/60">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight text-white leading-tight">
+                      System Security &amp; Audit Trail
+                    </h3>
+                    <p className="text-emerald-200 text-[10px] sm:text-xs font-medium">
+                      Real-time immutable logging of admin logins, student edits, and enrollment authorizations
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={fetchAuditLogs}
+                    disabled={loadingAuditLogs}
+                    className="p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-emerald-800/70 hover:bg-emerald-700 text-emerald-100 hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    title="Refresh Logs"
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${loadingAuditLogs ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Refresh</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAuditLogModal(false)}
+                    className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Status & Security Metrics Bar */}
+              <div className="bg-emerald-50/70 px-4 py-2.5 border-b border-emerald-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-gray-600">Admin Account:</span>
+                  <strong className="text-emerald-950 font-bold truncate">richardbelen99@gmail.com</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span className="text-gray-600">2FA Security:</span>
+                  <strong className="text-blue-900 font-bold">Active &amp; Monitored</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span className="text-gray-600">Query Cache:</span>
+                  <strong className="text-amber-900 font-bold">In-Memory TTL</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                  <span className="text-gray-600">Total Log Entries:</span>
+                  <strong className="text-teal-950 font-bold">{auditLogs.length}</strong>
+                </div>
+              </div>
+
+              {/* Filter and Search Controls */}
+              <div className="p-3 sm:p-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row gap-2.5 sm:items-center sm:justify-between shrink-0">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={auditSearch}
+                    onChange={(e) => setAuditSearch(e.target.value)}
+                    placeholder="Search logs by action, email, detail, or IP..."
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-300 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {auditSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setAuditSearch('')}
+                      className="absolute right-2.5 top-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                  {[
+                    { id: 'all', label: 'All Actions' },
+                    { id: 'login', label: 'Logins' },
+                    { id: 'enrollment', label: 'Enrollments' },
+                    { id: 'student', label: 'Students' },
+                    { id: 'attendance', label: 'Attendance' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setAuditFilter(tab.id)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        auditFilter === tab.id
+                          ? 'bg-emerald-800 text-white shadow-2xs'
+                          : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logs Table */}
+              <div className="overflow-y-auto flex-1 p-2 sm:p-4">
+                {loadingAuditLogs ? (
+                  <div className="py-16 text-center text-gray-500 flex flex-col items-center justify-center gap-2">
+                    <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-xs font-bold text-gray-600">Retrieving audit security logs...</span>
+                  </div>
+                ) : (() => {
+                  const filtered = auditLogs.filter((log) => {
+                    const act = String(log.action || '').toLowerCase();
+                    const det = String(log.detail || '').toLowerCase();
+                    const uName = String(log.user_name || '').toLowerCase();
+                    const uEmail = String(log.user_email || '').toLowerCase();
+                    const ip = String(log.ip || '').toLowerCase();
+                    const q = auditSearch.toLowerCase().trim();
+
+                    if (auditFilter !== 'all' && !act.includes(auditFilter)) {
+                      return false;
+                    }
+                    if (q) {
+                      return act.includes(q) || det.includes(q) || uName.includes(q) || uEmail.includes(q) || ip.includes(q);
+                    }
+                    return true;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="py-12 text-center text-gray-400">
+                        <Clock className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                        <p className="text-sm font-semibold text-gray-600">No audit log records found</p>
+                        <p className="text-xs text-gray-400 mt-1">Actions performed by administrators and faculty are recorded here in real-time.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-2xs">
+                      <table className="w-full text-left text-[11px] sm:text-xs">
+                        <thead className="bg-gray-100 text-gray-700 uppercase tracking-wider font-extrabold text-[10px] border-b border-gray-200">
+                          <tr>
+                            <th className="py-2.5 px-3">Timestamp</th>
+                            <th className="py-2.5 px-3">Action</th>
+                            <th className="py-2.5 px-3">User / Actor</th>
+                            <th className="py-2.5 px-3">Details</th>
+                            <th className="py-2.5 px-3">IP Address</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 font-medium">
+                          {filtered.map((log) => {
+                            const action = String(log.action || '');
+                            let badgeStyle = 'bg-gray-100 text-gray-800 border-gray-200';
+                            if (action.includes('login_success')) badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                            else if (action.includes('login_failed') || action.includes('deleted')) badgeStyle = 'bg-red-100 text-red-800 border-red-300';
+                            else if (action.includes('approved') || action.includes('enrolled')) badgeStyle = 'bg-blue-100 text-blue-800 border-blue-300';
+                            else if (action.includes('schedule') || action.includes('password')) badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300';
+                            else if (action.includes('attendance')) badgeStyle = 'bg-teal-100 text-teal-800 border-teal-300';
+
+                            return (
+                              <tr key={log.id} className="hover:bg-emerald-50/40 transition-colors">
+                                <td className="py-2 px-3 whitespace-nowrap text-gray-500 font-mono text-[10.5px]">
+                                  {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
+                                </td>
+                                <td className="py-2 px-3 whitespace-nowrap">
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-wider ${badgeStyle}`}>
+                                    {log.action}
+                                  </span>
+                                </td>
+                                <td className="py-2 px-3 whitespace-nowrap">
+                                  <div className="font-bold text-gray-900">{log.user_name || 'System / Guest'}</div>
+                                  {log.user_email && <div className="text-[10px] text-gray-500 font-mono">{log.user_email}</div>}
+                                </td>
+                                <td className="py-2 px-3 max-w-xs sm:max-w-md truncate text-gray-700 font-mono text-[10.5px]">
+                                  {log.detail || '—'}
+                                </td>
+                                <td className="py-2 px-3 whitespace-nowrap text-gray-500 font-mono text-[10.5px]">
+                                  {log.ip || '127.0.0.1'}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between shrink-0">
+                <span className="text-[11px] text-gray-500 font-medium">
+                  Showing {auditLogs.length} audit entries • Stored securely in database
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditLogModal(false)}
+                  className="px-4 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

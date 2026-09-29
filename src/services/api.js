@@ -211,11 +211,11 @@ export async function loginUser(email, password, _forceLogin = true) {
       
       const offlineAccounts = [
         {
-          emails: ['admin@gmail.com', 'richardbelen99@gmail.com', 'admin@cvsu.edu.ph'],
+          emails: ['richardbelen99@gmail.com', 'admin@gmail.com', 'admin@cvsu.edu.ph', 'admin'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'admin@gmail.com',
+            email: 'richardbelen99@gmail.com',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -299,7 +299,7 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office' },
+        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
         { id: 2, name: 'CWTS Facilitator', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
@@ -2338,3 +2338,16 @@ export const calendarAPI = {
     });
   }
 };
+
+// ── Audit Logs API (Admin Security Audit) ───────────────────────────────────
+export const auditLogsAPI = {
+  getLogs: async (limit = 100) => {
+    try {
+      return await apiCall(`/audit-logs?limit=${limit}`);
+    } catch (err) {
+      console.warn('Fetch audit logs fallback:', err);
+      return [];
+    }
+  }
+};
+
