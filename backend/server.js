@@ -1812,12 +1812,13 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
         { expiresIn: '10m' }
       );
 
-      var sendResult = await send2FAEmail(deliveryEmail, otp2fa, user.name);
+      // Generate a refId upfront so we can include it in the response immediately
+      var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
 
       var record = {
         otp: otp2fa,
         tempToken: tempToken,
-        ticketId: sendResult.refId,
+        ticketId: refId,
         userId: user.id,
         user: user,
         deliveryEmail: deliveryEmail,
@@ -1831,9 +1832,16 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       }
 
       console.log(`\n======================================================`);
-      console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${user.email} (sent to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${sendResult.refId}) (Valid 10 mins)`);
+      console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${user.email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${refId}) (Valid 10 mins)`);
       console.log(`======================================================\n`);
-      auditLog('admin_2fa_prompted', user.id, `Sent to ${deliveryEmail}`, ip);
+      auditLog('admin_2fa_prompted', user.id, `Sending to ${deliveryEmail}`, ip);
+
+      // Fire-and-forget: send email in background so HTTP response is instant
+      send2FAEmail(deliveryEmail, otp2fa, user.name).then(function(r) {
+        console.log(`[ADMIN 2FA EMAIL] Delivered to ${deliveryEmail} via ${r.method || 'smtp'} (Ticket #${refId})`);
+      }).catch(function(e) {
+        console.error(`[ADMIN 2FA EMAIL ERROR] Failed to deliver to ${deliveryEmail}:`, e.message);
+      });
 
       return res.json({
         require2FA: true,
@@ -1841,10 +1849,10 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
         email: user.email,
         deliveryEmail: deliveryEmail,
         maskedEmail: maskEmail(deliveryEmail),
-        ticketId: sendResult.refId,
+        ticketId: refId,
         cooldownRemaining: 60,
         reused: false,
-        message: `Two-Factor Authentication required. 6-digit security code sent to your registered email (Ticket #${sendResult.refId || 'NEW'}).`
+        message: `Two-Factor Authentication required. 6-digit security code sent to your registered email (Ticket #${refId}).`
       });
     }
 
@@ -1997,36 +2005,39 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
 
     var otp2fa = crypto.randomInt(100000, 1000000).toString();
 
-    console.log(`\n[ADMIN 2FA RESEND] Fresh 2FA OTP for ${email} (sent to ${deliveryEmail}): [ ${otp2fa} ] (Valid 10 mins)\n`);
-    var emailResult = await send2FAEmail(deliveryEmail, otp2fa, 'Administrator');
-    if (!emailResult.sent) {
-      console.warn('[ADMIN 2FA RESEND] Email dispatch failed:', emailResult.error);
-      return res.status(500).json({
-        message: 'Could not send verification email. Please check your network and try again.',
-        detail: emailResult.error
-      });
-    }
+    console.log(`\n[ADMIN 2FA RESEND] Fresh 2FA OTP for ${email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Valid 10 mins)\n`);
+
+    // Generate refId upfront so response is instant
+    var resendRefId = crypto.randomBytes(3).toString('hex').toUpperCase();
 
     var freshRecord = {
       otp: otp2fa,
       tempToken: tempToken,
-      ticketId: emailResult.refId,
-      userId: (record && record.userId) || 1,
-      user: (record && record.user) || { id: 1, email: email, role: 'admin', name: 'Administrator' },
+      ticketId: resendRefId,
+      userId: decoded.id,
       deliveryEmail: deliveryEmail,
       sentAt: Date.now(),
       expiresAt: Date.now() + 10 * 60 * 1000,
       attempts: 0
     };
     inMemory2FA.set(deliveryEmail, freshRecord);
-    inMemory2FA.set(email.toLowerCase(), freshRecord);
+    if (email.toLowerCase() !== deliveryEmail) inMemory2FA.set(email.toLowerCase(), freshRecord);
+    if (decoded.email && decoded.email.toLowerCase() !== deliveryEmail) inMemory2FA.set(decoded.email.toLowerCase(), freshRecord);
 
-    res.json({
-      success: true,
-      message: `Fresh verification code sent! Check your inbox (Ticket #${emailResult.refId}).`,
-      ticketId: emailResult.refId,
-      cooldownRemaining: 60
+    // Fire-and-forget: return response immediately, send email in background
+    send2FAEmail(deliveryEmail, otp2fa, 'Administrator').then(function(r) {
+      console.log(`[ADMIN 2FA RESEND EMAIL] Delivered to ${deliveryEmail} via ${r.method || 'smtp'}`);
+    }).catch(function(e) {
+      console.error(`[ADMIN 2FA RESEND EMAIL ERROR] Failed to deliver to ${deliveryEmail}:`, e.message);
     });
+
+    return res.json({
+      success: true,
+      ticketId: resendRefId,
+      cooldownRemaining: 60,
+      message: `A fresh 6-digit verification code has been dispatched to your registered email.`
+    });
+
   } catch (err) {
     console.error('[ADMIN 2FA RESEND ERROR]', err);
     res.status(500).json({ message: 'Failed to resend 2FA code.' });
@@ -2926,19 +2937,13 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
     var otp = crypto.randomInt(100000, 1000000).toString();
 
     // Dispatch email directly with Port 465 SSL and await completion
-    var mailResult = await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
-    if (!mailResult.sent) {
-      console.warn('[AUTH] Password reset email dispatch failed:', mailResult.error);
-      return res.status(500).json({
-        message: 'Could not send verification email. Please check your network and try again.',
-        detail: mailResult.error
-      });
-    }
+    // Generate refId upfront so we can respond instantly
+    var resetRefId = crypto.randomBytes(3).toString('hex').toUpperCase();
 
-    // Save in-memory with attempt tracking, sentAt, and ticketId
+    // Save in-memory with attempt tracking, sentAt, and ticketId — BEFORE sending email
     var resetRecord = {
       otp: otp,
-      ticketId: mailResult.refId,
+      ticketId: resetRefId,
       sentAt: Date.now(),
       expiresAt: Date.now() + 10 * 60 * 1000,
       used: false,
@@ -2964,12 +2969,19 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
+    // Fire-and-forget: return response immediately, send email in background
+    sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).then(function(r) {
+      console.log(`[FORGOT PW EMAIL] Delivered to ${targetDeliveryEmail} via ${r.method || 'smtp'} (Ticket #${resetRefId})`);
+    }).catch(function(e) {
+      console.error(`[FORGOT PW EMAIL ERROR] Failed to deliver to ${targetDeliveryEmail}:`, e.message);
+    });
+
     res.json({
       success: true,
       reused: false,
-      ticketId: mailResult.refId,
+      ticketId: resetRefId,
       cooldownRemaining: 60,
-      message: `A 6-digit verification code has been dispatched to ${targetDeliveryEmail} (Ticket #${mailResult.refId || 'NEW'}). Please check your inbox.`
+      message: `A 6-digit verification code has been dispatched to ${targetDeliveryEmail} (Ticket #${resetRefId}). Please check your inbox.`
     });
   } catch (err) {
     console.error('Forgot password error:', err);

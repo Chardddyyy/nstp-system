@@ -327,17 +327,18 @@ function Login() {
         storeExpiry(STORAGE_KEY_2FA, cooldown);
         setTwoFactorResendCooldown(cooldown);
         setTwoFactorOtp('');
-        if (res.ticketId) {
-          setTwoFactorTicketId(res.ticketId);
-        }
-        setTwoFactorSuccess(res.message || `A fresh 6-digit verification code has been dispatched to your email (Ticket #${res.ticketId || 'NEW'}).`);
+        if (res.ticketId) setTwoFactorTicketId(res.ticketId);
+        // no success banner — resend button countdown is enough feedback
       } else {
         const serverRemaining = res.cooldownRemaining;
         if (serverRemaining && serverRemaining > 0) {
+          // Server still has cooldown — silently sync the button countdown
           storeExpiry(STORAGE_KEY_2FA, serverRemaining);
           setTwoFactorResendCooldown(serverRemaining);
+          // Don't show the error — the button will reflect the correct time
+        } else {
+          setTwoFactorError(res.message || 'Failed to resend verification code. Please try again.');
         }
-        setTwoFactorError(res.message || 'Failed to resend verification code. Please try again.');
       }
     } catch (err) {
       setTwoFactorError(err.message || 'Failed to resend verification code. Please try again.');
@@ -1220,12 +1221,6 @@ function Login() {
                 </div>
               </div>
 
-              {twoFactorSuccess && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800">
-                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
-                  <span className="leading-tight font-medium">{twoFactorSuccess}</span>
-                </div>
-              )}
 
               {twoFactorError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
