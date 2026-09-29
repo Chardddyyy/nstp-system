@@ -73,7 +73,7 @@ async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) 
 async function notifyBackupFailure(activity, errorDetails) {
   try {
     const nodemailer = require('nodemailer');
-    const adminEmail = process.env.EMAIL_USER || 'richardbelen99@gmail.com';
+    const adminEmail = process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com';
     const emailPass = process.env.EMAIL_PASS || 'dbusndgszozlgttd';
 
     const transporter = nodemailer.createTransport({

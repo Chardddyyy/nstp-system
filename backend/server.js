@@ -1480,8 +1480,8 @@ function maskEmail(email) {
 }
 
 async function send2FAEmail(targetEmail, otpCode, userName) {
-  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-  var emailUser = String(rawUser).trim().toLowerCase() || 'richardbelen99@gmail.com';
+  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
+  var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
   var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
   var emailPass = String(rawPass).replace(/\s+/g, '').trim();
   if (!emailPass || emailPass.length < 8) {
@@ -1945,8 +1945,8 @@ async function ensurePasswordResetsTable() {
 }
 
 async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
-  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-  var emailUser = String(rawUser).trim().toLowerCase() || 'richardbelen99@gmail.com';
+  var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
+  var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
   var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
   var emailPass = String(rawPass).replace(/\s+/g, '').trim();
   if (!emailPass || emailPass.length < 8) {
@@ -2430,8 +2430,8 @@ async function sendEnrollmentApprovalEmail(studentData) {
 // Helper to send Official Printable Digital ID card to student
 async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const deliveryEmail = (overrideEmail || studentData.email || '').trim();
-  const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'richardbelen99@gmail.com';
-  const emailUser = String(rawUser).trim().toLowerCase();
+  const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
+  const emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
   const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
 
   if (!deliveryEmail || !deliveryEmail.includes('@')) {
