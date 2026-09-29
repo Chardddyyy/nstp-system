@@ -2190,8 +2190,8 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
 // Automated Enrollment Approval & Digital ID Email Dispatcher
 async function sendEnrollmentApprovalEmail(studentData) {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const emailUser = process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com';
+  const emailPass = process.env.EMAIL_PASS || 'yahzxgygoemkvuxw';
   const webhookUrl = process.env.GMAIL_WEBHOOK_URL;
   const deliveryEmail = (studentData.email || '').trim();
 
@@ -2360,7 +2360,7 @@ async function sendEnrollmentApprovalEmail(studentData) {
   }
 
   const mailOptions = {
-    from: `"CvSU Naic NSTP" <${emailUser || 'nstp.cvsu.naic@gmail.com'}>`,
+    from: `"CvSU Naic NSTP" <${emailUser || 'cvsunaicnstp@gmail.com'}>`,
     to: deliveryEmail,
     subject: subject,
     html: htmlContent,
