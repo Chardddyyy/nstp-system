@@ -500,13 +500,15 @@ function InstructorDashboard() {
                 <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
                   {viewingArchive ? `Batch ${archiveViewData?.year} (${user?.department})` : (
                     <>
-                      <span className="hidden sm:inline">{user?.department} Instructor Portal</span>
+                      <span className="hidden sm:inline">
+                        {user?.department === 'ROTC' ? 'ROTC Training Staff Portal' : `${user?.department} Facilitator Portal`}
+                      </span>
                       <span className="sm:hidden">{user?.department} Portal</span>
                     </>
                   )}
                 </h2>
                 <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">
-                  {viewingArchive ? `Archived Records • ${user?.department} Department` : `Welcome, ${user?.name || 'Instructor'} 👋`}
+                  {viewingArchive ? `Archived Records • ${user?.department} Department` : `Welcome, ${user?.name || (user?.department === 'ROTC' ? 'Training Staff' : 'Facilitator')} 👋`}
                 </p>
               </div>
             </div>
@@ -821,7 +823,7 @@ function InstructorDashboard() {
               <Link 
                 to="/profile" 
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-emerald-400/80 hover:ring-amber-300 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer shrink-0 overflow-hidden active:scale-95 hover:scale-105 p-0 flex items-center justify-center bg-emerald-900/60"
-                title={`View Profile (${user?.name || 'Instructor'})`}
+                title={`View Profile (${user?.name || (user?.department === 'ROTC' ? 'Training Staff' : 'Facilitator')})`}
                 aria-label="View Profile"
               >
                 {getUserAvatar()}

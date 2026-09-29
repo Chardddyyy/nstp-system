@@ -300,9 +300,9 @@ export function getUsers() {
       } catch (_) {}
       return [
         { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office' },
-        { id: 2, name: 'CWTS Instructor', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
-        { id: 3, name: 'LTS Instructor', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
-        { id: 4, name: 'ROTC Instructor', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
+        { id: 2, name: 'CWTS Facilitator', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
+        { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
+        { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
       ];
     });
 }

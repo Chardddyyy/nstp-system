@@ -849,10 +849,10 @@ async function seedPastBatches() {
           description: `Official comprehensive documentation and field accomplishment report for NSTP CWTS activities during ${b.year}.`,
           status: 'Approved', 
           submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15` : `${b.sy.split('-')[1]}-04-15`,
-          instructor: 'CWTS Instructor',
-          instructor_name: 'CWTS Instructor',
+          instructor: 'CWTS Facilitator',
+          instructor_name: 'CWTS Facilitator',
           submissions: [
-            { id: 1, instructor: 'CWTS Instructor', instructor_name: 'CWTS Instructor', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
+            { id: 1, instructor: 'CWTS Facilitator', instructor_name: 'CWTS Facilitator', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
           ]
         },
         { 
@@ -862,10 +862,10 @@ async function seedPastBatches() {
           description: `Diagnostic assessments, remedial reading tutorials, and learning kit distribution report for ${b.year}.`,
           status: 'Approved', 
           submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16` : `${b.sy.split('-')[1]}-04-16`,
-          instructor: 'LTS Instructor',
-          instructor_name: 'LTS Instructor',
+          instructor: 'LTS Facilitator',
+          instructor_name: 'LTS Facilitator',
           submissions: [
-            { id: 2, instructor: 'LTS Instructor', instructor_name: 'LTS Instructor', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
+            { id: 2, instructor: 'LTS Facilitator', instructor_name: 'LTS Facilitator', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
           ]
         },
         { 
@@ -875,10 +875,10 @@ async function seedPastBatches() {
           description: `Troop formation muster, military tactics evaluation, and pass-in-review accomplishment for ${b.year}.`,
           status: 'Approved', 
           submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17` : `${b.sy.split('-')[1]}-04-17`,
-          instructor: 'ROTC Instructor',
-          instructor_name: 'ROTC Instructor',
+          instructor: 'ROTC Training Staff',
+          instructor_name: 'ROTC Training Staff',
           submissions: [
-            { id: 3, instructor: 'ROTC Instructor', instructor_name: 'ROTC Instructor', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
+            { id: 3, instructor: 'ROTC Training Staff', instructor_name: 'ROTC Training Staff', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
           ]
         }
       ];

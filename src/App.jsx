@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import Calendar from './pages/Calendar';
 import Enrollment from './pages/Enrollment';
 import LetterFormats from './pages/LetterFormats';
+import GoogleDrive from './pages/GoogleDrive';
 import DigitalIdViewer from './pages/DigitalIdViewer';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
 
@@ -258,6 +259,9 @@ function GlobalKeyboardManager() {
         } else if (key === 'f' && user.role === 'admin') {
           e.preventDefault();
           navigate('/letter-formats');
+        } else if (key === 'g' && user.role === 'admin') {
+          e.preventDefault();
+          window.open('https://drive.google.com/drive/folders/19yefzA-HIg7TqBe74PlpH_bJn1KzXnsX?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto', '_blank', 'noopener,noreferrer');
         }
       }
     };
@@ -290,9 +294,9 @@ function App() {
     } catch {}
     return [
       { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
-      { id: 2, name: 'CWTS Instructor', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
-      { id: 3, name: 'LTS Instructor', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
-      { id: 4, name: 'ROTC Instructor', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
+      { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
+      { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
     ];
   });
   const [students, setStudents] = useState(() => {
@@ -333,9 +337,9 @@ function App() {
         id: 'group-all-instructors',
         isGroup: true,
         is_group: 1,
-        groupName: 'All Instructors',
-        group_name: 'All Instructors',
-        with: 'All Instructors',
+        groupName: 'Facilitators & Training Staff',
+        group_name: 'Facilitators & Training Staff',
+        with: 'Facilitators & Training Staff',
         participants: [1, 2, 3, 4],
         last_message: null,
         last_message_time: null
@@ -346,8 +350,8 @@ function App() {
         is_group: 0,
         participant_1_id: 1,
         participant_2_id: 2,
-        with: 'CWTS Instructor',
-        partnerName: 'CWTS Instructor',
+        with: 'CWTS Facilitator',
+        partnerName: 'CWTS Facilitator',
         partnerId: 2,
         last_message: null,
         last_message_time: null
@@ -358,8 +362,8 @@ function App() {
         is_group: 0,
         participant_1_id: 1,
         participant_2_id: 3,
-        with: 'LTS Instructor',
-        partnerName: 'LTS Instructor',
+        with: 'LTS Facilitator',
+        partnerName: 'LTS Facilitator',
         partnerId: 3,
         last_message: null,
         last_message_time: null
@@ -370,8 +374,8 @@ function App() {
         is_group: 0,
         participant_1_id: 1,
         participant_2_id: 4,
-        with: 'ROTC Instructor',
-        partnerName: 'ROTC Instructor',
+        with: 'ROTC Training Staff',
+        partnerName: 'ROTC Training Staff',
         partnerId: 4,
         last_message: null,
         last_message_time: null
@@ -1347,10 +1351,15 @@ function App() {
           seenFacultyUserIds.current.add(u.id);
           if (!dismissedSet.has(uKey)) {
             const isInstructor = u.role === 'instructor';
+            const roleTitle = isInstructor 
+              ? (u.department === 'ROTC' ? 'ROTC Training Staff' : `${u.department || 'NSTP'} Facilitator`)
+              : 'System Administrator';
             pushNotification({
               id: uKey,
-              title: isInstructor ? 'New Instructor Registered' : 'New Administrator Added',
-              message: `${u.name || 'New Faculty'} was registered as ${isInstructor ? (u.department || 'NSTP') + ' Instructor' : 'System Administrator'}.`,
+              title: isInstructor 
+                ? (u.department === 'ROTC' ? 'New Training Staff Registered' : 'New Facilitator Registered')
+                : 'New Administrator Added',
+              message: `${u.name || 'New Faculty'} was registered as ${roleTitle}.`,
               type: 'system',
               link: currentUser.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'
             });
@@ -2003,9 +2012,9 @@ function App() {
     setUser(null);
     setUsers([
       { id: 1, name: 'NSTP Administrator', email: 'admin@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
-      { id: 2, name: 'CWTS Instructor', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
-      { id: 3, name: 'LTS Instructor', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
-      { id: 4, name: 'ROTC Instructor', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
+      { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
+      { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
     ]);
     setStudents([]);
     setPendingEnrollments([]);
@@ -2448,6 +2457,8 @@ function App() {
             <Route path="/chat" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Chat /></ProtectedRoute>} />
             <Route path="/calendar" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Calendar /></ProtectedRoute>} />
             <Route path="/letter-formats" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><LetterFormats /></ProtectedRoute>} />
+            <Route path="/admin/google-drive" element={<ProtectedRoute allowedRoles={['admin']}><GoogleDrive /></ProtectedRoute>} />
+            <Route path="/google-drive" element={<ProtectedRoute allowedRoles={['admin']}><Navigate to="/admin/google-drive" replace /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />

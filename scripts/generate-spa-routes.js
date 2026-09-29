@@ -28,6 +28,8 @@ if (fs.existsSync(indexHtml)) {
     'chat',
     'calendar',
     'letter-formats',
+    'admin/google-drive',
+    'google-drive',
     'attendance',
     'reports',
     'grades',

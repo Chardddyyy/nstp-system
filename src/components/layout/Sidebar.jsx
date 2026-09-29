@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Users, FileText, MessageSquare,
-  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock
+  Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock, ExternalLink
 } from 'lucide-react';
+
+const GDRIVE_URL = 'https://drive.google.com/drive/folders/19yefzA-HIg7TqBe74PlpH_bJn1KzXnsX?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto';
 
 const DEPT_COLORS = {
   CWTS:  { bg: 'bg-blue-500',  text: 'text-white' },
@@ -108,7 +110,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                 <div className="min-w-0">
                   <h1 className="font-black text-xs sm:text-sm leading-tight text-white tracking-tight">CvSU - Naic Campus</h1>
                   <span className="inline-block text-[9px] sm:text-[10px] font-extrabold uppercase text-amber-300 tracking-wider bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mt-0.5 truncate max-w-full">
-                    {user?.department} Instructor
+                    {user?.department === 'ROTC' ? 'ROTC Training Staff' : `${user?.department} Facilitator`}
                   </span>
                 </div>
               </div>
@@ -201,6 +203,43 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               </span>
             )}
           </button>
+
+          {/* Google Drive — Admin Only (Direct link to Google Drive) */}
+          {isAdmin && (
+            <a
+              href={GDRIVE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              title="CvSU NSTP Google Drive Repository"
+              className={`w-full min-h-[46px] flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer select-none group ${
+                location.pathname === '/admin/google-drive'
+                  ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 font-black shadow-md shadow-amber-950/30'
+                  : 'text-emerald-100/90 hover:bg-emerald-800/60 hover:text-white font-semibold hover:translate-x-1'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <svg className="w-5 h-5 shrink-0 drop-shadow-xs" viewBox="0 0 87.3 78" fill="none" aria-hidden="true">
+                  <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                  <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>
+                  <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.1z" fill="#ea4335"/>
+                  <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.4-4.5 1.2z" fill="#00832d"/>
+                  <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.4 4.5-1.2z" fill="#2684fc"/>
+                  <path d="m73.4 26.5-13.25-22.95c-.8-1.4-1.95-2.5-3.3-3.3l-13.2 22.8 13.75 23.8h27.5c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                </svg>
+                <span>Google Drive</span>
+              </div>
+              <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors ${
+                location.pathname === '/admin/google-drive'
+                  ? 'bg-emerald-950/20 text-emerald-950 border-emerald-950/30'
+                  : 'bg-emerald-800/80 group-hover:bg-emerald-700 text-emerald-200 group-hover:text-white border-emerald-700/50'
+              }`}>
+                <span>Drive</span>
+                <ExternalLink className="w-3 h-3" />
+              </span>
+            </a>
+          )}
+
 
           {/* Messages — Locked in Archive Mode, accessible only in Current Batch */}
           <button

@@ -27,6 +27,7 @@ export default function KeyboardShortcutsModal({ isOpen, onClose }) {
         { keys: ['Alt', 'C'], desc: 'Go to Real-Time Chat' },
         { keys: ['Alt', 'L'], desc: 'Go to Calendar & Events' },
         { keys: ['Alt', 'F'], desc: 'Go to Letter Formats (Admin Only)' },
+        { keys: ['Alt', 'G'], desc: 'Open Google Drive Repository (Admin Only)' },
       ]
     },
     {
