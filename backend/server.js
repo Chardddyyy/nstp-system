@@ -240,6 +240,23 @@ var enrollmentLimiter = rateLimit({
   message: { message: 'Too many enrollment submissions from this IP network. Please try again later.' },
 });
 
+// ── Rate limiters for authentication OTP endpoints ────────────────────────────
+var forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many password reset requests from this IP. Please wait 15 minutes before requesting again.' }
+});
+
+var verifyOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many OTP verification attempts from this IP. Please wait 15 minutes before trying again.' }
+});
+
 // ── In-memory login rate limiter ─────────────────────────────────────────────
 // Keyed by email. Locks account for 15 mins only after 10 consecutive FAILED attempts.
 var loginAttempts = new Map();
@@ -2797,23 +2814,6 @@ app.get('/api/auth/test-email', authenticateToken, requireAdmin, async (req, res
     target: target,
     result: result
   });
-});
-
-// Rate limiters for authentication recovery endpoints
-const forgotPasswordLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Too many password reset requests from this IP. Please wait 15 minutes before requesting again.' }
-});
-
-const verifyOtpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Too many OTP verification attempts from this IP. Please wait 15 minutes before trying again.' }
 });
 
 // Forgot Password — generate cryptographically secure OTP and send to registered email
