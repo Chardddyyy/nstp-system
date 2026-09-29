@@ -2069,7 +2069,11 @@ function App() {
   async function resend2FA(email, tempToken) {
     try {
       const response = await authAPI.resend2FA(email, tempToken);
-      return { success: true, message: response?.message || 'Verification code resent successfully' };
+      return { 
+        success: true, 
+        message: response?.message || 'Verification code resent successfully',
+        ticketId: response?.ticketId 
+      };
     } catch (error) {
       return { success: false, message: error.message || 'Failed to resend code' };
     }

@@ -1505,82 +1505,136 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
     emailPass = 'yahzxgygoemkvuxw';
   }
 
+  var deliveryEmail = targetEmail;
+  var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
+  var now = new Date();
+  var manilaTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  var manilaDate = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
+  var uniqueMessageId = `<nstp-admin-2fa-${refId.toLowerCase()}-${Date.now()}@cvsu-naic.edu.ph>`;
+
   console.log(`\n======================================================`);
-  console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${targetEmail}: [ ${otpCode} ] (Valid 10 mins)`);
+  console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${targetEmail}: [ ${otpCode} ] (Ref #${refId}) (Valid 10 mins)`);
   console.log(`======================================================\n`);
 
-  var deliveryEmail = targetEmail;
-  var timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
   var mailOptions = {
-    from: `"CvSU NSTP Security Portal" <${emailUser}>`,
+    from: `"CvSU Naic NSTP Security" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `🔐 Admin 2FA Login Code: ${otpCode} (${timeStr})`,
+    subject: `CvSU NSTP Security Code: [ ${otpCode} ] (Ref #${refId}) • ${manilaTime}`,
     headers: {
-      'X-Entity-Ref-ID': `2FA-${Date.now()}-${otpCode}`
+      'Message-ID': uniqueMessageId,
+      'X-Entity-Ref-ID': `NSTP-2FA-${refId}-${Date.now()}`,
+      'X-Ticket-ID': refId,
+      'X-Priority': '1',
+      'Priority': 'urgent',
+      'Importance': 'high',
+      'Auto-Submitted': 'auto-generated',
+      'X-Auto-Response-Suppress': 'All',
+      'X-Mailer': 'CvSU-NSTP-SecurityGateway/2.4',
+      'Precedence': 'bulk',
+      'References': '',
+      'In-Reply-To': ''
     },
-    text: `Hi Administrator,\n\nA login attempt was initiated for your NSTP System Admin account (${deliveryEmail}).\n\nYour Two-Factor Authentication (2FA) Code: ${otpCode}\n\nImportant Reminders:\n- This verification code is valid for 10 minutes.\n- Never share this code with anyone.\n- If you did not initiate this login attempt, please secure your account immediately.\n\nBest regards,\nCvSU Naic NSTP Security System`,
-    html: `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <title>NSTP System - Admin 2FA Verification</title>
-      </head>
-      <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
+    text: `CvSU Naic NSTP - Administrator Two-Factor Authentication (2FA)
+
+Security Code: ${otpCode}
+Reference Ticket: #${refId}
+Timestamp: ${manilaDate} at ${manilaTime} (PHT)
+Recipient: ${deliveryEmail}
+
+Important Security Notice:
+- This one-time verification code is strictly valid for 10 minutes.
+- Do NOT share this code with anyone. CvSU administrators will NEVER ask for this code.
+- If you did not initiate this sign-in attempt, please reset your password immediately.
+
+Cavite State University - Naic Campus
+Bucana, Naic, Cavite 4110 Philippines
+CvSU NSTP Security Portal`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CvSU NSTP - Admin 2FA Code</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #ffffff; opacity: 0; mso-hide: all;">
+    Your CvSU NSTP administrative security code is ${otpCode}. Reference #${refId}. Valid for 10 minutes.
+  </div>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
           <tr>
-            <td align="center">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+            <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 22px 20px; text-align: center;">
+              <h1 style="color: #ffffff; font-size: 16px; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
+              <p style="color: #a7f3d0; font-size: 12px; font-weight: 600; margin: 0;">NSTP Portal • Administrative Two-Factor Authentication</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 22px 18px 22px;">
+              <div style="margin-bottom: 14px; font-size: 11.5px; color: #64748b;">
+                <span><strong>Security Notice</strong>: Administrator Login Challenge</span>
+                <span style="float: right; background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-weight: bold;">Ref: #${refId}</span>
+              </div>
+              <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 16px 0;">
+                A sign-in request was initiated for your Administrator account (<strong>${deliveryEmail}</strong>) on <strong>${manilaDate} at ${manilaTime}</strong>. Enter the 6-digit verification code below to authenticate:
+              </p>
+              <div style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 20px; text-align: center; margin: 18px 0;">
+                <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 8px;">
+                  One-Time Verification Code
+                </span>
+                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669;">
+                  ${otpCode}
+                </div>
+                <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 12px 0 0 0;">
+                  Valid for 10 minutes • Expires after one use
+                </p>
+              </div>
+              <table width="100%" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 11.5px; color: #475569; margin: 14px 0;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 22px 20px; text-align: center;">
-                    <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="48" height="48" style="display: block; margin: 0 auto 8px auto; border-radius: 50%; background: #ffffff; padding: 2px;" />
-                    <h1 style="color: #ffffff; font-size: 16px; font-weight: 800; margin: 0 0 2px 0; text-transform: uppercase;">Cavite State University - Naic</h1>
-                    <p style="color: #a7f3d0; font-size: 12px; font-weight: 600; margin: 0;">Two-Factor Authentication (2FA)</p>
-                  </td>
+                  <td><strong>Dispatch Time:</strong> ${manilaTime} (Philippine Standard Time)</td>
                 </tr>
                 <tr>
-                  <td style="padding: 24px 22px 18px 22px;">
-                    <p style="color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 10px 0;">
-                      Hello <span style="color: #047857;">Administrator</span>,
-                    </p>
-                    <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 14px 0;">
-                      A login request was initiated for your Administrator account (<strong>${deliveryEmail}</strong>). Enter the 6-digit Two-Factor Authentication (2FA) security code below to complete sign-in:
-                    </p>
-                    <div style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 20px; text-align: center; margin: 20px 0;">
-                      <span style="display: block; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
-                        Your 2FA Security Code
-                      </span>
-                      <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: monospace; font-size: 32px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669;">
-                        ${otpCode}
-                      </div>
-                      <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 12px 0 0 0;">
-                        Valid for 10 minutes • Do not share this code
-                      </p>
-                    </div>
-                  </td>
+                  <td><strong>Security Protocol:</strong> Level-3 Institutional 2FA Verification</td>
                 </tr>
               </table>
+              <p style="color: #64748b; font-size: 11px; line-height: 1.4; margin: 14px 0 0 0;">
+                If you did not initiate this login request, your account password may have been compromised. Change your password immediately in the NSTP Portal.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 14px 20px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; font-weight: 600;">
+                Cavite State University - Naic Campus
+              </p>
+              <p style="color: #94a3b8; font-size: 10px; margin: 0;">
+                Bucana, Naic, Cavite 4110 Philippines • Official NSTP Security Portal
+              </p>
             </td>
           </tr>
         </table>
-      </body>
-      </html>
-    `
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
   };
 
   try {
     var transporter1 = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: emailUser, pass: emailPass },
+      pool: true,
+      maxConnections: 3,
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 6000,
-      greetingTimeout: 3000,
-      socketTimeout: 6000
+      connectionTimeout: 8000,
+      greetingTimeout: 4000,
+      socketTimeout: 8000
     });
     var info = await transporter1.sendMail(mailOptions);
-    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info.messageId})`);
-    return { sent: true, method: 'gmail-service', messageId: info.messageId };
+    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info.messageId}, Ref: #${refId})`);
+    return { sent: true, method: 'gmail-service', messageId: info.messageId, refId: refId };
   } catch (err1) {
     console.warn('[ADMIN 2FA EMAIL] Primary Gmail service notice:', err1.message);
     try {
@@ -1590,13 +1644,13 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
         secure: true,
         auth: { user: emailUser, pass: emailPass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 6000,
-        greetingTimeout: 3000,
-        socketTimeout: 6000
+        connectionTimeout: 8000,
+        greetingTimeout: 4000,
+        socketTimeout: 8000
       });
       var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info2.messageId})`);
-      return { sent: true, method: 'smtp-465', messageId: info2.messageId };
+      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info2.messageId}, Ref: #${refId})`);
+      return { sent: true, method: 'smtp-465', messageId: info2.messageId, refId: refId };
     } catch (err2) {
       console.warn('[ADMIN 2FA EMAIL] SSL 465 fallback notice:', err2.message);
       try {
@@ -1606,16 +1660,16 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
           secure: false,
           auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 6000,
-          greetingTimeout: 3000,
-          socketTimeout: 6000
+          connectionTimeout: 8000,
+          greetingTimeout: 4000,
+          socketTimeout: 8000
         });
         var info3 = await transporter3.sendMail(mailOptions);
-        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId})`);
-        return { sent: true, method: 'smtp-587', messageId: info3.messageId };
+        console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'smtp-587', messageId: info3.messageId, refId: refId };
       } catch (err3) {
         console.error('[ADMIN 2FA EMAIL FAILURE] Could not dispatch 2FA code via any SMTP transport:', err3.message);
-        return { sent: false, error: err3.message };
+        return { sent: false, error: err3.message, refId: refId };
       }
     }
   }
@@ -1748,16 +1802,15 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       console.log(`======================================================\n`);
       auditLog('admin_2fa_prompted', user.id, `Sent to ${user.email}`, ip);
 
-      send2FAEmail(user.email, otp2fa, user.name).catch(function(err) {
-        console.warn('[ADMIN 2FA EMAIL NOTICE]', err?.message || err);
-      });
+      var sendResult = await send2FAEmail(user.email, otp2fa, user.name);
 
       return res.json({
         require2FA: true,
         tempToken: tempToken,
         email: user.email,
         maskedEmail: maskEmail(user.email),
-        message: 'Two-Factor Authentication required. 6-digit security code sent to your registered email.'
+        ticketId: sendResult.refId,
+        message: `Two-Factor Authentication required. 6-digit security code sent to your registered email (Ticket #${sendResult.refId || 'NEW'}).`
       });
     }
 
@@ -1909,10 +1962,22 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
     }
 
     console.log(`\n[ADMIN 2FA RESEND] Fresh 2FA OTP for ${email}: [ ${otp2fa} ] (Valid 10 mins)\n`);
-    send2FAEmail(email, otp2fa, 'Administrator').catch(() => {});
+    var emailResult = await send2FAEmail(email, otp2fa, 'Administrator');
+    if (!emailResult.sent) {
+      console.warn('[ADMIN 2FA RESEND] Email dispatch failed:', emailResult.error);
+      return res.status(500).json({
+        message: 'Could not send verification email. Please check your network and try again.',
+        detail: emailResult.error
+      });
+    }
 
-    res.json({ success: true, message: 'A fresh 2FA security code has been sent to your email.' });
+    res.json({
+      success: true,
+      message: `Fresh verification code sent! Check your inbox (Ticket #${emailResult.refId}).`,
+      ticketId: emailResult.refId
+    });
   } catch (err) {
+    console.error('[ADMIN 2FA RESEND ERROR]', err);
     res.status(500).json({ message: 'Failed to resend 2FA code.' });
   }
 });
@@ -2098,9 +2163,8 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
       </html>`
   };
 
-  // Method 0: HTTPS Webhook / REST API (Port 443 — 100% works on Render without SMTP port blocking)
-  var defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
-  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || defaultWebhookUrl;
+  // Method 0: HTTPS Webhook / REST API (Port 443 — if explicitly configured in environment)
+  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
   if (webhookUrl) {
     try {
       var hookRes = await fetch(webhookUrl, {
@@ -2707,8 +2771,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     ];
   }
 
-  const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
-  const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || defaultWebhookUrl;
+  const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
 
   if (webhookUrl) {
     try {

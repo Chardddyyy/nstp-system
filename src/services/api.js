@@ -1795,21 +1795,23 @@ export async function sendStudentDigitalId(studentOrId) {
 </html>
   `;
 
-  const defaultWebhookUrl = 'https://script.google.com/macros/s/AKfycbyIzYvOLr39ZoKlvSNR6L0-zq2bNyszEWh9kfxEBbVrVrjLuAsNA8WW10gCloF2ZDEhDQ/exec';
-  try {
-    await fetch(defaultWebhookUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        to: deliveryEmail,
-        subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
-        text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
-        html: htmlContent
-      })
-    });
-  } catch (webhookErr) {
-    console.warn('[API] Webhook delivery note:', webhookErr);
+  const customWebhookUrl = '';
+  if (customWebhookUrl) {
+    try {
+      await fetch(customWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          to: deliveryEmail,
+          subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
+          text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
+          html: htmlContent
+        })
+      });
+    } catch (webhookErr) {
+      console.warn('[API] Webhook delivery note:', webhookErr);
+    }
   }
 
   return { success: true, message: `Digital ID sent successfully to ${deliveryEmail}` };
