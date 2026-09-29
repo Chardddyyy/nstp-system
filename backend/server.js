@@ -1621,38 +1621,37 @@ CvSU NSTP Security Portal`,
 </html>`
   };
 
+  // Method 1 (Primary & Fastest): Direct SSL Port 465 (Direct TLS handshake, ~1.5s on cloud/Render)
   try {
     var transporter1 = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user: emailUser, pass: emailPass },
-      pool: true,
-      maxConnections: 3,
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 8000,
-      greetingTimeout: 4000,
-      socketTimeout: 8000
+      connectionTimeout: 6000,
+      greetingTimeout: 3500,
+      socketTimeout: 6000
     });
     var info = await transporter1.sendMail(mailOptions);
-    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info.messageId}, Ref: #${refId})`);
-    return { sent: true, method: 'gmail-service', messageId: info.messageId, refId: refId };
+    console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info.messageId}, Ref: #${refId})`);
+    return { sent: true, method: 'smtp-465', messageId: info.messageId, refId: refId };
   } catch (err1) {
-    console.warn('[ADMIN 2FA EMAIL] Primary Gmail service notice:', err1.message);
+    console.warn('[ADMIN 2FA EMAIL] Primary SSL 465 notice:', err1.message);
     try {
       var transporter2 = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
+        service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 8000,
-        greetingTimeout: 4000,
-        socketTimeout: 8000
+        connectionTimeout: 6000,
+        greetingTimeout: 3500,
+        socketTimeout: 6000
       });
       var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info2.messageId}, Ref: #${refId})`);
-      return { sent: true, method: 'smtp-465', messageId: info2.messageId, refId: refId };
+      console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
+      return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
     } catch (err2) {
-      console.warn('[ADMIN 2FA EMAIL] SSL 465 fallback notice:', err2.message);
+      console.warn('[ADMIN 2FA EMAIL] Gmail service fallback notice:', err2.message);
       try {
         var transporter3 = nodemailer.createTransport({
           host: 'smtp.gmail.com',
@@ -1660,9 +1659,9 @@ CvSU NSTP Security Portal`,
           secure: false,
           auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 8000,
-          greetingTimeout: 4000,
-          socketTimeout: 8000
+          connectionTimeout: 6000,
+          greetingTimeout: 3500,
+          socketTimeout: 6000
         });
         var info3 = await transporter3.sendMail(mailOptions);
         console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId}, Ref: #${refId})`);

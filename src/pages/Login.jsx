@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset, testBackendPing, getPrimaryApiUrl } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings, Clock } from 'lucide-react';
 
 
 // Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
@@ -284,17 +284,17 @@ function Login() {
     try {
       const res = await resend2FA(twoFactorEmail, twoFactorTempToken);
       if (res.success) {
-        setTwoFactorResendCooldown(25);
+        setTwoFactorResendCooldown(60);
         setTwoFactorOtp('');
         if (res.ticketId) {
           setTwoFactorTicketId(res.ticketId);
         }
-        setTwoFactorSuccess(res.message || 'Bagong verification code naipapadala na sa iyong Gmail!');
+        setTwoFactorSuccess(res.message || `A fresh 6-digit verification code has been dispatched to your email (Ticket #${res.ticketId || 'NEW'}).`);
       } else {
-        setTwoFactorError(res.message || 'Failed to resend 2FA code.');
+        setTwoFactorError(res.message || 'Failed to resend verification code. Please try again.');
       }
     } catch (err) {
-      setTwoFactorError(err.message || 'Failed to resend 2FA code.');
+      setTwoFactorError(err.message || 'Failed to resend verification code. Please try again.');
     } finally {
       setTwoFactorResending(false);
     }
@@ -338,9 +338,9 @@ function Login() {
         setTwoFactorTicketId(result.ticketId || '');
         setTwoFactorOtp('');
         setTwoFactorError('');
-        setTwoFactorSuccess(result.ticketId ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.` : '');
+        setTwoFactorSuccess(result.ticketId ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
         setShow2FAModal(true);
-        setTwoFactorResendCooldown(25);
+        setTwoFactorResendCooldown(60);
         return;
       }
 
@@ -360,9 +360,9 @@ function Login() {
             setTwoFactorTicketId(retryResult.ticketId || '');
             setTwoFactorOtp('');
             setTwoFactorError('');
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : '');
+            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
             setShow2FAModal(true);
-            setTwoFactorResendCooldown(25);
+            setTwoFactorResendCooldown(60);
             return;
           }
           if (retryResult.success) {
@@ -392,9 +392,9 @@ function Login() {
             setTwoFactorTicketId(retryResult.ticketId || '');
             setTwoFactorOtp('');
             setTwoFactorError('');
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : '');
+            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
             setShow2FAModal(true);
-            setTwoFactorResendCooldown(25);
+            setTwoFactorResendCooldown(60);
             return;
           }
           if (retryResult.success) {
@@ -1124,21 +1124,25 @@ function Login() {
                 <div className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-mono font-bold text-emerald-900">
                   {twoFactorMaskedEmail || 'richardbelen99@gmail.com'}
                 </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1.5">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-800 font-semibold bg-emerald-50 border border-emerald-200/90 py-1 px-3 rounded-lg">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>Code expires in 10 minutes</span>
+                  </div>
+                  {twoFactorTicketId && (
+                    <div className="inline-flex items-center gap-1 text-[11px] text-gray-600 font-medium bg-gray-100 py-1 px-2.5 rounded-lg border border-gray-200">
+                      <span>Reference:</span>
+                      <span className="font-mono font-bold text-gray-900">#{twoFactorTicketId}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {twoFactorSuccess && (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-xs text-emerald-800">
                   <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
                   <span className="leading-tight font-medium">{twoFactorSuccess}</span>
-                </div>
-              )}
-
-              {twoFactorTicketId && (
-                <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 font-medium">
-                  <span>Current Email Reference:</span>
-                  <span className="font-mono font-bold text-emerald-900 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200">
-                    Ticket #{twoFactorTicketId}
-                  </span>
                 </div>
               )}
 
@@ -1169,8 +1173,8 @@ function Login() {
                     className="w-full text-center text-2xl sm:text-3xl font-mono font-black tracking-[0.4em] py-3.5 px-4 bg-gray-50 border-2 border-emerald-600/40 rounded-2xl focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition-all text-gray-900 placeholder:text-gray-300"
                   />
                 </div>
-                <p className="text-[10.5px] text-gray-400 text-center leading-normal">
-                  Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. Each resend sends an unthreaded unique code to guarantee delivery.
+                <p className="text-[11px] text-gray-400 text-center leading-normal">
+                  Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. The code expires in 10 minutes.
                 </p>
               </div>
 
@@ -1204,7 +1208,7 @@ function Login() {
                     {twoFactorResending
                       ? 'Sending fresh code...'
                       : twoFactorResendCooldown > 0
-                      ? `Resend in ${twoFactorResendCooldown}s`
+                      ? `Resend code in ${twoFactorResendCooldown}s`
                       : 'Resend Verification Code'}
                   </button>
 
