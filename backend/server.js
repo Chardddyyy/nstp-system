@@ -1506,9 +1506,6 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
   }
 
   var deliveryEmail = targetEmail;
-  if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
-    deliveryEmail = 'cvsunaicnstp@gmail.com';
-  }
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var now = new Date();
   var manilaTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1703,7 +1700,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     var aliases = [email];
     if (email === 'admin@cvsu.edu.ph' || email === 'cvsunaicnstp@gmail.com' || email === 'admin' || email === 'admin@gmail.com' || email === 'richardbelen99@gmail.com') {
-      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
+      aliases = ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com'];
     } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor' || email === 'cwts@gmail.com') {
       aliases = ['clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph', 'cwts@gmail.com'];
     } else if (email === 'lts@cvsu.edu.ph' || email === 'lts' || email === 'lts@gmail.com') {
@@ -1783,10 +1780,9 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     // ── Two-Factor Authentication (2FA) for Admin ──────────────────────────────
     if (user.role === 'admin') {
-      var deliveryEmail = user.email;
-      if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
-        deliveryEmail = 'cvsunaicnstp@gmail.com';
-      }
+      // deliveryEmail is the admin's actual registered email (receives the 2FA code)
+      // cvsunaicnstp@gmail.com is only the SMTP sender account (used in FROM field)
+      var deliveryEmail = user.email || 'richardbelen99@gmail.com';
 
       var userKey = deliveryEmail.toLowerCase();
       var existing2FA = inMemory2FA.get(userKey) || inMemory2FA.get(user.email.toLowerCase());
@@ -1906,7 +1902,8 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
       return res.status(401).json({ message: '2FA session expired. Please log in again.' });
     }
 
-    var deliveryEmail = (decoded.deliveryEmail || (email.includes('cvsu.edu.ph') || email.includes('richardbelen99') || email === 'admin@gmail.com' || email === 'admin' ? 'cvsunaicnstp@gmail.com' : email)).toLowerCase();
+    // Resolve delivery email from token (admin's actual email, not the SMTP sender)
+    var deliveryEmail = (decoded.deliveryEmail || decoded.email || email).toLowerCase();
     var record = inMemory2FA.get(deliveryEmail) || inMemory2FA.get(email.toLowerCase()) || (decoded.email && inMemory2FA.get(decoded.email.toLowerCase()));
     if (!record || Date.now() > record.expiresAt) {
       inMemory2FA.delete(email);
@@ -1984,7 +1981,8 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
       return res.status(401).json({ message: '2FA session expired. Please log in again.' });
     }
 
-    var deliveryEmail = (decoded.deliveryEmail || (email.includes('cvsu.edu.ph') || email.includes('richardbelen99') || email === 'admin@gmail.com' || email === 'admin' ? 'cvsunaicnstp@gmail.com' : email)).toLowerCase();
+    // Resolve delivery email from token (admin's actual email, not the SMTP sender)
+    var deliveryEmail = (decoded.deliveryEmail || decoded.email || email).toLowerCase();
     var record = inMemory2FA.get(deliveryEmail) || inMemory2FA.get(email.toLowerCase()) || (decoded.email && inMemory2FA.get(decoded.email.toLowerCase()));
     var now = Date.now();
 
@@ -2090,9 +2088,6 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
 
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var deliveryEmail = targetEmail;
-  if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
-    deliveryEmail = 'cvsunaicnstp@gmail.com';
-  }
   var now = new Date();
   var timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
   var dateStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
@@ -2908,9 +2903,8 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
 
     var user = foundUsers[0];
     var targetDeliveryEmail = user.email ? user.email.toLowerCase().trim() : cleanEmail;
-    if (user.role === 'admin' || targetDeliveryEmail.includes('cvsu.edu.ph') || targetDeliveryEmail.includes('richardbelen99') || targetDeliveryEmail === 'admin@gmail.com' || targetDeliveryEmail === 'admin') {
-      targetDeliveryEmail = 'cvsunaicnstp@gmail.com';
-    }
+    // targetDeliveryEmail is the admin's actual email (richardbelen99@gmail.com)
+    // cvsunaicnstp@gmail.com is only the SMTP FROM sender, not the delivery address
 
     var now = Date.now();
     var existingReset = inMemoryResetOtps.get(cleanEmail) || inMemoryResetOtps.get(targetDeliveryEmail);
