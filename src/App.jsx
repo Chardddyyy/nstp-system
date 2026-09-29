@@ -293,7 +293,7 @@ function App() {
       if (Array.isArray(cached) && cached.length > 0) return cached;
     } catch {}
     return [
-      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
@@ -1973,13 +1973,17 @@ function App() {
           require2FA: true,
           tempToken: response.tempToken,
           email: response.email,
+          deliveryEmail: response.deliveryEmail,
           maskedEmail: response.maskedEmail,
+          ticketId: response.ticketId,
+          cooldownRemaining: response.cooldownRemaining,
+          reused: response.reused,
           message: response.message || 'Two-factor authentication code required'
         };
       }
 
       // Defense Fail-Safe Guard: Always enforce 2FA verification for Admin account
-      if (response && response.token && response.user && (response.user.role === 'admin' || response.user.email?.toLowerCase().includes('admin') || response.user.email?.toLowerCase() === 'richardbelen99@gmail.com')) {
+      if (response && response.token && response.user && (response.user.role === 'admin' || response.user.email?.toLowerCase().includes('admin') || response.user.email?.toLowerCase() === 'cvsunaicnstp@gmail.com')) {
         window.__nstp_pending_admin_auth__ = {
           token: response.token,
           user: response.user
@@ -1992,7 +1996,10 @@ function App() {
           require2FA: true,
           tempToken: 'pending_admin_jwt_' + Date.now(),
           email: uEmail,
+          deliveryEmail: 'cvsunaicnstp@gmail.com',
           maskedEmail: masked,
+          cooldownRemaining: 60,
+          reused: false,
           message: 'Two-Factor Authentication required for Administrator access.'
         };
       }
@@ -2072,7 +2079,8 @@ function App() {
       return { 
         success: true, 
         message: response?.message || 'Verification code resent successfully',
-        ticketId: response?.ticketId 
+        ticketId: response?.ticketId,
+        cooldownRemaining: response?.cooldownRemaining || 60
       };
     } catch (error) {
       return { success: false, message: error.message || 'Failed to resend code' };
@@ -2091,7 +2099,7 @@ function App() {
     notificationsLoadedUserRef.current = null;
     setUser(null);
     setUsers([
-      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },

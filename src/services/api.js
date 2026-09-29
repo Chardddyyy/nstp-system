@@ -96,8 +96,8 @@ async function apiCall(endpoint, options) {
 
   var response;
   try {
-    // Fast 3s timeout for login to avoid freezing if Cloud Server is asleep, 20s for general calls
-    var timeoutDuration = endpoint === '/auth/login' ? 3000 : 20000;
+    // Resilient 25s timeout for login, 2FA, and password reset requests to complete SMTP handshake cleanly
+    var timeoutDuration = 25000;
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, timeoutDuration);
     var configWithSignal = Object.assign({}, config, { signal: controller.signal });
@@ -211,11 +211,11 @@ export async function loginUser(email, password, _forceLogin = true) {
       
       const offlineAccounts = [
         {
-          emails: ['richardbelen99@gmail.com', 'admin@gmail.com', 'admin@cvsu.edu.ph', 'admin'],
+          emails: ['cvsunaicnstp@gmail.com', 'admin@gmail.com', 'admin@cvsu.edu.ph', 'admin'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'richardbelen99@gmail.com',
+            email: 'cvsunaicnstp@gmail.com',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -322,7 +322,7 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
+        { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office' },
         { id: 2, name: 'CWTS Facilitator', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },

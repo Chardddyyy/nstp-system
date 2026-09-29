@@ -49,6 +49,35 @@ function fallbackExecCopy(text) {
   }
 }
 
+// ── Local email masking helper ─────────────────────────────────────────────────
+function maskEmailLocal(email) {
+  if (!email || !email.includes('@')) return email || '';
+  const [name, domain] = email.split('@');
+  if (name.length <= 2) return name.charAt(0) + '***@' + domain;
+  return name.slice(0, 2) + '***' + name.slice(-2) + '@' + domain;
+}
+
+// ── Persistent cooldown helpers using sessionStorage ──────────────────────────
+const STORAGE_KEY_2FA = 'nstp_2fa_cooldown_expiry';
+const STORAGE_KEY_FORGOT = 'nstp_forgot_cooldown_expiry';
+
+function storeExpiry(key, seconds) {
+  try { sessionStorage.setItem(key, String(Date.now() + seconds * 1000)); } catch (_) {}
+}
+
+function readRemaining(key) {
+  try {
+    const expiry = parseInt(sessionStorage.getItem(key) || '0', 10);
+    const remaining = Math.ceil((expiry - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  } catch (_) { return 0; }
+}
+
+function clearExpiry(key) {
+  try { sessionStorage.removeItem(key); } catch (_) {}
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,7 +97,8 @@ function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // Initialize resend cooldown from sessionStorage so it persists across back-navigation
+  const [resendCooldown, setResendCooldown] = useState(() => readRemaining(STORAGE_KEY_FORGOT));
 
   // Admin Two-Factor Authentication (2FA) state
   const [show2FAModal, setShow2FAModal] = useState(false);
@@ -81,7 +111,8 @@ function Login() {
   const [twoFactorTicketId, setTwoFactorTicketId] = useState('');
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [twoFactorResending, setTwoFactorResending] = useState(false);
-  const [twoFactorResendCooldown, setTwoFactorResendCooldown] = useState(0);
+  // Initialize 2FA cooldown from sessionStorage so it persists even if user clicks "Back to Login"
+  const [twoFactorResendCooldown, setTwoFactorResendCooldown] = useState(() => readRemaining(STORAGE_KEY_2FA));
 
   // Server connection diagnostics state
   const [showServerModal, setShowServerModal] = useState(false);
@@ -128,25 +159,33 @@ function Login() {
     window.location.reload();
   };
 
+  // Forgot-password cooldown — tick from sessionStorage expiry for persistence across navigation
   useEffect(() => {
-    let timer;
-    if (resendCooldown > 0) {
-      timer = setInterval(() => {
-        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
+    if (resendCooldown <= 0) { clearExpiry(STORAGE_KEY_FORGOT); return; }
+    const timer = setInterval(() => {
+      const remaining = readRemaining(STORAGE_KEY_FORGOT);
+      setResendCooldown(remaining);
+    }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // 2FA cooldown — tick from sessionStorage expiry so it persists even when user clicks "Back to Login" and tries logging in again
   useEffect(() => {
-    let timer;
-    if (twoFactorResendCooldown > 0) {
-      timer = setInterval(() => {
-        setTwoFactorResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
+    if (twoFactorResendCooldown <= 0) { clearExpiry(STORAGE_KEY_2FA); return; }
+    const timer = setInterval(() => {
+      const remaining = readRemaining(STORAGE_KEY_2FA);
+      setTwoFactorResendCooldown(remaining);
+    }, 1000);
     return () => clearInterval(timer);
   }, [twoFactorResendCooldown]);
+
+  // On mount: sync cooldowns from sessionStorage in case we navigated back
+  useEffect(() => {
+    const remaining2FA = readRemaining(STORAGE_KEY_2FA);
+    if (remaining2FA > 0) setTwoFactorResendCooldown(remaining2FA);
+    const remainingForgot = readRemaining(STORAGE_KEY_FORGOT);
+    if (remainingForgot > 0) setResendCooldown(remainingForgot);
+  }, []);
 
   // Cross-Tab Instant Sync & 1-Click Auto-Fill from Email Link
   useEffect(() => {
@@ -284,13 +323,20 @@ function Login() {
     try {
       const res = await resend2FA(twoFactorEmail, twoFactorTempToken);
       if (res.success) {
-        setTwoFactorResendCooldown(60);
+        const cooldown = res.cooldownRemaining || 60;
+        storeExpiry(STORAGE_KEY_2FA, cooldown);
+        setTwoFactorResendCooldown(cooldown);
         setTwoFactorOtp('');
         if (res.ticketId) {
           setTwoFactorTicketId(res.ticketId);
         }
         setTwoFactorSuccess(res.message || `A fresh 6-digit verification code has been dispatched to your email (Ticket #${res.ticketId || 'NEW'}).`);
       } else {
+        const serverRemaining = res.cooldownRemaining;
+        if (serverRemaining && serverRemaining > 0) {
+          storeExpiry(STORAGE_KEY_2FA, serverRemaining);
+          setTwoFactorResendCooldown(serverRemaining);
+        }
         setTwoFactorError(res.message || 'Failed to resend verification code. Please try again.');
       }
     } catch (err) {
@@ -334,13 +380,26 @@ function Login() {
       if (result.require2FA) {
         setTwoFactorTempToken(result.tempToken || '');
         setTwoFactorEmail(result.email || cleanEmail);
-        setTwoFactorMaskedEmail(result.maskedEmail || cleanEmail);
+        setTwoFactorMaskedEmail(result.maskedEmail || maskEmailLocal(result.deliveryEmail || result.email || cleanEmail));
         setTwoFactorTicketId(result.ticketId || '');
         setTwoFactorOtp('');
         setTwoFactorError('');
-        setTwoFactorSuccess(result.ticketId ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
+        // Use server-provided cooldown (accurate for reuse case) or default to 60
+        const serverCooldown = result.cooldownRemaining || 60;
+        // Only store/update sessionStorage if there is no longer remaining cooldown already active
+        const existingRemaining = readRemaining(STORAGE_KEY_2FA);
+        if (existingRemaining <= 0 || !result.reused) {
+          storeExpiry(STORAGE_KEY_2FA, serverCooldown);
+          setTwoFactorResendCooldown(serverCooldown);
+        } else {
+          setTwoFactorResendCooldown(existingRemaining);
+        }
+        setTwoFactorSuccess(
+          result.reused
+            ? `Code already dispatched — check your inbox (Ticket #${result.ticketId || 'ACTIVE'}). Resend available in ${readRemaining(STORAGE_KEY_2FA)}s.`
+            : (result.ticketId ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.')
+        );
         setShow2FAModal(true);
-        setTwoFactorResendCooldown(60);
         return;
       }
 
@@ -362,7 +421,14 @@ function Login() {
             setTwoFactorError('');
             setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
             setShow2FAModal(true);
-            setTwoFactorResendCooldown(60);
+            const cooldownR = retryResult.cooldownRemaining || 60;
+            const existingR = readRemaining(STORAGE_KEY_2FA);
+            if (existingR <= 0 || !retryResult.reused) {
+              storeExpiry(STORAGE_KEY_2FA, cooldownR);
+              setTwoFactorResendCooldown(cooldownR);
+            } else {
+              setTwoFactorResendCooldown(existingR);
+            }
             return;
           }
           if (retryResult.success) {
@@ -394,7 +460,14 @@ function Login() {
             setTwoFactorError('');
             setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
             setShow2FAModal(true);
-            setTwoFactorResendCooldown(60);
+            const cooldownR = retryResult.cooldownRemaining || 60;
+            const existingR = readRemaining(STORAGE_KEY_2FA);
+            if (existingR <= 0 || !retryResult.reused) {
+              storeExpiry(STORAGE_KEY_2FA, cooldownR);
+              setTwoFactorResendCooldown(cooldownR);
+            } else {
+              setTwoFactorResendCooldown(existingR);
+            }
             return;
           }
           if (retryResult.success) {
@@ -433,19 +506,33 @@ function Login() {
       setForgotError('Please enter your registered email address');
       return;
     }
+    // Guard: if cooldown still active, do not re-send
+    const existingCooldown = readRemaining(STORAGE_KEY_FORGOT);
+    if (existingCooldown > 0) {
+      setResendCooldown(existingCooldown);
+      setForgotStep(2);
+      return;
+    }
     setForgotLoading(true);
     try {
-      await requestPasswordReset(clean);
+      const result = await requestPasswordReset(clean);
       setForgotOtp('');
-      setResendCooldown(60);
+      const cooldown = result?.cooldownRemaining || 60;
+      storeExpiry(STORAGE_KEY_FORGOT, cooldown);
+      setResendCooldown(cooldown);
       setForgotStep(2);
+      if (result?.reused) {
+        setForgotSuccess(`A code was recently dispatched (Ticket #${result.ticketId || 'ACTIVE'}). Please check your inbox.`);
+      }
     } catch (err) {
       // Auto-retry once in case cloud server was cold-starting
       try {
         await new Promise(r => setTimeout(r, 1500));
-        await requestPasswordReset(clean);
+        const retryResult = await requestPasswordReset(clean);
         setForgotOtp('');
-        setResendCooldown(60);
+        const cooldown = retryResult?.cooldownRemaining || 60;
+        storeExpiry(STORAGE_KEY_FORGOT, cooldown);
+        setResendCooldown(cooldown);
         setForgotStep(2);
       } catch (retryErr) {
         var msg = retryErr?.message || err?.message || 'Failed to send reset code.';
@@ -571,7 +658,7 @@ function Login() {
                   spellCheck="false"
                   data-lpignore="true"
                   className="w-full min-h-[46px] pl-10 pr-3 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                  placeholder="richardbelen99@gmail.com / admin"
+                  placeholder="cvsunaicnstp@gmail.com / admin"
                   autoComplete="off"
                   required
                 />
@@ -669,7 +756,7 @@ function Login() {
 
             <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
               {[
-                { role: 'Admin', email: 'richardbelen99@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                { role: 'Admin', email: 'cvsunaicnstp@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
                 { role: 'CWTS', email: 'cwts@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
                 { role: 'LTS', email: 'lts@gmail.com', pass: 'lts123', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
                 { role: 'ROTC', email: 'rotc@gmail.com', pass: 'rotc123', badge: 'bg-red-100 text-red-800 border-red-300' },
@@ -1122,7 +1209,7 @@ function Login() {
                   A 6-digit one-time verification code has been dispatched to your administrator email:
                 </p>
                 <div className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-mono font-bold text-emerald-900">
-                  {twoFactorMaskedEmail || 'richardbelen99@gmail.com'}
+                  {twoFactorMaskedEmail || 'cv***tp@gmail.com'}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-1.5">

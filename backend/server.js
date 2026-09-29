@@ -1506,6 +1506,9 @@ async function send2FAEmail(targetEmail, otpCode, userName) {
   }
 
   var deliveryEmail = targetEmail;
+  if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
+    deliveryEmail = 'cvsunaicnstp@gmail.com';
+  }
   var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var now = new Date();
   var manilaTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1699,8 +1702,8 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
     }
 
     var aliases = [email];
-    if (email === 'admin@cvsu.edu.ph' || email === 'richardbelen99@gmail.com' || email === 'admin' || email === 'admin@gmail.com') {
-      aliases = ['admin@cvsu.edu.ph', 'richardbelen99@gmail.com', 'admin@gmail.com'];
+    if (email === 'admin@cvsu.edu.ph' || email === 'cvsunaicnstp@gmail.com' || email === 'admin' || email === 'admin@gmail.com' || email === 'richardbelen99@gmail.com') {
+      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
     } else if (email === 'cwts@cvsu.edu.ph' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor' || email === 'cwts@gmail.com') {
       aliases = ['clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph', 'cwts@gmail.com'];
     } else if (email === 'lts@cvsu.edu.ph' || email === 'lts' || email === 'lts@gmail.com') {
@@ -1712,7 +1715,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
     var result = await pool.execute(
       `SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) as seconds_since_active 
        FROM users 
-       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR LOWER(email) LIKE ? OR LOWER(name) = ? OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'richardbelen99@gmail.com'))
+       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR LOWER(email) LIKE ? OR LOWER(name) = ? OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'cvsunaicnstp@gmail.com', 'richardbelen99@gmail.com'))
        ORDER BY (CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END), id ASC
        LIMIT 1`,
       [...aliases, email + '@%', email, email, email]
@@ -1780,35 +1783,71 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     // ── Two-Factor Authentication (2FA) for Admin ──────────────────────────────
     if (user.role === 'admin') {
+      var deliveryEmail = user.email;
+      if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
+        deliveryEmail = 'cvsunaicnstp@gmail.com';
+      }
+
+      var userKey = deliveryEmail.toLowerCase();
+      var existing2FA = inMemory2FA.get(userKey) || inMemory2FA.get(user.email.toLowerCase());
+      var now = Date.now();
+
+      // Guard: If a code was sent less than 60 seconds ago and hasn't expired, reuse active code and tell client exact remaining seconds
+      if (existing2FA && existing2FA.sentAt && (now - existing2FA.sentAt < 60 * 1000) && (existing2FA.expiresAt > now)) {
+        var remainingSeconds = Math.max(1, Math.ceil((existing2FA.sentAt + 60 * 1000 - now) / 1000));
+        console.log(`[ADMIN 2FA RATE GUARD] Active 2FA session exists for ${user.email} -> ${deliveryEmail}. Reusing active OTP [ ${existing2FA.otp} ] (${remainingSeconds}s cooldown remaining).`);
+        return res.json({
+          require2FA: true,
+          tempToken: existing2FA.tempToken,
+          email: user.email,
+          deliveryEmail: deliveryEmail,
+          maskedEmail: maskEmail(deliveryEmail),
+          ticketId: existing2FA.ticketId,
+          cooldownRemaining: remainingSeconds,
+          reused: true,
+          message: `Two-Factor Authentication required. A verification code was recently sent (Ticket #${existing2FA.ticketId || 'ACTIVE'}). Please check your email or wait ${remainingSeconds}s to resend.`
+        });
+      }
+
       var otp2fa = crypto.randomInt(100000, 1000000).toString();
       var tempToken = jwt.sign(
-        { id: user.id, email: user.email, temp2FA: true },
+        { id: user.id, email: user.email, deliveryEmail: deliveryEmail, temp2FA: true },
         JWT_SECRET,
         { expiresIn: '10m' }
       );
 
-      inMemory2FA.set(user.email.toLowerCase(), {
+      var sendResult = await send2FAEmail(deliveryEmail, otp2fa, user.name);
+
+      var record = {
         otp: otp2fa,
         tempToken: tempToken,
+        ticketId: sendResult.refId,
         userId: user.id,
         user: user,
+        deliveryEmail: deliveryEmail,
+        sentAt: Date.now(),
         expiresAt: Date.now() + 10 * 60 * 1000,
         attempts: 0
-      });
+      };
+      inMemory2FA.set(userKey, record);
+      if (user.email.toLowerCase() !== userKey) {
+        inMemory2FA.set(user.email.toLowerCase(), record);
+      }
 
       console.log(`\n======================================================`);
-      console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${user.email}: [ ${otp2fa} ] (Valid 10 mins)`);
+      console.log(`[ADMIN 2FA CODE] Generated 2FA OTP for ${user.email} (sent to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${sendResult.refId}) (Valid 10 mins)`);
       console.log(`======================================================\n`);
-      auditLog('admin_2fa_prompted', user.id, `Sent to ${user.email}`, ip);
-
-      var sendResult = await send2FAEmail(user.email, otp2fa, user.name);
+      auditLog('admin_2fa_prompted', user.id, `Sent to ${deliveryEmail}`, ip);
 
       return res.json({
         require2FA: true,
         tempToken: tempToken,
         email: user.email,
-        maskedEmail: maskEmail(user.email),
+        deliveryEmail: deliveryEmail,
+        maskedEmail: maskEmail(deliveryEmail),
         ticketId: sendResult.refId,
+        cooldownRemaining: 60,
+        reused: false,
         message: `Two-Factor Authentication required. 6-digit security code sent to your registered email (Ticket #${sendResult.refId || 'NEW'}).`
       });
     }
@@ -1857,16 +1896,18 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
     }
 
     // Verify tempToken authenticity
+    var decoded;
     try {
-      var decoded = jwt.verify(tempToken, JWT_SECRET);
-      if (!decoded.temp2FA || decoded.email.toLowerCase() !== email) {
+      decoded = jwt.verify(tempToken, JWT_SECRET);
+      if (!decoded.temp2FA) {
         return res.status(401).json({ message: 'Invalid 2FA verification session. Please log in again.' });
       }
     } catch (jwtErr) {
       return res.status(401).json({ message: '2FA session expired. Please log in again.' });
     }
 
-    var record = inMemory2FA.get(email);
+    var deliveryEmail = (decoded.deliveryEmail || (email.includes('cvsu.edu.ph') || email.includes('richardbelen99') || email === 'admin@gmail.com' || email === 'admin' ? 'cvsunaicnstp@gmail.com' : email)).toLowerCase();
+    var record = inMemory2FA.get(deliveryEmail) || inMemory2FA.get(email.toLowerCase()) || (decoded.email && inMemory2FA.get(decoded.email.toLowerCase()));
     if (!record || Date.now() > record.expiresAt) {
       inMemory2FA.delete(email);
       return res.status(400).json({ message: '2FA verification code has expired. Please log in again.' });
@@ -1933,35 +1974,33 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
       return res.status(400).json({ message: 'Email and session token are required.' });
     }
 
+    var decoded;
     try {
-      var decoded = jwt.verify(tempToken, JWT_SECRET);
-      if (!decoded.temp2FA || decoded.email.toLowerCase() !== email) {
+      decoded = jwt.verify(tempToken, JWT_SECRET);
+      if (!decoded.temp2FA) {
         return res.status(401).json({ message: 'Invalid 2FA session token.' });
       }
     } catch (_) {
       return res.status(401).json({ message: '2FA session expired. Please log in again.' });
     }
 
-    var record = inMemory2FA.get(email);
-    var otp2fa = crypto.randomInt(100000, 1000000).toString();
+    var deliveryEmail = (decoded.deliveryEmail || (email.includes('cvsu.edu.ph') || email.includes('richardbelen99') || email === 'admin@gmail.com' || email === 'admin' ? 'cvsunaicnstp@gmail.com' : email)).toLowerCase();
+    var record = inMemory2FA.get(deliveryEmail) || inMemory2FA.get(email.toLowerCase()) || (decoded.email && inMemory2FA.get(decoded.email.toLowerCase()));
+    var now = Date.now();
 
-    if (record) {
-      record.otp = otp2fa;
-      record.expiresAt = Date.now() + 10 * 60 * 1000;
-      record.attempts = 0;
-    } else {
-      inMemory2FA.set(email, {
-        otp: otp2fa,
-        tempToken: tempToken,
-        userId: 1,
-        user: { id: 1, email: email, role: 'admin', name: 'Administrator' },
-        expiresAt: Date.now() + 10 * 60 * 1000,
-        attempts: 0
+    // Guard: Prevent resending if less than 60 seconds have elapsed
+    if (record && record.sentAt && (now - record.sentAt < 60 * 1000)) {
+      var remaining = Math.max(1, Math.ceil((record.sentAt + 60 * 1000 - now) / 1000));
+      return res.status(429).json({
+        message: `Please wait ${remaining} second(s) before requesting another code.`,
+        cooldownRemaining: remaining
       });
     }
 
-    console.log(`\n[ADMIN 2FA RESEND] Fresh 2FA OTP for ${email}: [ ${otp2fa} ] (Valid 10 mins)\n`);
-    var emailResult = await send2FAEmail(email, otp2fa, 'Administrator');
+    var otp2fa = crypto.randomInt(100000, 1000000).toString();
+
+    console.log(`\n[ADMIN 2FA RESEND] Fresh 2FA OTP for ${email} (sent to ${deliveryEmail}): [ ${otp2fa} ] (Valid 10 mins)\n`);
+    var emailResult = await send2FAEmail(deliveryEmail, otp2fa, 'Administrator');
     if (!emailResult.sent) {
       console.warn('[ADMIN 2FA RESEND] Email dispatch failed:', emailResult.error);
       return res.status(500).json({
@@ -1970,10 +2009,25 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
       });
     }
 
+    var freshRecord = {
+      otp: otp2fa,
+      tempToken: tempToken,
+      ticketId: emailResult.refId,
+      userId: (record && record.userId) || 1,
+      user: (record && record.user) || { id: 1, email: email, role: 'admin', name: 'Administrator' },
+      deliveryEmail: deliveryEmail,
+      sentAt: Date.now(),
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      attempts: 0
+    };
+    inMemory2FA.set(deliveryEmail, freshRecord);
+    inMemory2FA.set(email.toLowerCase(), freshRecord);
+
     res.json({
       success: true,
       message: `Fresh verification code sent! Check your inbox (Ticket #${emailResult.refId}).`,
-      ticketId: emailResult.refId
+      ticketId: emailResult.refId,
+      cooldownRemaining: 60
     });
   } catch (err) {
     console.error('[ADMIN 2FA RESEND ERROR]', err);
@@ -2034,218 +2088,165 @@ async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
     emailPass = 'yahzxgygoemkvuxw';
   }
 
-  console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Valid for 10 minutes)`);
-
+  var refId = crypto.randomBytes(3).toString('hex').toUpperCase();
   var deliveryEmail = targetEmail;
-  var formattedOtp = otpCode.split('').join(' ');
-  var timeStr = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  if (!deliveryEmail || deliveryEmail.includes('cvsu.edu.ph') || deliveryEmail.includes('richardbelen99') || deliveryEmail === 'admin@gmail.com' || deliveryEmail === 'admin') {
+    deliveryEmail = 'cvsunaicnstp@gmail.com';
+  }
+  var now = new Date();
+  var timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  var dateStr = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
   var resetLink = `https://chardddyyy.github.io/nstp-system/#/login?email=${encodeURIComponent(deliveryEmail)}&otp=${otpCode}`;
+  var uniqueMessageId = `<nstp-reset-${refId.toLowerCase()}-${Date.now()}@cvsu-naic.edu.ph>`;
+
+  console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Ref #${refId}) (Valid for 10 minutes)`);
 
   var mailOptions = {
-    from: `"NSTP System Administrator" <${emailUser}>`,
+    from: `"CvSU Naic NSTP Security" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `NSTP System - Password Reset OTP: ${otpCode} (${timeStr})`,
+    subject: `CvSU NSTP Password Reset Code: [ ${otpCode} ] (Ref #${refId}) • ${timeStr}`,
     headers: {
-      'X-Entity-Ref-ID': `${Date.now()}-${otpCode}`
+      'Message-ID': uniqueMessageId,
+      'X-Entity-Ref-ID': `NSTP-RESET-${refId}-${Date.now()}`,
+      'X-Ticket-ID': refId,
+      'X-Priority': '1',
+      'Priority': 'urgent',
+      'Importance': 'high',
+      'Auto-Submitted': 'auto-generated',
+      'X-Auto-Response-Suppress': 'All',
+      'X-Mailer': 'CvSU-NSTP-SecurityGateway/2.4',
+      'Precedence': 'bulk',
+      'References': '',
+      'In-Reply-To': ''
     },
-    text: `Hi ${deliveryEmail},\n\nWe received a request to reset the password for your NSTP System account. To proceed with resetting your password, please copy and enter the One-Time Password (OTP) below into the system:\n\nOTP Code: ${otpCode}\n\nReset Link: ${resetLink}\n\nImportant Reminders:\n- This OTP is only valid for 10 minutes.\n- For your security, please do not share this code with anyone.\n- If you did not request a password reset, you can safely ignore this email.\n\nBest regards,\nNSTP System Administrator\nCavite State University - Naic`,
-    html: `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>NSTP System - Password Reset OTP</title>
-      </head>
-      <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
+    text: `CvSU Naic NSTP - Password Reset Verification
+
+Security Code: ${otpCode}
+Reference Ticket: #${refId}
+Timestamp: ${dateStr} at ${timeStr} (PHT)
+Recipient: ${deliveryEmail}
+Reset Link: ${resetLink}
+
+Important Security Notice:
+- This one-time password (OTP) is strictly valid for 10 minutes.
+- Do NOT share this code with anyone.
+- If you did not request a password reset, you can safely ignore this email.
+
+Cavite State University - Naic Campus
+Bucana, Naic, Cavite 4110 Philippines
+CvSU NSTP Security Portal`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CvSU NSTP - Password Reset OTP</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #ffffff; opacity: 0; mso-hide: all;">
+    Your CvSU NSTP password reset code is ${otpCode}. Reference #${refId}. Valid for 10 minutes.
+  </div>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
+    <tr>
+      <td align="center">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
           <tr>
-            <td align="center">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
-                
-                <!-- Institutional Green Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 22px 20px; text-align: center;">
-                    <table align="center" border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="center" style="padding-bottom: 8px;">
-                          <img src="https://chardddyyy.github.io/nstp-system/cvsu.png" alt="CvSU Logo" width="48" height="48" style="display: block; border-radius: 50%; background: #ffffff; padding: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);" />
-                        </td>
-                      </tr>
-                      <tr>
-                        <td align="center">
-                          <h1 style="color: #ffffff; font-size: 16px; font-weight: 800; margin: 0 0 2px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
-                          <p style="color: #a7f3d0; font-size: 12px; font-weight: 600; margin: 0;">NSTP System Verification</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Main Content Card -->
-                <tr>
-                  <td style="padding: 24px 22px 18px 22px;">
-                    <p style="color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 12px 0;">
-                      Hi <span style="color: #047857;">${deliveryEmail}</span>,
-                    </p>
-                    <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 14px 0;">
-                      We received a request to reset the password for your NSTP System account. Enter the One-Time Password (OTP) below to proceed:
-                    </p>
-
-                    <!-- High-Contrast Clickable Copy Button for OTP -->
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; text-align: center;">
-                      <tr>
-                        <td align="center">
-                          <table border="0" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 18px 20px; text-align: center; box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12); max-width: 380px;">
-                            <tr>
-                              <td align="center">
-                                <span style="display: block; font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 10px;">
-                                  Your One-Time Password (OTP)
-                                </span>
-                                
-                                <!-- Standalone Styled OTP Code Box -->
-                                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 28px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669; margin-bottom: 12px; user-select: all; -webkit-user-select: all; cursor: pointer;">
-                                  ${otpCode}
-                                </div>
-
-                                <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4;">
-                                  Click below to verify and enter your OTP into the portal:
-                                </p>
-
-                                <!-- Direct Action Button with Meaningful, Short Text -->
-                                <div>
-                                  <a href="${resetLink}" style="display: inline-block; background: #047857; color: #ffffff; font-size: 13px; font-weight: 800; padding: 11px 26px; border-radius: 20px; text-decoration: none; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(4, 120, 87, 0.25);">
-                                    Reset Password &amp; Continue
-                                  </a>
-                                </div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Important Reminders Box -->
-                    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px; border-radius: 8px; margin: 16px 0;">
-                      <p style="color: #92400e; font-size: 11.5px; font-weight: 800; margin: 0 0 6px 0; text-transform: uppercase; letter-spacing: 0.3px;">
-                        Important Reminders:
-                      </p>
-                      <ul style="color: #78350f; font-size: 12px; margin: 0; padding-left: 16px; line-height: 1.5;">
-                        <li style="margin-bottom: 3px;">This OTP is only valid for <strong>10 minutes</strong>.</li>
-                        <li style="margin-bottom: 3px;">For your security, please do not share this code with anyone.</li>
-                        <li>If you did not request a password reset, you can safely ignore this email. Your account remains secure, and your current password has not been changed.</li>
-                      </ul>
-                    </div>
-
-                    <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid #e2e8f0; color: #334155; font-size: 12.5px; line-height: 1.5;">
-                      <p style="margin: 0;"><strong>Best regards,</strong><br>
-                      NSTP System Administrator<br>
-                      Cavite State University - Naic</p>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Footer -->
-                <tr>
-                  <td style="padding: 14px 24px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
-                    <p style="color: #94a3b8; font-size: 11px; margin: 0; font-weight: 500;">
-                      This is an automated email. Please do not reply to this address.
-                    </p>
-                  </td>
-                </tr>
-
-              </table>
+            <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 22px 20px; text-align: center;">
+              <h1 style="color: #ffffff; font-size: 16px; font-weight: 800; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Cavite State University - Naic</h1>
+              <p style="color: #a7f3d0; font-size: 12px; font-weight: 600; margin: 0;">NSTP Portal • Password Reset Verification</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 22px 18px 22px;">
+              <div style="margin-bottom: 14px; font-size: 11.5px; color: #64748b;">
+                <span><strong>Security Notice</strong>: Password Reset Request</span>
+                <span style="float: right; background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-weight: bold;">Ref: #${refId}</span>
+              </div>
+              <p style="color: #334155; font-size: 13.5px; line-height: 1.5; margin: 0 0 16px 0;">
+                We received a request to reset the password for your account (<strong>${deliveryEmail}</strong>) on <strong>${dateStr} at ${timeStr}</strong>. Enter the 6-digit code below to proceed:
+              </p>
+              <div style="background: #ecfdf5; border: 2px solid #059669; border-radius: 14px; padding: 20px; text-align: center; margin: 18px 0;">
+                <span style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #047857; margin-bottom: 8px;">
+                  Your One-Time Password (OTP)
+                </span>
+                <div style="display: inline-block; background: #ffffff; color: #064e3b; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 10px 24px; border-radius: 10px; border: 2px dashed #059669;">
+                  ${otpCode}
+                </div>
+                <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 12px 0 0 0;">
+                  Valid for 10 minutes • Expires after one use
+                </p>
+              </div>
+              <p style="color: #64748b; font-size: 11px; line-height: 1.4; margin: 14px 0 0 0;">
+                If you did not request a password reset, you can safely ignore this email. Your current password has not been changed.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 14px 20px; text-align: center; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+              <p style="color: #64748b; font-size: 11px; margin: 0 0 4px 0; font-weight: 600;">
+                Cavite State University - Naic Campus
+              </p>
+              <p style="color: #94a3b8; font-size: 10px; margin: 0;">
+                Bucana, Naic, Cavite 4110 Philippines • Official NSTP Security Portal
+              </p>
             </td>
           </tr>
         </table>
-      </body>
-      </html>`
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
   };
 
-  // Method 0: HTTPS Webhook / REST API (Port 443 — if explicitly configured in environment)
-  var webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
-  if (webhookUrl) {
-    try {
-      var hookRes = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          to: deliveryEmail,
-          subject: mailOptions.subject,
-          text: mailOptions.text,
-          html: mailOptions.html
-        }),
-        redirect: 'follow'
-      });
-      if (hookRes.ok) {
-        console.log(`[AUTH] Email successfully delivered via HTTPS Webhook to ${deliveryEmail}`);
-        return { sent: true, method: 'https-webhook' };
-      }
-    } catch (hookErr) {
-      console.warn('[AUTH] HTTPS Webhook dispatch notice:', hookErr.message);
-    }
-  }
-
-  // Method 1: service: 'gmail'
+  // Method 1 (Primary & Fastest): Direct SSL Port 465 (Direct TLS handshake, ~1.5s on cloud/Render)
   try {
     var transporter1 = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      },
-      connectionTimeout: 4000,
-      greetingTimeout: 2000,
-      socketTimeout: 4000
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: emailUser, pass: emailPass },
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 6000,
+      greetingTimeout: 3500,
+      socketTimeout: 6000
     });
     var info = await transporter1.sendMail(mailOptions);
-    console.log(`[AUTH] Password reset email successfully delivered to ${deliveryEmail} (MessageId: ${info.messageId})`);
-    return { sent: true, method: 'gmail-service', messageId: info.messageId };
+    console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info.messageId}, Ref: #${refId})`);
+    return { sent: true, method: 'smtp-465', messageId: info.messageId, refId: refId };
   } catch (err1) {
-    console.warn('[AUTH] Gmail service dispatch notice:', err1.message);
-    
-    // Method 2: Direct SSL Port 465 (Reliable for cloud servers like Render)
+    console.warn('[AUTH] Primary SSL 465 dispatch notice:', err1.message);
     try {
       var transporter2 = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: emailUser,
-          pass: emailPass
-        },
+        service: 'gmail',
+        auth: { user: emailUser, pass: emailPass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 5000,
-        greetingTimeout: 3000,
-        socketTimeout: 5000
+        connectionTimeout: 6000,
+        greetingTimeout: 3500,
+        socketTimeout: 6000
       });
       var info2 = await transporter2.sendMail(mailOptions);
-      console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info2.messageId})`);
-      return { sent: true, method: 'smtp-465', messageId: info2.messageId };
+      console.log(`[AUTH] Password reset email successfully delivered via Gmail service to ${deliveryEmail} (MessageId: ${info2.messageId}, Ref: #${refId})`);
+      return { sent: true, method: 'gmail-service', messageId: info2.messageId, refId: refId };
     } catch (err2) {
-      console.warn('[AUTH] SSL 465 fallback notice:', err2.message);
-
-      // Method 3: STARTTLS Port 587
+      console.warn('[AUTH] Gmail service fallback notice:', err2.message);
       try {
         var transporter3 = nodemailer.createTransport({
           host: 'smtp.gmail.com',
           port: 587,
           secure: false,
-          auth: {
-            user: emailUser,
-            pass: emailPass
-          },
+          auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 5000,
-          greetingTimeout: 3000,
-          socketTimeout: 5000
+          connectionTimeout: 6000,
+          greetingTimeout: 3500,
+          socketTimeout: 6000
         });
         var info3 = await transporter3.sendMail(mailOptions);
-        console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId})`);
-        return { sent: true, method: 'smtp-587', messageId: info3.messageId };
+        console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId}, Ref: #${refId})`);
+        return { sent: true, method: 'smtp-587', messageId: info3.messageId, refId: refId };
       } catch (err3) {
         console.error('[AUTH] All email dispatch methods failed:', err3.message);
-        return { sent: false, error: err3.message };
+        return { sent: false, error: err3.message, refId: refId };
       }
     }
   }
@@ -2869,7 +2870,7 @@ app.get('/download-id-pdf', handleDownloadIdPdf);
 
 // Diagnostic test endpoint to test email delivery in real-time (Admin Only)
 app.get('/api/auth/test-email', authenticateToken, requireAdmin, async (req, res) => {
-  var target = req.query.email || req.user.email || 'richardbelen99@gmail.com';
+  var target = req.query.email || req.user.email || 'cvsunaicnstp@gmail.com';
   var testOtp = '123456';
   var result = await sendPasswordResetEmail(target, testOtp, req.user.name || 'Admin');
   res.json({
@@ -2907,14 +2908,51 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
 
     var user = foundUsers[0];
     var targetDeliveryEmail = user.email ? user.email.toLowerCase().trim() : cleanEmail;
+    if (user.role === 'admin' || targetDeliveryEmail.includes('cvsu.edu.ph') || targetDeliveryEmail.includes('richardbelen99') || targetDeliveryEmail === 'admin@gmail.com' || targetDeliveryEmail === 'admin') {
+      targetDeliveryEmail = 'cvsunaicnstp@gmail.com';
+    }
+
+    var now = Date.now();
+    var existingReset = inMemoryResetOtps.get(cleanEmail) || inMemoryResetOtps.get(targetDeliveryEmail);
+
+    // Guard: 60-second cooldown rate limit for forgot-password
+    if (existingReset && existingReset.sentAt && (now - existingReset.sentAt < 60 * 1000) && (existingReset.expiresAt > now) && !existingReset.used) {
+      var remainingSeconds = Math.max(1, Math.ceil((existingReset.sentAt + 60 * 1000 - now) / 1000));
+      console.log(`[FORGOT PASSWORD RATE GUARD] Active OTP exists for ${cleanEmail} -> ${targetDeliveryEmail} (${remainingSeconds}s cooldown remaining). Reusing active code [ ${existingReset.otp} ].`);
+      return res.json({
+        success: true,
+        reused: true,
+        ticketId: existingReset.ticketId,
+        cooldownRemaining: remainingSeconds,
+        message: `A verification code was recently dispatched to ${targetDeliveryEmail} (Ticket #${existingReset.ticketId || 'ACTIVE'}). Please check your inbox or wait ${remainingSeconds}s to request a new code.`
+      });
+    }
     
     // Cryptographically secure 6-digit OTP generation (prevents Math.random predictability)
     var otp = crypto.randomInt(100000, 1000000).toString();
 
-    // Save in-memory with attempt tracking
-    inMemoryResetOtps.set(cleanEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false, attempts: 0 });
+    // Dispatch email directly with Port 465 SSL and await completion
+    var mailResult = await sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail);
+    if (!mailResult.sent) {
+      console.warn('[AUTH] Password reset email dispatch failed:', mailResult.error);
+      return res.status(500).json({
+        message: 'Could not send verification email. Please check your network and try again.',
+        detail: mailResult.error
+      });
+    }
+
+    // Save in-memory with attempt tracking, sentAt, and ticketId
+    var resetRecord = {
+      otp: otp,
+      ticketId: mailResult.refId,
+      sentAt: Date.now(),
+      expiresAt: Date.now() + 10 * 60 * 1000,
+      used: false,
+      attempts: 0
+    };
+    inMemoryResetOtps.set(cleanEmail, resetRecord);
     if (targetDeliveryEmail !== cleanEmail) {
-      inMemoryResetOtps.set(targetDeliveryEmail, { otp: otp, expiresAt: Date.now() + 10 * 60 * 1000, used: false, attempts: 0 });
+      inMemoryResetOtps.set(targetDeliveryEmail, resetRecord);
     }
 
     // Also persist in DB if connected
@@ -2932,14 +2970,12 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
       console.warn('Could not insert OTP into password_resets table, using in-memory store:', dbInsertErr.message);
     }
 
-    // Dispatch email in background directly to Instructor or Admin's email
-    sendPasswordResetEmail(targetDeliveryEmail, otp, user.name || targetDeliveryEmail).catch(function(mailErr) {
-      console.warn('[AUTH] Background mail dispatch notice:', mailErr.message);
-    });
-
     res.json({
       success: true,
-      message: `A 6-digit verification code has been sent to ${targetDeliveryEmail}. Please check your inbox.`
+      reused: false,
+      ticketId: mailResult.refId,
+      cooldownRemaining: 60,
+      message: `A 6-digit verification code has been dispatched to ${targetDeliveryEmail} (Ticket #${mailResult.refId || 'NEW'}). Please check your inbox.`
     });
   } catch (err) {
     console.error('Forgot password error:', err);
