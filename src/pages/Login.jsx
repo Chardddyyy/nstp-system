@@ -1137,14 +1137,6 @@ function Login() {
                 </div>
               </div>
 
-              {/* Official Email Notice */}
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-[11.5px] text-emerald-900">
-                <Shield className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
-                <div className="leading-snug">
-                  <span className="font-bold">Official Email Code Verification:</span> Ang 6-digit security code ay ipinadala sa iyong Gmail inbox (<strong className="font-mono text-emerald-950 font-bold">{twoFactorMaskedEmail || 'richardbelen99@gmail.com'}</strong>). Buksan ang iyong Gmail at ilagay ang natanggap na code.
-                </div>
-              </div>
-
               <div className="space-y-2 pt-1">
                 <button
                   type="submit"
