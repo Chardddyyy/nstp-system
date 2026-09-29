@@ -288,16 +288,17 @@ function Login() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
+  const executeLogin = async (targetEmail, targetPassword) => {
     setError('');
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = (targetEmail || email).trim().toLowerCase();
+    const cleanPassword = targetPassword || password;
+
     if (!cleanEmail) {
       setError('Please enter your email address');
       return;
     }
-    if (!password) {
+    if (!cleanPassword) {
       setError('Please enter your password');
       return;
     }
@@ -314,7 +315,7 @@ function Login() {
     }, 14000);
 
     try {
-      const result = await login(cleanEmail, password);
+      const result = await login(cleanEmail, cleanPassword);
       clearTimeout(timer1);
       clearTimeout(timer2);
 
@@ -337,7 +338,7 @@ function Login() {
         }
       } else {
         if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
-          const retryResult = await login(cleanEmail, password, true);
+          const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
             setTwoFactorTempToken(retryResult.tempToken || '');
             setTwoFactorEmail(retryResult.email || cleanEmail);
@@ -367,7 +368,7 @@ function Login() {
       const errMsg = err?.message || '';
       if (errMsg.includes('another device') || errMsg.includes('currently active')) {
         try {
-          const retryResult = await login(cleanEmail, password, true);
+          const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
             setTwoFactorTempToken(retryResult.tempToken || '');
             setTwoFactorEmail(retryResult.email || cleanEmail);
@@ -399,6 +400,11 @@ function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    executeLogin(email, password);
   };
 
   const handleSendForgotOtp = async (e) => {
@@ -657,6 +663,7 @@ function Login() {
                     setEmail(item.email);
                     setPassword(item.pass);
                     setError('');
+                    executeLogin(item.email, item.pass);
                   }}
                   className="p-2 sm:p-2.5 bg-white hover:bg-emerald-100/50 active:scale-95 rounded-xl border border-emerald-200/80 transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
                 >
