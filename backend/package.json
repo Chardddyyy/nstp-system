@@ -5,6 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:cluster": "node cluster.js",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "start:loadtest": "SKIP_RATE_LIMIT=true node cluster.js",
     "dev": "nodemon server.js",
     "test": "node --check server.js && node --check routes/index.js",
     "backup:gdrive": "node -e \"require('./utils/gdriveAutoSave').autoSaveToGDrive('Manual CLI Backup', false)\"",

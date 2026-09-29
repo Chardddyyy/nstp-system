@@ -225,7 +225,7 @@ var globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests. Please try again later.' },
-  skip: (req) => req.method === 'OPTIONS',
+  skip: (req) => req.method === 'OPTIONS' || process.env.SKIP_RATE_LIMIT === 'true' || process.env.NODE_ENV === 'test',
 });
 app.use(globalLimiter);
 
@@ -8148,10 +8148,20 @@ app.use(function(err, req, res, next) {
 async function startServer() {
   var db = getDbConfig();
 
+  // ── HTTP Keep-Alive & Timeout Tuning for High-Concurrency (k6 / Reverse Proxy) ─
+  // Resolves "http: server closed idle connection", "EOF", and "connection reset by peer"
+  httpServer.keepAliveTimeout = 65000; // 65s — exceeds k6 & cloud reverse proxy (ALB/Nginx) 60s idle timeout
+  httpServer.headersTimeout = 66000;   // 66s — must strictly exceed keepAliveTimeout
+  httpServer.requestTimeout = 30000;   // 30s per request timeout
+  if ('maxRequestsPerSocket' in httpServer) {
+    httpServer.maxRequestsPerSocket = 0; // unlimited requests per keep-alive socket
+  }
+
   // Start listening on HTTP + WebSocket Server immediately
   httpServer.listen(PORT, '0.0.0.0', function() {
     console.log('Server + Socket.io running on port ' + PORT);
     console.log('API available at http://localhost:' + PORT + '/api and http://127.0.0.1:' + PORT + '/api');
+    console.log(`[HTTP Tuning] keepAliveTimeout=${httpServer.keepAliveTimeout}ms, headersTimeout=${httpServer.headersTimeout}ms`);
     try {
       initCronScheduler();
     } catch (cronErr) {
