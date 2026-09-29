@@ -3022,16 +3022,6 @@ app.get('/api/students/:id/download-id-pdf', authenticateToken, handleDownloadId
 app.get('/api/students/download-id-pdf', authenticateToken, handleDownloadIdPdf);
 app.get('/download-id-pdf', authenticateToken, handleDownloadIdPdf);
 
-// Diagnostic test endpoint to test email delivery in real-time (Admin Only)
-app.get('/api/auth/test-email', authenticateToken, requireAdmin, async (req, res) => {
-  var target = req.query.email || req.user.email || 'cvsunaicnstp@gmail.com';
-  var testOtp = '123456';
-  var result = await sendPasswordResetEmail(target, testOtp, req.user.name || 'Admin');
-  res.json({
-    target: target,
-    result: result
-  });
-});
 
 // Forgot Password — generate cryptographically secure OTP and send to registered email
 app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
