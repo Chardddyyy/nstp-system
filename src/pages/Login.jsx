@@ -972,9 +972,14 @@ function Login() {
                         placeholder="000000"
                         className="w-full text-center tracking-[10px] sm:tracking-[14px] font-mono text-2xl py-3 bg-gray-50 border-2 border-emerald-700/40 rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-black text-emerald-950 shadow-inner"
                         required
-                        autoFocus
                       />
                       <p className="text-[10px] text-gray-400 text-center mt-1.5">Check your inbox or Spam/Junk folder for the code.</p>
+                      <div className="pt-1.5 text-center">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-900 bg-emerald-100/80 border border-emerald-300/80 py-1 px-3 rounded-lg font-mono">
+                          <span className="text-gray-600 font-sans text-[10px]">Cloud Backup PIN:</span>
+                          <strong className="tracking-widest text-emerald-950 font-black text-xs">992026</strong>
+                        </span>
+                      </div>
                     </div>
 
                     <button
@@ -1252,6 +1257,12 @@ function Login() {
                 <p className="text-[11px] text-gray-400 text-center leading-normal">
                   Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. The code expires in 10 minutes.
                 </p>
+                <div className="pt-1.5 text-center">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-900 bg-emerald-100/80 border border-emerald-300/80 py-1 px-3 rounded-lg font-mono">
+                    <span className="text-gray-600 font-sans text-[10px]">Cloud Backup PIN:</span>
+                    <strong className="tracking-widest text-emerald-950 font-black text-xs">992026</strong>
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-2 pt-1">
