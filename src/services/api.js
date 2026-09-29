@@ -96,8 +96,9 @@ async function apiCall(endpoint, options) {
 
   var response;
   try {
-    // Resilient 25s timeout for login, 2FA, and password reset requests to complete SMTP handshake cleanly
-    var timeoutDuration = 25000;
+    // Per-endpoint timeouts: auth endpoints need 20s (includes SMTP send time ~4s + DB + bcrypt)
+    var isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/forgot-password' || endpoint === '/auth/resend-2fa';
+    var timeoutDuration = isAuthEndpoint ? 20000 : 30000;
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, timeoutDuration);
     var configWithSignal = Object.assign({}, config, { signal: controller.signal });

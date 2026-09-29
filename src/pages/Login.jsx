@@ -1217,12 +1217,6 @@ function Login() {
                     <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>Code expires in 10 minutes</span>
                   </div>
-                  {twoFactorTicketId && (
-                    <div className="inline-flex items-center gap-1 text-[11px] text-gray-600 font-medium bg-gray-100 py-1 px-2.5 rounded-lg border border-gray-200">
-                      <span>Reference:</span>
-                      <span className="font-mono font-bold text-gray-900">#{twoFactorTicketId}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 

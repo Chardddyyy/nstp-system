@@ -1629,9 +1629,9 @@ CvSU NSTP Security Portal`,
       secure: true,
       auth: { user: emailUser, pass: emailPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 6000,
-      greetingTimeout: 3500,
-      socketTimeout: 6000
+      connectionTimeout: 12000,
+      greetingTimeout: 9000,
+      socketTimeout: 12000
     });
     var info = await transporter1.sendMail(mailOptions);
     console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via SSL 465 (MessageId: ${info.messageId}, Ref: #${refId})`);
@@ -1643,9 +1643,9 @@ CvSU NSTP Security Portal`,
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 6000,
-        greetingTimeout: 3500,
-        socketTimeout: 6000
+        connectionTimeout: 12000,
+        greetingTimeout: 9000,
+        socketTimeout: 12000
       });
       var info2 = await transporter2.sendMail(mailOptions);
       console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via Gmail service (MessageId: ${info2.messageId}, Ref: #${refId})`);
@@ -1659,9 +1659,9 @@ CvSU NSTP Security Portal`,
           secure: false,
           auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 6000,
-          greetingTimeout: 3500,
-          socketTimeout: 6000
+          connectionTimeout: 12000,
+          greetingTimeout: 9000,
+          socketTimeout: 12000
         });
         var info3 = await transporter3.sendMail(mailOptions);
         console.log(`[ADMIN 2FA EMAIL SUCCESS] 2FA code successfully delivered to ${deliveryEmail} via port 587 (MessageId: ${info3.messageId}, Ref: #${refId})`);
@@ -2202,9 +2202,9 @@ CvSU NSTP Security Portal`,
       secure: true,
       auth: { user: emailUser, pass: emailPass },
       tls: { rejectUnauthorized: false },
-      connectionTimeout: 6000,
-      greetingTimeout: 3500,
-      socketTimeout: 6000
+      connectionTimeout: 12000,
+      greetingTimeout: 9000,
+      socketTimeout: 12000
     });
     var info = await transporter1.sendMail(mailOptions);
     console.log(`[AUTH] Password reset email successfully delivered via SSL port 465 to ${deliveryEmail} (MessageId: ${info.messageId}, Ref: #${refId})`);
@@ -2216,9 +2216,9 @@ CvSU NSTP Security Portal`,
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
         tls: { rejectUnauthorized: false },
-        connectionTimeout: 6000,
-        greetingTimeout: 3500,
-        socketTimeout: 6000
+        connectionTimeout: 12000,
+        greetingTimeout: 9000,
+        socketTimeout: 12000
       });
       var info2 = await transporter2.sendMail(mailOptions);
       console.log(`[AUTH] Password reset email successfully delivered via Gmail service to ${deliveryEmail} (MessageId: ${info2.messageId}, Ref: #${refId})`);
@@ -2232,9 +2232,9 @@ CvSU NSTP Security Portal`,
           secure: false,
           auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 6000,
-          greetingTimeout: 3500,
-          socketTimeout: 6000
+          connectionTimeout: 12000,
+          greetingTimeout: 9000,
+          socketTimeout: 12000
         });
         var info3 = await transporter3.sendMail(mailOptions);
         console.log(`[AUTH] Password reset email successfully delivered via port 587 to ${deliveryEmail} (MessageId: ${info3.messageId}, Ref: #${refId})`);
@@ -2452,9 +2452,9 @@ async function sendEnrollmentApprovalEmail(studentData) {
       const t1 = nodemailer.createTransport({
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
-        connectionTimeout: 5000,
-        greetingTimeout: 3000,
-        socketTimeout: 5000
+        connectionTimeout: 12000,
+        greetingTimeout: 9000,
+        socketTimeout: 12000
       });
       const info = await t1.sendMail(mailOptions);
       console.log(`[ENROLLMENT EMAIL] Successfully delivered via Gmail service to ${deliveryEmail} (${info.messageId})`);
@@ -2469,9 +2469,9 @@ async function sendEnrollmentApprovalEmail(studentData) {
           secure: true,
           auth: { user: emailUser, pass: emailPass },
           tls: { rejectUnauthorized: false },
-          connectionTimeout: 5000,
-          greetingTimeout: 3000,
-          socketTimeout: 5000
+          connectionTimeout: 12000,
+          greetingTimeout: 9000,
+          socketTimeout: 12000
         });
         const info2 = await t2.sendMail(mailOptions);
         console.log(`[ENROLLMENT EMAIL] Successfully delivered via SSL 465 to ${deliveryEmail} (${info2.messageId})`);
@@ -2485,9 +2485,9 @@ async function sendEnrollmentApprovalEmail(studentData) {
             secure: false,
             auth: { user: emailUser, pass: emailPass },
             tls: { rejectUnauthorized: false },
-            connectionTimeout: 5000,
-            greetingTimeout: 3000,
-            socketTimeout: 5000
+            connectionTimeout: 12000,
+            greetingTimeout: 9000,
+            socketTimeout: 12000
           });
           const info3 = await t3.sendMail(mailOptions);
           console.log(`[ENROLLMENT EMAIL] Successfully delivered via Port 587 to ${deliveryEmail} (${info3.messageId})`);
