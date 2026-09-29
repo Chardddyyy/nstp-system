@@ -1482,10 +1482,10 @@ function maskEmail(email) {
 async function send2FAEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
   var emailPass = String(rawPass).replace(/\s+/g, '').trim();
   if (!emailPass || emailPass.length < 8) {
-    emailPass = 'dbusndgszozlgttd';
+    emailPass = 'yahzxgygoemkvuxw';
   }
 
   console.log(`\n======================================================`);
@@ -1947,10 +1947,10 @@ async function ensurePasswordResetsTable() {
 async function sendPasswordResetEmail(targetEmail, otpCode, userName) {
   var rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   var emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
+  var rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
   var emailPass = String(rawPass).replace(/\s+/g, '').trim();
   if (!emailPass || emailPass.length < 8) {
-    emailPass = 'dbusndgszozlgttd';
+    emailPass = 'yahzxgygoemkvuxw';
   }
 
   console.log(`[AUTH RESET OTP] Generated OTP for ${targetEmail}: [ ${otpCode} ] (Valid for 10 minutes)`);
@@ -2432,7 +2432,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const deliveryEmail = (overrideEmail || studentData.email || '').trim();
   const rawUser = process.env.EMAIL_USER || process.env.SMTP_USER || 'cvsunaicnstp@gmail.com';
   const emailUser = String(rawUser).trim().toLowerCase() || 'cvsunaicnstp@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'dbusndgszozlgttd';
+  const emailPass = process.env.EMAIL_PASS || process.env.SMTP_PASS || 'yahzxgygoemkvuxw';
 
   if (!deliveryEmail || !deliveryEmail.includes('@')) {
     console.log('[DIGITAL ID EMAIL] Skipping email: invalid student email address', deliveryEmail);

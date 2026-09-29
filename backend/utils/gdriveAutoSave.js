@@ -74,7 +74,7 @@ async function notifyBackupFailure(activity, errorDetails) {
   try {
     const nodemailer = require('nodemailer');
     const adminEmail = process.env.EMAIL_USER || 'cvsunaicnstp@gmail.com';
-    const emailPass = process.env.EMAIL_PASS || 'dbusndgszozlgttd';
+    const emailPass = process.env.EMAIL_PASS || 'yahzxgygoemkvuxw';
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
