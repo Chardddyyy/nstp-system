@@ -319,19 +319,34 @@ export default function LetterFormats() {
     ? archiveViewData.letterData
     : templates;
 
-  const filteredTemplates = sourceTemplates.filter(t => {
-    if (user?.role === 'instructor' && user?.department) {
-      const isAllowed = t.department === 'All' || t.department === user.department;
-      if (!isAllowed) return false;
-    }
-    // Strict tab filtering:
-    // When 'All' is selected -> only templates with department === 'All'
-    // When a specific department (e.g. 'CWTS') is selected -> only templates with that department
-    const deptMatch = activeTab === 'All' ? t.department === 'All' : t.department === activeTab;
-    const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    return deptMatch && searchMatch;
-  });
+  const filteredTemplates = useMemo(() => {
+    return sourceTemplates
+      .filter(t => {
+        if (user?.role === 'instructor' && user?.department) {
+          const isAllowed = t.department === 'All' || t.department === user.department;
+          if (!isAllowed) return false;
+        }
+        // Strict tab filtering:
+        // When 'All' is selected -> only templates with department === 'All'
+        // When a specific department (e.g. 'CWTS') is selected -> only templates with that department
+        const deptMatch = activeTab === 'All' ? t.department === 'All' : t.department === activeTab;
+        const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+        return deptMatch && searchMatch;
+      })
+      .sort((a, b) => {
+        // Priority 1: New / Custom formats uploaded by Admin (not starting with 'tpl-')
+        const isCustomA = !String(a.id || '').startsWith('tpl-');
+        const isCustomB = !String(b.id || '').startsWith('tpl-');
+        if (isCustomA !== isCustomB) {
+          return isCustomA ? -1 : 1;
+        }
+        // Priority 2: Highest date/timestamp first
+        const timeA = new Date(a.updatedAt || a.createdAt || a.created_at || 0).getTime() || 0;
+        const timeB = new Date(b.updatedAt || b.createdAt || b.created_at || 0).getTime() || 0;
+        return timeB - timeA;
+      });
+  }, [sourceTemplates, user, activeTab, searchTerm]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 text-gray-900 font-sans max-w-full overflow-x-hidden">
@@ -477,14 +492,21 @@ export default function LetterFormats() {
               <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                      item.department === 'ROTC' ? 'bg-red-50 text-red-700 border-red-200' :
-                      item.department === 'CWTS' ? 'bg-green-50 text-green-700 border-green-200' :
-                      item.department === 'LTS' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                      'bg-emerald-50 text-emerald-800 border-emerald-200'
-                    }`}>
-                      {item.department === 'All' ? 'All Departments' : item.department}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
+                        item.department === 'ROTC' ? 'bg-red-50 text-red-700 border-red-200' :
+                        item.department === 'CWTS' ? 'bg-green-50 text-green-700 border-green-200' :
+                        item.department === 'LTS' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                        'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      }`}>
+                        {item.department === 'All' ? 'All Departments' : item.department}
+                      </span>
+                      {(!String(item.id || '').startsWith('tpl-') || (new Date(item.createdAt || 0).getTime() > new Date('2025-01-01').getTime())) && (
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs">
+                          NEW
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-400 font-medium">
                       {new Date(item.createdAt).toLocaleDateString()}
                     </span>

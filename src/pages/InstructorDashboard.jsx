@@ -133,10 +133,18 @@ function InstructorDashboard() {
   }, [viewingArchive, archiveViewData, students, user?.department]);
 
   const myReports = useMemo(() => {
+    let list = [];
     if (viewingArchive && archiveViewData?.reportData) {
-      return (archiveViewData.reportData || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+      list = (archiveViewData.reportData || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+    } else {
+      list = (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
     }
-    return (reports || []).filter(r => r && (r.department === 'All' || r.department === user?.department));
+    // Always sort newest assignments on top so instructors immediately see new reports from Admin
+    return [...list].sort((a, b) => {
+      const timeA = new Date(a.created_at || a.createdAt || a.dueDate || a.due_date || 0).getTime() || (Number(a.id) || 0);
+      const timeB = new Date(b.created_at || b.createdAt || b.dueDate || b.due_date || 0).getTime() || (Number(b.id) || 0);
+      return timeB - timeA;
+    });
   }, [viewingArchive, archiveViewData, reports, user?.department]);
 
   const isMessageNotification = (n) => n?.type === 'message';

@@ -14,11 +14,11 @@ const getReports = catchAsync(async (req, res) => {
   const isInstructor = req.user && req.user.role === 'instructor';
   const instructorDept = req.user?.department;
 
-  let query = 'SELECT * FROM reports ORDER BY created_at DESC';
+  let query = 'SELECT * FROM reports ORDER BY created_at DESC, id DESC';
   const params = [];
 
   if (isInstructor && instructorDept && instructorDept !== 'All') {
-    query = 'SELECT * FROM reports WHERE department = ? OR department = "All" ORDER BY created_at DESC';
+    query = 'SELECT * FROM reports WHERE department = ? OR department = "All" ORDER BY created_at DESC, id DESC';
     params.push(instructorDept);
   }
 

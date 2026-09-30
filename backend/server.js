@@ -4495,7 +4495,7 @@ app.get('/api/reports', authenticateToken, async (req, res) => {
       SELECT r.*, u.name as created_by_name 
       FROM reports r 
       LEFT JOIN users u ON r.created_by = u.id 
-      ORDER BY r.created_at DESC
+      ORDER BY r.created_at DESC, r.id DESC
     `);
     
     // Get submissions and comments for each report

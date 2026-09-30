@@ -285,24 +285,33 @@ function Reports() {
     : reports;
 
   // Filter reports - instructors see only their department assignments - memoized for performance
-  const filteredReports = useMemo(() => sourceReports.filter(report => {
-    const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'All' || report.status === filterStatus;
-    const matchesDept = filterDept === 'All' || report.department === 'All' || report.department === filterDept;
+  const filteredReports = useMemo(() => {
+    const list = sourceReports.filter(report => {
+      const matchesSearch = report.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'All' || report.status === filterStatus;
+      const matchesDept = filterDept === 'All' || report.department === 'All' || report.department === filterDept;
 
-    // Instructors only see reports for their department
-    if (isInstructor && user?.department) {
-      const assignedToMe = report.department === 'All' || report.department === user.department;
-      return matchesSearch && matchesStatus && matchesDept && assignedToMe;
-    }
+      // Instructors only see reports for their department
+      if (isInstructor && user?.department) {
+        const assignedToMe = report.department === 'All' || report.department === user.department;
+        return matchesSearch && matchesStatus && matchesDept && assignedToMe;
+      }
 
-    // Students don't see submit buttons (read-only if needed)
-    if (user?.role === 'student') {
-      return false; // Students don't access this page or see reports
-    }
+      // Students don't see submit buttons (read-only if needed)
+      if (user?.role === 'student') {
+        return false; // Students don't access this page or see reports
+      }
 
-    return matchesSearch && matchesStatus && matchesDept;
-  }), [sourceReports, searchTerm, filterStatus, filterDept, isInstructor, user]);
+      return matchesSearch && matchesStatus && matchesDept;
+    });
+
+    // Ensure newly created / recent reports from Admin are always at the top!
+    return [...list].sort((a, b) => {
+      const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime() || (Number(a.id) || 0);
+      const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime() || (Number(b.id) || 0);
+      return timeB - timeA;
+    });
+  }, [sourceReports, searchTerm, filterStatus, filterDept, isInstructor, user]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -468,6 +477,15 @@ function Reports() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                     <h3 className="text-sm sm:text-lg font-bold text-gray-800 leading-snug truncate">{report.title}</h3>
+                    {(() => {
+                      const repTime = new Date(report.created_at || report.createdAt || report.date || 0).getTime();
+                      const isRecent = repTime > 0 && (Date.now() - repTime < 7 * 24 * 60 * 60 * 1000);
+                      return isRecent ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs uppercase tracking-wider">
+                          NEW
+                        </span>
+                      ) : null;
+                    })()}
                     <span className={`px-2 py-0.5 rounded-lg text-[10px] sm:text-sm font-semibold ${getStatusColor(report.status)}`}>
                       {report.status}
                     </span>
