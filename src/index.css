@@ -50,17 +50,32 @@ html {
   }
 }
 
-.login-full-viewport {
+/* Full Screen Viewport Coverage adjusted for Desktop (0.75) and Mobile (0.90) Zoom */
+.min-h-screen,
+.login-full-viewport,
+.app-min-screen-height {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
-@media screen and (min-width: 768px) {
-  .login-full-viewport {
-    min-height: calc(100vh / 0.75);
+@media screen and (max-width: 767px) {
+  .min-h-screen,
+  .login-full-viewport,
+  .app-min-screen-height {
+    min-height: calc(100vh / 0.90);
+    min-height: calc(100dvh / 0.90);
   }
 }
 
-/* Full Screen Viewport Coverage adjusted for Desktop (0.75) and Mobile (0.90) Zoom */
+@media screen and (min-width: 768px) {
+  .min-h-screen,
+  .login-full-viewport,
+  .app-min-screen-height {
+    min-height: calc(100vh / 0.75);
+    min-height: calc(100dvh / 0.75);
+  }
+}
+
 .app-screen-height {
   height: 100dvh;
   max-height: 100dvh;

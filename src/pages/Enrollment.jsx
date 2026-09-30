@@ -950,8 +950,8 @@ function Enrollment() {
 
   if (!enrollmentStatus.isOpen) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans flex flex-col justify-between">
-        <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full">
+      <div className="min-h-screen min-h-[100dvh] app-min-screen-height bg-gradient-to-b from-green-50/50 via-white to-gray-50 text-gray-900 font-sans flex flex-col justify-between w-full">
+        <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full shrink-0">
           <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
@@ -972,10 +972,10 @@ function Enrollment() {
           </div>
         </header>
 
-        <main className="max-w-xl mx-auto py-12 px-4 w-full text-center flex-1 flex items-center justify-center">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-200/80 space-y-4">
-            <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-200">
-              <Clock className="w-8 h-8" />
+        <main className="max-w-xl mx-auto py-10 sm:py-16 px-4 w-full text-center flex-1 flex flex-col items-center justify-center my-auto">
+          <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-gray-200/80 space-y-4 w-full">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-200">
+              <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-amber-600" />
             </div>
             
             <h2 className="text-xl sm:text-2xl font-black text-emerald-950">{enrollmentStatus.headline}</h2>
@@ -1005,7 +1005,7 @@ function Enrollment() {
             <div className="pt-2">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl text-xs shadow-md transition-all active:scale-95"
+                className="inline-flex items-center gap-2 bg-emerald-800 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition-all active:scale-95"
               >
                 &larr; Return to Main Portal
               </Link>
@@ -1013,7 +1013,7 @@ function Enrollment() {
           </div>
         </main>
 
-        <footer className="bg-emerald-950 text-white py-3 text-center text-xs">
+        <footer className="bg-emerald-950 text-white py-4 px-4 text-center text-xs shrink-0 w-full mt-auto border-t border-emerald-900/60">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
         </footer>
       </div>
@@ -1022,7 +1022,7 @@ function Enrollment() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 flex items-center justify-center p-4">
+      <div className="min-h-screen min-h-[100dvh] app-min-screen-height bg-gradient-to-br from-emerald-900 via-emerald-950 to-teal-950 flex items-center justify-center p-4">
         <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 sm:p-10 max-w-md w-full text-center border border-emerald-500/20">
           <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-5 border-4 border-emerald-500/30 shadow-inner">
             <CheckCircle className="w-10 h-10 text-emerald-600" />
