@@ -449,7 +449,7 @@ function Enrollment() {
         if (parsed.weightInput) setWeightInput(parsed.weightInput);
         if (parsed.weightUnit) setWeightUnit(parsed.weightUnit);
         setDraftPromptVisible(false);
-        showToast('Naibalik ang iyong dating draft! Maaari mo nang ipagpatuloy.', 'success');
+        showToast('Your previous draft has been restored! You may now continue.', 'success');
       }
     } catch (e) {
       console.warn('Restore draft error:', e);
@@ -475,7 +475,7 @@ function Enrollment() {
     setAgreedToTerms(false);
     setHasSavedData(false);
     setDraftPromptVisible(false);
-    showToast('Nalinis ang form. Maaari nang mag-umpisa ng bago.', 'info');
+    showToast('Form has been cleared. You may now start fresh.', 'info');
   };
 
 
@@ -1123,10 +1123,10 @@ function Enrollment() {
                   </div>
                   <div>
                     <h4 className="text-xs sm:text-sm font-black text-emerald-950">
-                      May Natagpuang Naka-save na Draft
+                      Saved Draft Found
                     </h4>
                     <p className="text-[11px] sm:text-xs text-emerald-800 font-medium leading-relaxed">
-                      May natagpuan kaming impormasyon mula sa iyong huling pag-fill up. Nais mo ba itong ituloy?
+                      We found previously saved application progress from your last session. Would you like to continue?
                     </p>
                   </div>
                 </div>
@@ -1136,14 +1136,14 @@ function Enrollment() {
                     onClick={handleStartFresh}
                     className="flex-1 sm:flex-none text-xs font-extrabold text-gray-700 hover:text-red-700 bg-white hover:bg-red-50 border border-gray-300 hover:border-red-300 px-3.5 py-2 rounded-xl transition-all cursor-pointer active:scale-95 text-center"
                   >
-                    Simulan Muli
+                    Start Fresh
                   </button>
                   <button
                     type="button"
                     onClick={handleRestoreDraft}
                     className="flex-1 sm:flex-none text-xs font-black text-emerald-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 px-4 py-2 rounded-xl transition-all shadow-xs cursor-pointer active:scale-95 text-center"
                   >
-                    Ipagpatuloy ang Draft ✓
+                    Resume Draft ✓
                   </button>
                 </div>
               </div>
