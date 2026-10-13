@@ -1916,15 +1916,29 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                   return (
                                     <div
                                       key={item.program}
-                                      onClick={() => setSelectedProgramFocus(prev => prev === item.program ? null : item.program)}
-                                      className={`w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-transform ${selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40' : ''}`}
-                                      title={`Click to filter or focus on ${item.program}`}
+                                      onClick={() => {
+                                        const q = [];
+                                        if (item.program) q.push(`course=${encodeURIComponent(item.program)}`);
+                                        if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
+                                        navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
+                                      }}
+                                      className={`w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-all hover:scale-105 hover:bg-emerald-50/70 hover:ring-2 hover:ring-emerald-500 rounded-xl p-1 sm:p-1.5 active:scale-95 ${
+                                        selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40 shadow-xs' : ''
+                                      }`}
+                                      title={`Click to view all ${item.program} students in Student Management`}
                                     >
                                       {/* Bar Cluster on Baseline */}
                                       <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-full pb-1">
                                         {/* CWTS Bar */}
                                         {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'CWTS') && (
-                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                          <div
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/students?course=${encodeURIComponent(item.program)}&dept=CWTS`);
+                                            }}
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            title={`Click to view ${item.program} - CWTS: ${item.cwts} student${item.cwts !== 1 ? 's' : ''} in Student Management`}
+                                          >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
                                               item.cwts > 0 ? 'text-emerald-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
                                             }`}>
@@ -1937,14 +1951,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                   ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover:from-emerald-500 group-hover:to-emerald-300'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
-                                              title={`${item.program} - CWTS: ${item.cwts} student${item.cwts !== 1 ? 's' : ''}`}
                                             />
                                           </div>
                                         )}
 
                                         {/* LTS Bar */}
                                         {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'LTS') && (
-                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                          <div
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/students?course=${encodeURIComponent(item.program)}&dept=LTS`);
+                                            }}
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            title={`Click to view ${item.program} - LTS: ${item.lts} student${item.lts !== 1 ? 's' : ''} in Student Management`}
+                                          >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
                                               item.lts > 0 ? 'text-purple-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
                                             }`}>
@@ -1957,14 +1977,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                   ? 'bg-gradient-to-t from-purple-600 to-purple-400 group-hover:from-purple-500 group-hover:to-purple-300'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
-                                              title={`${item.program} - LTS: ${item.lts} student${item.lts !== 1 ? 's' : ''}`}
                                             />
                                           </div>
                                         )}
 
                                         {/* ROTC Bar */}
                                         {(selectedComponentFilter === 'ALL' || selectedComponentFilter === 'ROTC') && (
-                                          <div className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px]">
+                                          <div
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/students?course=${encodeURIComponent(item.program)}&dept=ROTC`);
+                                            }}
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            title={`Click to view ${item.program} - ROTC: ${item.rotc} student${item.rotc !== 1 ? 's' : ''} in Student Management`}
+                                          >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
                                               item.rotc > 0 ? 'text-rose-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
                                             }`}>
@@ -1977,7 +2003,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                   ? 'bg-gradient-to-t from-rose-600 to-rose-400 group-hover:from-rose-500 group-hover:to-rose-300'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
-                                              title={`${item.program} - ROTC: ${item.rotc} student${item.rotc !== 1 ? 's' : ''}`}
                                             />
                                           </div>
                                         )}
@@ -1988,10 +2013,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                                       {/* X-Axis Program Label & Pill */}
                                       <div className="pt-2 text-center w-full">
-                                        <div className="text-xs sm:text-sm font-black text-gray-900 truncate">
-                                          {item.program}
+                                        <div className="text-xs sm:text-sm font-black text-gray-900 group-hover:text-emerald-700 truncate transition-colors flex items-center justify-center gap-1">
+                                          <span>{item.program}</span>
+                                          <span className="text-[10px] text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
                                         </div>
-                                        <div className="text-[10.5px] font-extrabold text-emerald-800 bg-white border border-gray-200 rounded-md px-1.5 py-0.5 shadow-2xs mt-1 inline-block">
+                                        <div className="text-[10.5px] font-extrabold text-emerald-800 bg-white group-hover:bg-emerald-100/80 border border-gray-200 group-hover:border-emerald-300 rounded-md px-1.5 py-0.5 shadow-2xs mt-1 inline-block transition-colors">
                                           {totalForFilter} std ({pct}%)
                                         </div>
                                       </div>

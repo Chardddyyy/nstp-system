@@ -90,7 +90,11 @@ function StudentManagement() {
 
   // Synchronize filters when URL query params change (e.g. from Dashboard View -> links)
   useEffect(() => {
-    if (paramDept) setFilterDept(paramDept);
+    if (paramDept) {
+      setFilterDept(paramDept);
+    } else if (paramCourse) {
+      setFilterDept('All');
+    }
     if (paramCourse) setFilterCourse(paramCourse);
     if (paramSection) setFilterNstpSection(paramSection);
     if (paramSearch) setSearchTerm(paramSearch);
@@ -786,7 +790,7 @@ function StudentManagement() {
         if (f === 'BSFAS' && (p.includes('FISHERIES') || p.includes('FOOD') || p.includes('ARTS'))) return true;
         if (f === 'BSBA' && (p.includes('BUSINESS') || p.includes('ADMINISTRATION'))) return true;
         if (f === 'BSED' && (p.includes('SECONDARY') || p.includes('BSED'))) return true;
-        if (f === 'BEED' && (p.includes('ELEMENTARY') || p.includes('BEED'))) return true;
+        if ((f === 'BEED' || f.includes('BEED')) && (p.includes('ELEMENTARY') || p.includes('BEED'))) return true;
         if (f === 'BSHM' && (p.includes('HOSPITALITY') || p.includes('HOTEL') || p.includes('HM'))) return true;
         return p.includes(f);
       })();
@@ -1396,7 +1400,11 @@ function StudentManagement() {
                 <option value="BSBA">BSBA</option>
                 <option value="BSED">BSEd</option>
                 <option value="BEED">BEED</option>
+                <option value="BEED Science">BEED Science</option>
                 <option value="BSHM">BSHM</option>
+                {filterCourse !== 'All' && !['BSIT', 'BSCS', 'BSFAS', 'BSBA', 'BSED', 'BEED', 'BEED Science', 'BSHM'].includes(filterCourse) && (
+                  <option value={filterCourse}>{filterCourse}</option>
+                )}
               </select>
             </div>
           </div>
