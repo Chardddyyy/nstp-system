@@ -59,6 +59,7 @@ function maskEmailLocal(email) {
 
 // ── Persistent cooldown helpers using sessionStorage ──────────────────────────
 const STORAGE_KEY_2FA = 'nstp_2fa_cooldown_expiry';
+const STORAGE_KEY_2FA_LOCKOUT = 'nstp_2fa_lockout_expiry';
 const STORAGE_KEY_FORGOT = 'nstp_forgot_cooldown_expiry';
 
 function storeExpiry(key, seconds) {
@@ -100,8 +101,9 @@ function Login() {
   // Initialize resend cooldown from sessionStorage so it persists across back-navigation
   const [resendCooldown, setResendCooldown] = useState(() => readRemaining(STORAGE_KEY_FORGOT));
 
-  // Admin Two-Factor Authentication (2FA) state
+  // Institutional Two-Factor Authentication (2FA) state
   const [show2FAModal, setShow2FAModal] = useState(false);
+  const [twoFactorRole, setTwoFactorRole] = useState('admin');
   const [twoFactorOtp, setTwoFactorOtp] = useState('');
   const [twoFactorTempToken, setTwoFactorTempToken] = useState('');
   const [twoFactorEmail, setTwoFactorEmail] = useState('');
@@ -113,6 +115,8 @@ function Login() {
   const [twoFactorResending, setTwoFactorResending] = useState(false);
   // Initialize 2FA cooldown from sessionStorage so it persists even if user clicks "Back to Login"
   const [twoFactorResendCooldown, setTwoFactorResendCooldown] = useState(() => readRemaining(STORAGE_KEY_2FA));
+  // 10-Minute Lockout timer state
+  const [twoFactorLockoutRemaining, setTwoFactorLockoutRemaining] = useState(() => readRemaining(STORAGE_KEY_2FA_LOCKOUT));
 
   // Server connection diagnostics state
   const [showServerModal, setShowServerModal] = useState(false);
@@ -159,32 +163,25 @@ function Login() {
     window.location.reload();
   };
 
-  // Forgot-password cooldown — tick from sessionStorage expiry for persistence across navigation
+  // Continuous 1-second ticker for 2FA cooldown, 10-minute lockout, and forgot-password timers
   useEffect(() => {
-    if (resendCooldown <= 0) { clearExpiry(STORAGE_KEY_FORGOT); return; }
-    const timer = setInterval(() => {
-      const remaining = readRemaining(STORAGE_KEY_FORGOT);
-      setResendCooldown(remaining);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
+    const updateTimers = () => {
+      const rem2FA = readRemaining(STORAGE_KEY_2FA);
+      setTwoFactorResendCooldown(rem2FA);
+      if (rem2FA <= 0) clearExpiry(STORAGE_KEY_2FA);
 
-  // 2FA cooldown — tick from sessionStorage expiry so it persists even when user clicks "Back to Login" and tries logging in again
-  useEffect(() => {
-    if (twoFactorResendCooldown <= 0) { clearExpiry(STORAGE_KEY_2FA); return; }
-    const timer = setInterval(() => {
-      const remaining = readRemaining(STORAGE_KEY_2FA);
-      setTwoFactorResendCooldown(remaining);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [twoFactorResendCooldown]);
+      const remLockout = readRemaining(STORAGE_KEY_2FA_LOCKOUT);
+      setTwoFactorLockoutRemaining(remLockout);
+      if (remLockout <= 0) clearExpiry(STORAGE_KEY_2FA_LOCKOUT);
 
-  // On mount: sync cooldowns from sessionStorage in case we navigated back
-  useEffect(() => {
-    const remaining2FA = readRemaining(STORAGE_KEY_2FA);
-    if (remaining2FA > 0) setTwoFactorResendCooldown(remaining2FA);
-    const remainingForgot = readRemaining(STORAGE_KEY_FORGOT);
-    if (remainingForgot > 0) setResendCooldown(remainingForgot);
+      const remForgot = readRemaining(STORAGE_KEY_FORGOT);
+      setResendCooldown(remForgot);
+      if (remForgot <= 0) clearExpiry(STORAGE_KEY_FORGOT);
+    };
+
+    updateTimers();
+    const interval = setInterval(updateTimers, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Cross-Tab Instant Sync & 1-Click Auto-Fill from Email Link
@@ -272,15 +269,23 @@ function Login() {
     };
   }, []);
 
-  // Ensure body and html background color matches deep emerald dark background to prevent any white edge leaks
+  // Ensure body and html background color matches deep emerald dark background and prevent scrolling
   useEffect(() => {
     const origBodyBg = document.body.style.backgroundColor;
     const origHtmlBg = document.documentElement.style.backgroundColor;
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+
     document.body.style.backgroundColor = '#022c22';
     document.documentElement.style.backgroundColor = '#022c22';
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
       document.body.style.backgroundColor = origBodyBg;
       document.documentElement.style.backgroundColor = origHtmlBg;
+      document.body.style.overflow = origBodyOverflow;
+      document.documentElement.style.overflow = origHtmlOverflow;
     };
   }, []);
 
@@ -289,6 +294,10 @@ function Login() {
 
   const handleVerify2FASubmit = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (twoFactorLockoutRemaining > 0) {
+      setTwoFactorError(`Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for ${Math.ceil(twoFactorLockoutRemaining / 60)} minute(s).`);
+      return;
+    }
     setTwoFactorError('');
     const cleanOtp = twoFactorOtp.trim().replace(/\D/g, '');
     if (!cleanOtp || cleanOtp.length !== 6) {
@@ -298,8 +307,19 @@ function Login() {
     setTwoFactorLoading(true);
     try {
       const res = await verify2FA(twoFactorEmail, cleanOtp, twoFactorTempToken);
+      if (res.isLocked || res.lockoutRemaining > 0) {
+        const lockSec = res.lockoutRemaining || 600;
+        storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+        setTwoFactorLockoutRemaining(lockSec);
+        setTwoFactorError(res.message || `Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minute(s).`);
+        return;
+      }
       if (res.success) {
+        clearExpiry(STORAGE_KEY_2FA);
+        clearExpiry(STORAGE_KEY_2FA_LOCKOUT);
         setShow2FAModal(false);
+        setTwoFactorError('');
+        setTwoFactorSuccess('');
         if (res.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
@@ -307,41 +327,69 @@ function Login() {
         }
       } else {
         setTwoFactorError(res.message || 'Invalid or expired 2FA code. Please try again.');
+        setTwoFactorSuccess('');
       }
     } catch (err) {
-      setTwoFactorError(err.message || 'Verification failed. Please try again.');
+      if (err.isLocked || err.lockoutRemaining > 0) {
+        const lockSec = err.lockoutRemaining || 600;
+        storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+        setTwoFactorLockoutRemaining(lockSec);
+        setTwoFactorError(err.message || `Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minute(s).`);
+        setTwoFactorSuccess('');
+      } else {
+        setTwoFactorError(err.message || 'Verification failed. Please try again.');
+        setTwoFactorSuccess('');
+      }
     } finally {
       setTwoFactorLoading(false);
     }
   };
 
   const handleResend2FA = async () => {
-    if (twoFactorResendCooldown > 0 || twoFactorResending) return;
+    if (twoFactorLockoutRemaining > 0 || twoFactorResendCooldown > 0 || twoFactorResending) return;
     setTwoFactorError('');
     setTwoFactorSuccess('');
     setTwoFactorResending(true);
     try {
       const res = await resend2FA(twoFactorEmail, twoFactorTempToken);
+      if (res.isLocked || res.lockoutRemaining > 0) {
+        const lockSec = res.lockoutRemaining || 600;
+        storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+        setTwoFactorLockoutRemaining(lockSec);
+        setTwoFactorError(res.message || `Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor code dispatch is temporarily locked for 10 minute(s).`);
+        setTwoFactorSuccess('');
+        return;
+      }
       if (res.success) {
         const cooldown = res.cooldownRemaining || 60;
         storeExpiry(STORAGE_KEY_2FA, cooldown);
         setTwoFactorResendCooldown(cooldown);
         setTwoFactorOtp('');
+        if (res.tempToken) setTwoFactorTempToken(res.tempToken);
         if (res.ticketId) setTwoFactorTicketId(res.ticketId);
-        // no success banner — resend button countdown is enough feedback
+        setTwoFactorError('');
+        setTwoFactorSuccess(res.ticketId ? `Fresh code dispatched! Look for Ticket #${res.ticketId} in your inbox.` : 'A fresh 6-digit verification code has been dispatched to your email.');
       } else {
         const serverRemaining = res.cooldownRemaining;
         if (serverRemaining && serverRemaining > 0) {
-          // Server still has cooldown — silently sync the button countdown
           storeExpiry(STORAGE_KEY_2FA, serverRemaining);
           setTwoFactorResendCooldown(serverRemaining);
-          // Don't show the error — the button will reflect the correct time
         } else {
           setTwoFactorError(res.message || 'Failed to resend verification code. Please try again.');
+          setTwoFactorSuccess('');
         }
       }
     } catch (err) {
-      setTwoFactorError(err.message || 'Failed to resend verification code. Please try again.');
+      if (err.isLocked || err.lockoutRemaining > 0) {
+        const lockSec = err.lockoutRemaining || 600;
+        storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+        setTwoFactorLockoutRemaining(lockSec);
+        setTwoFactorError(err.message || `Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor code dispatch is temporarily locked for 10 minute(s).`);
+        setTwoFactorSuccess('');
+      } else {
+        setTwoFactorError(err.message || 'Failed to resend verification code. Please try again.');
+        setTwoFactorSuccess('');
+      }
     } finally {
       setTwoFactorResending(false);
     }
@@ -379,26 +427,38 @@ function Login() {
       clearTimeout(timer2);
 
       if (result.require2FA) {
+        setTwoFactorRole(result.role || 'admin');
         setTwoFactorTempToken(result.tempToken || '');
         setTwoFactorEmail(result.email || cleanEmail);
         setTwoFactorMaskedEmail(result.maskedEmail || maskEmailLocal(result.deliveryEmail || result.email || cleanEmail));
         setTwoFactorTicketId(result.ticketId || '');
         setTwoFactorOtp('');
         setTwoFactorError('');
-        // Use server-provided cooldown (accurate for reuse case) or default to 60
-        const serverCooldown = result.cooldownRemaining || 60;
-        // Only store/update sessionStorage if there is no longer remaining cooldown already active
+
+        if (result.isLocked || result.lockoutRemaining > 0) {
+          const lockSec = result.lockoutRemaining || 600;
+          storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+          setTwoFactorLockoutRemaining(lockSec);
+          setTwoFactorError(result.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
+          setTwoFactorSuccess('');
+          setShow2FAModal(true);
+          return;
+        }
+
+        // Keep active cooldown counting down — do NOT reset back to 60s
         const existingRemaining = readRemaining(STORAGE_KEY_2FA);
-        if (existingRemaining <= 0 || !result.reused) {
+        if (existingRemaining > 0) {
+          setTwoFactorResendCooldown(existingRemaining);
+        } else {
+          const serverCooldown = result.cooldownRemaining || 60;
           storeExpiry(STORAGE_KEY_2FA, serverCooldown);
           setTwoFactorResendCooldown(serverCooldown);
-        } else {
-          setTwoFactorResendCooldown(existingRemaining);
         }
+
         setTwoFactorSuccess(
-          result.reused
-            ? `Code already dispatched — check your inbox (Ticket #${result.ticketId || 'ACTIVE'}). Resend available in ${readRemaining(STORAGE_KEY_2FA)}s.`
-            : (result.ticketId ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.')
+          result.ticketId
+            ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.`
+            : 'A 6-digit verification code has been dispatched to your email.'
         );
         setShow2FAModal(true);
         return;
@@ -414,22 +474,35 @@ function Login() {
         if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
           const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
+            setTwoFactorRole(retryResult.role || 'admin');
             setTwoFactorTempToken(retryResult.tempToken || '');
             setTwoFactorEmail(retryResult.email || cleanEmail);
             setTwoFactorMaskedEmail(retryResult.maskedEmail || cleanEmail);
             setTwoFactorTicketId(retryResult.ticketId || '');
             setTwoFactorOtp('');
             setTwoFactorError('');
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
-            setShow2FAModal(true);
-            const cooldownR = retryResult.cooldownRemaining || 60;
+
+            if (retryResult.isLocked || retryResult.lockoutRemaining > 0) {
+              const lockSec = retryResult.lockoutRemaining || 600;
+              storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+              setTwoFactorLockoutRemaining(lockSec);
+              setTwoFactorError(retryResult.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
+              setTwoFactorSuccess('');
+              setShow2FAModal(true);
+              return;
+            }
+
             const existingR = readRemaining(STORAGE_KEY_2FA);
-            if (existingR <= 0 || !retryResult.reused) {
+            if (existingR > 0) {
+              setTwoFactorResendCooldown(existingR);
+            } else {
+              const cooldownR = retryResult.cooldownRemaining || 60;
               storeExpiry(STORAGE_KEY_2FA, cooldownR);
               setTwoFactorResendCooldown(cooldownR);
-            } else {
-              setTwoFactorResendCooldown(existingR);
             }
+
+            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
+            setShow2FAModal(true);
             return;
           }
           if (retryResult.success) {
@@ -448,6 +521,16 @@ function Login() {
       clearTimeout(timer1);
       clearTimeout(timer2);
       console.error('Login error:', err);
+
+      if (err.isLocked || err.lockoutRemaining > 0 || (err.message && (err.message.includes('Naka-4 na attempts') || err.message.includes('Maximum verification attempts') || err.message.includes('Maximum incorrect attempts')))) {
+        const lockSec = err.lockoutRemaining || 600;
+        storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+        setTwoFactorLockoutRemaining(lockSec);
+        setError(err.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
+        setLoading(false);
+        return;
+      }
+
       const errMsg = err?.message || '';
       if (errMsg.includes('another device') || errMsg.includes('currently active')) {
         try {
@@ -459,16 +542,27 @@ function Login() {
             setTwoFactorTicketId(retryResult.ticketId || '');
             setTwoFactorOtp('');
             setTwoFactorError('');
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
-            setShow2FAModal(true);
-            const cooldownR = retryResult.cooldownRemaining || 60;
+
+            if (retryResult.isLocked || retryResult.lockoutRemaining > 0) {
+              const lockSec = retryResult.lockoutRemaining || 600;
+              storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+              setTwoFactorLockoutRemaining(lockSec);
+              setTwoFactorError(retryResult.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts).');
+              setShow2FAModal(true);
+              return;
+            }
+
             const existingR = readRemaining(STORAGE_KEY_2FA);
-            if (existingR <= 0 || !retryResult.reused) {
+            if (existingR > 0) {
+              setTwoFactorResendCooldown(existingR);
+            } else {
+              const cooldownR = retryResult.cooldownRemaining || 60;
               storeExpiry(STORAGE_KEY_2FA, cooldownR);
               setTwoFactorResendCooldown(cooldownR);
-            } else {
-              setTwoFactorResendCooldown(existingR);
             }
+
+            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
+            setShow2FAModal(true);
             return;
           }
           if (retryResult.success) {
@@ -603,15 +697,15 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen min-h-[100dvh] login-full-viewport w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-x-hidden overflow-y-auto">
+    <div className="h-screen h-[100dvh] max-h-screen max-h-[100dvh] login-static-page w-full max-w-full flex flex-col justify-between bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden select-none">
       {/* Background Decorative Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none overflow-hidden max-w-full"></div>
 
-      {/* Header - Edge-to-Edge Desktop & Compact Mobile Match */}
-      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-full px-3 sm:px-8 lg:px-12 py-2 sm:py-3 flex justify-between items-center gap-2">
+      {/* Header - Compact Static Header */}
+      <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full max-w-full overflow-hidden">
+        <div className="w-full max-w-full px-3 sm:px-8 lg:px-12 py-2 sm:py-2.5 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-            <div className="w-7 h-7 sm:w-10 sm:h-10 bg-white rounded-lg sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0 flex-1">
@@ -622,7 +716,7 @@ function Login() {
 
           <Link 
             to="/" 
-            className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2 sm:px-3.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0 whitespace-nowrap"
+            className="flex items-center gap-1 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs border border-emerald-700/80 active:scale-95 transition-all shadow-sm shrink-0 whitespace-nowrap"
           >
             <ArrowLeft className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
             <span>Home</span>
@@ -630,24 +724,24 @@ function Login() {
         </div>
       </header>
 
-      {/* Main Content Area - Clean Centered Login Card with Generous Breathing Room */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 py-16 sm:py-28 my-auto relative z-10 w-full max-w-full overflow-x-hidden">
-        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden my-auto p-4 sm:p-7">
-          <div className="text-center mb-4 sm:mb-6">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl p-1.5 mx-auto mb-3 flex items-center justify-center shadow-xs border border-emerald-200">
+      {/* Main Content Area - Static Centered Card with Zero Overflow */}
+      <main className="flex-1 flex items-center justify-center px-4 py-1.5 sm:py-3 relative z-10 w-full max-w-full overflow-hidden">
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden p-3.5 sm:p-6">
+          <div className="text-center mb-2.5 sm:mb-4">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 rounded-xl sm:rounded-2xl p-1 mx-auto mb-2 flex items-center justify-center shadow-xs border border-emerald-200">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
-            <p className="text-gray-500 text-[11px] sm:text-xs mt-1">Sign in with your official CvSU faculty or admin credentials</p>
+            <h2 className="text-lg sm:text-xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
+            <p className="text-gray-500 text-[10px] sm:text-[11.5px] mt-0.5">Sign in with your official CvSU faculty or admin credentials</p>
           </div>
 
-          <form onSubmit={handleSubmit} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" className="space-y-3.5 sm:space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" className="space-y-2.5 sm:space-y-3">
             <div>
-              <label htmlFor="email" className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-600/80" />
                 <input
                   type="email"
                   id="email"
@@ -658,8 +752,8 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full min-h-[46px] pl-10 pr-3 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                  placeholder="admin@cvsu.edu.ph / admin"
+                  className="w-full min-h-[42px] sm:min-h-[44px] pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  placeholder="Admin@gmail.com"
                   autoComplete="off"
                   required
                 />
@@ -668,11 +762,11 @@ function Login() {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700">
+                <label htmlFor="password" className="block text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
                   Password
                 </label>
                 {error && (
-                  <span className="text-[11px] sm:text-xs font-bold text-red-600 animate-fade-in flex items-center gap-1">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-red-600 animate-fade-in flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
                     {error}
                   </span>
@@ -690,7 +784,7 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full min-h-[46px] pl-10 pr-10 py-2.5 text-base sm:text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  className="w-full min-h-[42px] sm:min-h-[44px] pl-10 pr-10 py-2 text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="••••••••••••"
                   autoComplete="new-password"
                   required
@@ -698,12 +792,12 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 transform -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 min-h-[38px] min-w-[38px] flex items-center justify-center text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <div className="flex justify-end mt-1.5">
+              <div className="flex justify-end mt-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -715,7 +809,7 @@ function Login() {
                     setForgotError('');
                     setShowForgotPassword(true);
                   }}
-                  className="text-[11px] sm:text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95 py-1"
+                  className="text-[10.5px] sm:text-[11px] text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95 py-0.5"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-blue-600" />
                   <span>Forgot Password?</span>
@@ -726,7 +820,7 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full min-h-[48px] mt-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-3 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] mt-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -740,25 +834,25 @@ function Login() {
           </form>
 
           {/* Institutional Testing & Demo Credentials Display */}
-          <div className="mt-3.5 p-3 sm:p-3.5 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-emerald-50/90 rounded-2xl border border-emerald-200/90 shadow-2xs">
-            <div className="flex items-center justify-between mb-2">
+          <div className="mt-2.5 sm:mt-3 p-2.5 sm:p-3 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-emerald-50/90 rounded-xl sm:rounded-2xl border border-emerald-200/90 shadow-2xs">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-md bg-emerald-600/10 flex items-center justify-center text-emerald-700">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <div className="w-4 h-4 rounded-md bg-emerald-600/10 flex items-center justify-center text-emerald-700">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
                 </div>
-                <span className="text-[10.5px] sm:text-xs font-black text-emerald-950 uppercase tracking-wider">
+                <span className="text-[10px] sm:text-[11px] font-black text-emerald-950 uppercase tracking-wider">
                   Test Accounts (Tap to Fill)
                 </span>
               </div>
-              <span className="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300/60">
+              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300/60">
                 Testing
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {[
-                { role: 'Admin', email: 'admin@cvsu.edu.ph', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-                { role: 'CWTS', email: 'cwts@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
+                { role: 'Admin', email: 'richardbelen99@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+                { role: 'CWTS', email: 'belenjoshua58@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
                 { role: 'LTS', email: 'lts@gmail.com', pass: 'lts123', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
                 { role: 'ROTC', email: 'rotc@gmail.com', pass: 'rotc123', badge: 'bg-red-100 text-red-800 border-red-300' },
               ].map((item) => (
@@ -771,28 +865,28 @@ function Login() {
                     setError('');
                     executeLogin(item.email, item.pass);
                   }}
-                  className="p-2 sm:p-2.5 bg-white hover:bg-emerald-100/50 active:scale-95 rounded-xl border border-emerald-200/80 transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
+                  className="p-1.5 sm:p-2 bg-white hover:bg-emerald-100/50 active:scale-95 rounded-lg sm:rounded-xl border border-emerald-200/80 transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-[9.5px] sm:text-[10px] font-black px-1.5 py-0.2 rounded border ${item.badge}`}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-[9px] sm:text-[9.5px] font-black px-1.5 py-0.2 rounded border ${item.badge}`}>
                       {item.role}
                     </span>
-                    <span className="text-[9.5px] sm:text-[10px] font-mono text-gray-500 font-bold group-hover:text-emerald-800">
+                    <span className="text-[9px] sm:text-[9.5px] font-mono text-gray-500 font-bold group-hover:text-emerald-800">
                       {item.pass}
                     </span>
                   </div>
-                  <p className="text-[10.5px] sm:text-[11px] font-extrabold text-gray-800 truncate">
+                  <p className="text-[10px] sm:text-[10.5px] font-extrabold text-gray-800 truncate">
                     {item.email}
                   </p>
                 </button>
               ))}
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs">
+          <div className="mt-2 pt-2 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10.5px] sm:text-[11px]">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
               to="/enrollment" 
-              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline py-1"
+              className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline py-0.5"
             >
               <Sparkles className="w-3 h-3 text-amber-500" />
               <span>Online Enrollment &rarr;</span>
@@ -1169,66 +1263,79 @@ function Login() {
       {/* Institutional Two-Factor Authentication (2FA) Modal */}
       {show2FAModal && (
         <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3.5 sm:p-4 animate-fade-in"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
           onClick={() => !twoFactorLoading && setShow2FAModal(false)}
         >
           <div
-            className="bg-white text-gray-900 rounded-2xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-emerald-800/30 flex flex-col relative my-auto max-h-[90vh]"
+            className="bg-white text-gray-900 rounded-2xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-emerald-800/30 relative my-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between shrink-0 border-b border-emerald-800/60">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
-                  <Shield className="w-5 h-5 text-emerald-300" />
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between border-b border-emerald-800/60">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                  <Shield className="w-4 h-4 text-emerald-300" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-black tracking-tight text-white leading-tight">Admin 2-Factor Authentication</h3>
-                  <p className="text-emerald-200 text-[10px] sm:text-xs font-medium">Cavite State University Naic Campus</p>
+                  <h3 className="text-xs sm:text-sm font-black tracking-tight text-white leading-tight">
+                    {twoFactorRole === 'admin' ? 'Admin' : 'Instructor'} Two-Factor Authentication
+                  </h3>
+                  <p className="text-emerald-200 text-[9.5px] sm:text-[10.5px] font-medium">Cavite State University Naic Campus</p>
                 </div>
               </div>
               <button
                 type="button"
                 disabled={twoFactorLoading}
                 onClick={() => setShow2FAModal(false)}
-                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0 disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleVerify2FASubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto">
-              <div className="text-center space-y-1.5">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 mb-1">
-                  <Lock className="w-6 h-6 text-emerald-700" />
+            {/* Modal Body - Clean, compact, NO SCROLLBAR */}
+            <form id="two-factor-form" onSubmit={handleVerify2FASubmit} className="p-4 sm:p-5 space-y-3">
+              <div className="text-center space-y-1">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 mb-0.5">
+                  <Lock className="w-5 h-5 text-emerald-700" />
                 </div>
-                <h4 className="text-base font-bold text-gray-900">Security Verification Required</h4>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  A 6-digit one-time verification code has been dispatched to your administrator email:
+                <h4 className="text-sm sm:text-base font-bold text-gray-900">Security Verification Required</h4>
+                <p className="text-[11px] sm:text-xs text-gray-600 leading-relaxed">
+                  A 6-digit one-time verification code has been dispatched to your {twoFactorRole === 'admin' ? 'administrator' : 'instructor'} email:
                 </p>
                 <div className="inline-block px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-mono font-bold text-emerald-900">
-                  {twoFactorMaskedEmail || 'cv***tp@gmail.com'}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1.5">
-                  <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-800 font-semibold bg-emerald-50 border border-emerald-200/90 py-1 px-3 rounded-lg">
-                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Code expires in 10 minutes</span>
-                  </div>
+                  {twoFactorMaskedEmail || 'registered email'}
                 </div>
               </div>
 
-
-              {twoFactorError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700">
+              {/* Status Alert - Shows EITHER Lockout OR Error OR Success, Never Stacks! */}
+              {twoFactorLockoutRemaining > 0 ? (
+                <div className="p-2.5 bg-rose-50 border-2 border-rose-300 rounded-xl flex items-start gap-2 text-xs text-rose-800 shadow-sm animate-pulse">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold">Security Lockout Active (4 Attempts Exceeded)</p>
+                    <p className="text-[11px] text-rose-700 leading-tight">
+                      Please try again in: <span className="font-mono font-bold">⏳ {Math.floor(twoFactorLockoutRemaining / 60)}m {(twoFactorLockoutRemaining % 60).toString().padStart(2, '0')}s</span>
+                    </p>
+                  </div>
+                </div>
+              ) : twoFactorError ? (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-700">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span className="leading-tight">{twoFactorError}</span>
                 </div>
-              )}
+              ) : twoFactorSuccess ? (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2 text-xs text-emerald-800">
+                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                  <span className="leading-tight">
+                    {twoFactorSuccess} {twoFactorTicketId && !twoFactorSuccess.includes('Ticket') && <span className="font-mono font-bold">(Ticket #{twoFactorTicketId})</span>}
+                  </span>
+                </div>
+              ) : null}
 
-              <div className="space-y-2">
-                <label htmlFor="two-factor-otp" className="block text-xs font-bold text-gray-700 text-center">
+              {/* OTP Input Field */}
+              <div className="space-y-1.5">
+                <label htmlFor="two-factor-otp" className="block text-[11px] sm:text-xs font-bold text-gray-700 text-center">
                   Enter 6-Digit Verification Code:
                 </label>
                 <div className="relative">
@@ -1241,22 +1348,26 @@ function Login() {
                     autoComplete="one-time-code"
                     autoFocus
                     value={twoFactorOtp}
-                    onChange={(e) => setTwoFactorOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onChange={(e) => {
+                      setTwoFactorError('');
+                      setTwoFactorOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    }}
                     placeholder="000000"
-                    disabled={twoFactorLoading || twoFactorResending}
-                    className="w-full text-center text-2xl sm:text-3xl font-mono font-black tracking-[0.4em] py-3.5 px-4 bg-gray-50 border-2 border-emerald-600/40 rounded-2xl focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition-all text-gray-900 placeholder:text-gray-300"
+                    disabled={twoFactorLoading || twoFactorResending || twoFactorLockoutRemaining > 0}
+                    className="w-full text-center text-2xl sm:text-3xl font-mono font-black tracking-[0.35em] sm:tracking-[0.4em] py-2.5 sm:py-3 px-4 bg-gray-50 border-2 border-emerald-600/40 rounded-xl sm:rounded-2xl focus:border-emerald-600 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/20 transition-all text-gray-900 placeholder:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
-                <p className="text-[11px] text-gray-400 text-center leading-normal">
+                <p className="text-[10.5px] sm:text-[11px] text-gray-400 text-center leading-normal">
                   Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. The code expires in 10 minutes.
                 </p>
               </div>
 
-              <div className="space-y-2 pt-1">
+              {/* Action Buttons Integrated Inside Form */}
+              <div className="pt-1 space-y-2">
                 <button
                   type="submit"
-                  disabled={twoFactorLoading || twoFactorResending || twoFactorOtp.length < 6}
-                  className="w-full py-3.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={twoFactorLoading || twoFactorResending || twoFactorOtp.length < 6 || twoFactorLockoutRemaining > 0}
+                  className="w-full py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {twoFactorLoading ? (
                     <>
@@ -1266,20 +1377,22 @@ function Login() {
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4 text-emerald-300" />
-                      <span>Verify &amp; Sign In as Admin</span>
+                      <span>Verify &amp; Sign In {twoFactorRole === 'admin' ? 'as Admin' : 'as Instructor'}</span>
                     </>
                   )}
                 </button>
 
-                <div className="flex items-center justify-between pt-2 text-xs">
+                <div className="flex items-center justify-between text-xs pt-0.5">
                   <button
                     type="button"
                     onClick={handleResend2FA}
-                    disabled={twoFactorResendCooldown > 0 || twoFactorLoading || twoFactorResending}
+                    disabled={twoFactorResendCooldown > 0 || twoFactorLoading || twoFactorResending || twoFactorLockoutRemaining > 0}
                     className="text-emerald-800 hover:text-emerald-700 font-bold hover:underline disabled:text-gray-400 disabled:no-underline cursor-pointer flex items-center gap-1"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${twoFactorResending ? 'animate-spin' : ''}`} />
-                    {twoFactorResending
+                    {twoFactorLockoutRemaining > 0
+                      ? `Locked (${Math.floor(twoFactorLockoutRemaining / 60)}m ${(twoFactorLockoutRemaining % 60).toString().padStart(2, '0')}s)`
+                      : twoFactorResending
                       ? 'Sending fresh code...'
                       : twoFactorResendCooldown > 0
                       ? `Resend code in ${twoFactorResendCooldown}s`
@@ -1377,38 +1490,37 @@ function Login() {
                 </div>
               </div>
 
-              {/* Network / PLDT Notice */}
-              <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl text-[11px] text-amber-900 leading-relaxed">
+              {/* Network Notice */}
+              <div className="p-3.5 bg-emerald-50/80 border border-emerald-200/80 rounded-2xl text-[11px] text-emerald-900 leading-relaxed">
                 <p className="font-bold flex items-center gap-1.5 mb-1">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  Bakit nagkakaroon ng Connection Timeout?
+                  <AlertCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  Localhost Server Mode
                 </p>
                 <p>
-                  1. <strong>Render Free Tier Cold-Start:</strong> Kapag matagal na walang gumagamit, natutulog ang cloud server at nangangailangan ng 15-30 segundo bago muling mag-boot.<br />
-                  2. <strong>PLDT Route Dropout:</strong> Kung gumagamit ng PLDT sa Pilipinas, maaaring may temporary packet drop papuntang Render Cloudflare IP (216.24.57.18).
+                  The system is operating securely on your local environment (Localhost port 3001 &amp; MySQL port 3306) with zero external cloud dependencies.
                 </p>
               </div>
 
               {/* Quick Preset Buttons */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-gray-700">Mabilisang Paglipat ng Server:</label>
+                <label className="block text-xs font-bold text-gray-700">Quick Server Presets:</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => handleSaveBackendUrl('')}
-                    className="p-2.5 text-left bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl transition-all cursor-pointer"
+                    className="p-2.5 text-left bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-300 rounded-xl transition-all cursor-pointer"
                   >
-                    <span className="block font-black text-xs text-emerald-950">Default Cloud (Render)</span>
-                    <span className="block text-[10px] text-gray-500 font-medium truncate">nstp-system-iw5p.onrender.com</span>
+                    <span className="block font-black text-xs text-emerald-950">Localhost Default (Port 3001)</span>
+                    <span className="block text-[10px] text-gray-500 font-medium truncate">http://localhost:3001/api</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => handleSaveBackendUrl('http://localhost:3001/api')}
+                    onClick={() => handleSaveBackendUrl('http://127.0.0.1:3001/api')}
                     className="p-2.5 text-left bg-emerald-50/60 hover:bg-emerald-100/70 border border-emerald-200 rounded-xl transition-all cursor-pointer"
                   >
-                    <span className="block font-black text-xs text-emerald-950">Localhost Server</span>
-                    <span className="block text-[10px] text-gray-500 font-medium">http://localhost:3001/api</span>
+                    <span className="block font-black text-xs text-emerald-950">127.0.0.1 Direct</span>
+                    <span className="block text-[10px] text-gray-500 font-medium">http://127.0.0.1:3001/api</span>
                   </button>
                 </div>
               </div>
@@ -1416,7 +1528,7 @@ function Login() {
               {/* Custom URL Input */}
               <div className="space-y-1.5">
                 <label htmlFor="custom-backend-url" className="block text-xs font-bold text-gray-700">
-                  Custom Backend o Tunnel URL (ngrok / Cloudflare / LAN IP):
+                  Custom Backend or Tunnel URL (ngrok / Cloudflare / LAN IP):
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -1451,8 +1563,8 @@ function Login() {
           </div>
         </div>
       )}
-      <footer className="bg-emerald-950/95 border-t border-emerald-900 py-3 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full mt-auto">
-        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-medium">
+      <footer className="bg-emerald-950/95 border-t border-emerald-900 py-2 sm:py-2.5 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full mt-auto">
+        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[9.5px] sm:text-[10.5px] text-emerald-400 font-medium">
           <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
           <p className="text-emerald-300/70">Authorized Faculty &amp; Admin Personnel Access Only</p>
         </div>

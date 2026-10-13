@@ -144,8 +144,17 @@ export default function LetterFormats() {
     try {
       const saved = localStorage.getItem('nstp_letter_templates');
       if (saved !== null) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        let parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Clean up any legacy custom templates that had fabricated mock attachments without real file data
+          parsed = parsed.map(item => {
+            if (!String(item.id || '').startsWith('tpl-') && item.file && !item.file.data) {
+              return { ...item, file: null };
+            }
+            return item;
+          });
+          return parsed;
+        }
       }
       return DEFAULT_TEMPLATES;
     } catch {
@@ -216,12 +225,14 @@ export default function LetterFormats() {
       return;
     }
 
-    const fallbackFilename = `${title.trim().replace(/[^a-zA-Z0-9_-]/g, '_')}_Official_CvSU_Template.doc`;
-    const finalFile = attachedFile || (editingTemplate ? editingTemplate.file : null) || {
-      name: fallbackFilename,
-      size: '135.0 KB',
-      type: 'application/msword'
-    };
+    // Require an actual uploaded file for new custom templates
+    const hasExistingFile = editingTemplate && editingTemplate.file && (editingTemplate.file.data || String(editingTemplate.id || '').startsWith('tpl-'));
+    if (!attachedFile && !hasExistingFile) {
+      showToast('Please attach a document file (PDF, Word, or Image) before saving.', 'warning');
+      return;
+    }
+
+    const finalFile = attachedFile || (editingTemplate ? editingTemplate.file : null);
 
     // Instructors can only create/edit letter formats for their own department
     const targetDept = user?.role === 'instructor' && user?.department
@@ -297,10 +308,14 @@ export default function LetterFormats() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } else {
+      return;
+    }
+    if (t.rawTemplate || String(t.id || '').startsWith('tpl-')) {
       const batchYear = viewingArchive && archiveViewData?.year ? archiveViewData.year : '2024-2025';
       downloadOfficialLetter(t, batchYear);
+      return;
     }
+    showToast('No attached document file available for this letter format.', 'warning');
   };
 
   const handleLogout = async () => {

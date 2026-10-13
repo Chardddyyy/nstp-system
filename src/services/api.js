@@ -1,6 +1,12 @@
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
     var custom = localStorage.getItem('nstp_custom_api_url') || localStorage.getItem('nstp_backend_url');
+    // If a stale Render URL was saved in localStorage, remove it to prevent connecting to Render
+    if (custom && custom.includes('onrender.com')) {
+      localStorage.removeItem('nstp_custom_api_url');
+      localStorage.removeItem('nstp_backend_url');
+      custom = null;
+    }
     if (custom && typeof custom === 'string' && custom.trim().startsWith('http')) {
       var cleanCustom = custom.trim().replace(/\/+$/, '');
       return cleanCustom.endsWith('/api') ? cleanCustom : cleanCustom + '/api';
@@ -31,9 +37,9 @@ function getPrimaryApiUrl() {
       return window.location.protocol + '//' + host + ':3001/api';
     }
 
-    return 'https://nstp-system-iw5p.onrender.com/api';
+    return window.location.protocol + '//' + (host || '127.0.0.1') + ':3001/api';
   }
-  return 'http://localhost:3001/api';
+  return 'http://127.0.0.1:3001/api';
 }
 
 if (typeof window !== 'undefined') {
@@ -41,7 +47,7 @@ if (typeof window !== 'undefined') {
     if (!url) {
       localStorage.removeItem('nstp_custom_api_url');
       localStorage.removeItem('nstp_backend_url');
-      console.log('Reset backend URL to default Render endpoint.');
+      console.log('Reset backend URL to default localhost endpoint.');
     } else {
       localStorage.setItem('nstp_custom_api_url', url);
       console.log('Backend URL set to:', url);
@@ -145,8 +151,8 @@ async function apiCall(endpoint, options) {
         throw new Error('Cloud backend is currently sleeping or suspended. If using Render, please check your Render dashboard to resume the service.');
       }
       var error = await (response ? response.json() : Promise.resolve({})).catch(function() { return {}; });
-      var isAuthEndpoint = endpoint === '/auth/login' || endpoint === '/auth/register';
-      if (response && !isAuthEndpoint && (response.status === 401 || error.code === 'TOKEN_EXPIRED')) {
+      var isLoginOrRegister = endpoint === '/auth/login' || endpoint === '/auth/register';
+      if (response && !isLoginOrRegister && (response.status === 401 || error.code === 'TOKEN_EXPIRED')) {
         localStorage.removeItem('nstp_token');
         localStorage.removeItem('nstp_cached_user');
         if (!window.__nstp_session_expired__) {
@@ -155,7 +161,7 @@ async function apiCall(endpoint, options) {
             detail: { code: error.code || 'TOKEN_EXPIRED', message: error.message || 'Session expired. Please log in again.' }
           }));
         }
-      } else if (response && !isAuthEndpoint && response.status === 403 && (error.message === 'Invalid token' || error.code === 'INVALID_TOKEN')) {
+      } else if (response && !isLoginOrRegister && response.status === 403 && (error.message === 'Invalid token' || error.code === 'INVALID_TOKEN')) {
         // Only trigger session expiration when server explicitly rejects JWT token signature
         localStorage.removeItem('nstp_token');
         localStorage.removeItem('nstp_cached_user');
@@ -169,6 +175,10 @@ async function apiCall(endpoint, options) {
       var apiErr = new Error(error.message || (response && response.status === 404 ? 'Resource not found' : 'API request failed'));
       apiErr.status = response ? response.status : 0;
       apiErr.code = error.code;
+      apiErr.lockoutRemaining = error.lockoutRemaining;
+      apiErr.isLocked = error.isLocked;
+      apiErr.attemptsRemaining = error.attemptsRemaining;
+      apiErr.cooldownRemaining = error.cooldownRemaining;
       throw apiErr;
     }
 
@@ -212,11 +222,11 @@ export async function loginUser(email, password, _forceLogin = true) {
       
       const offlineAccounts = [
         {
-          emails: ['admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com', 'admin'],
+          emails: ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com', 'admin'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'admin@cvsu.edu.ph',
+            email: 'richardbelen99@gmail.com',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -224,11 +234,11 @@ export async function loginUser(email, password, _forceLogin = true) {
           }
         },
         {
-          emails: ['cwts@gmail.com', 'cwts@cvsu.edu.ph', 'clarkebelen28@gmail.com'],
+          emails: ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'cwts@cvsu.edu.ph', 'clarkebelen28@gmail.com'],
           passwords: ['cwts123', 'cwts'],
           user: {
             id: 2,
-            email: 'cwts@gmail.com',
+            email: 'belenjoshua58@gmail.com',
             name: 'CWTS Coordinator',
             role: 'instructor',
             department: 'CWTS',
@@ -323,8 +333,8 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office' },
-        { id: 2, name: 'CWTS Facilitator', email: 'cwts@cvsu.edu.ph', role: 'instructor', department: 'CWTS' },
+        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
+        { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
       ];
@@ -336,16 +346,24 @@ export async function getMe() {
 }
 
 export function updateUser(id, data) {
-  return apiCall('/users/' + id, {
+  const targetId = (!id || id === 'undefined' || id === 'null') ? 'me' : id;
+  return apiCall('/users/' + targetId, {
     method: 'PUT',
     body: JSON.stringify(data)
   });
 }
 
-export function changePassword(id, newPassword) {
+export function changePassword(id, newPassword, currentPassword) {
   return apiCall('/users/' + id + '/password', {
     method: 'PUT',
-    body: JSON.stringify({ newPassword: newPassword })
+    body: JSON.stringify({ newPassword: newPassword, currentPassword: currentPassword })
+  });
+}
+
+export function triggerDatabaseBackup(activity) {
+  return apiCall('/backup/now', {
+    method: 'POST',
+    body: JSON.stringify({ activity: activity || 'Manual Admin Web Backup' })
   });
 }
 
@@ -851,7 +869,9 @@ function generateArchivedStudents(startYear, semester, totalCwts, totalLts, tota
       else if (g === 'DRP') { remarks = 'Dropped'; status = 'dropped'; }
 
       const initials = `${firstName[0]}${lastName[0]}`;
-      const svgPhoto = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%23f1f5f9'/><circle cx='50' cy='38' r='22' fill='%23047857'/><ellipse cx='50' cy='85' rx='36' ry='24' fill='%23065f46'/><text x='50' y='44' font-family='Arial,sans-serif' font-size='14' font-weight='900' fill='%23ffffff' text-anchor='middle'>${initials}</text></svg>`;
+      const deptBg = dept === 'ROTC' ? '%23991b1b' : dept === 'LTS' ? '%236b21a8' : '%23065f46';
+      const svgPhoto = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${deptBg}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${deptBg}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${initials}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`;
+      const svgCor = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${studentId}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${name}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${program}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${schoolYear} (${semester})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`;
 
       students.push({
         id: (startYear % 100) * 1000 + (is2ndSem ? 500 : 0) + studentSeq,
@@ -899,6 +919,10 @@ function generateArchivedStudents(startYear, semester, totalCwts, totalLts, tota
         qr_token: serialId,
         id_photo_2x2: svgPhoto,
         photo: svgPhoto,
+        registrationPhoto: svgCor,
+        registration_photo: svgCor,
+        cor: svgCor,
+        reg_form: svgCor,
         has_2nd_sem: is2ndSem
       });
 
@@ -1619,7 +1643,7 @@ export async function sendStudentDigitalId(studentOrId) {
   const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
 
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
-  const directPdfDownloadUrl = `https://nstp-system-iw5p.onrender.com/api/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
+  const directPdfDownloadUrl = `${getPrimaryApiUrl()}/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
 
   const htmlContent = `
 <!DOCTYPE html>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -23,6 +23,29 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
   const archiveViewData = auth.archiveViewData || null;
   const setViewingArchive = auth.setViewingArchive || (() => {});
   const setArchiveViewData = auth.setArchiveViewData || (() => {});
+
+  const totalUnreadMessages = useMemo(() => {
+    const notifCount = (auth.notifications || []).filter(n => (n.type === 'message' || n.conversationId) && !n.read).length;
+    let storeCount = 0;
+    if (user && auth.messages && typeof window !== 'undefined') {
+      try {
+        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+        const currentUserId = String(user.id || user._id || '');
+        Object.entries(auth.messages).forEach(([convId, msgList]) => {
+          if (!Array.isArray(msgList)) return;
+          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          msgList.forEach(m => {
+            const sId = String(m.sender_id || m.senderId || '');
+            const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
+            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+              storeCount++;
+            }
+          });
+        });
+      } catch {}
+    }
+    return Math.max(notifCount, storeCount);
+  }, [auth.notifications, auth.messages, user]);
 
   useEffect(() => {
     if (!open) return;
@@ -204,21 +227,39 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
             )}
           </button>
 
-          {/* Google Drive — Admin Only (Direct link to Google Drive) */}
+          {/* Google Drive — Admin Only (Direct link to Google Drive) — Locked in Archive Mode */}
           {isAdmin && (
-            <a
-              href={GDRIVE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-              title="CvSU NSTP Google Drive Repository"
-              className={navClass('/admin/google-drive')}
-            >
-              <div className="flex items-center space-x-3">
-                <HardDrive className="w-5 h-5" />
-                <span>Google Drive</span>
-              </div>
-            </a>
+            viewingArchive ? (
+              <button
+                type="button"
+                disabled
+                title="Google Drive is locked in Archive Mode (Current Batch only)"
+                className={lockedNavClass()}
+              >
+                <div className="flex items-center space-x-3">
+                  <HardDrive className="w-5 h-5" />
+                  <span>Google Drive</span>
+                </div>
+                <span className="flex items-center gap-1 text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-black border border-rose-500/30">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Locked</span>
+                </span>
+              </button>
+            ) : (
+              <a
+                href={GDRIVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                title="CvSU NSTP Google Drive Repository"
+                className={navClass('/admin/google-drive')}
+              >
+                <div className="flex items-center space-x-3">
+                  <HardDrive className="w-5 h-5" />
+                  <span>Google Drive</span>
+                </div>
+              </a>
+            )
           )}
 
 
@@ -234,12 +275,16 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
               <MessageSquare className="w-5 h-5" />
               <span>Messages</span>
             </div>
-            {viewingArchive && (
+            {viewingArchive ? (
               <span className="flex items-center gap-1 text-[9px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-black border border-rose-500/30">
                 <Lock className="w-2.5 h-2.5" />
                 <span>Locked</span>
               </span>
-            )}
+            ) : totalUnreadMessages > 0 ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
+                {totalUnreadMessages > 9 ? '9+' : totalUnreadMessages}
+              </span>
+            ) : null}
           </button>
 
           {/* Profile — Locked in Archive Mode, accessible only in Current Batch */}

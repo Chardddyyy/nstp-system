@@ -19,7 +19,7 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2023-04-06', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2023-04-07', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2023-04-08', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2023-04-10', title: 'Araw ng Kagitingan (Observed)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2023-04-10', title: 'Day of Valor (Observed)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2023-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2023-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2023-08-28', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -34,7 +34,7 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2024-03-28', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-03-29', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-03-30', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2024-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2024-04-09', title: 'Day of Valor (Araw ng Kagitingan)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2024-08-26', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -49,7 +49,7 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2025-04-17', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2025-04-18', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2025-04-19', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2025-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2025-04-09', title: 'Day of Valor (Araw ng Kagitingan)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2025-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2025-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2025-08-25', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -64,7 +64,7 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2026-04-02', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-04-03', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-04-04', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2026-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2026-04-09', title: 'Day of Valor (Araw ng Kagitingan)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2026-08-31', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -79,7 +79,7 @@ const PHILIPPINE_HOLIDAYS = [
   { date: '2027-03-25', title: 'Maundy Thursday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2027-03-26', title: 'Good Friday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2027-03-27', title: 'Black Saturday', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
-  { date: '2027-04-09', title: 'Araw ng Kagitingan', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
+  { date: '2027-04-09', title: 'Day of Valor (Araw ng Kagitingan)', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2027-05-01', title: 'Labor Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2027-06-12', title: 'Independence Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
   { date: '2027-08-30', title: 'National Heroes Day', type: 'holiday', category: 'Holiday', track: 'All Tracks' },
@@ -189,9 +189,22 @@ function Calendar() {
     if (batchRange?.rawEnd) setEditRangeEnd(batchRange.rawEnd);
   }, [batchRange?.rawStart, batchRange?.rawEnd]);
 
+  const minCalendarAllowedMonth = useMemo(() => {
+    return `${new Date().getFullYear()}-01`;
+  }, []);
+
   const handleSaveSemesterRange = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!editRangeStart || !editRangeEnd) return;
+
+    if (editRangeEnd < editRangeStart) {
+      pushNotification?.({
+        type: 'warning',
+        message: 'End Month cannot be earlier than Start Month.'
+      });
+      return;
+    }
+
     setRangeSaving(true);
     try {
       const payload = {
@@ -249,23 +262,10 @@ function Calendar() {
   }, []);
   const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
 
-  // Summary view filters - Default aligned strictly with active academic batch semester
-  const [summarySemester, setSummarySemester] = useState(() => {
-    const b = String(currentBatch || '');
-    if (b.includes('2nd')) return '2nd';
-    return '1st';
-  });
+  // Summary view filters
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
   const [summarySearch, setSummarySearch] = useState('');
   const [eventToDelete, setEventToDelete] = useState(null);
-
-  // Keep summarySemester synchronized whenever active batch changes
-  useEffect(() => {
-    if (currentBatch && !viewingArchive) {
-      const b = String(currentBatch || '');
-      setSummarySemester(b.includes('2nd') ? '2nd' : '1st');
-    }
-  }, [currentBatch, viewingArchive]);
 
   // Real-time synchronization of deleted events across users
   useEffect(() => {
@@ -443,19 +443,6 @@ function Calendar() {
   // Filtered list for the Annual Summary View
   const filteredSummaryEvents = useMemo(() => {
     return allAnnualEvents.filter(ev => {
-      // Semester filter
-      if (summarySemester === '1st') {
-        const d = new Date(ev.date);
-        const m = d.getMonth(); // 7=Aug to 11=Dec
-        if (ev.semester && ev.semester !== '1st Semester') return false;
-        if (!ev.semester && !(m >= 7 && m <= 11)) return false;
-      } else if (summarySemester === '2nd') {
-        const d = new Date(ev.date);
-        const m = d.getMonth(); // 0=Jan to 5=Jun
-        if (ev.semester && ev.semester !== '2nd Semester') return false;
-        if (!ev.semester && !(m >= 0 && m <= 5)) return false;
-      }
-
       // Track filter
       if (summaryTrack !== 'all') {
         if (ev.track && ev.track !== 'All Tracks' && ev.track !== summaryTrack) return false;
@@ -473,7 +460,7 @@ function Calendar() {
 
       return true;
     });
-  }, [allAnnualEvents, summarySemester, summaryTrack, summarySearch]);
+  }, [allAnnualEvents, summaryTrack, summarySearch]);
 
   // Monthly grouping of filtered summary events
   const groupedSummaryEvents = useMemo(() => {
@@ -566,7 +553,7 @@ function Calendar() {
       setEvents(updatedEvents);
       try { localStorage.setItem('nstp_calendar_events', JSON.stringify(updatedEvents)); } catch (_) {}
 
-      // Persist to backend (triggers SMS notifications for instructors)
+      // Persist to backend
       calendarAPI.createEvent(eventPayload).then(created => {
         if (created && created.id) {
           // Sync final server ID if different
@@ -1013,9 +1000,7 @@ function Calendar() {
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 ml-7 sm:ml-0">
-                  {summarySemester === 'all'
-                    ? 'Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.'
-                    : `Active schedule matrix for ${summarySemester === '1st' ? '1st Semester' : '2nd Semester'} of ${currentBatch || 'A.Y. 2026-2027'}.`}
+                  Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.
                 </p>
               </div>
             </div>
@@ -1047,37 +1032,6 @@ function Calendar() {
             {/* Filter Controls Bar */}
             <div className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 mb-3">
               <div className="flex items-center gap-1.5 flex-wrap">
-                {/* Semester Filter */}
-                <div className="flex items-center bg-white rounded-lg p-0.5 border border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setSummarySemester('all')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
-                      summarySemester === 'all' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    All Year
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSummarySemester('1st')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
-                      summarySemester === '1st' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    1st Sem
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSummarySemester('2nd')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
-                      summarySemester === '2nd' ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    2nd Sem
-                  </button>
-                </div>
-
                 {/* Track Filter */}
                 <select
                   value={summaryTrack}
@@ -1570,7 +1524,13 @@ function Calendar() {
                       type="month"
                       id="edit-range-start"
                       value={editRangeStart}
-                      onChange={(e) => setEditRangeStart(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEditRangeStart(val);
+                        if (val && editRangeEnd && editRangeEnd < val) {
+                          setEditRangeEnd(val);
+                        }
+                      }}
                       className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-bold"
                       required
                     />
@@ -1583,13 +1543,31 @@ function Calendar() {
                     <input
                       type="month"
                       id="edit-range-end"
+                      min={editRangeStart || undefined}
                       value={editRangeEnd}
-                      onChange={(e) => setEditRangeEnd(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val && editRangeStart && val < editRangeStart) {
+                          pushNotification?.({
+                            type: 'warning',
+                            message: 'End Month cannot be earlier than Start Month.'
+                          });
+                          setEditRangeEnd(editRangeStart);
+                          return;
+                        }
+                        setEditRangeEnd(val);
+                      }}
                       className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-bold"
                       required
                     />
                   </div>
                 </div>
+
+                {editRangeStart && editRangeEnd && editRangeEnd < editRangeStart && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                    ⚠️ Invalid: End Month cannot be earlier than Start Month.
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
                   <button
@@ -1601,7 +1579,12 @@ function Calendar() {
                   </button>
                   <button
                     type="submit"
-                    disabled={rangeSaving || !editRangeStart || !editRangeEnd}
+                    disabled={
+                      rangeSaving ||
+                      !editRangeStart ||
+                      !editRangeEnd ||
+                      editRangeEnd < editRangeStart
+                    }
                     className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
                   >
                     {rangeSaving ? 'Saving...' : 'Save Coverage'}

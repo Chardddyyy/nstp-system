@@ -36,7 +36,7 @@ async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) 
 
     const backupPayload = {
       fileName: `CvSU_NSTP_Complete_Database_Dump_${cleanActivity}_${timestamp.slice(0, 10)}`,
-      folderId: '1MDK7wfYmKICAzEgFMNlI8iHR2zMwibZI',
+      folderId: process.env.GDRIVE_FOLDER_ID || '1MDK7wfYmKICAzEgFMNlI8iHR2zMwibZI',
       cleanOld: cleanOld,
       backupData: {
         system: 'Cavite State University Naic - NSTP Record & Report Management System',

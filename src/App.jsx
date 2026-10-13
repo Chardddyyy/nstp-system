@@ -20,6 +20,7 @@ import LetterFormats from './pages/LetterFormats';
 import GoogleDrive from './pages/GoogleDrive';
 import DigitalIdViewer from './pages/DigitalIdViewer';
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal';
+import { isNotificationAllowedForRole } from './utils/notificationFilter';
 
 const BASE_PATH = (() => {
   const pathname = window.location.pathname.toLowerCase();
@@ -176,23 +177,161 @@ function formatRelativeTime(dateInput) {
 }
 
 // Hardware tone generator using Web Audio API (cross-device: iOS, Android, macOS, Windows)
+let sharedAudioCtx = null;
+let hasUserInteracted = false;
+
+if (typeof window !== 'undefined') {
+  const markInteracted = () => {
+    hasUserInteracted = true;
+    if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+  };
+  ['click', 'keydown', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, markInteracted, { once: true, passive: true });
+  });
+}
+
+function getDevicePlatform() {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  if (/iPad|iPhone|iPod/.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /Macintosh|Mac OS X/i.test(ua)) {
+    return 'apple';
+  }
+  if (/Android/i.test(ua)) {
+    return 'android';
+  }
+  if (/Windows|Win32|Win64/i.test(ua)) {
+    return 'windows';
+  }
+  return 'other';
+}
+
 function playNotificationSound() {
+  // Never attempt to start AudioContext before a user gesture to eliminate browser console warnings
+  if (!hasUserInteracted || typeof window === 'undefined') return;
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    // Gentle warm chime: 880Hz (A5) -> 1174Hz (D6)
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1174, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.28);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.3);
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new AudioCtx();
+    }
+
+    const platform = getDevicePlatform();
+
+    // Trigger gentle native haptic vibration on mobile hardware
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        if (platform === 'android') {
+          navigator.vibrate([60, 40, 60]);
+        } else if (platform === 'apple') {
+          navigator.vibrate(50);
+        }
+      } catch (_) {}
+    }
+
+    const playNativeDeviceChime = (ctx) => {
+      try {
+        const now = ctx.currentTime;
+
+        if (platform === 'apple') {
+          // ─── Authentic Apple Tri-Tone Alert (macOS / iOS / iPadOS) ──────────
+          // 3 ascending crystal tones: G#5 (830.6Hz) -> B5 (987.8Hz) -> E6 (1318.5Hz)
+          const notes = [
+            { freq: 830.6, start: 0.00, dur: 0.11, vol: 0.16 },
+            { freq: 987.8, start: 0.08, dur: 0.12, vol: 0.18 },
+            { freq: 1318.5, start: 0.16, dur: 0.32, vol: 0.22 },
+          ];
+
+          notes.forEach(({ freq, start, dur, vol }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + start);
+            gain.gain.setValueAtTime(vol, now + start);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + start);
+            osc.stop(now + start + dur);
+          });
+        } else if (platform === 'android') {
+          // ─── Authentic Android Bubble / Water Drop Sound ───────────────────
+          // Resonant pitch bend from 480Hz up to 1320Hz with a crisp harmonic ping
+          const osc = ctx.createOscillator();
+          const overtone = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const overtoneGain = ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(480, now);
+          osc.frequency.exponentialRampToValueAtTime(1320, now + 0.05);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.14);
+
+          gain.gain.setValueAtTime(0.24, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+          overtone.type = 'triangle';
+          overtone.frequency.setValueAtTime(1760, now);
+          overtoneGain.gain.setValueAtTime(0.08, now);
+          overtoneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          overtone.connect(overtoneGain);
+          overtoneGain.connect(ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.20);
+          overtone.start(now);
+          overtone.stop(now + 0.14);
+        } else if (platform === 'windows') {
+          // ─── Authentic Modern Windows Chime (F5 -> C6 Bell) ───────────────
+          const bell1 = ctx.createOscillator();
+          const bell2 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          const gain2 = ctx.createGain();
+
+          bell1.type = 'sine';
+          bell1.frequency.setValueAtTime(698.46, now); // F5
+          gain1.gain.setValueAtTime(0.18, now);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          bell1.connect(gain1);
+          gain1.connect(ctx.destination);
+          bell1.start(now);
+          bell1.stop(now + 0.24);
+
+          bell2.type = 'sine';
+          bell2.frequency.setValueAtTime(1046.5, now + 0.10); // C6
+          gain2.gain.setValueAtTime(0.20, now + 0.10);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+          bell2.connect(gain2);
+          gain2.connect(ctx.destination);
+          bell2.start(now + 0.10);
+          bell2.stop(now + 0.40);
+        } else {
+          // ─── Fallback Warm Dual-tone Chime ─────────────────────────────────
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.setValueAtTime(1174, now + 0.08);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.30);
+        }
+      } catch (_) {}
+    };
+
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().then(() => playNativeDeviceChime(sharedAudioCtx)).catch(() => {});
+    } else {
+      playNativeDeviceChime(sharedAudioCtx);
+    }
   } catch (_) {}
 }
 
@@ -293,8 +432,8 @@ function App() {
       if (Array.isArray(cached) && cached.length > 0) return cached;
     } catch {}
     return [
-      { id: 1, name: 'NSTP Administrator', email: 'admin@cvsu.edu.ph', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
-      { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
     ];
@@ -555,46 +694,21 @@ function App() {
     } catch (_) {}
   }, []);
 
-  const [viewingArchive, setViewingArchiveState] = useState(() => {
-    try {
-      return localStorage.getItem('nstp_viewing_archive') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [archiveViewData, setArchiveViewDataState] = useState(() => {
-    try {
-      localStorage.removeItem('nstp_archive_view_data');
-      localStorage.removeItem('nstp_archive_view_data_v5');
-      const saved = localStorage.getItem('nstp_archive_view_data_v6');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [viewingArchive, setViewingArchiveState] = useState(false);
+  const [archiveViewData, setArchiveViewDataState] = useState(null);
 
   const setViewingArchive = useCallback((val) => {
     setViewingArchiveState(Boolean(val));
-    try {
-      if (val) {
-        localStorage.setItem('nstp_viewing_archive', 'true');
-      } else {
-        localStorage.removeItem('nstp_viewing_archive');
-      }
-    } catch {}
+    if (!val) {
+      setArchiveViewDataState(null);
+    }
   }, []);
 
   const setArchiveViewData = useCallback((data) => {
     setArchiveViewDataState(data);
-    try {
-      if (data) {
-        localStorage.setItem('nstp_archive_view_data_v6', JSON.stringify(data));
-      } else {
-        localStorage.removeItem('nstp_archive_view_data_v6');
-        localStorage.removeItem('nstp_archive_view_data_v5');
-        localStorage.removeItem('nstp_archive_view_data');
-      }
-    } catch {}
+    if (!data) {
+      setViewingArchiveState(false);
+    }
   }, []);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
@@ -620,6 +734,7 @@ function App() {
   const seenEventReminders = useRef(new Set());
   const seenLetterIds = useRef(new Set());
   const seenFacultyUserIds = useRef(new Set());
+  const alertedMessageIds = useRef(new Set());
 
   // Global Realtime Telemetry Heartbeat Ping
   useEffect(() => {
@@ -704,23 +819,32 @@ function App() {
 
   const pushNotification = useCallback((notif) => {
     if (!notif) return;
+    const isMessage = notif.type === 'message' || Boolean(notif.conversationId);
+    if (isMessage && user) {
+      const sId = String(notif.senderId || notif.sender_id || '');
+      const myId = String(user.id || user._id || '');
+      if (sId && myId && sId === myId) return;
+      if (user.name && notif.senderName && (notif.senderName === user.name || notif.senderName.toLowerCase() === user.name.toLowerCase())) return;
+      if (user.name && typeof notif.title === 'string' && notif.title.toLowerCase().includes(user.name.toLowerCase())) return;
+      if (user.role === 'admin' && (notif.senderName === 'Admin' || notif.senderName === 'NSTP Administrator')) return;
+      if (user.role === 'admin' && typeof notif.title === 'string' && (notif.title.includes('NSTP Administrator') || notif.title.includes('Admin'))) return;
+    }
     const notifKey = notif.id || notif.key || (
       notif.enrollmentId ? `enrollment-${notif.enrollmentId}` :
       notif.reportId ? `report-${notif.reportId}` :
-      notif.conversationId ? `conv-${notif.conversationId}` :
+      notif.conversationId ? `conv-${notif.conversationId}-${Date.now()}` :
       `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
     );
 
     // Check if user previously dismissed or deleted this notification/entity
-    if (user) {
+    if (user && !isMessage) {
       try {
         const dismissKey = getDismissedStorageKey(user);
         const dismissed = new Set(JSON.parse(localStorage.getItem(dismissKey) || '[]').map(String));
         if (
           dismissed.has(String(notifKey)) ||
           (notif.enrollmentId && dismissed.has(`enrollment-${notif.enrollmentId}`)) ||
-          (notif.reportId && dismissed.has(`report-${notif.reportId}`)) ||
-          (notif.conversationId && dismissed.has(`conv-${notif.conversationId}`))
+          (notif.reportId && dismissed.has(`report-${notif.reportId}`))
         ) {
           return; // Previously dismissed by user; never recreate
         }
@@ -729,7 +853,7 @@ function App() {
 
     // Check if this notification key was already marked as read by the user
     let isAlreadyRead = false;
-    if (user) {
+    if (user && !isMessage) {
       try {
         const readStorageKey = getReadNotificationsStorageKey(user);
         const readSet = new Set(JSON.parse(localStorage.getItem(readStorageKey) || '[]').map(String));
@@ -751,12 +875,20 @@ function App() {
       reportTitle: notif.reportTitle || null,
       conversationId: notif.conversationId || null,
       senderName: notif.senderName || null,
+      senderId: notif.senderId || notif.sender_id || null,
+      isGroup: Boolean(notif.isGroup || (notif.conversationId && String(notif.conversationId).startsWith('group-'))),
+      groupName: notif.groupName || (String(notif.conversationId).startsWith('group-') ? 'All Instructors' : null),
     };
 
     setNotifications(prev => {
+      // For message notifications with a conversationId, remove older message notification for that same conversation so new unread message is at top
+      if (isMessage && notif.conversationId) {
+        const filtered = (prev || []).filter(n => !(n.type === 'message' && String(n.conversationId) === String(notif.conversationId)));
+        return [item, ...filtered].slice(0, 50);
+      }
       // Prevent duplicate notification for same entity key
-      if (prev.some(n => String(n.id) === String(notifKey))) return prev;
-      return [item, ...prev].slice(0, 50);
+      if ((prev || []).some(n => String(n.id) === String(notifKey))) return prev;
+      return [item, ...(prev || [])].slice(0, 50);
     });
 
     // Play subtle audio alert chime
@@ -793,7 +925,7 @@ function App() {
             dismissed.add(String(n.id));
             if (n.enrollmentId) dismissed.add(`enrollment-${n.enrollmentId}`);
             if (n.reportId) dismissed.add(`report-${n.reportId}`);
-            if (n.conversationId) dismissed.add(`conv-${n.conversationId}`);
+            if (n.conversationId && String(n.id).startsWith('conv-')) dismissed.add(`conv-${n.conversationId}`);
           }
         });
         idSet.forEach(id => dismissed.add(String(id)));
@@ -935,7 +1067,11 @@ function App() {
       window.dispatchEvent(new CustomEvent('nstp_chat_message', { detail: payload }));
 
       // Dispatch instant device notification and on-screen toast if message is from another person
-      const isOwnMessage = String(senderId || '') === String(user.id || user._id || '');
+      const myId = String(user.id || user._id || '');
+      const sId = String(senderId || '');
+      const isOwnMessage = (sId && myId && sId === myId) ||
+        (user.name && (senderName === user.name || senderName.toLowerCase() === user.name.toLowerCase())) ||
+        (user.role === 'admin' && (senderName === 'Admin' || senderName === 'NSTP Administrator'));
       if (!isOwnMessage) {
         // Hardware vibration
         try {
@@ -944,18 +1080,20 @@ function App() {
           }
         } catch (_) {}
 
+        // Add to notification center (bell dropdown), play chime, and trigger OS push notification
+        pushNotification({
+          id: `conv-${convKey}-${Date.now()}`,
+          title: `Message from ${senderName}`,
+          message: preview || 'Sent you a message',
+          type: 'message',
+          link: `/chat?convId=${convKey}`,
+          conversationId: convKey,
+          senderName: senderName,
+          senderId: senderId
+        });
+
         // Show immediate visual in-app toast regardless of browser permission state
         showToast(preview || 'Sent you a message', 'info', `💬 ${senderName}`);
-
-        pushNotification({
-          id: `msg-${message.id || Date.now()}`,
-          title: `New Message from ${senderName}`,
-          message: `${senderName}: ${preview || 'Sent you a message'}`,
-          type: 'message',
-          link: `/chat?convId=${conversationId}`,
-          conversationId,
-          senderName
-        });
       }
     };
 
@@ -1033,6 +1171,7 @@ function App() {
     seenEventReminders.current = new Set();
     seenLetterIds.current = new Set();
     seenFacultyUserIds.current = new Set();
+    alertedMessageIds.current = new Set();
   }
 
   function seedRealtimeBaseline(pending, reportsList, convList, studentsList, usersList, calendarList, lettersList, currentUser) {
@@ -1066,6 +1205,8 @@ function App() {
       reconcileUnreadConversationMessages(safeConvs, currentUser, true);
     }
 
+    // Baseline seed accounts (IDs 1-4) are default system accounts and should never trigger notifications
+    [1, 2, 3, 4].forEach(id => seenFacultyUserIds.current.add(id));
     safeUsers.forEach(u => {
       if (u && u.id && (u.role === 'instructor' || u.role === 'admin')) {
         seenFacultyUserIds.current.add(u.id);
@@ -1083,6 +1224,10 @@ function App() {
       if (l && l.id) seenLetterIds.current.add(l.id);
     });
 
+    if (currentUser) {
+      reconcileSystemNotifications(safePending, safeReports, safeStudents, safeEvents, safeLetters, safeUsers, currentUser);
+    }
+
     // Persist seen IDs to storage so next login doesn't duplicate existing records
     if (currentUser) {
       try {
@@ -1090,13 +1235,327 @@ function App() {
           enrollments: Array.from(seenEnrollmentIds.current).slice(-500),
           submissions: Array.from(seenSubmissionKeys.current).slice(-500),
           reports: Array.from(seenReportIds.current).slice(-500),
-          students: Array.from(seenStudentIds.current).slice(-500)
+          students: Array.from(seenStudentIds.current).slice(-500),
+          faculty: Array.from(seenFacultyUserIds.current).slice(-500),
+          letters: Array.from(seenLetterIds.current).slice(-500)
         };
         safeSetStorage(getSeenEntitiesStorageKey(currentUser), seenPayload);
       } catch {}
     }
 
     baselineReady.current = true;
+  }
+
+  function reconcileSystemNotifications(pending, reportsList, studentsList, calendarList, lettersList, usersList, currentUser) {
+    if (!currentUser) return;
+
+    const safePending = Array.isArray(pending) ? pending : [];
+    const safeStudents = Array.isArray(studentsList) ? studentsList : [];
+    const safeReports = Array.isArray(reportsList) ? reportsList : [];
+    const safeEvents = Array.isArray(calendarList) ? calendarList : [];
+    const safeUsers = Array.isArray(usersList) ? usersList : [];
+    const safeLetters = (Array.isArray(lettersList) && lettersList.length > 0)
+      ? lettersList
+      : [
+          { id: 'tpl-1', title: 'Letter of Intent / Parent Consent' },
+          { id: 'tpl-2', title: 'Community Service Endorsement Letter' }
+        ];
+
+    const dismissedKey = getDismissedStorageKey(currentUser);
+    let dismissedSet = new Set();
+    try {
+      dismissedSet = new Set(JSON.parse(localStorage.getItem(dismissedKey) || '[]').map(String));
+    } catch {}
+
+    const readKey = getReadNotificationsStorageKey(currentUser);
+    let readNotifSet = new Set();
+    try {
+      readNotifSet = new Set(JSON.parse(localStorage.getItem(readKey) || '[]').map(String));
+    } catch {}
+
+    const systemItems = [];
+
+    const getDaysRemaining = (dateStr) => {
+      if (!dateStr) return null;
+      const t = new Date(dateStr).getTime();
+      if (isNaN(t)) return null;
+      return Math.ceil((t - Date.now()) / (1000 * 60 * 60 * 24));
+    };
+
+    // =========================================================================
+    // A. PARA SA ADMIN:
+    // 1. Pending enrollments kung sino-sino ang mga nag-enroll
+    // 2. Nag-pasa ng report / nag-submit na mga instructor
+    // 3. Mga pa-deadline na di pa nagpapasa na instructor
+    // =========================================================================
+    if (currentUser.role === 'admin') {
+      // 1. Pending enrollments (kung sino-sino ang mga nag-enroll)
+      safePending.forEach(e => {
+        if (!e || !e.id) return;
+        const eKey = `enrollment-${e.id}`;
+        if (dismissedSet.has(eKey) || dismissedSet.has(String(e.id))) return;
+        const enrollName = e.student_name || e.fullName || e.firstName || 'Student Applicant';
+        systemItems.push({
+          id: eKey,
+          title: `Pending Enrollment: ${enrollName}`,
+          message: `${enrollName} submitted an enrollment application for ${e.department || 'NSTP'}. Awaiting review and approval.`,
+          type: 'enrollment',
+          read: readNotifSet.has(eKey),
+          time: formatRelativeTime(e.created_at),
+          createdAt: e.created_at || new Date().toISOString(),
+          link: '/admin/dashboard',
+          enrollmentId: e.id,
+          studentName: enrollName
+        });
+      });
+
+      // 2. Nag-pasa ng report or nag-submit
+      safeReports.forEach(report => {
+        if (!report) return;
+        const submissions = Array.isArray(report.submissions) ? report.submissions : [];
+        submissions.forEach(sub => {
+          if (!sub) return;
+          const subKey = `submission-${report.id}-${sub.instructor_id || sub.id}`;
+          if (dismissedSet.has(subKey) || dismissedSet.has(`report-${report.id}`)) return;
+          const subName = sub.instructor_name || sub.instructor || sub.department || 'an instructor';
+          systemItems.push({
+            id: subKey,
+            title: `Report Submitted: ${report.title || 'Accomplishment Report'}`,
+            message: `"${report.title || 'Untitled'}" was submitted by ${subName}. Awaiting admin verification.`,
+            type: 'report',
+            read: readNotifSet.has(subKey),
+            time: formatRelativeTime(sub.submitted_at || report.updated_at || report.created_at),
+            createdAt: sub.submitted_at || report.updated_at || report.created_at || new Date().toISOString(),
+            link: '/reports',
+            reportId: report.id,
+            reportTitle: report.title
+          });
+        });
+      });
+
+      // 3. Mga pa-deadline na di pa nagpapasa na instructor
+      safeReports.forEach(report => {
+        if (!report || !report.deadline) return;
+        const daysLeft = getDaysRemaining(report.deadline);
+        // If deadline is within 3 days, today, or slightly overdue within 2 days
+        if (daysLeft !== null && daysLeft <= 3 && daysLeft >= -2) {
+          const expectedDepts = report.department === 'All' ? ['ROTC', 'CWTS', 'LTS'] : [report.department];
+          const submissions = Array.isArray(report.submissions) ? report.submissions : [];
+          const submittedDepts = new Set(submissions.map(s => String(s.department || s.instructor_department || '')));
+          const missingDepts = expectedDepts.filter(d => !submittedDepts.has(d));
+
+          if (missingDepts.length > 0) {
+            const dlKey = `admin-report-deadline-${report.id}`;
+            if (dismissedSet.has(dlKey) || dismissedSet.has(String(report.id))) return;
+            const dueLabel = daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : daysLeft < 0 ? 'Overdue' : `in ${daysLeft} days`;
+            systemItems.push({
+              id: dlKey,
+              title: `Upcoming Deadline - Missing Submissions`,
+              message: `Report "${report.title || 'Untitled'}" is due ${dueLabel} (${String(report.deadline).slice(0, 10)}). No submission yet from: ${missingDepts.join(', ')}.`,
+              type: 'report',
+              read: readNotifSet.has(dlKey),
+              time: String(report.deadline).slice(0, 10),
+              createdAt: report.created_at || new Date().toISOString(),
+              link: '/reports',
+              reportId: report.id,
+              reportTitle: report.title
+            });
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // B. PARA SA INSTRUCTOR:
+    // 1. Bagong upload ni admin na report (assigned to this instructor's department or 'All')
+    // 2. New add ng student (yung mga na-accept sa pending enrollment)
+    // 3. Pag may dinagdag na instructor or admin si admin
+    // 4. Bagong upload na letter format
+    // 5. Malapit na na event sa calendar
+    // 6. Bagong dagdag na event sa calendar
+    // 7. Mga malapit na mag-deadline sa reports
+    // =========================================================================
+    if (currentUser.role === 'instructor') {
+      const myDept = currentUser.department || '';
+
+      // 1. Bagong upload ni admin na report (para sa department ng instructor o 'All')
+      safeReports.forEach(report => {
+        if (!report || !report.id) return;
+        const isMyDept = report.department === 'All' || (myDept && report.department === myDept);
+        if (!isMyDept) return; // STRICTLY EXCLUDE other departments!
+
+        const rKey = `report-assign-${report.id}`;
+        if (dismissedSet.has(rKey) || dismissedSet.has(String(report.id))) return;
+
+        const dueText = report.deadline ? `Deadline: ${String(report.deadline).slice(0, 10)}` : 'No set deadline';
+        systemItems.push({
+          id: rKey,
+          title: `New Report Assignment: ${report.title || 'Untitled'}`,
+          message: `Admin assigned a report requirement for ${report.department}. ${dueText}.`,
+          type: 'report',
+          read: readNotifSet.has(rKey),
+          time: formatRelativeTime(report.created_at),
+          createdAt: report.created_at || new Date().toISOString(),
+          link: '/reports',
+          reportId: report.id,
+          reportTitle: report.title
+        });
+      });
+
+      // 2. New add ng student (yung mga na-accept sa pending enrollment sa department niya)
+      const myAcceptedStudents = safeStudents.filter(s => {
+        const sDept = s.department || s.nstp_component || '';
+        return myDept && sDept === myDept;
+      });
+      myAcceptedStudents.slice(0, 15).forEach(s => {
+        if (!s || !s.id) return;
+        const sKey = `student-accepted-${s.id}`;
+        if (dismissedSet.has(sKey) || dismissedSet.has(String(s.id))) return;
+        const studentName = s.name || s.student_name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Student';
+        systemItems.push({
+          id: sKey,
+          title: `New Student Added: ${myDept}`,
+          message: `${studentName} was approved and officially added to your ${myDept} class roster.`,
+          type: 'student',
+          read: readNotifSet.has(sKey),
+          time: formatRelativeTime(s.created_at),
+          createdAt: s.created_at || new Date().toISOString(),
+          link: '/students',
+          studentName
+        });
+      });
+
+      // 3. Pag may dinagdag na instructor or admin si admin
+      safeUsers.forEach(u => {
+        if (!u || !u.id) return;
+        if (String(u.id) === String(currentUser.id)) return;
+        if (Number(u.id) <= 4) return; // Exclude default seed accounts
+
+        if (u.role === 'instructor' || u.role === 'admin') {
+          const uKey = `faculty-added-${u.id}`;
+          if (dismissedSet.has(uKey) || dismissedSet.has(String(u.id))) return;
+          const isInst = u.role === 'instructor';
+          const title = isInst
+            ? `New Faculty Member Added (${u.department || 'NSTP'})`
+            : `New System Administrator Added`;
+          const roleLabel = isInst ? `${u.department || 'NSTP'} Instructor` : 'System Administrator';
+          systemItems.push({
+            id: uKey,
+            title,
+            message: `${u.name || 'A new faculty member'} was added as ${roleLabel}.`,
+            type: 'system',
+            read: readNotifSet.has(uKey),
+            time: formatRelativeTime(u.created_at),
+            createdAt: u.created_at || new Date().toISOString(),
+            link: '/instructor/dashboard'
+          });
+        }
+      });
+
+      // 4. Bagong upload na letter format
+      safeLetters.slice(0, 5).forEach(letter => {
+        if (!letter || !letter.id) return;
+        const lKey = `letter-fmt-${letter.id}`;
+        if (dismissedSet.has(lKey) || dismissedSet.has(String(letter.id))) return;
+        systemItems.push({
+          id: lKey,
+          title: `New Letter Format: ${letter.title || 'Official Letter'}`,
+          message: `Official format template "${letter.title || 'Letter'}" is ready for student letters and endorsements.`,
+          type: 'system',
+          read: readNotifSet.has(lKey),
+          time: 'Format',
+          createdAt: letter.created_at || new Date().toISOString(),
+          link: '/letter-formats'
+        });
+      });
+
+      // 5 & 6. Malapit na na event sa calendar AT bagong dagdag na event sa calendar
+      safeEvents.forEach(ev => {
+        if (!ev || !ev.id) return;
+        const evKey = `event-cal-${ev.id}`;
+        if (dismissedSet.has(evKey) || dismissedSet.has(String(ev.id))) return;
+
+        const daysLeft = getDaysRemaining(ev.date);
+        const isUpcomingSoon = daysLeft !== null && daysLeft <= 5 && daysLeft >= 0;
+
+        const title = isUpcomingSoon
+          ? `Upcoming Event: ${ev.title || 'Event'}`
+          : `New Calendar Event: ${ev.title || 'Event'}`;
+        const timeBadge = isUpcomingSoon
+          ? (daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : `in ${daysLeft}d`)
+          : (ev.date ? String(ev.date).slice(0, 10) : 'Calendar');
+
+        systemItems.push({
+          id: evKey,
+          title,
+          message: `"${ev.title || 'Event'}" scheduled on ${ev.date ? String(ev.date).slice(0, 10) : 'upcoming date'}${ev.location ? ` at ${ev.location}` : ''}.`,
+          type: 'calendar',
+          read: readNotifSet.has(evKey),
+          time: timeBadge,
+          createdAt: ev.created_at || new Date().toISOString(),
+          link: '/calendar'
+        });
+      });
+
+      // 7. Mga malapit na mag-deadline sa reports
+      safeReports.forEach(report => {
+        if (!report || !report.deadline) return;
+        const isMyDept = report.department === 'All' || (myDept && report.department === myDept);
+        if (!isMyDept) return; // STRICTLY EXCLUDE other departments
+
+        const daysLeft = getDaysRemaining(report.deadline);
+        // If deadline is within 3 days, today, or slightly overdue within 2 days
+        if (daysLeft !== null && daysLeft <= 3 && daysLeft >= -2) {
+          const submissions = Array.isArray(report.submissions) ? report.submissions : [];
+          const hasSubmitted = submissions.some(s =>
+            String(s.instructor_id) === String(currentUser.id) ||
+            (myDept && (s.department === myDept || s.instructor_department === myDept))
+          );
+
+          if (!hasSubmitted) {
+            const dlKey = `inst-report-deadline-${report.id}`;
+            if (dismissedSet.has(dlKey) || dismissedSet.has(String(report.id))) return;
+            const dueLabel = daysLeft === 0 ? 'Today' : daysLeft === 1 ? 'Tomorrow' : daysLeft < 0 ? 'Overdue' : `in ${daysLeft} days`;
+            systemItems.push({
+              id: dlKey,
+              title: `Report Deadline Approaching: ${report.title || 'Untitled'}`,
+              message: `Reminder: Report "${report.title || 'Untitled'}" is due ${dueLabel} (${String(report.deadline).slice(0, 10)}). Please submit your accomplishment report.`,
+              type: 'report',
+              read: readNotifSet.has(dlKey),
+              time: dueLabel,
+              createdAt: report.created_at || new Date().toISOString(),
+              link: '/reports',
+              reportId: report.id,
+              reportTitle: report.title
+            });
+          }
+        }
+      });
+    }
+
+    // Sort system items (unread first, then newest)
+    systemItems.sort((a, b) => {
+      if (a.read !== b.read) return a.read ? 1 : -1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    setNotifications(prev => {
+      const prevMsgs = (prev || []).filter(n => n.type === 'message' || String(n.id).startsWith('msg-') || Boolean(n.conversationId));
+      const stateReadMap = new Map((prev || []).map(n => [String(n.id), Boolean(n.read)]));
+
+      const mergedSystem = systemItems
+        .filter(item => isNotificationAllowedForRole(item, currentUser))
+        .map(item => {
+          const wasReadInState = stateReadMap.get(String(item.id));
+          const wasReadInStorage = readNotifSet.has(String(item.id));
+          return (wasReadInState || wasReadInStorage) ? { ...item, read: true } : item;
+        });
+
+      // ONLY keep chat messages + role-compliant system notifications!
+      const updated = [...prevMsgs, ...mergedSystem].slice(0, 100);
+      safeSetStorage(getNotificationStorageKey(currentUser), updated);
+      return updated;
+    });
   }
 
   function detectRealtimeChanges(pending, reportsList, convList, studentsList, usersList, calendarList, lettersList, currentUser) {
@@ -1119,9 +1578,19 @@ function App() {
     let newlySeen = false;
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-    // ── 1. Admin Specific Notifications ─────────────────────────────────────
+    const safePush = (notif) => {
+      if (!isNotificationAllowedForRole(notif, currentUser)) return;
+      pushNotification(notif);
+    };
+
+    // =========================================================================
+    // 1. ADMIN SPECIFIC REALTIME NOTIFICATIONS
+    // - Pending enrollments
+    // - Instructor report submissions
+    // - Approaching deadlines with missing submissions
+    // =========================================================================
     if (currentUser.role === 'admin') {
-      // New Pending Enrollments
+      // A. New Pending Enrollments
       safePending.forEach(enrollment => {
         if (!enrollment || !enrollment.id) return;
         const eKey = `enrollment-${enrollment.id}`;
@@ -1133,10 +1602,10 @@ function App() {
           seenEnrollmentIds.current.add(enrollment.id);
           newlySeen = true;
           const enrollName = enrollment.student_name || enrollment.fullName || enrollment.firstName || 'A student';
-          pushNotification({
+          safePush({
             id: eKey,
-            title: 'New Enrollment Application',
-            message: `${enrollName} submitted an enrollment application (${enrollment.department || 'NSTP'})`,
+            title: `Pending Enrollment: ${enrollName}`,
+            message: `${enrollName} submitted an enrollment application for ${enrollment.department || 'NSTP'}. Awaiting review.`,
             type: 'enrollment',
             link: '/admin/dashboard',
             enrollmentId: enrollment.id,
@@ -1145,7 +1614,7 @@ function App() {
         }
       });
 
-      // New Report Submissions by Instructors
+      // B. New Report Submissions by Instructors
       safeReports.forEach(report => {
         if (!report) return;
         (Array.isArray(report.submissions) ? report.submissions : []).forEach(sub => {
@@ -1158,10 +1627,11 @@ function App() {
           if (!seenSubmissionKeys.current.has(subKey)) {
             seenSubmissionKeys.current.add(subKey);
             newlySeen = true;
-            pushNotification({
+            const subName = sub.instructor_name || sub.instructor || sub.department || 'an instructor';
+            safePush({
               id: `submission-${subKey}`,
-              title: 'New Report Submission',
-              message: `Report "${report.title || 'Untitled'}" was submitted by ${sub.instructor || sub.department || 'an instructor'}`,
+              title: `Report Submitted: ${report.title || 'Accomplishment Report'}`,
+              message: `Report "${report.title || 'Untitled'}" was submitted by ${subName}. Awaiting verification.`,
               type: 'report',
               link: '/reports',
               reportId: report.id,
@@ -1170,14 +1640,96 @@ function App() {
           }
         });
       });
+
+      // C. Approaching Deadlines with Missing Submissions
+      safeReports.forEach(report => {
+        if (!report || !report.deadline) return;
+        const dStr = String(report.deadline).slice(0, 10);
+        if (dStr === tomorrow) {
+          const expectedDepts = report.department === 'All' ? ['ROTC', 'CWTS', 'LTS'] : [report.department];
+          const submissions = Array.isArray(report.submissions) ? report.submissions : [];
+          const submittedDepts = new Set(submissions.map(s => String(s.department || s.instructor_department || '')));
+          const missingDepts = expectedDepts.filter(d => !submittedDepts.has(d));
+
+          if (missingDepts.length > 0) {
+            const dlKey = `admin-report-deadline-${report.id}-${dStr}`;
+            if (!seenReportReminders.current.has(dlKey) && !dismissedSet.has(dlKey)) {
+              seenReportReminders.current.add(dlKey);
+              safePush({
+                id: dlKey,
+                title: 'Upcoming Deadline - Missing Submissions',
+                message: `Report "${report.title || 'Untitled'}" is due tomorrow (${dStr}). No submission yet from: ${missingDepts.join(', ')}.`,
+                type: 'report',
+                link: '/reports',
+                reportId: report.id,
+                reportTitle: report.title
+              });
+            }
+          }
+        }
+      });
     }
 
-    // ── 2. Instructor Specific Notifications ─────────────────────────────────
+    // =========================================================================
+    // 2. INSTRUCTOR SPECIFIC REALTIME NOTIFICATIONS
+    // - New report upload by admin (for their dept or All)
+    // - New student accepted into roster
+    // - New faculty or admin registered
+    // - New letter format uploaded
+    // - Upcoming or new calendar event
+    // - Report deadline approaching (unsubmitted)
+    // =========================================================================
     if (currentUser.role === 'instructor') {
-      // Check for newly approved/enrolled students assigned to this instructor's department
+      const myDept = currentUser.department || '';
+
+      // A. New Report Assignment by Admin (for instructor's department or 'All')
+      safeReports.forEach(report => {
+        if (!report || !report.id) return;
+        const isMyDept = report.department === 'All' || (myDept && report.department === myDept);
+        if (!isMyDept) return;
+
+        const rKey = `report-assign-${report.id}`;
+        if (dismissedSet.has(String(report.id)) || dismissedSet.has(rKey)) {
+          seenReportIds.current.add(report.id);
+          return;
+        }
+
+        const currentVer = `${report.title || ''}__${report.deadline || ''}__${report.description || ''}__${report.updated_at || ''}`;
+        if (!seenReportIds.current.has(report.id)) {
+          seenReportIds.current.add(report.id);
+          seenReportVersions.current[report.id] = currentVer;
+          newlySeen = true;
+          safePush({
+            id: rKey,
+            title: `New Report Assignment: ${report.title || 'Untitled'}`,
+            message: `Admin assigned a report requirement for ${report.department}. ${report.deadline ? `Deadline: ${String(report.deadline).slice(0, 10)}` : 'No set deadline'}.`,
+            type: 'report',
+            link: '/reports',
+            reportId: report.id,
+            reportTitle: report.title
+          });
+        } else {
+          // Report Edited
+          const prevVer = seenReportVersions.current[report.id];
+          if (prevVer && prevVer !== currentVer) {
+            seenReportVersions.current[report.id] = currentVer;
+            safePush({
+              id: `report-edit-${report.id}-${Date.now()}`,
+              title: `Report Updated: ${report.title || 'Untitled'}`,
+              message: `Report "${report.title || 'Untitled'}" instructions or details were updated.`,
+              type: 'report',
+              link: '/reports',
+              reportId: report.id,
+              reportTitle: report.title
+            });
+          }
+        }
+      });
+
+      // B. Newly Approved/Enrolled Students Assigned to Instructor's Class Roster
       safeStudents.forEach(student => {
         if (!student || !student.id) return;
-        const sKey = `student-${student.id}`;
+        const sKey = `student-accepted-${student.id}`;
         if (dismissedSet.has(String(student.id)) || dismissedSet.has(sKey)) {
           seenStudentIds.current.add(student.id);
           return;
@@ -1186,12 +1738,12 @@ function App() {
           seenStudentIds.current.add(student.id);
           newlySeen = true;
           const studentDept = student.department || student.nstp_component || '';
-          if (studentDept === currentUser.department) {
+          if (myDept && studentDept === myDept) {
             const studentName = student.name || student.student_name || `${student.firstName || ''} ${student.lastName || ''}`.trim() || 'New Student';
-            pushNotification({
+            safePush({
               id: sKey,
-              title: `New ${currentUser.department} Student Enrolled`,
-              message: `${studentName} was assigned to ${currentUser.department} class roster`,
+              title: `New Student Added: ${myDept}`,
+              message: `${studentName} was approved and officially added to your ${myDept} class roster.`,
               type: 'student',
               link: '/students',
               studentName
@@ -1199,174 +1751,122 @@ function App() {
           }
         }
       });
-    }
 
-    // ── 3. Reports Notifications (New, Edited, 1-Day Deadline Reminder) ────────
-    safeReports.forEach(report => {
-      if (!report || !report.id) return;
-      const isTargetDept = report.department === 'All' || report.department === currentUser.department || currentUser.role === 'admin';
-      if (!isTargetDept) return;
+      // C. New Faculty Member or Administrator Registered
+      safeUsers.forEach(u => {
+        if (!u || !u.id) return;
+        if (String(u.id) === String(currentUser.id)) return;
+        if (seenFacultyUserIds.current.has(u.id)) return;
+        seenFacultyUserIds.current.add(u.id);
 
-      const rKey = `report-${report.id}`;
-      if (dismissedSet.has(String(report.id)) || dismissedSet.has(rKey)) {
-        seenReportIds.current.add(report.id);
-        return;
-      }
+        if (!baselineReady.current || Number(u.id) <= 4) return;
 
-      const currentVer = `${report.title || ''}__${report.deadline || ''}__${report.description || ''}__${report.updated_at || ''}`;
-
-      // A. New Report Assignment
-      if (!seenReportIds.current.has(report.id)) {
-        seenReportIds.current.add(report.id);
-        seenReportVersions.current[report.id] = currentVer;
-        newlySeen = true;
-        pushNotification({
-          id: rKey,
-          title: report.department === 'All' ? 'New General Report Assignment' : `New ${report.department} Report Assignment`,
-          message: `Admin assigned: "${report.title || 'Untitled'}" (${report.department === 'All' ? 'All Departments' : report.department})`,
-          type: 'report',
-          link: '/reports',
-          reportId: report.id,
-          reportTitle: report.title
-        });
-      } else {
-        // B. Report Edited / Modified
-        const prevVer = seenReportVersions.current[report.id];
-        if (prevVer && prevVer !== currentVer) {
-          seenReportVersions.current[report.id] = currentVer;
-          pushNotification({
-            id: `report-edit-${report.id}-${Date.now()}`,
-            title: 'Report Updated',
-            message: `Report "${report.title || 'Untitled'}" details or instructions were updated.`,
-            type: 'report',
-            link: '/reports',
-            reportId: report.id,
-            reportTitle: report.title
-          });
-        }
-      }
-
-      // C. 1-Day Before Deadline Reminder
-      if (report.deadline) {
-        const dStr = String(report.deadline).slice(0, 10);
-        if (dStr === tomorrow) {
-          const remindKey = `report-deadline-${report.id}-${dStr}`;
-          if (!seenReportReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
-            seenReportReminders.current.add(remindKey);
-            pushNotification({
-              id: remindKey,
-              title: 'Upcoming Report Deadline Tomorrow',
-              message: `Reminder: Report "${report.title || 'Untitled'}" is due tomorrow (${dStr})!`,
-              type: 'report',
-              link: '/reports',
-              reportId: report.id,
-              reportTitle: report.title
+        if (u.role === 'instructor' || u.role === 'admin') {
+          const uKey = `faculty-added-${u.id}`;
+          if (!dismissedSet.has(uKey)) {
+            const isInst = u.role === 'instructor';
+            safePush({
+              id: uKey,
+              title: isInst ? `New Faculty Member Added (${u.department || 'NSTP'})` : 'New System Administrator Added',
+              message: `${u.name || 'A new faculty member'} was registered as ${isInst ? `${u.department || 'NSTP'} Instructor` : 'System Administrator'}.`,
+              type: 'system',
+              link: '/instructor/dashboard'
             });
           }
         }
-      }
-    });
+      });
 
-    // ── 4. Calendar Notifications (New, Edited, 1-Day Before Reminder) ─────────
-    safeEvents.forEach(ev => {
-      if (!ev || !ev.id) return;
-      const evKey = `event-${ev.id}`;
-      if (dismissedSet.has(String(ev.id)) || dismissedSet.has(evKey)) {
-        seenEventIds.current.add(ev.id);
-        return;
-      }
+      // D. New Letter Format Template Added
+      safeLetters.forEach(letter => {
+        if (!letter || !letter.id) return;
+        const lKey = `letter-fmt-${letter.id}`;
+        if (!seenLetterIds.current.has(letter.id)) {
+          seenLetterIds.current.add(letter.id);
+          if (!dismissedSet.has(lKey)) {
+            safePush({
+              id: lKey,
+              title: `New Letter Format: ${letter.title || 'Official Letter'}`,
+              message: `Official format template "${letter.title || 'Letter'}" is ready for student letters and endorsements.`,
+              type: 'system',
+              link: '/letter-formats'
+            });
+          }
+        }
+      });
 
-      const evVer = `${ev.title || ''}__${ev.date || ''}__${ev.time || ''}__${ev.location || ''}`;
+      // E. Calendar Events (New Event Added & Upcoming Tomorrow Reminder)
+      safeEvents.forEach(ev => {
+        if (!ev || !ev.id) return;
+        const evKey = `event-cal-${ev.id}`;
+        if (dismissedSet.has(String(ev.id)) || dismissedSet.has(evKey)) {
+          seenEventIds.current.add(ev.id);
+          return;
+        }
 
-      // A. New Calendar Event
-      if (!seenEventIds.current.has(ev.id)) {
-        seenEventIds.current.add(ev.id);
-        seenEventVersions.current[ev.id] = evVer;
-        pushNotification({
-          id: evKey,
-          title: 'New Calendar Event Added',
-          message: `"${ev.title || 'New Event'}" scheduled on ${ev.date || 'upcoming date'}.`,
-          type: 'calendar',
-          link: '/calendar'
-        });
-      } else {
-        // B. Calendar Event Edited
-        const prevVer = seenEventVersions.current[ev.id];
-        if (prevVer && prevVer !== evVer) {
+        const evVer = `${ev.title || ''}__${ev.date || ''}__${ev.time || ''}__${ev.location || ''}`;
+        if (!seenEventIds.current.has(ev.id)) {
+          seenEventIds.current.add(ev.id);
           seenEventVersions.current[ev.id] = evVer;
-          pushNotification({
-            id: `event-edit-${ev.id}-${Date.now()}`,
-            title: 'Calendar Event Updated',
-            message: `Event "${ev.title || 'Untitled'}" schedule or details have been updated.`,
+          safePush({
+            id: evKey,
+            title: `New Calendar Event: ${ev.title || 'Event'}`,
+            message: `"${ev.title || 'Event'}" scheduled on ${ev.date || 'upcoming date'}${ev.location ? ` at ${ev.location}` : ''}.`,
             type: 'calendar',
             link: '/calendar'
           });
         }
-      }
 
-      // C. 1-Day Before Calendar Event Reminder
-      if (ev.date) {
-        const evDateStr = String(ev.date).slice(0, 10);
-        if (evDateStr === tomorrow) {
-          const remindKey = `event-remind-${ev.id}-${evDateStr}`;
-          if (!seenEventReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
-            seenEventReminders.current.add(remindKey);
-            pushNotification({
-              id: remindKey,
-              title: 'Upcoming Calendar Event Tomorrow',
-              message: `Reminder: "${ev.title || 'Event'}" is happening tomorrow (${evDateStr})!`,
-              type: 'calendar',
-              link: '/calendar'
-            });
+        // 1-Day Before Calendar Event Reminder
+        if (ev.date) {
+          const evDateStr = String(ev.date).slice(0, 10);
+          if (evDateStr === tomorrow) {
+            const remindKey = `event-remind-${ev.id}-${evDateStr}`;
+            if (!seenEventReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
+              seenEventReminders.current.add(remindKey);
+              safePush({
+                id: remindKey,
+                title: `Upcoming Event: ${ev.title || 'Event'}`,
+                message: `Reminder: "${ev.title || 'Event'}" is happening tomorrow (${evDateStr})!`,
+                type: 'calendar',
+                link: '/calendar'
+              });
+            }
           }
         }
-      }
-    });
+      });
 
-    // ── 5. Format Letter Notifications (New Format Letter Added) ───────────────
-    safeLetters.forEach(letter => {
-      if (!letter || !letter.id) return;
-      const lKey = `letter-${letter.id}`;
-      if (!seenLetterIds.current.has(letter.id)) {
-        seenLetterIds.current.add(letter.id);
-        if (!dismissedSet.has(lKey)) {
-          pushNotification({
-            id: lKey,
-            title: 'New Letter Format Available',
-            message: `Official format template "${letter.title || 'New Letter'}" has been added.`,
-            type: 'system',
-            link: '/letter-formats'
-          });
-        }
-      }
-    });
+      // F. Reports Approaching Deadline (Due Tomorrow & Unsubmitted by Instructor)
+      safeReports.forEach(report => {
+        if (!report || !report.deadline) return;
+        const isMyDept = report.department === 'All' || (myDept && report.department === myDept);
+        if (!isMyDept) return;
 
-    // ── 6. Faculty Notifications (New Instructor or Admin Added) ───────────────
-    safeUsers.forEach(u => {
-      if (!u || !u.id) return;
-      if (u.id === currentUser.id) return;
-      if (u.role === 'instructor' || u.role === 'admin') {
-        const uKey = `user-${u.id}`;
-        if (!seenFacultyUserIds.current.has(u.id)) {
-          seenFacultyUserIds.current.add(u.id);
-          if (!dismissedSet.has(uKey)) {
-            const isInstructor = u.role === 'instructor';
-            const roleTitle = isInstructor 
-              ? (u.department === 'ROTC' ? 'ROTC Training Staff' : `${u.department || 'NSTP'} Facilitator`)
-              : 'System Administrator';
-            pushNotification({
-              id: uKey,
-              title: isInstructor 
-                ? (u.department === 'ROTC' ? 'New Training Staff Registered' : 'New Facilitator Registered')
-                : 'New Administrator Added',
-              message: `${u.name || 'New Faculty'} was registered as ${roleTitle}.`,
-              type: 'system',
-              link: currentUser.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'
-            });
+        const dStr = String(report.deadline).slice(0, 10);
+        if (dStr === tomorrow) {
+          const submissions = Array.isArray(report.submissions) ? report.submissions : [];
+          const hasSubmitted = submissions.some(s =>
+            String(s.instructor_id) === String(currentUser.id) ||
+            (myDept && (s.department === myDept || s.instructor_department === myDept))
+          );
+
+          if (!hasSubmitted) {
+            const remindKey = `inst-report-deadline-${report.id}-${dStr}`;
+            if (!seenReportReminders.current.has(remindKey) && !dismissedSet.has(remindKey)) {
+              seenReportReminders.current.add(remindKey);
+              safePush({
+                id: remindKey,
+                title: `Report Deadline Approaching: ${report.title || 'Untitled'}`,
+                message: `Reminder: Report "${report.title || 'Untitled'}" is due tomorrow (${dStr})! Please submit your accomplishment report.`,
+                type: 'report',
+                link: '/reports',
+                reportId: report.id,
+                reportTitle: report.title
+              });
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     if (newlySeen && currentUser) {
       try {
@@ -1374,7 +1874,9 @@ function App() {
           enrollments: Array.from(seenEnrollmentIds.current).slice(-500),
           submissions: Array.from(seenSubmissionKeys.current).slice(-500),
           reports: Array.from(seenReportIds.current).slice(-500),
-          students: Array.from(seenStudentIds.current).slice(-500)
+          students: Array.from(seenStudentIds.current).slice(-500),
+          faculty: Array.from(seenFacultyUserIds.current).slice(-500),
+          letters: Array.from(seenLetterIds.current).slice(-500)
         };
         safeSetStorage(getSeenEntitiesStorageKey(currentUser), seenPayload);
       } catch {}
@@ -1405,24 +1907,15 @@ function App() {
     const newNotifs = [];
 
     for (const conv of convList) {
-      if (!conv || !conv.id || !conv.last_message_time) continue;
-
-      const lastSenderId = conv.last_sender_id;
-      const isOwnLastMessage = lastSenderId && (String(lastSenderId) === String(currentUser.id) || Number(lastSenderId) === Number(currentUser.id));
-      const lastMsgTime = new Date(conv.last_message_time).getTime();
-      const lastReadTime = readMap[conv.id] ? new Date(readMap[conv.id]).getTime() : 0;
-
-      // If user already read this conversation at or after latest message, skip
-      if (lastReadTime && lastReadTime >= lastMsgTime) {
-        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
-        continue;
-      }
+      if (!conv || !conv.id) continue;
 
       // If conversation alerts are dismissed entirely, skip
       if (dismissedSet.has(`conv-${conv.id}`)) {
-        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+        if (conv.last_message_time) seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
         continue;
       }
+
+      const lastReadTime = readMap[conv.id] ? new Date(readMap[conv.id]).getTime() : 0;
 
       // Fetch the actual message history of this conversation to extract ALL unread messages
       try {
@@ -1440,121 +1933,140 @@ function App() {
             return { ...prev, [conv.id]: [...msgs, ...localOnly] };
           });
 
-          // Find ALL messages sent by someone else after lastReadTime
-          const unreadMsgs = msgs.filter(m => {
-            const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
-            const isOwn = m.sender_id && (String(m.sender_id) === String(currentUser.id) || Number(m.sender_id) === Number(currentUser.id));
-            return mTime > lastReadTime && !isOwn;
+          // Strictly filter for messages sent by OTHER users (exclude own messages completely!)
+          const myIdStr = String(currentUser.id || currentUser._id || '');
+          const othersMsgs = msgs.filter(m => {
+            const mSenderId = String(m.sender_id || m.senderId || '');
+            if (!mSenderId) return false;
+            if (mSenderId === myIdStr) return false;
+            if (currentUser.name && (m.sender_name === currentUser.name || m.senderName === currentUser.name || (m.sender_name && m.sender_name.toLowerCase() === currentUser.name.toLowerCase()))) return false;
+            if (currentUser.role === 'admin' && (m.sender_name === 'Admin' || m.senderName === 'Admin' || m.sender_name === 'NSTP Administrator' || m.senderName === 'NSTP Administrator')) return false;
+            if (m.type === 'deleted' || m.is_deleted) return false;
+            return true;
           });
 
-          if (unreadMsgs.length > 0) {
-            unreadMsgs.forEach(m => {
-              const notifId = `msg-${m.id}`;
-              if (dismissedSet.has(notifId)) return;
+          if (othersMsgs.length > 0) {
+            const isGroup = Boolean(conv.is_group || String(conv.id).startsWith('group-'));
+            const groupName = isGroup ? (conv.group_name || conv.name || 'All Instructors') : null;
 
-              // Prevent duplicate notification
-              const alreadyInList = (notificationsRef.current || []).some(n => String(n.id) === String(notifId));
-              if (alreadyInList) return;
+            // Push all unread messages from others, PLUS recent messages from others
+            // (up to 20 most recent messages sent by other users in this conversation so all message types:
+            // text, photos, files, voice, etc. are visible in notification dropdown!)
+            const recentOthers = othersMsgs.slice(-20);
+            recentOthers.forEach(m => {
+              const mSenderId = String(m.sender_id || m.senderId || '');
+              if (mSenderId === myIdStr) return; // Strict guard: never allow own message!
 
-              const senderName = m.sender_name || conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
-              let preview = m.text || m.content || '';
-              if (preview.startsWith('data:')) preview = 'Sent an attachment';
-              else if (preview.startsWith('📸') || m.type === 'image') preview = 'Sent a photo';
-              else if (preview.startsWith('🎤') || m.type === 'voice') preview = 'Sent a voice message';
-              else if (preview.startsWith('📎') || m.type === 'file') preview = 'Sent a file';
-              if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+              let senderName = m.sender_name || m.senderName;
+              if (!senderName || senderName === 'Someone') {
+                const senderObj = (users || []).find(u => String(u.id) === mSenderId);
+                senderName = senderObj?.name || conv.name || conv.with || 'User';
+              }
 
-              const isMarkedRead = readNotifSet.has(notifId);
+              const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
+              const notifId = `msg-${m.id || `${conv.id}-${mTime}`}`;
+              if (!dismissedSet.has(notifId)) {
+                const isUnread = mTime > lastReadTime && !readNotifSet.has(notifId);
 
-              newNotifs.push({
-                id: notifId,
-                messageId: m.id,
-                title: `New Message from ${senderName}`,
-                message: `${senderName}: ${preview}`,
-                type: 'message',
-                link: `/chat?convId=${conv.id}`,
-                conversationId: conv.id,
-                senderName,
-                time: formatRelativeTime(m.created_at),
-                read: isMarkedRead ? true : false,
-                created_at: m.created_at
-              });
-            });
-          }
-        } else if (!isOwnLastMessage && conv.last_message) {
-          // Fallback if getMessages returned empty or direct last_message only
-          const notifId = `msg-conv-${conv.id}-${lastMsgTime}`;
-          if (!dismissedSet.has(notifId) && !(notificationsRef.current || []).some(n => String(n.id) === String(notifId))) {
-            const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
-            let preview = conv.last_message;
-            if (preview.startsWith('data:')) preview = 'Sent an attachment';
-            else if (preview.startsWith('📸')) preview = 'Sent a photo';
-            else if (preview.startsWith('🎤')) preview = 'Sent a voice message';
-            else if (preview.startsWith('📎')) preview = 'Sent a file';
-            if (preview.length > 80) preview = preview.slice(0, 80) + '…';
+                // Format preview clearly according to content type (avoid duplicate icons)
+                let previewText = m.text || '';
+                if (m.type === 'voice') {
+                  if (m.duration) {
+                    previewText = `🎤 Voice message (${m.duration})`;
+                  } else if (m.text && m.text.startsWith('🎤')) {
+                    previewText = m.text;
+                  } else {
+                    previewText = '🎤 Voice message';
+                  }
+                } else if (m.type === 'image') {
+                  if (m.text && m.text.trim()) {
+                    previewText = m.text.startsWith('📸') ? m.text : `📸 ${m.text}`;
+                  } else {
+                    previewText = '📸 Photo';
+                  }
+                } else if (m.type === 'file') {
+                  if (m.file_name) {
+                    previewText = `📎 File: ${m.file_name}`;
+                  } else if (m.text && m.text.startsWith('📎')) {
+                    previewText = m.text;
+                  } else {
+                    previewText = m.text ? `📎 ${m.text}` : '📎 File attachment';
+                  }
+                } else if (m.type === 'call') {
+                  previewText = '📞 Voice/Video call';
+                } else if (!previewText) {
+                  previewText = 'Sent you a message';
+                }
 
-            newNotifs.push({
-              id: notifId,
-              title: `New Message from ${senderName}`,
-              message: `${senderName}: ${preview}`,
-              type: 'message',
-              link: `/chat?convId=${conv.id}`,
-              conversationId: conv.id,
-              senderName,
-              time: formatRelativeTime(conv.last_message_time),
-              read: readNotifSet.has(notifId),
-              created_at: conv.last_message_time
+                newNotifs.push({
+                  id: notifId,
+                  messageId: m.id,
+                  time: formatRelativeTime(m.created_at || m.timestamp),
+                  read: !isUnread,
+                  title: isGroup ? `${senderName} in ${groupName}` : `Message from ${senderName}`,
+                  message: previewText,
+                  type: 'message',
+                  link: `/chat?convId=${conv.id}`,
+                  conversationId: conv.id,
+                  senderId: mSenderId,
+                  senderName: senderName,
+                  isGroup: isGroup,
+                  groupName: groupName,
+                  createdAt: m.created_at || m.timestamp
+                });
+              }
             });
           }
         }
       } catch (err) {
         console.warn('Failed to fetch messages for unread inspection in conv', conv.id, err);
-        if (!isOwnLastMessage && conv.last_message) {
-          const notifId = `msg-conv-${conv.id}-${lastMsgTime}`;
-          if (!dismissedSet.has(notifId) && !(notificationsRef.current || []).some(n => String(n.id) === String(notifId))) {
-            const senderName = conv.last_sender_name || conv.with || conv.partnerName || 'Instructor';
-            newNotifs.push({
-              id: notifId,
-              title: `New Message from ${senderName}`,
-              message: `${senderName}: ${conv.last_message}`,
-              type: 'message',
-              link: `/chat?convId=${conv.id}`,
-              conversationId: conv.id,
-              senderName,
-              time: formatRelativeTime(conv.last_message_time),
-              read: readNotifSet.has(notifId),
-              created_at: conv.last_message_time
-            });
-          }
-        }
       }
 
-      seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+      if (conv.last_message_time) {
+        seenConvLastMessageTime.current[conv.id] = String(conv.last_message_time);
+      }
     }
 
-    if (newNotifs.length > 0) {
-      setNotifications(prev => {
-        const existingIds = new Set((prev || []).map(n => String(n.id)));
-        const toAdd = newNotifs.filter(n => !existingIds.has(String(n.id)));
-        if (toAdd.length === 0) return prev;
-        const updated = [...toAdd, ...(prev || [])].slice(0, 50);
-        safeSetStorage(getNotificationStorageKey(currentUser), updated);
-        return updated;
+    // Sort all message notifications newest first
+    newNotifs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    const myIdStr = String(currentUser.id || currentUser._id || '');
+    setNotifications(prev => {
+      const nonMessagePrev = (prev || []).filter(n => n.type !== 'message' && !String(n.id).startsWith('msg-') && !n.conversationId);
+      const newMsgIds = new Set(newNotifs.map(n => String(n.id)));
+      const otherPrevMsgs = (prev || []).filter(n => {
+        const isMsg = n.type === 'message' || String(n.id).startsWith('msg-') || Boolean(n.conversationId);
+        if (!isMsg) return false;
+        if (newMsgIds.has(String(n.id))) return false;
+        if (dismissedSet.has(String(n.id))) return false;
+        const sId = String(n.senderId || n.sender_id || '');
+        if (sId && sId === myIdStr) return false;
+        if (currentUser.name && n.senderName && (n.senderName === currentUser.name || n.senderName.toLowerCase() === currentUser.name.toLowerCase())) return false;
+        if (currentUser.name && typeof n.title === 'string' && n.title.toLowerCase().includes(currentUser.name.toLowerCase())) return false;
+        if (currentUser.role === 'admin' && (n.senderName === 'Admin' || n.senderName === 'NSTP Administrator')) return false;
+        if (currentUser.role === 'admin' && typeof n.title === 'string' && (n.title.includes('NSTP Administrator') || n.title.includes('Admin'))) return false;
+        return true;
       });
+      const updated = [...newNotifs, ...otherPrevMsgs, ...nonMessagePrev].slice(0, 100);
+      safeSetStorage(getNotificationStorageKey(currentUser), updated);
+      return updated;
+    });
 
-      const unreadItems = newNotifs.filter(n => !n.read);
-      if (unreadItems.length > 0) {
-        const top = unreadItems[0];
-        const extra = unreadItems.length > 1 ? ` (+${unreadItems.length - 1} more)` : '';
-        showToast(`${top.message}${extra}`, 'info', `💬 ${top.title}`);
-        if (!isInitialBaseline) {
-          playNotificationSound();
-          unreadItems.slice(0, 3).forEach(item => {
-            triggerDeviceNotification(item.title, item.message, item.link, item.id);
-          });
-        }
-      }
+    const unreadItems = newNotifs.filter(n => !n.read);
+    const unalertedItems = unreadItems.filter(n => !alertedMessageIds.current.has(String(n.id)));
+
+    if (!isInitialBaseline && unalertedItems.length > 0) {
+      const top = unalertedItems[0];
+      const extra = unalertedItems.length > 1 ? ` (+${unalertedItems.length - 1} more)` : '';
+      showToast(`${top.message}${extra}`, 'info', `💬 ${top.title}`);
+      playNotificationSound();
+      unalertedItems.slice(0, 3).forEach(item => {
+        triggerDeviceNotification(item.title, item.message, item.link, item.id);
+      });
     }
+
+    // Always mark all unread items as alerted so background polling never repeats them!
+    unreadItems.forEach(n => alertedMessageIds.current.add(String(n.id)));
   }
 
   async function checkConversationMessages(convList, currentUser) {
@@ -1620,6 +2132,7 @@ function App() {
       if (!baselineReady.current) {
         seedRealtimeBaseline(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
       } else {
+        reconcileSystemNotifications(pending, activeReports, activeStudents, activeEvents, activeLetters, activeUsers, user);
         detectRealtimeChanges(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
         await checkConversationMessages(activeConvs, user);
       }
@@ -1658,8 +2171,29 @@ function App() {
       });
     } catch {}
 
+    // Filter loaded notifications:
+    // 1. Exclude own messages sent by current user
+    // 2. Strictly filter by user role and department
+    loaded = (Array.isArray(loaded) ? loaded : []).filter(n => {
+      if (!n || !n.id) return false;
+      const strId = String(n.id);
+      const isMsg = n.type === 'message' || strId.startsWith('msg-') || strId.startsWith('conv-') || Boolean(n.conversationId);
+      if (isMsg) {
+        const sId = String(n.senderId || n.sender_id || '');
+        const myId = String(user.id || user._id || '');
+        if (sId && myId && sId === myId) return false;
+        if (user.name && n.senderName && (n.senderName === user.name || n.senderName.toLowerCase() === user.name.toLowerCase())) return false;
+        if (user.name && typeof n.title === 'string' && n.title.toLowerCase().includes(user.name.toLowerCase())) return false;
+        if (user.role === 'admin' && (n.senderName === 'Admin' || n.senderName === 'NSTP Administrator')) return false;
+        if (user.role === 'admin' && typeof n.title === 'string' && (n.title.includes('NSTP Administrator') || n.title.includes('Admin'))) return false;
+        return true;
+      }
+      return isNotificationAllowedForRole(n, user);
+    });
+
     setNotifications(Array.isArray(loaded) ? loaded : []);
     notificationsLoadedUserRef.current = user.id;
+    safeSetStorage(key, loaded);
 
     // Load seen entity IDs from storage so existing items are never re-notified
     try {
@@ -1668,6 +2202,8 @@ function App() {
       (seenData.submissions || []).forEach(k => seenSubmissionKeys.current.add(k));
       (seenData.reports || []).forEach(id => seenReportIds.current.add(id));
       (seenData.students || []).forEach(id => seenStudentIds.current.add(id));
+      (seenData.faculty || []).forEach(id => seenFacultyUserIds.current.add(id));
+      (seenData.letters || []).forEach(id => seenLetterIds.current.add(id));
     } catch {}
 
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -1916,8 +2452,7 @@ function App() {
           });
 
           if (activeUser) {
-            resetRealtimeBaseline();
-            seedRealtimeBaseline([], [], conversationsData, [], [], [], [], activeUser);
+            reconcileUnreadConversationMessages(conversationsData, activeUser, true);
           }
         }
       }).catch(err => console.warn('Conversations load error:', err));
@@ -1975,6 +2510,8 @@ function App() {
           email: response.email,
           deliveryEmail: response.deliveryEmail,
           maskedEmail: response.maskedEmail,
+          role: response.role,
+          roleTitle: response.roleTitle,
           ticketId: response.ticketId,
           cooldownRemaining: response.cooldownRemaining,
           reused: response.reused,
@@ -1982,8 +2519,9 @@ function App() {
         };
       }
 
-      // Defense Fail-Safe Guard: Always enforce 2FA verification for Admin account
-      if (response && response.token && response.user && (response.user.role === 'admin' || response.user.email?.toLowerCase().includes('admin') || response.user.email?.toLowerCase() === 'admin@cvsu.edu.ph')) {
+      // Defense Fail-Safe Guard: Always enforce 2FA verification for Admin & ALL Instructors (CWTS, LTS, ROTC)
+      const isInstructorUser = response && response.user && (response.user.role === 'instructor' || response.user.department === 'CWTS' || response.user.department === 'LTS' || response.user.department === 'ROTC');
+      if (response && response.token && response.user && (response.user.role === 'admin' || isInstructorUser)) {
         window.__nstp_pending_admin_auth__ = {
           token: response.token,
           user: response.user
@@ -1994,13 +2532,14 @@ function App() {
         return {
           success: false,
           require2FA: true,
-          tempToken: 'pending_admin_jwt_' + Date.now(),
+          tempToken: 'pending_2fa_jwt_' + Date.now(),
           email: uEmail,
           deliveryEmail: response.user.email || email,
           maskedEmail: masked,
+          role: response.user.role,
           cooldownRemaining: 60,
           reused: false,
-          message: 'Two-Factor Authentication required for Administrator access.'
+          message: 'Two-Factor Authentication required for account access.'
         };
       }
 
@@ -2024,6 +2563,15 @@ function App() {
         if (Array.isArray(cachedConvs) && cachedConvs.length > 0) setConversations(cachedConvs);
         const cachedMsgs = JSON.parse(localStorage.getItem('nstp_cached_messages') || '{}');
         if (cachedMsgs && typeof cachedMsgs === 'object' && Object.keys(cachedMsgs).length > 0) setMessages(cachedMsgs);
+      } catch (_) {}
+
+      setViewingArchiveState(false);
+      setArchiveViewDataState(null);
+      try {
+        localStorage.removeItem('nstp_viewing_archive');
+        localStorage.removeItem('nstp_archive_view_data_v6');
+        localStorage.removeItem('nstp_archive_view_data_v5');
+        localStorage.removeItem('nstp_archive_view_data');
       } catch (_) {}
 
       setLoading(false);
@@ -2064,12 +2612,29 @@ function App() {
         if (cachedMsgs && typeof cachedMsgs === 'object' && Object.keys(cachedMsgs).length > 0) setMessages(cachedMsgs);
       } catch (_) {}
 
+      setViewingArchiveState(false);
+      setArchiveViewDataState(null);
+      try {
+        localStorage.removeItem('nstp_viewing_archive');
+        localStorage.removeItem('nstp_archive_view_data_v6');
+        localStorage.removeItem('nstp_archive_view_data_v5');
+        localStorage.removeItem('nstp_archive_view_data');
+      } catch (_) {}
+
       setLoading(false);
       loadAllData(response.user).catch(err => console.warn('Background data load error:', err));
       return { success: true, role: response.user.role };
     } catch (error) {
       console.error('2FA verification error:', error);
-      return { success: false, message: error.message || 'Invalid authentication code' };
+      return {
+        success: false,
+        message: error.message || 'Invalid authentication code',
+        status: error.status,
+        code: error.code,
+        lockoutRemaining: error.lockoutRemaining,
+        isLocked: error.isLocked || error.status === 429,
+        attemptsRemaining: error.attemptsRemaining
+      };
     }
   }
 
@@ -2080,10 +2645,20 @@ function App() {
         success: true, 
         message: response?.message || 'Verification code resent successfully',
         ticketId: response?.ticketId,
-        cooldownRemaining: response?.cooldownRemaining || 60
+        cooldownRemaining: response?.cooldownRemaining || 60,
+        sendAttempts: response?.sendAttempts,
+        attemptsRemaining: response?.attemptsRemaining
       };
     } catch (error) {
-      return { success: false, message: error.message || 'Failed to resend code' };
+      return {
+        success: false,
+        message: error.message || 'Failed to resend code',
+        status: error.status,
+        code: error.code,
+        lockoutRemaining: error.lockoutRemaining,
+        isLocked: error.isLocked || error.status === 429,
+        cooldownRemaining: error.cooldownRemaining
+      };
     }
   }
 
@@ -2093,14 +2668,29 @@ function App() {
     } catch (_) {}
     localStorage.removeItem('nstp_token');
     localStorage.removeItem('nstp_cached_user');
+    localStorage.removeItem('nstp_cached_conversations');
+    localStorage.removeItem('nstp_cached_messages');
+    localStorage.removeItem('nstp_active_chat');
     if (user) {
       safeSetStorage(getNotificationStorageKey(user), notifications);
+      try {
+        const seenPayload = {
+          enrollments: Array.from(seenEnrollmentIds.current).slice(-500),
+          submissions: Array.from(seenSubmissionKeys.current).slice(-500),
+          reports: Array.from(seenReportIds.current).slice(-500),
+          students: Array.from(seenStudentIds.current).slice(-500),
+          faculty: Array.from(seenFacultyUserIds.current).slice(-500),
+          letters: Array.from(seenLetterIds.current).slice(-500)
+        };
+        safeSetStorage(getSeenEntitiesStorageKey(user), seenPayload);
+        safeSetStorage(`nstp_last_logout_${user.id}`, new Date().toISOString());
+      } catch {}
     }
     notificationsLoadedUserRef.current = null;
     setUser(null);
     setUsers([
-      { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
-      { id: 2, name: 'CWTS Facilitator', email: 'cwts@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
+      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
     ]);
@@ -2114,18 +2704,31 @@ function App() {
     setIncomingCall(null);
     clearOutgoingCall();
     resetRealtimeBaseline();
+    setViewingArchiveState(false);
+    setArchiveViewDataState(null);
+    try {
+      localStorage.removeItem('nstp_viewing_archive');
+      localStorage.removeItem('nstp_archive_view_data_v6');
+      localStorage.removeItem('nstp_archive_view_data_v5');
+      localStorage.removeItem('nstp_archive_view_data');
+    } catch (_) {}
   }
 
   async function updateUserData(updatedData) {
-    const updated = await usersAPI.update(user.id, updatedData);
+    const targetId = user?.id || 'me';
+    const updated = await usersAPI.update(targetId, updatedData);
     setUser(updated);
-    const usersData = await usersAPI.getAll();
-    setUsers(usersData);
+    safeSetStorage('nstp_cached_user', updated);
+    try {
+      const usersData = await usersAPI.getAll();
+      setUsers(usersData);
+      safeSetStorage('nstp_cached_all_users', usersData);
+    } catch (_) {}
     return updated;
   }
 
-  async function changeUserPassword(newPassword) {
-    await usersAPI.changePassword(user.id, newPassword);
+  async function changeUserPassword(newPassword, currentPassword) {
+    await usersAPI.changePassword(user.id, newPassword, currentPassword);
     return true;
   }
 
@@ -2362,6 +2965,9 @@ function App() {
       time: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       senderId: newMsg.sender_id ?? user?.id,
       sender_id: newMsg.sender_id ?? user?.id,
+      senderName: newMsg.sender_name ?? user?.name,
+      sender_name: newMsg.sender_name ?? user?.name,
+      sender: 'me',
     };
 
     setMessages(prev => {
@@ -2432,21 +3038,105 @@ function App() {
   const getUserConversations = useCallback(() => {
     if (!user) return [];
     const uid = String(user.id ?? '');
-    return (conversations || []).filter(c => {
-      if (!c) return false;
-      const p1 = String(c.participant_1_id ?? '');
-      const p2 = String(c.participant_2_id ?? '');
-      if (uid && (p1 === uid || p2 === uid)) return true;
-      const isGroup = Boolean(c.isGroup || c.is_group || String(c.id).startsWith('group-') || c.groupName || c.group_name);
-      if (isGroup) {
-        if (Array.isArray(c.participants) && c.participants.length > 0) {
-          return c.participants.some(p => String(p) === uid);
-        }
-        return true;
+    const currentList = Array.isArray(conversations) ? [...conversations] : [];
+
+    // Ensure Group Chat is present
+    const hasGroup = currentList.some(c => 
+      c.isGroup || c.is_group || String(c.id).startsWith('group-') || c.groupName === 'All Instructors' || c.group_name === 'All Instructors'
+    );
+    if (!hasGroup) {
+      currentList.unshift({
+        id: 'group-all-instructors',
+        is_group: 1,
+        isGroup: true,
+        group_name: 'All Instructors',
+        groupName: 'All Instructors',
+        with: 'All Instructors',
+        participants: (users || []).map(u => u.id),
+      });
+    }
+
+    // Auto-ensure 1-on-1 direct conversation with all other instructors / admin
+    const otherStaff = (users || []).filter(u => 
+      String(u.id) !== uid && (u.role === 'admin' || u.role === 'instructor')
+    );
+
+    for (const other of otherStaff) {
+      const p1 = Math.min(Number(user.id), Number(other.id));
+      const p2 = Math.max(Number(user.id), Number(other.id));
+      const convId = `${p1}-${p2}`;
+      
+      const exists = currentList.some(c => 
+        String(c.id) === convId ||
+        (!c.is_group && !c.isGroup && (
+          (String(c.participant_1_id) === uid && String(c.participant_2_id) === String(other.id)) ||
+          (String(c.participant_2_id) === uid && String(c.participant_1_id) === String(other.id))
+        ))
+      );
+
+      if (!exists) {
+        currentList.push({
+          id: convId,
+          participant_1_id: p1,
+          participant_2_id: p2,
+          is_group: 0,
+          isGroup: false,
+          with: other.name,
+          partnerId: other.id,
+          partnerName: other.name,
+          partnerAvatar: other.avatar,
+          partnerPicture: other.profilePicture,
+          partnerRole: other.role,
+          partnerDepartment: other.department,
+          avatar: other.avatar,
+          profilePicture: other.profilePicture,
+          participants: [p1, p2],
+        });
       }
-      return false;
-    });
-  }, [conversations, user]);
+    }
+
+    // Return all conversations relevant to this user, updating partnerName from users table if changed
+    return currentList
+      .filter(c => {
+        if (!c) return false;
+        const p1 = String(c.participant_1_id ?? '');
+        const p2 = String(c.participant_2_id ?? '');
+        if (uid && (p1 === uid || p2 === uid)) return true;
+        const isGroup = Boolean(c.isGroup || c.is_group || String(c.id).startsWith('group-') || c.groupName || c.group_name);
+        if (isGroup) {
+          if (Array.isArray(c.participants) && c.participants.length > 0) {
+            return c.participants.some(p => String(p) === uid);
+          }
+          return true;
+        }
+        return false;
+      })
+      .map(c => {
+        const isGroup = Boolean(c.isGroup || c.is_group || String(c.id).startsWith('group-') || c.groupName || c.group_name);
+        if (isGroup) {
+          return {
+            ...c,
+            with: c.groupName || c.group_name || 'All Instructors',
+            isGroup: true,
+          };
+        }
+        const p1 = String(c.participant_1_id ?? '');
+        const p2 = String(c.participant_2_id ?? '');
+        const otherId = p1 === uid ? p2 : p1;
+        const otherUser = (users || []).find(u => String(u.id) === String(otherId));
+        return {
+          ...c,
+          partnerId: otherId,
+          partnerName: otherUser?.name || c.partnerName || c.with || 'Instructor',
+          with: otherUser?.name || c.partnerName || c.with || 'Instructor',
+          partnerAvatar: otherUser?.avatar || c.partnerAvatar || c.avatar,
+          partnerPicture: otherUser?.profilePicture || c.partnerPicture || c.profilePicture,
+          partnerRole: otherUser?.role || c.partnerRole,
+          partnerDepartment: otherUser?.department || c.partnerDepartment,
+          isGroup: false,
+        };
+      });
+  }, [conversations, user, users]);
 
   async function clearBatchData() {
     await clearBatch();
@@ -2458,7 +3148,7 @@ function App() {
 
   const contextValue = {
     user, login, verify2FA, resend2FA, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
-    students, setStudents, reports, conversations: userConversations, messages, pendingEnrollments,
+    students, setStudents, reports, conversations: userConversations, messages, setMessages, pendingEnrollments,
     archivedYears, currentBatch,
     viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData,
     addStudent: addStudentFunc, updateStudent: updateStudentFunc, deleteStudent: deleteStudentFunc,
@@ -2548,6 +3238,10 @@ function App() {
             <Route path="/admin/google-drive" element={<ProtectedRoute allowedRoles={['admin']}><GoogleDrive /></ProtectedRoute>} />
             <Route path="/google-drive" element={<ProtectedRoute allowedRoles={['admin']}><Navigate to="/admin/google-drive" replace /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to="/profile" replace /></ProtectedRoute>} />
+            <Route path="/archives" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
+            <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/students' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />

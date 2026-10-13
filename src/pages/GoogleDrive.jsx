@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
+import { triggerDatabaseBackup } from '../services/api';
 import {
   ExternalLink,
   Copy,
@@ -15,7 +16,9 @@ import {
   Menu,
   Lock,
   Sparkles,
-  Info
+  Info,
+  RefreshCw,
+  CloudUpload
 } from 'lucide-react';
 
 const GDRIVE_URL = 'https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
@@ -35,9 +38,11 @@ export function GoogleDriveIcon({ className = "w-6 h-6" }) {
 
 export default function GoogleDrive() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, showToast } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [lastBackupTime, setLastBackupTime] = useState(null);
 
   const handleOpenDrive = () => {
     window.open(GDRIVE_URL, '_blank', 'noopener,noreferrer');
@@ -48,6 +53,24 @@ export default function GoogleDrive() {
       navigator.clipboard.writeText(GDRIVE_URL);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleTriggerBackup = async () => {
+    if (isBackingUp) return;
+    setIsBackingUp(true);
+    try {
+      const res = await triggerDatabaseBackup(`Admin Manual Backup by ${user?.name || user?.email || 'Admin'}`);
+      setLastBackupTime(new Date().toLocaleTimeString());
+      if (typeof showToast === 'function') {
+        showToast(res?.message || 'Database snapshot successfully synced to Google Drive!', 'success');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') {
+        showToast(err?.message || 'Backup failed. Please verify GDRIVE_WEBHOOK_URL configuration.', 'error');
+      }
+    } finally {
+      setIsBackingUp(false);
     }
   };
 
@@ -154,6 +177,31 @@ export default function GoogleDrive() {
                   <span>Open in Google Drive</span>
                   <ExternalLink className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
                 </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerBackup}
+                  disabled={isBackingUp}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-black text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                >
+                  {isBackingUp ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Uploading Database Snapshot...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CloudUpload className="w-4 h-4" />
+                      <span>Backup Database to Drive Now</span>
+                    </>
+                  )}
+                </button>
+
+                {lastBackupTime && (
+                  <p className="text-[10px] text-center font-semibold text-emerald-800 bg-emerald-50 py-1 px-2 rounded-lg border border-emerald-200">
+                    ✓ Last Snapshot: {lastBackupTime}
+                  </p>
+                )}
 
                 <button
                   type="button"

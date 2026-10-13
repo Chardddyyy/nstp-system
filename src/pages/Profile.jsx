@@ -525,6 +525,10 @@ function Profile() {
   };
 
   const handlePasswordChange = async () => {
+    if (user?.role !== 'admin' && !formData.currentPassword) {
+      showToast('Please enter your current password.', 'warning');
+      return;
+    }
     if (formData.newPassword !== formData.confirmPassword) {
       showToast('Passwords do not match!', 'warning');
       return;
@@ -535,11 +539,11 @@ function Profile() {
     }
     setIsChangingPassword(true);
     try {
-      await changePassword(formData.newPassword);
+      await changePassword(formData.newPassword, formData.currentPassword);
       showToast('Password changed successfully!', 'success');
       setFormData({ ...formData, currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (_error) {
-      showToast('Failed to change password. Please try again.', 'error');
+    } catch (error) {
+      showToast(error?.message || 'Failed to change password. Please try again.', 'error');
     } finally {
       setIsChangingPassword(false);
     }
@@ -742,7 +746,7 @@ function Profile() {
                     disabled={!isEditing}
                     autoComplete="email"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100 font-medium"
-                    placeholder="e.g. admin@cvsu.edu.ph"
+                    placeholder="e.g. richardbelen99@gmail.com"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
                     Password recovery codes and system notices will be sent to this email address.
@@ -838,7 +842,7 @@ function Profile() {
                                   <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700 shrink-0">Admin</span>
                                 ) : (
                                   <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'} shrink-0`}>
-                                    {inst.department === 'ROTC' ? 'ROTC Training Staff' : `${inst.department} Facilitator`}
+                                    Instructor
                                   </span>
                                 )}
                               </div>
@@ -1009,10 +1013,10 @@ function Profile() {
                   {f.email.length > 0 && !emailOk && <p className="text-red-500 text-xs mt-0.5">Enter a valid email address</p>}
                 </div>
 
-                {/* Mobile / Phone Number for SMS */}
+                {/* Mobile / Phone Number */}
                 <div>
                   <label htmlFor="inst-phone" className="block text-xs font-semibold text-gray-600 mb-1">
-                    Mobile Phone Number (for SMS Notifications)
+                    Mobile Phone Number
                   </label>
                   <input
                     type="tel"
@@ -1028,7 +1032,7 @@ function Profile() {
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                   />
                   <p className="text-[10px] text-gray-500 mt-0.5">
-                    Dito matatanggap ng instructor ang SMS alerts para sa mga chat messages, bagong report, at calendar updates.
+                    Official mobile contact number for faculty records and directory.
                   </p>
                 </div>
 

@@ -89,7 +89,7 @@ function getReadConversationsStorageKey(currentUser) {
 
 function Chat() {
   const { user, logout, allUsers, students, conversations, messages, sendMessage, getUserConversations,
-    editMessage, deleteMessage, addReaction, clearMessages, deleteConversation, startConversation,
+    editMessage, deleteMessage, addReaction, clearMessages,
     _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
     setMessages,
     pendingAnsweredCall, setPendingAnsweredCall, showToast,
@@ -132,13 +132,15 @@ function Chat() {
       try {
         const msgs = await conversationsAPI.getMessages(activeConversationId);
         if (msgs && Array.isArray(msgs)) {
-          setMessages(prev => {
-            const currentList = prev[activeConversationId] || [];
-            if (currentList.length === msgs.length && currentList[currentList.length - 1]?.id === msgs[msgs.length - 1]?.id) {
-              return prev;
-            }
-            return { ...prev, [activeConversationId]: msgs };
-          });
+          if (typeof setMessages === 'function') {
+            setMessages(prev => {
+              const currentList = prev[activeConversationId] || [];
+              if (currentList.length === msgs.length && currentList[currentList.length - 1]?.id === msgs[msgs.length - 1]?.id) {
+                return prev;
+              }
+              return { ...prev, [activeConversationId]: msgs };
+            });
+          }
         }
       } catch (_) {}
     };
@@ -159,11 +161,13 @@ function Chat() {
       const cId = data.conversationId;
       const ids = Array.isArray(data.conversationIds) ? data.conversationIds : [cId];
       if (ids.some(id => String(id) === String(activeConversationId))) {
-        setMessages(prev => {
-          const list = prev[activeConversationId] || [];
-          if (list.some(m => String(m.id) === String(data.message.id))) return prev;
-          return { ...prev, [activeConversationId]: [...list, data.message] };
-        });
+        if (typeof setMessages === 'function') {
+          setMessages(prev => {
+            const list = prev[activeConversationId] || [];
+            if (list.some(m => String(m.id) === String(data.message.id))) return prev;
+            return { ...prev, [activeConversationId]: [...list, data.message] };
+          });
+        }
       }
     };
 
@@ -178,7 +182,6 @@ function Chat() {
     };
   }, [activeConversationId, setMessages]);
 
-  const [showContacts, setShowContacts] = useState(false);
   const [readConversations, setReadConversations] = useState(() => {
     try {
       const key = getReadConversationsStorageKey(user);
@@ -198,6 +201,22 @@ function Chat() {
       setReadConversations(saved ? JSON.parse(saved) : {});
     } catch {}
   }, [user]);
+
+  const fetchedConvIdsRef = useRef(new Set());
+  // Pre-load messages for all conversations so exact unread count is always accurate
+  useEffect(() => {
+    if (!conversations || !Array.isArray(conversations) || conversations.length === 0) return;
+    conversations.forEach(c => {
+      if (c && c.id && !fetchedConvIdsRef.current.has(c.id)) {
+        fetchedConvIdsRef.current.add(c.id);
+        conversationsAPI.getMessages(c.id).then(msgs => {
+          if (Array.isArray(msgs) && typeof setMessages === 'function') {
+            setMessages(prev => ({ ...prev, [c.id]: msgs }));
+          }
+        }).catch(() => {});
+      }
+    });
+  }, [conversations, setMessages]);
 
   // Keep active conversation marked as read and clear matching message notifications
   useEffect(() => {
@@ -221,6 +240,24 @@ function Chat() {
     }
   }, [activeConversationId, user, globalNotifications, markAllNotificationsRead]);
   const [messageText, setMessageText] = useState('');
+  const draftsByConvRef = useRef({});
+  const prevActiveConvIdRef = useRef(activeConversationId);
+
+  // Isolate composer drafts strictly per conversation so typed text never bleeds into other chats
+  useEffect(() => {
+    const prevId = prevActiveConvIdRef.current;
+    if (prevId && prevId !== activeConversationId) {
+      if (messageText && messageText.trim()) {
+        draftsByConvRef.current[prevId] = messageText;
+      } else {
+        delete draftsByConvRef.current[prevId];
+      }
+    }
+    prevActiveConvIdRef.current = activeConversationId;
+    const nextDraft = activeConversationId ? (draftsByConvRef.current[activeConversationId] || '') : '';
+    setMessageText(nextDraft);
+  }, [activeConversationId]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [editingMessage, setEditingMessage] = useState(null);
   const [editText, setEditText] = useState('');
@@ -377,6 +414,9 @@ function Chat() {
       return;
     }
 
+    if (activeConversation?.id) {
+      delete draftsByConvRef.current[activeConversation.id];
+    }
     sendMessage(activeConversation.id, {
       sender: 'me',
       text: messageText
@@ -1451,7 +1491,13 @@ function Chat() {
   }, [showChatMenu, showEmojiPicker, showAttachMenu, showMessageMenu]);
 
   const handleEmojiSelect = (emoji) => {
-    setMessageText(prev => prev + emoji);
+    setMessageText(prev => {
+      const updated = prev + emoji;
+      if (activeConversationId) {
+        draftsByConvRef.current[activeConversationId] = updated;
+      }
+      return updated;
+    });
     setShowEmojiPicker(false);
   };
 
@@ -1967,44 +2013,6 @@ function Chat() {
     setShowConfirmModal(true);
   };
 
-  const handleDeleteConversation = () => {
-    if (!activeConversation || isGroupConversation(activeConversation)) return;
-    setConfirmModalData({
-      title: 'Delete Conversation',
-      message: `Delete this conversation with ${activeConversation.with}? This removes it for both parties and cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      isDanger: true,
-      onConfirm: async () => {
-        try {
-          const targetId = activeConversation.id;
-          await deleteConversation(targetId);
-
-          // Clear local messages state for this conversation as well
-          if (typeof setMessages === 'function') {
-            setMessages(prev => {
-              const next = { ...prev };
-              delete next[targetId];
-              return next;
-            });
-          }
-
-          // Return directly to conversation list view
-          setActiveConversationId(null);
-          setShowConversations(true);
-
-          setShowChatMenu(false);
-          setShowConfirmModal(false);
-          addNotification('Conversation and messages deleted successfully', 'success');
-        } catch {
-          addNotification('Could not delete conversation.', 'error');
-          setShowConfirmModal(false);
-        }
-      }
-    });
-    setShowConfirmModal(true);
-  };
-
   const handleBlockUser = () => {
     if (!activeConversation) return;
     if (isBlocked) {
@@ -2148,6 +2156,30 @@ function Chat() {
     return `${month} ${day}, ${year} ${hours}:${minutes}${ampm}`;
   };
 
+  // Helper function to format message bubble timestamp compactly (e.g. "9:21pm" or "Oct 12, 9:21pm")
+  const formatMessageTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return String(dateString);
+
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const timeStr = `${hours}:${minutes}${ampm}`;
+
+    if (isToday) {
+      return timeStr;
+    }
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[date.getMonth()]} ${date.getDate()}, ${timeStr}`;
+  };
+
   // Get user avatar display
   const getUserAvatar = (u) => {
     return (
@@ -2213,124 +2245,69 @@ function Chat() {
 
                   <div className="min-w-0 flex-1">
                     <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
-                      {showContacts ? 'Contacts' : 'Messages'}
+                      Messages
                     </h1>
                   </div>
                 </div>
-
-                {/* Toggle between conversations and contacts */}
-                <button type="button"
-                  onClick={() => setShowContacts(v => !v)}
-                  className={`flex items-center gap-1.5 px-3 py-2 sm:px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer shrink-0 ${showContacts ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 text-emerald-950 shadow-md' : 'bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 border border-emerald-700/60'}`}
-                  title={showContacts ? 'Back to chats' : 'View all contacts'}
-                >
-                  {showContacts
-                    ? <><MessageSquare className="w-4 h-4" /> <span>Chats</span></>
-                    : <><Users className="w-4 h-4" /> <span>Contacts</span></>}
-                </button>
               </div>
-              {!showContacts && (
-                <div className="relative z-10">
-                  <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    id="chat-search-conversations"
-                    name="chatSearchTerm"
-                    placeholder="Search conversations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm border border-emerald-800/40 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-gray-900 font-medium"
-                  />
-                </div>
-              )}
+              <div className="relative z-10">
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  id="chat-search-conversations"
+                  name="chatSearchTerm"
+                  placeholder="Search conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm border border-emerald-800/40 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-white text-gray-900 font-medium"
+                />
+              </div>
             </div>
           </div>
 
           <div className="flex-1 min-h-0 h-full overflow-y-auto overscroll-contain pb-6">
-
-            {/* ── Contacts panel ── */}
-            {showContacts && (() => {
-              const currentUserId = String(user?.id || '');
-              const currentUserEmail = (user?.email || '').trim().toLowerCase();
-              const contacts = (allUsers || []).filter(u => {
-                const uId = String(u.id || '');
-                const uEmail = (u.email || '').trim().toLowerCase();
-                // Never show currently logged-in account
-                if (uId && uId === currentUserId) return false;
-                if (uEmail && uEmail === currentUserEmail) return false;
-                // If logged in as admin, never show any admin account in contacts (only instructors)
-                if (user?.role === 'admin' && u.role === 'admin') return false;
-                // If instructor, never show instructor of same department
-                if (user?.role === 'instructor' && u.department === user?.department && u.role === 'instructor') return false;
-                return (u.role === 'admin' || u.role === 'instructor');
-              });
-              if (contacts.length === 0) return (
-                <div className="text-center py-8 text-gray-500 px-4">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">No other staff members yet</p>
-                </div>
-              );
-              const deptColor = { CWTS: 'bg-green-100 text-green-700', LTS: 'bg-purple-100 text-purple-700', ROTC: 'bg-red-100 text-red-700' };
-              return contacts.map(contact => (
-                <button key={contact.id}
-                  type="button"
-                  onClick={async () => {
-                    setShowContacts(false);
-                    const conv = await startConversation(contact);
-                    if (conv?.id) {
-                      handleSetActiveConversation(conv.id);
-                    }
-                  }}
-                  className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100 transition-colors text-left cursor-pointer"
-                >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border border-emerald-600/30 shadow-xs">
-                    <img
-                      src={getAvatarSrc(contact.avatar, contact.profilePicture)}
-                      alt={contact.name || 'User'}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{contact.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{contact.email}</p>
-                  </div>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${contact.role === 'admin' ? 'bg-yellow-100 text-yellow-700' : deptColor[contact.department] || 'bg-gray-100 text-gray-600'}`}>
-                    {contact.role === 'admin' ? 'Admin' : contact.department}
-                  </span>
-                </button>
-              ));
-            })()}
-
-            {/* ── Conversations list ── */}
-            {!showContacts && filteredConversations.length === 0 ? (
+            {filteredConversations.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center min-h-[320px] h-full py-12 text-gray-500 px-4 text-center">
                 <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mb-3 shadow-2xs border border-emerald-100">
                   <MessageSquare className="w-8 h-8 text-emerald-600/70" />
                 </div>
-                <p className="font-bold text-slate-700 text-sm">No conversations yet</p>
-                <p className="mt-1.5 text-xs text-slate-400 max-w-xs">Tap <strong className="text-emerald-700">Contacts</strong> to start chatting with staff or instructors.</p>
+                <p className="font-bold text-slate-700 text-sm">No conversations found</p>
+                <p className="mt-1.5 text-xs text-slate-400 max-w-xs">All instructors and admin chats are automatically connected.</p>
               </div>
-            ) : !showContacts && (
+            ) : (
               filteredConversations.map((conversation) => {
                 const partner = getConversationPartner(conversation);
+                const convIdStr = String(conversation.id);
                 const conversationMessages = messages[conversation.id] || [];
-                const lastReadTime = readConversations[conversation.id] || 0;
-                let unreadCount = 0;
-                if (conversationMessages.length > 0) {
-                  unreadCount = conversationMessages.filter(msg => {
-                    const msgTime = new Date(msg.created_at || msg.timestamp || 0).getTime();
-                    const isOwnMessage = String(msg.senderId || msg.sender_id) === String(user?.id);
-                    return msgTime > lastReadTime && !isOwnMessage;
-                  }).length;
-                } else if (conversation.last_message_time && conversation.last_sender_id && String(conversation.last_sender_id) !== String(user?.id)) {
+                const lastReadTime = readConversations[conversation.id] ? new Date(readConversations[conversation.id]).getTime() : 0;
+
+                // 1. Unread count from global notifications
+                const notifUnread = (globalNotifications || []).filter(n =>
+                  (n.type === 'message' || Boolean(n.conversationId)) &&
+                  String(n.conversationId) === convIdStr &&
+                  !n.read &&
+                  String(n.senderId || n.sender_id || '') !== String(user?.id)
+                ).length;
+
+                // 2. Unread count from in-memory messages array
+                const storeUnread = (conversationMessages || []).filter(msg => {
+                  const msgTime = new Date(msg.created_at || msg.timestamp || 0).getTime();
+                  const isOwnMessage = String(msg.senderId || msg.sender_id || '') === String(user?.id);
+                  return msgTime > lastReadTime && !isOwnMessage;
+                }).length;
+
+                // 3. Fallback from conversation unread_count or last message
+                let unreadCount = Math.max(notifUnread, storeUnread);
+                if (unreadCount === 0 && conversation.last_message_time) {
                   const lastMsgTime = new Date(conversation.last_message_time).getTime();
-                  if (lastMsgTime > lastReadTime) {
-                    unreadCount = 1;
+                  const isOtherSender = conversation.last_sender_id ? String(conversation.last_sender_id) !== String(user?.id) : true;
+                  if (lastMsgTime > lastReadTime && isOtherSender) {
+                    unreadCount = Math.max(Number(conversation.unread_count) || 0, 1);
                   }
                 }
 
-                // Check if there are new messages (red dot indicator)
-                const hasNewMessages = unreadCount > 0 && activeConversationId !== conversation.id;
+                // Check if there are new messages (and not the currently open chat)
+                const hasNewMessages = unreadCount > 0 && String(activeConversationId) !== convIdStr;
 
                 return (
                   <button type="button"
@@ -2340,36 +2317,40 @@ function Chat() {
                       e.stopPropagation();
                       handleSetActiveConversation(conversation.id);
                     }}
-                    className={`w-full p-4 lg:p-5 flex items-center space-x-4 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${String(activeConversationId) === String(conversation.id) ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
+                    className={`w-full p-4 lg:p-5 flex items-center space-x-3.5 sm:space-x-4 hover:bg-gray-50 transition-colors border-b border-gray-100 active:bg-gray-100 touch-manipulation cursor-pointer ${String(activeConversationId) === String(conversation.id) ? 'bg-green-50 border-l-4 border-l-green-600' : ''}`}
                   >
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       {isGroupConversation(conversation) ? getGroupAvatar(conversation) : getUserAvatar(partner)}
-                      {/* Red dot indicator for new messages */}
+                      {/* Red circle count badge on avatar */}
                       {hasNewMessages && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-red-600 text-white text-[10px] font-black rounded-full border-2 border-white flex items-center justify-center shadow-md animate-pulse">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
                       )}
                     </div>
                     <div className="flex-1 text-left min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-800 text-base lg:text-lg truncate">
+                        <h3 className={`text-base lg:text-lg truncate ${hasNewMessages ? 'font-black text-gray-950' : 'font-semibold text-gray-800'}`}>
                           {getConversationPartnerName(conversation)}
                         </h3>
-                        <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                        <span className={`text-xs whitespace-nowrap ml-2 ${hasNewMessages ? 'font-black text-red-600' : 'text-gray-500'}`}>
                           {(conversation.last_message_time || conversation.time)
                             ? new Date(conversation.last_message_time || conversation.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             : ''}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 truncate">
-                        {getConversationSnippet(conversation)}
-                      </p>
+                      <div className="flex items-center justify-between mt-0.5 gap-2">
+                        <p className={`text-sm truncate flex-1 ${hasNewMessages ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                          {getConversationSnippet(conversation)}
+                        </p>
+                        {/* Red circle badge with number of new messages on right */}
+                        {hasNewMessages && (
+                          <span className="min-w-[22px] h-[22px] px-1.5 bg-red-600 text-white text-xs font-black rounded-full flex items-center justify-center shrink-0 shadow-md">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {/* Show unread count badge */}
-                    {hasNewMessages && (
-                      <span className="w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
                   </button>
                 );
               })
@@ -2477,14 +2458,6 @@ function Chat() {
                               <FileText className="w-4 h-4 text-gray-500 shrink-0" />
                               <span>Clear Chat History</span>
                             </button>
-                            
-                            <button type="button"
-                              onClick={() => { handleDeleteConversation(); setShowChatMenu(false); }}
-                              className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2.5 transition-colors cursor-pointer text-xs sm:text-sm font-semibold"
-                            >
-                              <X className="w-4 h-4 text-rose-500 shrink-0" />
-                              <span>Delete Conversation</span>
-                            </button>
 
                             <button type="button"
                               onClick={() => { handleBlockUser(); setShowChatMenu(false); }}
@@ -2591,7 +2564,11 @@ function Chat() {
               >
                 <div className="space-y-3 w-full max-w-full mt-auto">
                   {currentMessages.map((message, msgIdx) => {
-                    const isOwn = message.senderId === user?.id || message.sender_id === user?.id;
+                    const isOwn = Boolean(
+                      message.sender === 'me' ||
+                      (message.sender_id != null && String(message.sender_id) === String(user?.id)) ||
+                      (message.senderId != null && String(message.senderId) === String(user?.id))
+                    );
                     const isNearBottom = msgIdx >= currentMessages.length - 2;
                     const deletedForEveryone = isMessageDeletedForEveryone(message);
                     const deletedForMe = isMessageDeletedForMe(message) || deletedForEveryone;
@@ -2619,7 +2596,7 @@ function Chat() {
                               })()
                             )}
                           </div>
-                          <div className={`max-w-[78%] sm:max-w-[85%] px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none' : 'bg-gray-100 text-gray-500 rounded-bl-none'}`}>
+                          <div className={`w-fit max-w-[78%] sm:max-w-[85%] px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl ${isOwn ? 'bg-blue-200 text-blue-400 rounded-br-none ml-auto' : 'bg-gray-100 text-gray-500 rounded-bl-none mr-auto'}`}>
                             <p className="italic text-xs sm:text-sm">Message deleted</p>
                           </div>
                         </div>
@@ -2653,6 +2630,12 @@ function Chat() {
 
                     const isCurrentMatch = matchedMessageIds[matchedMessageIndex] === message.id;
                     const isMatch = Boolean(messageSearchQuery.trim() && matchedMessageIds.includes(message.id));
+                    const sId = String(message.senderId || message.sender_id || '');
+                    const senderUser = !isOwn
+                      ? ((allUsers || []).find(u => String(u.id) === sId) ||
+                         (activeConversation?.participantDetails || []).find(p => String(p.id) === sId) ||
+                         (String(getConversationPartner(activeConversation)?.id) === sId ? getConversationPartner(activeConversation) : null))
+                      : null;
 
                     return (
                       <div key={message.id}
@@ -2674,37 +2657,28 @@ function Chat() {
                               className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
                             />
                           ) : (
-                            (() => {
-                              const sId = String(message.senderId || message.sender_id || '');
-                              const senderUser = (allUsers || []).find(u => String(u.id) === sId) ||
-                                (activeConversation?.participantDetails || []).find(p => String(p.id) === sId) ||
-                                (String(getConversationPartner(activeConversation)?.id) === sId ? getConversationPartner(activeConversation) : null);
-                              const avatarSrc = getAvatarSrc(
+                            <img
+                              src={getAvatarSrc(
                                 senderUser?.avatar || message.sender_avatar,
                                 senderUser?.profilePicture || message.sender_picture
-                              );
-                              return (
-                                <img
-                                  src={avatarSrc}
-                                  alt={senderUser?.name || message.sender_name || 'User'}
-                                  className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
-                                />
-                              );
-                            })()
+                              )}
+                              alt={senderUser?.name || message.sender_name || 'User'}
+                              className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full shadow-xs"
+                            />
                           )}
                         </div>
 
                         {/* Message Content */}
-                        <div className="group relative max-w-[78%] sm:max-w-[85%] min-w-0">
+                        <div className={`group relative max-w-[78%] sm:max-w-[85%] min-w-0 flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                           {/* Sender name - only for others */}
                           {!isOwn && (
                             <span className="text-[11px] sm:text-xs font-medium text-gray-500 block mb-0.5 ml-1 truncate">
-                              {message.senderName}
+                              {message.sender_name || message.senderName || senderUser?.name || 'Partner'}
                             </span>
                           )}
 
                           <div
-                            className={`rounded-2xl ${(message.type === 'image' || message.message_type === 'image') && (message.imageUrl || message.image_url || message.file_url)
+                            className={`rounded-2xl w-fit max-w-full ${isOwn ? 'ml-auto' : 'mr-auto'} ${(message.type === 'image' || message.message_type === 'image') && (message.imageUrl || message.image_url || message.file_url)
                                 ? `overflow-hidden ${isOwn ? 'rounded-br-none' : 'rounded-bl-none'}`
                                 : `px-3 py-1.5 sm:px-4 sm:py-2 ${isOwn ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none shadow-xs'}`
                               }`}
@@ -2836,12 +2810,12 @@ function Chat() {
                           {/* Time outside bubble & Edit History Trigger */}
                           <div className={`text-[10px] mt-0.5 flex items-center gap-1.5 ${isOwn ? 'justify-end mr-1 text-gray-400' : 'justify-start ml-1 text-gray-400'}`}>
                             {(() => {
-                              const messageTime = message.created_at ? formatDate(message.created_at) :
-                                message.timestamp ? formatDate(message.timestamp) :
-                                  message.time ? message.time : '';
+                              const rawTime = message.created_at || message.timestamp || message.time;
+                              const messageTime = formatMessageTime(rawTime);
+                              const fullDateTime = formatDate(rawTime);
                               return (
                                 <>
-                                  <span>{messageTime}</span>
+                                  <span title={fullDateTime}>{messageTime}</span>
                                   {Boolean(message.edited) && (
                                     <button
                                       type="button"
@@ -3050,14 +3024,31 @@ function Chat() {
                     </div>
                   ) : (
                     <input
+                      key={'composer_' + (activeConversationId || 'empty')}
                       type="text"
                       id="chat-message-composer"
-                      name="chatMessageText"
+                      name={'chatMessageText_' + (activeConversationId || 'none')}
                       value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setMessageText(val);
+                        if (activeConversationId) {
+                          if (val.trim()) {
+                            draftsByConvRef.current[activeConversationId] = val;
+                          } else {
+                            delete draftsByConvRef.current[activeConversationId];
+                          }
+                        }
+                      }}
                       onBlur={() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' })}
                       placeholder="Type a message..."
                       className="flex-1 min-w-0 px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-full sm:rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      data-form-type="other"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -3139,7 +3130,7 @@ function Chat() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowContacts(true)}
+                    onClick={() => setShowConversations(true)}
                     className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-sm rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -3868,9 +3859,7 @@ function Chat() {
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">Voice Message ({voiceMsg.duration || 'Audio'})</h4>
-                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">
-                                      Recorded by <span className="font-semibold text-slate-700">{voiceMsg.senderName || (voiceMsg.senderId === user?.id ? 'Me' : 'Partner')}</span> • {timeStr}
-                                    </p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5 truncate">{timeStr}</p>
                                   </div>
                                 </div>
                                 <button
@@ -3897,7 +3886,12 @@ function Chat() {
                       <div className="space-y-2">
                         {filteredAll.map((item, idx) => {
                           const timeStr = item.created_at ? formatDate(item.created_at) : (item.timestamp ? formatDate(item.timestamp) : '');
-                          const sender = item.senderName || (item.senderId === user?.id ? 'Me' : 'Partner');
+                          const isOwnItem = Boolean(
+                            (item.sender_id != null && String(item.sender_id) === String(user?.id)) ||
+                            (item.senderId != null && String(item.senderId) === String(user?.id)) ||
+                            item.sender === 'me'
+                          );
+                          const sender = isOwnItem ? 'You' : (item.sender_name || item.senderName || activePartnerName || 'Partner');
 
                           if (item.mediaCategory === 'photo') {
                             const url = item.imageUrl || item.image_url || item.file_url;
@@ -3967,7 +3961,7 @@ function Chat() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <h4 className="text-xs font-bold text-slate-900 truncate leading-snug">Voice Message ({item.duration || 'Audio'})</h4>
-                                  <p className="text-[10px] text-slate-500 mt-0.5 truncate">Recorded by <span className="font-semibold text-slate-700">{sender}</span> • {timeStr}</p>
+                                  <p className="text-[10px] text-slate-500 mt-0.5 truncate">{timeStr}</p>
                                 </div>
                               </div>
                               <button

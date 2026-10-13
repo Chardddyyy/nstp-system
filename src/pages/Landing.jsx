@@ -440,7 +440,7 @@ function Landing() {
           <div className="flex items-center gap-2 max-w-full">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-950 animate-ping shrink-0"></span>
             <span className="text-[11px] sm:text-xs">
-              <strong>📶 Data-Saver Active:</strong> Naka-optimize ang portal para sa mahinang internet. Pwede kang mag-enroll agad nang mabilis:
+              <strong>📶 Data-Saver Active:</strong> The portal is optimized for low-bandwidth connections. You may proceed directly to expedited enrollment:
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -448,7 +448,7 @@ function Landing() {
               to="/enrollment"
               className="bg-emerald-950 hover:bg-emerald-900 text-amber-300 px-3 py-1 rounded-full text-[10.5px] font-black tracking-wide shadow-xs active:scale-95 transition-all flex items-center gap-1"
             >
-              <span>🚀 Mag-enroll Agad (Lite Track)</span>
+              <span>🚀 Enroll Now (Lite Track)</span>
               <span>&rarr;</span>
             </Link>
             <button
@@ -762,28 +762,28 @@ function Landing() {
               className="w-full h-full object-cover transition-transform duration-1000 ease-out"
               loading={index === 0 ? 'eager' : 'lazy'}
             />
-            {/* Rich Gradient Overlay - Full Screen Depth & Generous Bottom Spacing */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/60 via-40% to-transparent flex flex-col justify-end p-4 xs:p-6 sm:p-12 md:p-16 lg:p-24 pb-8 xs:pb-10 sm:pb-16 md:pb-22 lg:pb-28">
+            {/* Rich Gradient Overlay - Tailored for Mobile & Desktop */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/60 via-40% to-transparent flex flex-col justify-end p-4 xs:p-5 sm:p-10 md:p-16 lg:p-24 pb-5 xs:pb-6 sm:pb-12 md:pb-20 lg:pb-26">
               <div className={`max-w-5xl transition-all duration-700 delay-150 ${
                 index === currentSlide ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               }`}>
-                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[9.5px] xs:text-xs sm:text-sm px-2.5 xs:px-3.5 sm:px-5 py-0.5 xs:py-1 sm:py-1.5 rounded-full uppercase tracking-wider mb-1.5 xs:mb-2.5 sm:mb-4 shadow-lg backdrop-blur-md border border-emerald-400/40">
+                <span className="inline-flex items-center bg-emerald-500/90 text-white font-black text-[9.5px] xs:text-xs sm:text-sm px-2.5 xs:px-3 sm:px-4 py-0.5 xs:py-1 rounded-full uppercase tracking-wider mb-1 xs:mb-2 sm:mb-3 shadow-lg backdrop-blur-md border border-emerald-400/40">
                   <span>{image.badge}</span>
                 </span>
                 
-                <h2 className="text-lg xs:text-xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-xl leading-tight max-w-5xl tracking-tight">
+                <h2 className="text-xl xs:text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white drop-shadow-xl leading-tight max-w-5xl tracking-tight">
                   {image.title}
                 </h2>
                 
-                <p className="text-emerald-100/90 text-[11.5px] xs:text-xs sm:text-base md:text-lg lg:text-xl max-w-3xl mt-1 xs:mt-1.5 sm:mt-4 font-medium leading-snug sm:leading-relaxed drop-shadow line-clamp-2 sm:line-clamp-none">
+                <p className="text-emerald-100/90 text-xs xs:text-sm sm:text-base md:text-lg lg:text-xl max-w-3xl mt-1 xs:mt-1.5 sm:mt-3 font-medium leading-snug sm:leading-relaxed drop-shadow line-clamp-2 sm:line-clamp-none">
                   {image.subtitle}
                 </p>
 
                 {/* Hero Immediate Action Buttons */}
-                <div className="mt-3 xs:mt-4 sm:mt-8 flex flex-row items-center gap-2 xs:gap-2.5 sm:gap-4 max-w-md sm:max-w-none">
+                <div className="mt-3 xs:mt-4 sm:mt-6 flex flex-row items-center gap-2 xs:gap-2.5 sm:gap-4 max-w-md sm:max-w-none">
                   <Link
                     to="/enrollment"
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3.5 xs:px-4 sm:px-9 py-2.5 xs:py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-3 xs:px-4 sm:px-8 py-2 xs:py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-base shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:scale-105 active:scale-95 transition-all text-center whitespace-nowrap"
                   >
                     <span>Apply for Enrollment</span>
                     <ArrowRight className="w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0" />
@@ -792,17 +792,11 @@ function Landing() {
                   <button
                     type="button"
                     onClick={() => scrollToSection('guide')}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2.5 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-3.5 xs:px-4 sm:px-8 py-2.5 xs:py-3 sm:py-4 rounded-xl sm:rounded-2xl text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2.5 bg-emerald-900/80 hover:bg-emerald-800/90 text-white font-bold px-3 xs:px-4 sm:px-7 py-2 xs:py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-[11px] xs:text-xs sm:text-base backdrop-blur-md border border-emerald-600/70 hover:border-emerald-400 active:scale-95 transition-all cursor-pointer shadow-lg text-center whitespace-nowrap"
                   >
                     <BookOpen className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
                     <span>How to Enroll</span>
                   </button>
-                </div>
-
-                {/* Low-Data / Weak Connection Reassurance */}
-                <div className="mt-3 xs:mt-3.5 sm:mt-4 flex items-center gap-2 text-[10.5px] xs:text-xs text-emerald-200/90 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                  <span>Mahina ang data o signal? Naka-optimize ang portal at may auto-save ang form upang hindi mawala ang sinagutan.</span>
                 </div>
               </div>
             </div>

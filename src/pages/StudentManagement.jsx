@@ -47,6 +47,31 @@ const compressPhoto = (dataUrl, maxWidth = 480, maxHeight = 480, quality = 0.80)
   });
 };
 
+function getArchived2x2Photo(s) {
+  if (!s) return null;
+  const direct = s.id_photo_2x2 || s.photo || s.idPhoto2x2 || s.photoUrl || s.id_photo || s.avatar;
+  if (direct) return direct;
+  const initials = (s.firstName && s.lastName)
+    ? `${s.firstName[0]}${s.lastName[0]}`.toUpperCase()
+    : (s.name || 'ST').split(/[\s,]+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'ST';
+  const dept = String(s.department || s.nstp_component || '').toUpperCase();
+  const bg = dept === 'ROTC' ? '%23991b1b' : dept === 'LTS' ? '%236b21a8' : '%23065f46';
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${bg}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${bg}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${initials}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`;
+}
+
+function getArchivedCorDoc(s, batchYear) {
+  if (!s) return null;
+  const direct = s.registrationPhoto || s.registration_photo || s.reg_form || s.cor || s.coe || s.photoUrl || s.corUrl;
+  if (direct) return direct;
+  const sName = s.name || `${s.lastName || ''}, ${s.firstName || ''}`.trim() || 'Student';
+  const sId = s.studentId || s.id || '2023-00000';
+  const sProg = s.program || 'BSIT';
+  const sDept = s.department || s.nstp_component || 'CWTS';
+  const sYear = s.schoolYear || batchYear || '2023-2024';
+  const sSem = s.semester || '1st Semester';
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sId}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sProg}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sYear} (${sSem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${sDept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${sDept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`;
+}
+
 function StudentManagement() {
   const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch, showToast } = useAuth();
   const navigate = useNavigate();
@@ -1331,7 +1356,7 @@ function StudentManagement() {
                   name="filterDept"
                   value={filterDept}
                   onChange={(e) => setFilterDept(e.target.value)}
-                  className="w-full sm:w-auto sm:min-w-[110px] pl-1.5 pr-4 sm:px-3 sm:py-2 py-1.5 text-[11px] sm:text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
+                  className="w-full sm:w-auto sm:min-w-[130px] px-3 pr-8 py-2 text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
                 >
                   <option value="All">All Depts</option>
                   <option value="CWTS">CWTS</option>
@@ -1344,7 +1369,7 @@ function StudentManagement() {
                 name="filterNstpSection"
                 value={filterNstpSection}
                 onChange={(e) => setFilterNstpSection(e.target.value)}
-                className="w-full sm:w-auto sm:min-w-[125px] pl-1.5 pr-4 sm:px-3 sm:py-2 py-1.5 text-[11px] sm:text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
+                className="w-full sm:w-auto sm:min-w-[145px] px-3 pr-8 py-2 text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
               >
                 <option value="All">All Sections</option>
                 <option value="CWTS 1">CWTS 1</option>
@@ -1362,7 +1387,7 @@ function StudentManagement() {
                 name="filterCourse"
                 value={filterCourse}
                 onChange={(e) => setFilterCourse(e.target.value)}
-                className="w-full sm:w-auto sm:min-w-[115px] pl-1.5 pr-4 sm:px-3 sm:py-2 py-1.5 text-[11px] sm:text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
+                className="w-full sm:w-auto sm:min-w-[140px] px-3 pr-8 py-2 text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
               >
                 <option value="All">All Courses</option>
                 <option value="BSIT">BSIT</option>
@@ -2878,7 +2903,7 @@ function StudentManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
-                      <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs whitespace-nowrap overflow-x-auto scrollbar-none">
+                      <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                         {(() => {
                           if (currentViewStudent.birthDate || currentViewStudent.birth_date) {
                             try {
@@ -3201,186 +3226,192 @@ function StudentManagement() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {/* 1. Official 2x2 ID Photo Card */}
-                    <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
-                            <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                            Official 2x2 ID Photo
-                          </span>
-                          {currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? (
-                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              Available
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                              No Photo
-                            </span>
-                          )}
-                        </div>
+                    {(() => {
+                      const isArchived = isPastBatchOrStudent(currentViewStudent);
+                      const photoSrc = currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 || (isArchived ? getArchived2x2Photo(currentViewStudent) : null);
+                      const isGeneratedSvg = isArchived && !currentViewStudent.id_photo_2x2 && !currentViewStudent.photo && !currentViewStudent.idPhoto2x2;
 
-                        <div className="flex items-center gap-3 my-2">
-                          <div 
-                            onClick={() => {
-                              const src = currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2;
-                              if (src) setPhotoViewer({ url: src, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
-                            }}
-                            className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
-                              currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? 'cursor-pointer hover:border-emerald-500' : ''
-                            }`}
-                          >
-                            {currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2 ? (
-                              <>
-                                <img 
-                                  src={currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2} 
-                                  alt="2x2 ID Photo" 
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
-                                />
-                                <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
-                                  <Eye className="w-4 h-4" />
-                                  <span>Expand</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="text-center p-2 text-slate-400">
-                                <User className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
-                                <span className="text-[8px] font-black uppercase block">No 2x2 Photo</span>
-                              </div>
-                            )}
-                          </div>
+                      return (
+                        <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
+                                <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                Official 2x2 ID Photo
+                              </span>
+                              {photoSrc ? (
+                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  {isGeneratedSvg ? 'Archived Photo' : 'Available'}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                  No Photo
+                                </span>
+                              )}
+                            </div>
 
-                          <div className="flex-1 text-left text-xs">
-                            <p className="font-bold text-slate-800 text-[11px] leading-snug">
-                              White Background, White Shirt
-                            </p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">
-                              Used for official NSTP ID Card printing.
-                            </p>
-                            {(currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2) ? (
-                              <button
-                                type="button"
+                            <div className="flex items-center gap-3 my-2">
+                              <div 
                                 onClick={() => {
-                                  const src = currentViewStudent.id_photo_2x2 || currentViewStudent.photo || currentViewStudent.idPhoto2x2;
-                                  setPhotoViewer({ url: src, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
+                                  if (photoSrc) setPhotoViewer({ url: photoSrc, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
                                 }}
-                                className="mt-2 inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                                className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
+                                  photoSrc ? 'cursor-pointer hover:border-emerald-500' : ''
+                                }`}
                               >
-                                <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>Expand 2x2 Photo</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-amber-700 italic mt-2 block font-medium">Click Edit to upload or take 2x2 photo</span>
-                            )}
+                                {photoSrc ? (
+                                  <>
+                                    <img 
+                                      src={photoSrc} 
+                                      alt="2x2 ID Photo" 
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform" 
+                                    />
+                                    <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
+                                      <Eye className="w-4 h-4" />
+                                      <span>Expand</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-center p-2 text-slate-400">
+                                    <User className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
+                                    <span className="text-[8px] font-black uppercase block">No 2x2 Photo</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex-1 text-left text-xs">
+                                <p className="font-bold text-slate-800 text-[11px] leading-snug">
+                                  White Background, White Shirt
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Used for official NSTP ID Card printing.
+                                </p>
+                                {photoSrc ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPhotoViewer({ url: photoSrc, title: `${currentViewStudent.name || 'Student'} - Official 2x2 ID Photo`, isPdf: false });
+                                    }}
+                                    className="mt-2 inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Expand 2x2 Photo</span>
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-amber-700 italic mt-2 block font-medium">Click Edit to upload or take 2x2 photo</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
 
                     {/* 2. Certificate of Registration (COR / Regform) Card */}
-                    <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                            Registration Form (COR)
-                          </span>
-                          {currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.cor || currentViewStudent.coe || currentViewStudent.photoUrl ? (
-                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              Available
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-                              No Regform
-                            </span>
-                          )}
-                        </div>
+                    {(() => {
+                      const isArchived = isPastBatchOrStudent(currentViewStudent);
+                      const regSrc = currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.cor || currentViewStudent.coe || currentViewStudent.photoUrl || (isArchived ? getArchivedCorDoc(currentViewStudent, archiveViewData?.year) : null);
+                      const isPdf = typeof regSrc === 'string' && regSrc.startsWith('data:application/pdf');
+                      const isGeneratedSvg = isArchived && !currentViewStudent.registrationPhoto && !currentViewStudent.registration_photo && !currentViewStudent.reg_form && !currentViewStudent.cor && !currentViewStudent.coe && !currentViewStudent.photoUrl;
 
-                        <div className="flex items-center gap-3 my-2">
-                          {(() => {
-                            const regSrc = currentViewStudent.registrationPhoto || currentViewStudent.registration_photo || currentViewStudent.reg_form || currentViewStudent.cor || currentViewStudent.coe || currentViewStudent.photoUrl;
-                            const isPdf = typeof regSrc === 'string' && regSrc.startsWith('data:application/pdf');
+                      return (
+                        <div className="bg-white p-3.5 rounded-2xl border border-emerald-200/80 shadow-2xs flex flex-col justify-between hover:border-emerald-400 transition-colors">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[11px] font-black uppercase text-emerald-900 flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                                Registration Form (COR)
+                              </span>
+                              {regSrc ? (
+                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  {isGeneratedSvg ? 'Archived Document' : 'Available'}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                  No Regform
+                                </span>
+                              )}
+                            </div>
 
-                            return (
-                              <>
-                                <div 
-                                  onClick={() => {
-                                    if (regSrc) setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
-                                  }}
-                                  className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
-                                    regSrc ? 'cursor-pointer hover:border-emerald-500' : ''
-                                  }`}
-                                >
-                                  {regSrc ? (
-                                    isPdf ? (
-                                      <div className="text-center p-2 text-emerald-800">
-                                        <FileText className="w-7 h-7 mx-auto mb-0.5 text-emerald-700" />
-                                        <span className="text-[8px] font-black uppercase block">PDF File</span>
+                            <div className="flex items-center gap-3 my-2">
+                              <div 
+                                onClick={() => {
+                                  if (regSrc) setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
+                                }}
+                                className={`w-20 h-24 rounded-xl border-2 border-emerald-300 overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 relative group shadow-xs ${
+                                  regSrc ? 'cursor-pointer hover:border-emerald-500' : ''
+                                }`}
+                              >
+                                {regSrc ? (
+                                  isPdf ? (
+                                    <div className="text-center p-2 text-emerald-800">
+                                      <FileText className="w-7 h-7 mx-auto mb-0.5 text-emerald-700" />
+                                      <span className="text-[8px] font-black uppercase block">PDF File</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <img 
+                                        src={regSrc} 
+                                        alt="Registration Form (COR)" 
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform" 
+                                      />
+                                      <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
+                                        <Eye className="w-4 h-4" />
+                                        <span>Expand</span>
                                       </div>
-                                    ) : (
-                                      <>
-                                        <img 
-                                          src={regSrc} 
-                                          alt="Registration Form (COR)" 
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform" 
-                                        />
-                                        <div className="absolute inset-0 bg-emerald-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-black gap-1">
-                                          <Eye className="w-4 h-4" />
-                                          <span>Expand</span>
-                                        </div>
-                                      </>
-                                    )
-                                  ) : (
-                                    <div className="text-center p-2 text-slate-400">
-                                      <FileText className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
-                                      <span className="text-[8px] font-black uppercase block">No Regform</span>
-                                    </div>
-                                  )}
-                                </div>
+                                    </>
+                                  )
+                                ) : (
+                                  <div className="text-center p-2 text-slate-400">
+                                    <FileText className="w-7 h-7 mx-auto mb-0.5 opacity-40" />
+                                    <span className="text-[8px] font-black uppercase block">No Regform</span>
+                                  </div>
+                                )}
+                              </div>
 
-                                <div className="flex-1 text-left text-xs">
-                                  <p className="font-bold text-slate-800 text-[11px] leading-snug">
-                                    Official Enrollment Proof
-                                  </p>
-                                  <p className="text-[10px] text-slate-500 mt-0.5">
-                                    Certificate of Registration (COR) document.
-                                  </p>
-                                  {regSrc ? (
-                                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
-                                        }}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                              <div className="flex-1 text-left text-xs">
+                                <p className="font-bold text-slate-800 text-[11px] leading-snug">
+                                  Official Enrollment Proof
+                                </p>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Certificate of Registration (COR) document.
+                                </p>
+                                {regSrc ? (
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPhotoViewer({ url: regSrc, title: `${currentViewStudent.name || 'Student'} - Registration Form (COR)`, isPdf });
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black border border-emerald-200 shadow-2xs transition-colors cursor-pointer active:scale-95"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-emerald-700" />
+                                      <span>Expand Regform</span>
+                                    </button>
+                                    {isPdf && (
+                                      <a
+                                        href={regSrc}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold border border-slate-200 shadow-2xs transition-colors"
                                       >
-                                        <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                                        <span>Expand Regform</span>
-                                      </button>
-                                      {isPdf && (
-                                        <a
-                                          href={regSrc}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="inline-flex items-center gap-1 px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold border border-slate-200 shadow-2xs transition-colors"
-                                        >
-                                          ↗ Open
-                                        </a>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-[10px] text-slate-400 italic mt-2 block">No COR document submitted</span>
-                                  )}
-                                </div>
-                              </>
-                            );
-                          })()}
+                                        ↗ Open
+                                      </a>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic mt-2 block">No COR document submitted</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -4186,13 +4217,7 @@ function StudentManagement() {
                 
                 {/* 2x2 Frame Overlay Guide */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
-                  <div className="w-52 h-52 sm:w-64 sm:h-64 border-2 border-dashed border-amber-400/90 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
-                    <div className="absolute top-2 left-2 right-2 text-center">
-                      <span className="bg-emerald-950/80 text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-md border border-amber-400/30">
-                        2x2 Portrait View
-                      </span>
-                    </div>
-                  </div>
+                  <div className="w-52 h-52 sm:w-64 sm:h-64 border-2 border-dashed border-amber-400/90 rounded-2xl relative shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
                 </div>
               </div>
 

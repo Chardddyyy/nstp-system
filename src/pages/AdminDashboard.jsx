@@ -6,7 +6,7 @@ import {
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
-  HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn
+  HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn, QrCode
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -14,6 +14,7 @@ import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatu
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
 import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
+import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -212,6 +213,7 @@ function AdminDashboard() {
     archivedYears = [], 
     currentBatch = '2026-2027 1st Semester', 
     notifications = [], 
+    messages = {},
     setNotifications, 
     deleteNotifications,
     markAllNotificationsRead,
@@ -247,35 +249,63 @@ function AdminDashboard() {
   const [selectedNotifications, setSelectedNotifications] = useState([]);
   const [selectedMessages, setSelectedMessages] = useState([]);
 
-  const isMessageNotification = (n) => n?.type === 'message';
+  const isMessageNotification = (n) => n?.type === 'message' || Boolean(n?.conversationId);
 
   const [activeNotifTab, setActiveNotifTab] = useState('all');
 
   const systemNotifications = useMemo(() => {
-    return (notifications || []).filter(n => !isMessageNotification(n));
-  }, [notifications]);
+    return (notifications || []).filter(n => !isMessageNotification(n) && isNotificationAllowedForRole(n, user));
+  }, [notifications, user]);
 
   const messageNotifications = useMemo(() => {
-    return (notifications || []).filter(n => isMessageNotification(n));
-  }, [notifications]);
+    const myId = String(user?.id || user?._id || '');
+    return (notifications || []).filter(n => {
+      if (!isMessageNotification(n)) return false;
+      const sId = String(n.senderId || n.sender_id || '');
+      if (myId && sId && sId === myId) return false;
+      if (user?.name && n.senderName && (n.senderName === user.name || n.senderName.toLowerCase() === user.name.toLowerCase())) return false;
+      if (user?.name && typeof n.title === 'string' && n.title.toLowerCase().includes(user.name.toLowerCase())) return false;
+      if (user?.role === 'admin' && (n.senderName === 'Admin' || n.senderName === 'NSTP Administrator')) return false;
+      if (user?.role === 'admin' && typeof n.title === 'string' && (n.title.includes('NSTP Administrator') || n.title.includes('Admin'))) return false;
+      return true;
+    });
+  }, [notifications, user]);
 
-  const totalUnreadCount = useMemo(() => {
-    return (notifications || []).filter(n => !n.read).length;
-  }, [notifications]);
+  const systemUnreadCount = useMemo(() => {
+    return systemNotifications.filter(n => !n.read).length;
+  }, [systemNotifications]);
 
   const activeBellNotifications = useMemo(() => {
-    if (activeNotifTab === 'system') return systemNotifications;
-    if (activeNotifTab === 'messages') return messageNotifications;
-    return notifications || [];
-  }, [activeNotifTab, systemNotifications, messageNotifications, notifications]);
+    if (activeNotifTab === 'unread') return systemNotifications.filter(n => !n.read);
+    return systemNotifications;
+  }, [activeNotifTab, systemNotifications]);
 
   const unreadCount = useMemo(() => {
-    return totalUnreadCount;
-  }, [totalUnreadCount]);
+    return systemUnreadCount;
+  }, [systemUnreadCount]);
 
   const messageUnreadCount = useMemo(() => {
-    return messageNotifications.filter(n => !n.read).length;
-  }, [messageNotifications]);
+    const notifCount = messageNotifications.filter(n => !n.read).length;
+    let storeCount = 0;
+    if (user && messages && typeof window !== 'undefined') {
+      try {
+        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+        const currentUserId = String(user.id || user._id || '');
+        Object.entries(messages).forEach(([convId, msgList]) => {
+          if (!Array.isArray(msgList)) return;
+          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          msgList.forEach(m => {
+            const sId = String(m.sender_id || m.senderId || '');
+            const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
+            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+              storeCount++;
+            }
+          });
+        });
+      } catch {}
+    }
+    return Math.max(notifCount, storeCount);
+  }, [messageNotifications, messages, user]);
   
   // Real-time RegForm document validator audit hook
   const regformAudits = useRegformAuditor(pendingEnrollments);
@@ -383,8 +413,8 @@ function AdminDashboard() {
   const [newBatchName, setNewBatchName] = useState('');
   const [newBatchSem, setNewBatchSem] = useState('2nd Semester');
   const [newBatchYearInput, setNewBatchYearInput] = useState('2025-2026');
-  const [newBatchStartMonth, setNewBatchStartMonth] = useState('2025-08');
-  const [newBatchEndMonth, setNewBatchEndMonth] = useState('2025-12');
+  const [newBatchStartMonth, setNewBatchStartMonth] = useState(() => `${new Date().getFullYear()}-01`);
+  const [newBatchEndMonth, setNewBatchEndMonth] = useState(() => `${new Date().getFullYear()}-05`);
   const [photoViewer, setPhotoViewer] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
@@ -864,6 +894,24 @@ function getConsecutiveBatchDetails(currentBatchStr) {
   };
 }
 
+  const handleBatchStartMonthChange = (e) => {
+    const val = e.target.value;
+    setNewBatchStartMonth(val);
+    if (val && newBatchEndMonth && newBatchEndMonth < val) {
+      setNewBatchEndMonth(val);
+    }
+  };
+
+  const handleBatchEndMonthChange = (e) => {
+    const val = e.target.value;
+    if (val && newBatchStartMonth && val < newBatchStartMonth) {
+      showNotif('warning', 'End Month cannot be earlier than Start Month.');
+      setNewBatchEndMonth(newBatchStartMonth);
+      return;
+    }
+    setNewBatchEndMonth(val);
+  };
+
   // Archive current year and start new batch with dynamic automatic semester/year progression
   const handleNewBatch = () => {
     setShowNewBatchConfirm(true);
@@ -873,25 +921,34 @@ function getConsecutiveBatchDetails(currentBatchStr) {
     setNewBatchSem(next.semester);
     setNewBatchName(next.fullBatchName);
 
-    // Compute automatic start and end month based on current batch being archived
-    const cur = String(currentBatch || '');
-    const match = cur.match(/(\d{4})/);
-    const baseYear = match ? parseInt(match[1], 10) : new Date().getFullYear();
-    if (cur.includes('1st Sem')) {
-      setNewBatchStartMonth(`${baseYear}-08`);
-      setNewBatchEndMonth(`${baseYear}-12`);
-    } else if (cur.includes('2nd Sem')) {
-      setNewBatchStartMonth(`${baseYear + 1}-01`);
-      setNewBatchEndMonth(`${baseYear + 1}-05`);
+    // Compute automatic start and end month for the CURRENT batch being archived
+    const cur = String(currentBatch || '').trim();
+    const match = cur.match(/(\d{4})\s*-\s*(\d{4})/);
+    let startYear = match ? parseInt(match[1], 10) : new Date().getFullYear();
+    let endYear = match ? parseInt(match[2], 10) : startYear + 1;
+
+    if (/2nd|second/i.test(cur)) {
+      // 2nd Semester runs from January to May of end year (e.g. 2027-01 to 2027-05)
+      setNewBatchStartMonth(`${endYear}-01`);
+      setNewBatchEndMonth(`${endYear}-05`);
+    } else if (/summer/i.test(cur)) {
+      setNewBatchStartMonth(`${endYear}-06`);
+      setNewBatchEndMonth(`${endYear}-07`);
     } else {
-      setNewBatchStartMonth(`${baseYear}-08`);
-      setNewBatchEndMonth(`${baseYear + 1}-05`);
+      // 1st Semester runs from August to December of start year (e.g. 2026-08 to 2026-12)
+      setNewBatchStartMonth(`${startYear}-08`);
+      setNewBatchEndMonth(`${startYear}-12`);
     }
   };
   
   const confirmNewBatch = async () => {
     if (!newBatchStartMonth || !newBatchEndMonth) {
-      showNotif('error', 'Kailangang piliin ang Start Month at End Month para sa bagong batch upang malaman ang sakop ng calendar.');
+      showNotif('error', 'Start Month and End Month must be selected for the batch coverage range.');
+      return;
+    }
+
+    if (newBatchEndMonth < newBatchStartMonth) {
+      showNotif('error', 'Invalid Coverage Range: End Month must be equal to or later than Start Month.');
       return;
     }
 
@@ -900,7 +957,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       return;
     }
 
-    const targetNewBatch = (newBatchName || `${newBatchYearInput} ${newBatchSem}`).trim() || `Batch ${new Date().getFullYear()} 1st Sem`;
+    const next = getConsecutiveBatchDetails(currentBatch);
+    const targetNewBatch = (newBatchName || `${newBatchYearInput} ${newBatchSem}`).trim() || next.fullBatchName;
+
+    // Incoming batch's own calendar range
+    const [nStartYrStr, nEndYrStr] = (next.academicYear || '').split('-');
+    const nStartYr = parseInt(nStartYrStr, 10) || new Date().getFullYear();
+    const nEndYr = parseInt(nEndYrStr, 10) || (nStartYr + 1);
+    const isNext1st = next.semester.includes('1st');
+    const incomingStartMonth = isNext1st ? `${nStartYr}-08` : `${nEndYr}-01`;
+    const incomingEndMonth = isNext1st ? `${nStartYr}-12` : `${nEndYr}-05`;
 
     try {
       await archivesAPI.create({
@@ -929,12 +995,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
       const newBatchPayload = {
         year: targetNewBatch,
-        start_month: newBatchStartMonth,
-        end_month: newBatchEndMonth,
-        startMonth: newBatchStartMonth,
-        endMonth: newBatchEndMonth,
-        start_date: `${newBatchStartMonth}-01`,
-        end_date: `${newBatchEndMonth}-28`
+        start_month: incomingStartMonth,
+        end_month: incomingEndMonth,
+        startMonth: incomingStartMonth,
+        endMonth: incomingEndMonth,
+        start_date: `${incomingStartMonth}-01`,
+        end_date: `${incomingEndMonth}-28`
       };
 
       try {
@@ -944,10 +1010,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       // Immediately sync with active system state and persistent storage
       if (updateActiveBatchRange) {
         updateActiveBatchRange({
-          startMonth: newBatchStartMonth,
-          endMonth: newBatchEndMonth,
-          startDate: `${newBatchStartMonth}-01`,
-          endDate: `${newBatchEndMonth}-28`
+          startMonth: incomingStartMonth,
+          endMonth: incomingEndMonth,
+          startDate: `${incomingStartMonth}-01`,
+          endDate: `${incomingEndMonth}-28`
         });
       }
 
@@ -956,7 +1022,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       setShowNewBatchConfirm(false);
       setConfirmText('');
 
-      showNotif('success', `Batch "${currentBatch}" archived successfully. Bagong batch "${targetNewBatch}" ay aktibo na (Calendar: ${newBatchStartMonth} hanggang ${newBatchEndMonth}).`);
+      showNotif('success', `Batch "${currentBatch}" archived successfully (Archive Calendar: ${newBatchStartMonth} to ${newBatchEndMonth}). New batch "${targetNewBatch}" is now active.`);
     } catch (error) {
       console.error('Archive batch error:', error);
       showNotif('error', 'Failed to archive batch. Please try again.');
@@ -1208,19 +1274,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         onClick={() => { setActiveNotifTab('all'); setSelectedNotifications([]); }}
                         className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'all' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                       >
-                        All ({(notifications || []).length})
+                        All ({systemNotifications.length})
                       </button>
                       <button type="button"
-                        onClick={() => { setActiveNotifTab('system'); setSelectedNotifications([]); }}
-                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'system' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                        onClick={() => { setActiveNotifTab('unread'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'unread' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                       >
-                        System ({systemNotifications.length})
-                      </button>
-                      <button type="button"
-                        onClick={() => { setActiveNotifTab('messages'); setSelectedNotifications([]); }}
-                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'messages' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-                      >
-                        Messages ({messageNotifications.length})
+                        Unread ({systemUnreadCount})
                       </button>
                     </div>
 
@@ -1259,8 +1319,14 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 onClick={() => handleNotificationItemClick(n)}
                               >
                                 <div className="flex items-center justify-between gap-1">
-                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1 ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                    {isMsg && <MessageSquare className="w-3 h-3 text-emerald-600 shrink-0" />}
+                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1.5 ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                    {n.type === 'enrollment' && <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                    {n.type === 'report' && <ClipboardList className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                                    {n.type === 'calendar' && <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                                    {n.type === 'student' && <Users className="w-3.5 h-3.5 text-teal-600 shrink-0" />}
+                                    {n.type === 'attendance' && <QrCode className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                                    {(n.type === 'system' || !n.type) && !isMsg && <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                    {isMsg && <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                                     <span className="truncate">{n.title}</span>
                                   </h4>
                                   <div className="flex items-center gap-1 shrink-0">
@@ -1408,9 +1474,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 }}
                               >
                                 <div className="flex items-center justify-between gap-1">
-                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                    {n.senderName || n.title || 'Message'}
-                                  </h4>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <h4 className={`text-[11px] sm:text-xs font-bold truncate ${n.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                      {n.senderName || 'Instructor'}
+                                    </h4>
+                                    {(n.isGroup || (n.conversationId && String(n.conversationId).startsWith('group-'))) ? (
+                                      <span className="shrink-0 text-[8.5px] sm:text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-extrabold border border-emerald-200">
+                                        👥 {n.groupName || 'All Instructors'}
+                                      </span>
+                                    ) : (
+                                      <span className="shrink-0 text-[8.5px] sm:text-[9px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+                                        Direct
+                                      </span>
+                                    )}
+                                  </div>
                                   <div className="flex items-center gap-1 shrink-0">
                                     {!n.read && (
                                       <button type="button"
@@ -2970,16 +3047,31 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </p>
                 </div>
                 
-                {/* Calendar Range Configuration for the Batch */}
+                {/* Calendar Range Configuration for the Batch being Archived */}
                 <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-emerald-800 shrink-0" />
-                      <span>Calendar Coverage Range (For this Batch)</span>
+                      <span>Calendar Coverage Range (For Archive: "{currentBatch}")</span>
                     </p>
                     <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-200/60 text-emerald-900 rounded-full">
                       Required
                     </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white/90 p-2.5 rounded-lg border border-amber-200/80 flex flex-col justify-between">
+                      <span className="text-[10.5px] text-gray-500 font-bold uppercase tracking-wider">Batch to be Archived:</span>
+                      <span className="font-black text-amber-950 text-xs mt-0.5">
+                        {currentBatch}
+                      </span>
+                    </div>
+                    <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200/80 flex flex-col justify-between">
+                      <span className="text-[10.5px] text-gray-500 font-bold uppercase tracking-wider">Incoming Active Batch:</span>
+                      <span className="font-black text-emerald-950 text-xs mt-0.5">
+                        {newBatchName || `${newBatchYearInput} ${newBatchSem}`}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2992,7 +3084,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         id="batch-start-date"
                         name="batchStartDate"
                         value={newBatchStartMonth}
-                        onChange={(e) => setNewBatchStartMonth(e.target.value)}
+                        onChange={handleBatchStartMonthChange}
                         className="w-full px-3 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
                         required
                       />
@@ -3006,14 +3098,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         id="batch-end-date"
                         name="batchEndDate"
                         value={newBatchEndMonth}
-                        onChange={(e) => setNewBatchEndMonth(e.target.value)}
+                        min={newBatchStartMonth || undefined}
+                        onChange={handleBatchEndMonthChange}
                         className="w-full px-3 py-1.5 text-xs bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold"
                         required
                       />
                     </div>
                   </div>
+
+                  {newBatchStartMonth && newBatchEndMonth && newBatchEndMonth < newBatchStartMonth && (
+                    <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1.5">
+                      <span>⚠️ Invalid: End Month cannot be earlier than Start Month.</span>
+                    </div>
+                  )}
+
                   <p className="text-[10px] text-emerald-800 font-medium italic">
-                    The selected month range will serve as the basis for the academic calendar, schedule matrix, and all reports for this batch.
+                    The selected calendar coverage range will serve as the official schedule matrix for batch <strong>"{currentBatch}"</strong> when viewed in archives.
                   </p>
                 </div>
 
@@ -3047,7 +3147,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <button
                   type="button"
                   onClick={confirmNewBatch}
-                  disabled={confirmText.toLowerCase() !== 'confirm'}
+                  disabled={
+                    confirmText.toLowerCase() !== 'confirm' ||
+                    !newBatchStartMonth ||
+                    !newBatchEndMonth ||
+                    newBatchEndMonth < newBatchStartMonth
+                  }
                   className="flex-1 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 text-white rounded-xl font-black text-xs transition-all shadow-sm cursor-pointer disabled:cursor-not-allowed"
                 >
                   Confirm &amp; Start Batch
@@ -3188,19 +3293,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         return null;
                       })()}
 
-                      {/* Blue Registrar ENROLLED / REGISTERED Watermark Verification Reminder */}
-                      <div className="mb-3 p-3 bg-blue-50/90 border border-blue-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shrink-0">✓</span>
-                          <div>
-                            <p className="text-xs font-black text-blue-950">Official Blue &ldquo;ENROLLED / REGISTERED&rdquo; Watermark Verification</p>
-                            <p className="text-[11px] text-blue-800">Verify that the blue printed or stamped &ldquo;ENROLLED&rdquo; / &ldquo;REGISTERED&rdquo; registrar status marking is visible on this document before approving.</p>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300 shrink-0">
-                          Blue Stamp Required
-                        </span>
-                      </div>
                       <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
                         <p className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                           <FileText className="w-4 h-4 text-emerald-700" /> Submitted Registration Document / Form
@@ -3344,7 +3436,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
                           <div className="min-w-0 col-span-2 sm:col-span-1">
                             <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
-                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs whitespace-nowrap overflow-x-auto scrollbar-none">
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
                               {birthDateStr}
                             </div>
                           </div>
@@ -3680,13 +3772,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Form B</span>
-                  </button>
-
-                  <button type="button"
-                    onClick={() => setShowArchiveDetails(false)}
-                    className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white ml-1"
-                  >
-                    <X className="w-6 h-6" />
                   </button>
                 </div>
               </div>
@@ -4408,7 +4493,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span className="text-gray-600">Admin Account:</span>
-                  <strong className="text-emerald-950 font-bold truncate">{user?.email || 'admin@cvsu.edu.ph'}</strong>
+                  <strong className="text-emerald-950 font-bold truncate">{user?.email || 'richardbelen99@gmail.com'}</strong>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500"></span>

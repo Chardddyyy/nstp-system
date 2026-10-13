@@ -6,12 +6,13 @@ import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixM
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
-  Archive, History, FileCheck, RotateCcw, Camera
+  Archive, History, FileCheck, RotateCcw, Camera, Shield, ClipboardList, QrCode
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 
 import { getAvatarSrc } from '../utils/avatars';
+import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 
 function InstructorDashboard() {
   const { 
@@ -20,7 +21,7 @@ function InstructorDashboard() {
     students = [], 
     reports = [], 
     conversations = [], 
-    _messages = {}, 
+    messages = {}, 
     notifications = [], 
     setNotifications,
     deleteNotifications,
@@ -147,35 +148,61 @@ function InstructorDashboard() {
     });
   }, [viewingArchive, archiveViewData, reports, user?.department]);
 
-  const isMessageNotification = (n) => n?.type === 'message';
+  const isMessageNotification = (n) => n?.type === 'message' || Boolean(n?.conversationId);
 
   const [activeNotifTab, setActiveNotifTab] = useState('all');
 
   const systemNotifications = useMemo(() => {
-    return (notifications || []).filter(n => !isMessageNotification(n));
-  }, [notifications]);
+    return (notifications || []).filter(n => !isMessageNotification(n) && isNotificationAllowedForRole(n, user));
+  }, [notifications, user]);
 
   const messageNotifications = useMemo(() => {
-    return (notifications || []).filter(n => isMessageNotification(n));
-  }, [notifications]);
+    const myId = String(user?.id || user?._id || '');
+    return (notifications || []).filter(n => {
+      if (!isMessageNotification(n)) return false;
+      const sId = String(n.senderId || n.sender_id || '');
+      if (myId && sId && sId === myId) return false;
+      if (user?.name && n.senderName && (n.senderName === user.name || n.senderName.toLowerCase() === user.name.toLowerCase())) return false;
+      if (user?.name && typeof n.title === 'string' && n.title.toLowerCase().includes(user.name.toLowerCase())) return false;
+      return true;
+    });
+  }, [notifications, user]);
 
-  const totalUnreadCount = useMemo(() => {
-    return (notifications || []).filter(n => !n.read).length;
-  }, [notifications]);
+  const systemUnreadCount = useMemo(() => {
+    return systemNotifications.filter(n => !n.read).length;
+  }, [systemNotifications]);
 
   const activeBellNotifications = useMemo(() => {
-    if (activeNotifTab === 'system') return systemNotifications;
-    if (activeNotifTab === 'messages') return messageNotifications;
-    return notifications || [];
-  }, [activeNotifTab, systemNotifications, messageNotifications, notifications]);
+    if (activeNotifTab === 'unread') return systemNotifications.filter(n => !n.read);
+    return systemNotifications;
+  }, [activeNotifTab, systemNotifications]);
 
   const unreadCount = useMemo(() => {
-    return totalUnreadCount;
-  }, [totalUnreadCount]);
+    return systemUnreadCount;
+  }, [systemUnreadCount]);
 
   const messageUnreadCount = useMemo(() => {
-    return messageNotifications.filter(n => !n.read).length;
-  }, [messageNotifications]);
+    const notifCount = messageNotifications.filter(n => !n.read).length;
+    let storeCount = 0;
+    if (user && messages && typeof window !== 'undefined') {
+      try {
+        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+        const currentUserId = String(user.id || user._id || '');
+        Object.entries(messages).forEach(([convId, msgList]) => {
+          if (!Array.isArray(msgList)) return;
+          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          msgList.forEach(m => {
+            const sId = String(m.sender_id || m.senderId || '');
+            const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
+            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+              storeCount++;
+            }
+          });
+        });
+      } catch {}
+    }
+    return Math.max(notifCount, storeCount);
+  }, [messageNotifications, messages, user]);
 
   // Check if user is loaded - after all hooks
   if (!user) {
@@ -596,19 +623,13 @@ function InstructorDashboard() {
                         onClick={() => { setActiveNotifTab('all'); setSelectedNotifications([]); }}
                         className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'all' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                       >
-                        All ({(notifications || []).length})
+                        All ({systemNotifications.length})
                       </button>
                       <button type="button"
-                        onClick={() => { setActiveNotifTab('system'); setSelectedNotifications([]); }}
-                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'system' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                        onClick={() => { setActiveNotifTab('unread'); setSelectedNotifications([]); }}
+                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'unread' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                       >
-                        System ({systemNotifications.length})
-                      </button>
-                      <button type="button"
-                        onClick={() => { setActiveNotifTab('messages'); setSelectedNotifications([]); }}
-                        className={`px-2 py-0.5 rounded-full font-bold transition-all cursor-pointer ${activeNotifTab === 'messages' ? 'bg-emerald-700 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-                      >
-                        Messages ({messageNotifications.length})
+                        Unread ({systemUnreadCount})
                       </button>
                     </div>
 
@@ -646,8 +667,14 @@ function InstructorDashboard() {
                               onClick={() => handleNotificationItemClick(notification)}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1 ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                  {isMsg && <MessageSquare className="w-3 h-3 text-emerald-600 shrink-0" />}
+                                <h4 className={`text-[11px] sm:text-xs font-bold truncate flex items-center gap-1.5 ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                  {notification.type === 'enrollment' && <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                                  {notification.type === 'report' && <ClipboardList className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                                  {notification.type === 'calendar' && <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+                                  {notification.type === 'student' && <Users className="w-3.5 h-3.5 text-teal-600 shrink-0" />}
+                                  {notification.type === 'attendance' && <QrCode className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                                  {(notification.type === 'system' || !notification.type) && !isMsg && <Shield className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                                  {isMsg && <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                                   <span className="truncate">{notification.title}</span>
                                 </h4>
                                 <div className="flex items-center gap-1 shrink-0">
@@ -792,9 +819,20 @@ function InstructorDashboard() {
                               }}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <h4 className={`text-[11px] sm:text-xs font-bold truncate ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
-                                  {notification.senderName || notification.title || 'Message'}
-                                </h4>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <h4 className={`text-[11px] sm:text-xs font-bold truncate ${notification.read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                    {notification.senderName || 'Instructor'}
+                                  </h4>
+                                  {(notification.isGroup || (notification.conversationId && String(notification.conversationId).startsWith('group-'))) ? (
+                                    <span className="shrink-0 text-[8.5px] sm:text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-extrabold border border-emerald-200">
+                                      👥 {notification.groupName || 'All Instructors'}
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 text-[8.5px] sm:text-[9px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+                                      Direct
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-1 shrink-0">
                                   {!notification.read && (
                                     <button type="button"
@@ -840,38 +878,40 @@ function InstructorDashboard() {
           </div>
         </div>
 
-        {/* ── Attendance QR Scanner Action Banner ────────────────────── */}
-        <div className="bg-white rounded-xl sm:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-emerald-100/90 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-xs sm:shadow-md shrink-0">
-              <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+        {/* ── Attendance QR Scanner Action Banner (Hidden when viewing past archives) ── */}
+        {!viewingArchive && (
+          <div className="bg-white rounded-xl sm:rounded-3xl p-2.5 sm:p-4 shadow-sm border border-emerald-100/90 mb-3 sm:mb-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 w-full sm:w-auto">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 text-white flex items-center justify-center shadow-xs sm:shadow-md shrink-0">
+                <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Quick QR token scanner &amp; attendance matrix</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Quick QR token scanner & attendance matrix</p>
+
+            <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowAttendanceScanner(true)}
+                className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+              >
+                <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
+                <span>Live QR Scanner</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAttendanceMatrix(true)}
+                className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-blue-600/50 whitespace-nowrap"
+              >
+                <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
+                <span>Attendance &amp; Absences</span>
+              </button>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowAttendanceScanner(true)}
-              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-            >
-              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-200" />
-              <span>Live QR Scanner</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowAttendanceMatrix(true)}
-              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-blue-600/50 whitespace-nowrap"
-            >
-              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
-              <span>Attendance &amp; Absences</span>
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Quick Stat Cards Grid (3 Clean Cards - Side by Side on Mobile) */}
         <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-6">
@@ -1158,15 +1198,6 @@ function InstructorDashboard() {
                   <Archive className="w-5 h-5 mr-2 text-amber-300" />
                   {user?.department} Batch {archiveViewData.year} Archive Details
                 </h3>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setShowArchiveDetails(false)}
-                    className="p-1 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer text-emerald-200 hover:text-white ml-1"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
               </div>
 
               <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">

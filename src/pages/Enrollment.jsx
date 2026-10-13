@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
@@ -7,9 +7,14 @@ import { analyzeDocumentFile } from '../utils/documentValidation';
 
 function Enrollment() {
   const { submitEnrollment, showToast: authShowToast } = useAuth();
+  const showToast = useCallback((message, type = 'error') => {
+    if (authShowToast) {
+      authShowToast(message, type);
+    }
+  }, [authShowToast]);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Live Enrollment Schedule Status State
   const [enrollmentStatus, setEnrollmentStatus] = useState(() => calculateEnrollmentStatus());
 
@@ -75,23 +80,45 @@ function Enrollment() {
       setGoogleRecaptchaToken('');
     };
 
-    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
-    let rendered = false;
+    // Google official public test key for reCAPTCHA v2 (guaranteed to work on localhost/LAN without domain restrictions):
+    const GOOGLE_TEST_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
+    const PROD_SITE_KEY = '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
+
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]' ||
+      window.location.hostname.startsWith('192.168.') ||
+      window.location.hostname.startsWith('10.') ||
+      window.location.hostname.endsWith('.local')
+    );
+
+    // On localhost / testing, ALWAYS use Google's official test site key so the checkbox works smoothly without domain errors
+    const siteKey = isLocalhost ? GOOGLE_TEST_SITE_KEY : (import.meta.env.VITE_RECAPTCHA_SITE_KEY || PROD_SITE_KEY);
 
     const renderWidget = () => {
-      if (rendered || recaptchaWidgetIdRef.current !== null) return;
+      if (recaptchaWidgetIdRef.current !== null) return;
       if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
-        if (!recaptchaContainerRef.current.hasChildNodes()) {
-          try {
-            rendered = true;
-            recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
-              sitekey: siteKey,
-              callback: (token) => window.onGoogleRecaptchaSuccess && window.onGoogleRecaptchaSuccess(token),
-              'expired-callback': () => window.onGoogleRecaptchaExpired && window.onGoogleRecaptchaExpired(),
-            });
-          } catch (e) {
-            console.warn('reCAPTCHA notice:', e);
+        try {
+          if (recaptchaContainerRef.current.querySelector('iframe')) return;
+          if (recaptchaContainerRef.current.hasChildNodes()) {
+            recaptchaContainerRef.current.innerHTML = '';
           }
+          recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
+            sitekey: siteKey,
+            callback: (token) => {
+              setGoogleRecaptchaToken(token);
+              setErrors(prev => ({ ...prev, captcha: '' }));
+            },
+            'expired-callback': () => {
+              setGoogleRecaptchaToken('');
+            },
+            'error-callback': () => {
+              console.warn('Google reCAPTCHA network notice.');
+            }
+          });
+        } catch (e) {
+          console.warn('reCAPTCHA render notice:', e);
         }
       }
     };
@@ -123,8 +150,28 @@ function Enrollment() {
       }
     }
 
-    const timer = setTimeout(renderWidget, 1000);
-    return () => clearTimeout(timer);
+    let attempts = 0;
+    const timer = setTimeout(renderWidget, 800);
+    const interval = setInterval(() => {
+      attempts++;
+      if (recaptchaWidgetIdRef.current !== null || attempts >= 8) {
+        clearInterval(interval);
+        return;
+      }
+      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
+        renderWidget();
+      }
+    }, 1200);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+      if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
+        try {
+          window.grecaptcha.reset(recaptchaWidgetIdRef.current);
+        } catch (_) {}
+      }
+    };
   }, []);
 
   const convertToCm = (val, unit) => {
@@ -209,6 +256,16 @@ function Enrollment() {
     setShowCameraModal(false);
   };
 
+  useEffect(() => {
+    if (showCameraModal) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [showCameraModal]);
+
   const triggerCorAction = (action = 'file') => {
     setCorGuideAction(action);
     setShowSampleCorModal(true);
@@ -277,7 +334,7 @@ function Enrollment() {
   const capturePhotoFromCamera = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
-    
+
     const rawW = video.videoWidth || 1280;
     const rawH = video.videoHeight || 720;
 
@@ -337,7 +394,7 @@ function Enrollment() {
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d');
-      
+
       if (facingMode === 'user') {
         ctx.translate(w, 0);
         ctx.scale(-1, 1);
@@ -353,7 +410,6 @@ function Enrollment() {
 
   // ── Weak Internet & Auto-Save Draft System ──────────────────────────────────
   const DRAFT_STORAGE_KEY = 'nstp_enrollment_draft_v2';
-  const [hasSavedData, setHasSavedData] = useState(false);
   const [draftPromptVisible, setDraftPromptVisible] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSlowConnection, setIsSlowConnection] = useState(() => {
@@ -367,11 +423,15 @@ function Enrollment() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      showToast('Konektado ka na muli sa Internet.', 'success');
+      if (typeof showToast === 'function') {
+        showToast('Internet connection restored.', 'success');
+      }
     };
     const handleOffline = () => {
       setIsOnline(false);
-      showToast('Nawalan ng koneksyon sa Internet. Naka-save ang iyong mga sinagutan sa iyong device.', 'error');
+      if (typeof showToast === 'function') {
+        showToast('Internet connection lost. Your filled form data is safely saved on your device.', 'error');
+      }
     };
 
     window.addEventListener('online', handleOnline);
@@ -394,7 +454,7 @@ function Enrollment() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [showToast]);
 
   // Check for saved draft on initial mount
   useEffect(() => {
@@ -407,11 +467,10 @@ function Enrollment() {
           data.lastName || data.firstName || data.studentId || data.email || data.contactNumber
         );
         if (hasMeaningfulData) {
-          setHasSavedData(true);
           setDraftPromptVisible(true);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   // Auto-save form inputs continuously so nothing is ever lost on page refresh or mobile drop
@@ -431,7 +490,7 @@ function Enrollment() {
           weightUnit,
           savedAt: Date.now()
         }));
-      } catch (_) {}
+      } catch (_) { }
     }, 400);
 
     return () => clearTimeout(timer);
@@ -473,7 +532,6 @@ function Enrollment() {
     setIdPhoto2x2(null);
     setErrors({});
     setAgreedToTerms(false);
-    setHasSavedData(false);
     setDraftPromptVisible(false);
     showToast('Form has been cleared. You may now start fresh.', 'info');
   };
@@ -491,12 +549,6 @@ function Enrollment() {
     setErrorBanner(msgs);
     if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     errorTimerRef.current = setTimeout(() => setErrorBanner([]), 5000);
-  };
-
-  const showToast = (message, type = 'error') => {
-    if (authShowToast) {
-      authShowToast(message, type);
-    }
   };
 
   const validateForm = () => {
@@ -557,8 +609,29 @@ function Enrollment() {
       }
     }
 
-    // Security Verification - Google reCAPTCHA v2 (with mobile fallback)
-    if (!googleRecaptchaToken && window.grecaptcha) {
+    // Security Verification - Google reCAPTCHA v2 (with resilient fallback)
+    let effectiveCaptchaToken = googleRecaptchaToken;
+    if (!effectiveCaptchaToken && window.grecaptcha) {
+      try {
+        if (recaptchaWidgetIdRef.current !== null) {
+          effectiveCaptchaToken = window.grecaptcha.getResponse(recaptchaWidgetIdRef.current);
+        } else if (typeof window.grecaptcha.getResponse === 'function') {
+          effectiveCaptchaToken = window.grecaptcha.getResponse();
+        }
+      } catch (_) { }
+    }
+    if (!effectiveCaptchaToken && typeof document !== 'undefined') {
+      const respEl = document.getElementById('g-recaptcha-response');
+      if (respEl && respEl.value) {
+        effectiveCaptchaToken = respEl.value;
+      }
+    }
+
+    if (effectiveCaptchaToken && !googleRecaptchaToken) {
+      setGoogleRecaptchaToken(effectiveCaptchaToken);
+    }
+
+    if (!effectiveCaptchaToken && window.grecaptcha) {
       newErrors.captcha = 'Security Verification: Please check the "I\'m not a robot" box.';
     }
 
@@ -831,7 +904,7 @@ function Enrollment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Prevent multiple submissions
     if (isSubmitting) return;
 
@@ -891,7 +964,7 @@ function Enrollment() {
         recaptchaToken: googleRecaptchaToken || null,
       };
 
-      setSubmitStatusMessage('Ipinapadala ang iyong enrollment... (Maaaring tumagal kung mahina ang signal)');
+      setSubmitStatusMessage('Submitting your enrollment... (This may take a moment on slower connections)');
       setSubmitErrorNotice('');
 
       // Auto-retry with backoff for unstable / weak mobile signals
@@ -902,7 +975,7 @@ function Enrollment() {
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
           if (attempt > 1) {
-            setSubmitStatusMessage(`Muling sinusubukan ipadala (Attempt ${attempt} ng ${MAX_RETRIES})... Huwag isara ang browser.`);
+            setSubmitStatusMessage(`Retrying submission (Attempt ${attempt} of ${MAX_RETRIES})... Please keep this browser window open.`);
             await new Promise(r => setTimeout(r, attempt * 1200));
           }
 
@@ -924,22 +997,26 @@ function Enrollment() {
         throw lastSubmitError;
       }
 
-      showToast('Enrollment submitted successfully! Ligtas na naipadala ang iyong application.', 'success');
+      showToast('Enrollment submitted successfully! Your application has been received.', 'success');
       setSubmitted(true);
+      if (window.grecaptcha && recaptchaWidgetIdRef.current !== null) {
+        try { window.grecaptcha.reset(recaptchaWidgetIdRef.current); } catch (_) { }
+      }
+      setGoogleRecaptchaToken('');
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       localStorage.removeItem('enrollmentFormData');
-      
+
     } catch (error) {
       console.error('❌ Enrollment submission failed:', error);
       const raw = error?.message || '';
       const isNet = raw.toLowerCase().includes('fetch') || raw.toLowerCase().includes('network') || raw.toLowerCase().includes('timeout') || !navigator.onLine;
       const friendly = raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate')
-        ? `Ang Student ID "${formData.studentId}" ay rehistrado na sa sistema. Pakisuri ang iyong Student ID.`
+        ? `Student ID "${formData.studentId}" is already registered in the system. Please verify your Student ID.`
         : isNet
-          ? 'Nawalan ng sapat na signal ng internet habang nag-susubmit. Nananatiling ligtas at buo ang iyong mga sinagutan. Pindutin ang "Subukang I-submit Muli" sa ibaba.'
+          ? 'Internet connection was interrupted during submission. Your form entries remain securely saved. Please click "Retry Submission" below.'
           : raw
             ? `Submission Notice: ${raw}`
-            : 'Hindi maipadala ang form dahil mahina ang koneksyon. Nananatiling ligtas ang iyong mga sinagutan. Paki-click muli ang Submit kapag lumakas ang signal.';
+            : 'Unable to submit due to unstable network connectivity. Your saved data is preserved. Please click Submit again once connection stabilizes.';
       showToast(friendly, 'error');
       setSubmitErrorNotice(friendly);
     } finally {
@@ -977,7 +1054,7 @@ function Enrollment() {
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-amber-200">
               <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-amber-600" />
             </div>
-            
+
             <h2 className="text-xl sm:text-2xl font-black text-emerald-950">{enrollmentStatus.headline}</h2>
             <p className="text-gray-600 text-xs sm:text-sm leading-relaxed font-medium">
               {enrollmentStatus.subtext}
@@ -1071,7 +1148,7 @@ function Enrollment() {
       {/* Main Form Container - Compact Mobile Spacing */}
       <main className="max-w-5xl mx-auto py-4 sm:py-10 px-3 sm:px-4 w-full flex-1">
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-emerald-100/80 overflow-hidden">
-          
+
           {/* Hero Header Banner */}
           <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-8 text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -1094,8 +1171,8 @@ function Enrollment() {
                 <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-red-900">
                   <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
                   <div>
-                    <p className="font-black text-red-950">⚠️ Offline Mode: Walang Koneksyon sa Internet</p>
-                    <p className="text-[11px] sm:text-xs text-red-800 font-medium">Huwag mag-alala, ligtas at awtomatikong naka-save ang lahat ng iyong mga tinype sa iyong device upang hindi mawala.</p>
+                    <p className="font-black text-red-950">⚠️ Offline Mode: No Internet Connection</p>
+                    <p className="text-[11px] sm:text-xs text-red-800 font-medium">Do not worry—all your form inputs are automatically saved on your device so no progress is lost.</p>
                   </div>
                 </div>
               </div>
@@ -1104,8 +1181,8 @@ function Enrollment() {
                 <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-amber-950">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping shrink-0"></span>
                   <div>
-                    <p className="font-extrabold text-amber-950 text-xs sm:text-sm">📶 Mahinang Signal / Data-Saver Active</p>
-                    <p className="text-[10.5px] sm:text-xs text-amber-850 font-medium">Naka-compress ang litrato at Certificate of Registration (COR) upang makapasok ang iyong enrollment kahit mahina ang data o 2G/3G signal.</p>
+                    <p className="font-extrabold text-amber-950 text-xs sm:text-sm">📶 Weak Signal / Data-Saver Active</p>
+                    <p className="text-[10.5px] sm:text-xs text-amber-850 font-medium">Photo and Certificate of Registration (COR) documents are automatically optimized to complete enrollment even on cellular data or slower networks.</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
@@ -1155,7 +1232,7 @@ function Enrollment() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <h4 className="text-xs sm:text-sm font-black text-red-950">Paunawa sa Pag-submit</h4>
+                    <h4 className="text-xs sm:text-sm font-black text-red-950">Submission Notice</h4>
                     <p className="text-xs text-red-800 font-medium mt-0.5 leading-relaxed">{submitErrorNotice}</p>
                     <button
                       type="button"
@@ -1164,7 +1241,7 @@ function Enrollment() {
                       className="mt-3 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 flex items-center gap-1.5"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Subukang I-submit Muli (Retry Submission)</span>
+                      <span>Retry Submission</span>
                     </button>
                   </div>
                 </div>
@@ -1346,10 +1423,10 @@ function Enrollment() {
                     autoCorrect="off"
                     spellCheck="false"
                     data-lpignore="true"
-                    max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`}
+                    max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
                     value={
                       formData.birthYear && formData.birthMonth && formData.birthDay
-                        ? `${formData.birthYear}-${String(formData.birthMonth).padStart(2,'0')}-${String(formData.birthDay).padStart(2,'0')}`
+                        ? `${formData.birthYear}-${String(formData.birthMonth).padStart(2, '0')}-${String(formData.birthDay).padStart(2, '0')}`
                         : ''
                     }
                     onChange={(e) => {
@@ -1365,7 +1442,7 @@ function Enrollment() {
                       if (parseInt(safeY) > currentYr) {
                         safeY = currentYr.toString();
                       }
-                      
+
                       const birth = new Date(parseInt(safeY), parseInt(m) - 1, parseInt(d));
                       let calcAge = '';
                       if (!isNaN(birth.getTime())) {
@@ -1378,10 +1455,10 @@ function Enrollment() {
                         calcAge = a >= 0 && a <= 120 ? a.toString() : '';
                       }
 
-                      const upd = { 
-                        ...formData, 
-                        birthYear: safeY, 
-                        birthMonth: String(parseInt(m)), 
+                      const upd = {
+                        ...formData,
+                        birthYear: safeY,
+                        birthMonth: String(parseInt(m)),
                         birthDay: String(parseInt(d)),
                         age: calcAge
                       };
@@ -1844,22 +1921,19 @@ function Enrollment() {
                           setPendingTrack(item);
                         }
                       }}
-                      className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${
-                        formData.nstpComponent === item.id 
-                          ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20' 
+                      className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${formData.nstpComponent === item.id
+                          ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
                           : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'
-                      }`}
+                        }`}
                     >
                       <div>
                         <div className="flex justify-between items-start mb-2.5">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                            formData.nstpComponent === item.id ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'
-                          }`}>
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${formData.nstpComponent === item.id ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'
+                            }`}>
                             {item.badge}
                           </span>
-                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                            formData.nstpComponent === item.id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300'
-                          }`}>
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${formData.nstpComponent === item.id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300'
+                            }`}>
                             {formData.nstpComponent === item.id && <Check className="w-3.5 h-3.5" />}
                           </div>
                         </div>
@@ -2001,9 +2075,8 @@ function Enrollment() {
 
                 {!registrationPhoto ? (
                   <div
-                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${
-                      errors.registrationPhoto ? 'border-red-400 bg-red-50/40' : 'border-emerald-200 hover:border-emerald-500 hover:shadow-sm'
-                    }`}
+                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${errors.registrationPhoto ? 'border-red-400 bg-red-50/40' : 'border-emerald-200 hover:border-emerald-500 hover:shadow-sm'
+                      }`}
                   >
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Upload className="w-7 h-7" />
@@ -2033,7 +2106,7 @@ function Enrollment() {
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-                    <div 
+                    <div
                       onClick={() => setPreviewPhotoModal({
                         type: 'regform',
                         title: 'Certificate of Registration (COR)',
@@ -2123,9 +2196,8 @@ function Enrollment() {
 
                 {!idPhoto2x2 ? (
                   <div
-                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${
-                      errors.idPhoto2x2 ? 'border-red-400 bg-red-50/40' : 'border-emerald-200 hover:border-emerald-500 hover:shadow-sm'
-                    }`}
+                    className={`border-2 border-dashed rounded-3xl p-8 text-center transition-all bg-white ${errors.idPhoto2x2 ? 'border-red-400 bg-red-50/40' : 'border-emerald-200 hover:border-emerald-500 hover:shadow-sm'
+                      }`}
                   >
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Camera className="w-7 h-7" />
@@ -2155,7 +2227,7 @@ function Enrollment() {
                   </div>
                 ) : (
                   <div className="bg-white border-2 border-emerald-500 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-                    <div 
+                    <div
                       onClick={() => setPreviewPhotoModal({
                         type: 'idphoto',
                         title: 'Official 2x2 ID Portrait Photo',
@@ -2212,9 +2284,9 @@ function Enrollment() {
 
               {/* Live Camera Viewfinder Modal */}
               {showCameraModal && (
-                <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-                  <div className="bg-emerald-950 rounded-3xl border border-emerald-800/80 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col">
-                    <div className="p-4 bg-emerald-900 flex items-center justify-between text-white border-b border-emerald-800">
+                <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in overflow-hidden touch-none select-none overscroll-none">
+                  <div className="bg-emerald-950 rounded-2xl sm:rounded-3xl border border-emerald-800/80 shadow-2xl max-w-lg w-full max-h-[92dvh] overflow-hidden flex flex-col justify-between">
+                    <div className="p-3.5 sm:p-4 bg-emerald-900 flex items-center justify-between text-white border-b border-emerald-800 shrink-0">
                       <div className="flex items-center gap-2">
                         <Camera className="w-5 h-5 text-amber-400" />
                         <h3 className="text-sm font-black">
@@ -2230,63 +2302,18 @@ function Enrollment() {
                       </button>
                     </div>
 
-                    <div className="relative bg-black aspect-[4/3] flex items-center justify-center overflow-hidden">
+                    <div className="relative bg-black flex-1 min-h-0 flex items-center justify-center overflow-hidden">
                       <video
                         ref={videoRef}
                         playsInline
                         muted
                         autoPlay
-                        className="w-full h-full object-cover enrollment-camera-video"
-                        style={{ 
+                        className="w-full h-full max-h-[58dvh] object-cover enrollment-camera-video"
+                        style={{
                           transform: 'none',
                           WebkitTransform: 'none'
                         }}
                       />
-                      
-                      {/* Top Clear Guidance Banner */}
-                      <div className="absolute top-3 left-3 right-3 pointer-events-none z-10">
-                        <div className="bg-emerald-950/90 backdrop-blur-md border border-emerald-500/40 text-white p-2.5 rounded-2xl shadow-xl flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-400/30">
-                            <Sparkles className="w-4 h-4 text-amber-400" />
-                          </div>
-                          <p className="text-[10px] sm:text-xs font-semibold leading-tight text-emerald-100">
-                            {cameraTarget === 'idphoto' 
-                              ? <span><strong className="text-amber-300 font-bold">2x2 ID Photo:</strong> Keep face centered, plain white background, white/collared shirt.</span>
-                              : <span><strong className="text-amber-300 font-bold">COR Document:</strong> Ensure text, subjects, and student details are sharp and clearly legible.</span>
-                            }
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Guide Box & Head Alignment Silhouette for 2x2 ID Photo */}
-                      {cameraTarget === 'idphoto' && (
-                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-3 sm:p-4">
-                          <div
-                            ref={idPhotoGuideBoxRef}
-                            className="w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 aspect-square max-w-[85vw] max-h-[85%] border-2.5 border-dashed border-amber-400 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] flex flex-col items-center justify-center relative overflow-hidden"
-                          >
-                            {/* Head & Shoulder Alignment Silhouette Overlay */}
-                            <svg viewBox="0 0 200 200" className="w-full h-full text-amber-300/80 stroke-current fill-none">
-                              {/* Oval Head Contour */}
-                              <ellipse cx="100" cy="74" rx="34" ry="44" strokeWidth="2.2" strokeDasharray="5 3" />
-                              {/* Eye balance reference line */}
-                              <line x1="78" y1="68" x2="122" y2="68" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
-                              {/* Vertical alignment line */}
-                              <line x1="100" y1="28" x2="100" y2="122" strokeWidth="1.2" strokeDasharray="4 4" opacity="0.45" />
-                              {/* Chin guide curve */}
-                              <path d="M 85 106 Q 100 120 115 106" strokeWidth="2" strokeDasharray="4 2" />
-                              {/* Neck guide lines */}
-                              <line x1="88" y1="120" x2="88" y2="140" strokeWidth="1.8" strokeDasharray="4 2" />
-                              <line x1="112" y1="120" x2="112" y2="140" strokeWidth="1.8" strokeDasharray="4 2" />
-                              {/* Shoulders contour */}
-                              <path d="M 28 190 Q 75 142 100 142 Q 125 142 172 190" strokeWidth="2.2" strokeDasharray="5 3" />
-                            </svg>
-                            <span className="absolute bottom-2.5 text-[9px] sm:text-[10.5px] font-black text-amber-300 uppercase tracking-wider bg-black/80 px-2.5 py-1 rounded-full border border-amber-400/50 shadow-md">
-                              👤 Align Head &amp; Shoulders Here
-                            </span>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <div className="p-4 sm:p-5 bg-emerald-950 flex items-center justify-between gap-2 sm:gap-3">
@@ -2364,11 +2391,10 @@ function Enrollment() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-4 px-8 rounded-2xl text-base sm:text-lg font-black transition-all shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
-                  isSubmitting
+                className={`w-full py-4 px-8 rounded-2xl text-base sm:text-lg font-black transition-all shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${isSubmitting
                     ? 'bg-amber-400/60 text-emerald-950/70 cursor-wait'
                     : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20 hover:shadow-2xl hover:-translate-y-0.5'
-                }`}
+                  }`}
               >
                 {isSubmitting ? (
                   <>
@@ -2384,112 +2410,148 @@ function Enrollment() {
         </div>
       </main>
 
-      {/* Terms and Privacy Policy Modal */}
+      {/* Terms and Privacy Policy Modal - Comprehensive Legal Framework */}
       {showTermsModal && (
-        <div 
-          className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in"
+        <div
+          className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
           onClick={() => setShowTermsModal(false)}
         >
-          <div 
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col border border-emerald-100/80 overflow-hidden"
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-emerald-100 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300">
-                  <Shield className="w-5 h-5" />
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+              <div className="flex items-center space-x-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-xs">
+                  <Shield className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight">Terms of Service &amp; Data Privacy Policy</h3>
-                  <p className="text-emerald-200 text-xs font-medium">Cavite State University - Naic Campus • NSTP Office</p>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    Terms of Service, CvSU Code &amp; Data Privacy Policy
+                  </h3>
+                  <p className="text-emerald-200 text-xs font-medium">
+                    Cavite State University - Naic Campus • NSTP Directorate • R.A. 9163 &amp; R.A. 10173
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowTermsModal(false)}
                 className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                aria-label="Close Terms Modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
-            {/* Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-xs sm:text-sm text-gray-700 leading-relaxed">
-              {/* Terms Section */}
-              <div className="bg-emerald-50/60 rounded-2xl p-5 border border-emerald-200/80 shadow-2xs">
-                <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-700" />
-                  1. Terms of Service &amp; Student Undertaking (R.A. 9163 &amp; University Regulations)
-                </h4>
-                <ul className="space-y-3 text-gray-700 font-medium">
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Statutory Mandatory Requirement:</strong> In accordance with Republic Act No. 9163 (National Service Training Program Act of 2001) and CHED regulations, all students enrolled in baccalaureate degree programs must satisfactorily complete two (2) consecutive semesters of one (1) chosen NSTP component (CWTS, LTS, or ROTC) as an indispensable prerequisite for graduation.</span>
+
+            {/* Body Content - Summarized Frameworks */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-3.5 text-xs sm:text-sm text-gray-700 leading-relaxed max-h-[60vh]">
+              {/* SECTION 1: CVSU RULES & REGULATIONS */}
+              <div className="bg-emerald-50/70 rounded-2xl p-4 sm:p-4.5 border border-emerald-200/80 shadow-2xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-5.5 h-5.5 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    1
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                    CvSU Rules, Regulations &amp; Student Code of Conduct
+                  </h4>
+                </div>
+                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Academic Integrity:</strong> All submitted personal data, 2x2 photograph, and Certificate of Registration (COR) are authentic and official. Any falsification is subject to disciplinary action and dropping from the course.</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Authenticity of Information:</strong> The student solemnly affirms that all personal identity data, academic records, contact numbers, and uploaded files (2x2 ID Photo and official Certificate of Registration) are true, accurate, and completely authentic. Any misrepresentation or fraudulent submission constitutes an offense under the Cavite State University Student Handbook and will subject the student to disciplinary action and revocation of course credits.</span>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>80% Attendance Rule:</strong> Maintaining a minimum of 80% physical attendance in classroom lectures and community fieldwork activities is mandatory. More than 2 unexcused absences will result in a failing grade (5.00/DRP).</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Component Continuity &amp; Required Training Hours:</strong> Under the Revised NSTP Implementing Rules and Regulations (IRR), students are required to complete fifty-four (54) training hours per semester. Shifting between components (e.g., CWTS to ROTC) between semesters is strictly disallowed unless covered by an officially approved petition under meritorious medical or administrative grounds.</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Attendance &amp; Academic Performance:</strong> Students must maintain a minimum of 80% attendance in all scheduled classroom lectures, military drills, and community service immersions. Unexcused absences exceeding the maximum allowable threshold will automatically result in a failing grade of 5.0 or Dropped (DRP).</span>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Anti-Hazing Policy (R.A. 11053):</strong> Any form of hazing, initiation rites, or physical and psychological violence across all components (CWTS, LTS, ROTC) is strictly prohibited.</span>
                   </li>
                 </ul>
               </div>
 
-              {/* Privacy Policy Section */}
-              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-2xs">
-                <h4 className="text-sm font-black text-emerald-950 mb-3 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-700" />
-                  2. Official Data Privacy Notice (Republic Act No. 10173 Compliance)
-                </h4>
-                <p className="text-gray-700 font-medium mb-3.5 leading-relaxed">
-                  Cavite State University (CvSU) - Naic Campus recognizes its responsibilities under <strong>Republic Act No. 10173</strong>, also known as the <strong>Data Privacy Act of 2012</strong>, and National Privacy Commission (NPC) Circulars. The personal and sensitive personal data collected through this portal are processed with strict confidentiality, adherence to proportionality, transparency, and legitimate university purposes:
-                </p>
-                <ul className="space-y-3 text-gray-700 font-medium">
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Scope and Categories of Data Collected:</strong> Under Sections 3 and 13 of R.A. 10173, the portal processes:
-                      <ul className="list-disc ml-5 mt-1.5 space-y-1 text-gray-600 font-normal">
-                        <li><strong>Personal Information:</strong> Full legal name, official student ID number, degree program/course, academic year and section, home address, personal contact number, email address, and emergency contact details.</li>
-                        <li><strong>Sensitive Personal Information:</strong> Date of birth, sex, civil status, blood type, declared medical history or physical limitations (collected solely to guarantee student safety during field training, community immersion, and military drills), high-resolution 2x2 ID photograph, and official Certificate of Registration (COR).</li>
-                      </ul>
-                    </span>
+              {/* SECTION 2: REPUBLIC ACT NO. 9163 (NSTP ACT OF 2001) */}
+              <div className="bg-amber-50/70 rounded-2xl p-4 sm:p-4.5 border border-amber-200/80 shadow-2xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-5.5 h-5.5 rounded-lg bg-amber-500 text-emerald-950 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    2
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-black text-amber-950">
+                    Republic Act No. 9163 (NSTP Act of 2001)
+                  </h4>
+                </div>
+                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
+                    <span><strong>Graduation Prerequisite:</strong> Completion of 2 semesters (NSTP 1 and 2, 3 units each) is a statutory prerequisite for college graduation.</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Specific and Legitimate Purpose of Processing:</strong> Data collected shall be utilized solely for: (1) authenticating student eligibility for tertiary enrollment under R.A. 10931; (2) official enlistment into CWTS, LTS, or ROTC tracks; (3) generating attendance sheets, safety liability manifests, and grade reports; (4) endorsement to the <strong>Commission on Higher Education (CHED)</strong> and <strong>Department of National Defense / Armed Forces of the Philippines (DND/AFP)</strong> for the issuance of permanent <strong>National NSTP Serial Numbers</strong>; and (5) accreditation into the National Service Reserve Corps (NSRC) or AFP Citizen Armed Force.</span>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
+                    <span><strong>Component Continuity:</strong> Both semesters must be completed under the same component track (CWTS, LTS, or ROTC); switching components without official university approval is prohibited.</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Security, Storage &amp; Non-Disclosure:</strong> Technical, physical, and organizational security measures are enforced. Data transmissions are encrypted via SSL/TLS protocols and stored in secure, access-restricted institutional databases. Under no circumstances will personal data be sold, leased, or disclosed to commercial third parties or unauthorized personnel.</span>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
+                    <span><strong>National Serial Number:</strong> Upon completion, CWTS/LTS graduates will be inducted into the NSRC and ROTC graduates into the AFP Reserve Force, each with an official CHED/DND National Serial Number.</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Data Subject Rights (Section 16, R.A. 10173):</strong> As a data subject, enrolled students possess the right to: (a) be informed of data collection; (b) access their recorded data; (c) rectify or update inaccurate or outdated information; (d) object to processing outside statutory academic requirements; and (e) lodge a complaint before the National Privacy Commission (NPC) if rights are compromised.</span>
+                </ul>
+              </div>
+
+              {/* SECTION 3: REPUBLIC ACT NO. 10173 (DATA PRIVACY ACT OF 2012) */}
+              <div className="bg-slate-50 rounded-2xl p-4 sm:p-4.5 border border-slate-200/90 shadow-2xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-5.5 h-5.5 rounded-lg bg-teal-800 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    3
+                  </div>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                    Republic Act No. 10173 (Data Privacy Act of 2012)
+                  </h4>
+                </div>
+                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Legitimate Academic Use:</strong> Your personal and medical information will be utilized exclusively for official NSTP enrollment, field immersion safety, and CHED institutional reporting.</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span><strong>Institutional Inquiries &amp; Data Protection Officer (DPO):</strong> For questions, data inspection requests, or privacy concerns, you may contact the <strong>CvSU Data Protection Officer (DPO)</strong> at <strong className="text-emerald-800">dpo@cvsu.edu.ph</strong>, or the <strong>CvSU Naic Campus NSTP Office</strong> at <strong className="text-emerald-800">naic@cvsu.edu.ph</strong>.</span>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Confidentiality &amp; Security:</strong> The database is encrypted and secured; information will never be disclosed or distributed to unauthorized third parties.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
+                    <span><strong>Data Subject Rights:</strong> You retain the right to request access, rectify inaccurate records, and inquire with the CvSU Data Protection Officer (dpo@cvsu.edu.ph).</span>
                   </li>
                 </ul>
               </div>
             </div>
 
-            {/* Footer Modal Action */}
-            <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowTermsModal(false)}
-                className="px-6 py-2.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
-              >
-                I Understand &amp; Agree
-              </button>
+            {/* Footer Modal Actions */}
+            <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
+                By clicking &quot;I Understand &amp; Agree&quot;, you bind yourself to the official University Code, R.A. 9163, and R.A. 10173.
+              </span>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreedToTerms(true);
+                    setShowTermsModal(false);
+                    showToast('Agreed to CvSU Rules, R.A. 9163, and Data Privacy Policy.', 'success');
+                  }}
+                  className="whitespace-nowrap px-6 py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 inline-flex items-center justify-center gap-1.5 shrink-0"
+                >
+                  <Check className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span>I Understand &amp; Agree</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2497,18 +2559,18 @@ function Enrollment() {
 
       {/* Track Selection Confirmation Modal */}
       {pendingTrack && (
-        <div 
+        <div
           className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in"
           onClick={() => setPendingTrack(null)}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl shadow-2xl w-full max-w-md border border-emerald-100 overflow-hidden text-center p-6 sm:p-8 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg sm:text-xl font-black text-emerald-950 mb-2">
               Confirm Selected NSTP Component
             </h3>
-            
+
             <p className="text-gray-600 text-xs sm:text-sm font-medium leading-relaxed mb-4">
               Are you sure you want to select <strong className="text-emerald-900 font-black">{pendingTrack.title} ({pendingTrack.subtitle})</strong> as your official NSTP Track Component?
             </p>
@@ -2546,11 +2608,11 @@ function Enrollment() {
 
       {/* Full Document / 2x2 Photo Inspection Lightbox Modal */}
       {previewPhotoModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in"
           onClick={() => setPreviewPhotoModal(null)}
         >
-          <div 
+          <div
             className="bg-emerald-950 rounded-3xl border border-emerald-700/80 shadow-2xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[92vh]"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2652,11 +2714,11 @@ function Enrollment() {
 
       {/* ── Sample Registration Form (COR) Visual Specimen & Guide Modal ── */}
       {showSampleCorModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in overflow-y-auto"
           onClick={() => setShowSampleCorModal(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl border border-emerald-200 my-auto animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2682,7 +2744,7 @@ function Enrollment() {
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
-              
+
               {/* Document Specimen Preview from Actual CvSU Naic Registration Form PDF */}
               <div className="bg-white rounded-2xl p-3 sm:p-4 border-2 border-emerald-300 shadow-md font-sans text-slate-800 relative overflow-hidden">
                 <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-200">
@@ -2713,7 +2775,7 @@ function Enrollment() {
                     className="w-full h-auto max-h-[480px] object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
                     loading="eager"
                   />
-                  
+
                   {/* Floating callout badges highlighting key inspection areas */}
                   <div className="absolute top-3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
@@ -2800,11 +2862,11 @@ function Enrollment() {
 
       {/* ── Official 2x2 ID Photo Specimen & Guide Modal ── */}
       {showSample2x2Modal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-6 animate-fade-in overflow-y-auto"
           onClick={() => setShowSample2x2Modal(false)}
         >
-          <div 
+          <div
             className="bg-white rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl border border-emerald-200 my-auto animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2830,7 +2892,7 @@ function Enrollment() {
 
             {/* Modal Body */}
             <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto space-y-5 bg-slate-50/50">
-              
+
               {/* Photo Visual Specimen Cards - Real Female & Male Examples */}
               <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
@@ -2881,7 +2943,7 @@ function Enrollment() {
 
                 <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-left">
                   <p className="text-xs text-emerald-950 font-bold leading-relaxed">
-                    💡 <strong>Opisyal na Pamantayan:</strong> Ang litratong ito ang direktang ipi-print sa iyong opisyal na physical NSTP PVC ID Card. Siguraduhing pantay ang ilaw, walang anino sa likod, at sumusunod sa mga halimbawa sa itaas.
+                    💡 <strong>Official Specification:</strong> This photograph will be printed directly onto your official physical NSTP PVC ID Card. Ensure balanced lighting, plain background without shadows, and adherence to the samples above.
                   </p>
                 </div>
               </div>

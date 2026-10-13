@@ -37,10 +37,27 @@ html {
   }
 }
 
-/* Full Screen Viewport Coverage adjusted for 75% Desktop Zoom */
+/* Responsive Hero Carousel Height:
+   - Mobile: Proportional card height (470px-560px) so content below is easily visible and scrollable.
+   - Desktop: Full viewport coverage adjusted for 75% system zoom.
+*/
 .hero-full-viewport {
-  height: calc(100vh - 60px);
-  min-height: calc(100vh - 60px);
+  height: 470px;
+  min-height: 470px;
+}
+
+@media screen and (min-width: 480px) {
+  .hero-full-viewport {
+    height: 510px;
+    min-height: 510px;
+  }
+}
+
+@media screen and (min-width: 640px) {
+  .hero-full-viewport {
+    height: 560px;
+    min-height: 560px;
+  }
 }
 
 @media screen and (min-width: 768px) {
@@ -52,7 +69,6 @@ html {
 
 /* Full Screen Viewport Coverage adjusted for Desktop (0.75) and Mobile (0.90) Zoom */
 .min-h-screen,
-.login-full-viewport,
 .app-min-screen-height {
   min-height: 100vh;
   min-height: 100dvh;
@@ -60,7 +76,6 @@ html {
 
 @media screen and (max-width: 767px) {
   .min-h-screen,
-  .login-full-viewport,
   .app-min-screen-height {
     min-height: calc(100vh / 0.90);
     min-height: calc(100dvh / 0.90);
@@ -69,7 +84,6 @@ html {
 
 @media screen and (min-width: 768px) {
   .min-h-screen,
-  .login-full-viewport,
   .app-min-screen-height {
     min-height: calc(100vh / 0.75);
     min-height: calc(100dvh / 0.75);
@@ -92,6 +106,31 @@ html {
   .app-screen-height {
     height: calc(100dvh / 0.75);
     max-height: calc(100dvh / 0.75);
+  }
+}
+
+/* Static Non-Scrolling Login Page */
+.login-static-page {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden !important;
+}
+
+@media screen and (max-width: 767px) {
+  .login-static-page {
+    height: calc(100dvh / 0.90);
+    max-height: calc(100dvh / 0.90);
+    overflow: hidden !important;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .login-static-page {
+    height: calc(100dvh / 0.75);
+    max-height: calc(100dvh / 0.75);
+    overflow: hidden !important;
   }
 }
 
