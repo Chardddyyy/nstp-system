@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
-import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive } from 'lucide-react';
+import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive, RotateCcw } from 'lucide-react';
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
 import xss from 'xss';
 
@@ -421,17 +421,26 @@ export default function LetterFormats() {
 
         {/* Viewing Archive Banner */}
         {viewingArchive && archiveViewData && (
-          <div className="flex-shrink-0 bg-amber-500 text-emerald-950 px-4 py-2.5 rounded-2xl flex items-center justify-between shadow-md mb-6 font-bold text-xs sm:text-sm">
-            <div className="flex items-center space-x-2">
-              <History className="w-5 h-5 text-emerald-950 shrink-0" />
-              <span>Viewing Archived Batch Letter Formats: <strong>Batch {archiveViewData.year}</strong></span>
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
+              <div>
+                <h2 className="text-base font-black text-amber-900">
+                  Archived Letter Formats — Batch {archiveViewData.year}
+                </h2>
+                <p className="text-xs text-amber-700 font-medium">Viewing archived batch templates. Editing is disabled.</p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => setViewingArchive(false)}
-              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0"
+              onClick={() => {
+                setViewingArchive(false);
+                setArchiveViewData(null);
+              }}
+              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
             >
-              Exit Archive
+              <RotateCcw className="w-4 h-4" />
+              <span>Back to Current</span>
             </button>
           </div>
         )}

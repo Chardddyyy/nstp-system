@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon, CalendarDays, Plus, X, Pencil,
-  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive,
+  ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive, RotateCcw,
   List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -821,17 +821,24 @@ function Calendar() {
 
         {/* Viewing Archive Banner */}
         {viewingArchive && archiveViewData && (
-          <div className="flex-shrink-0 bg-gradient-to-r from-amber-400 to-amber-500 text-emerald-950 px-4 py-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-md mb-3 font-bold text-xs sm:text-sm border border-amber-500">
-            <div className="flex items-center space-x-2">
-              <History className="w-4 h-4 text-emerald-950 shrink-0" />
-              <span>
-                Viewing Archived Batch Calendar: <strong>Batch {archiveViewData.year}</strong>
-                {batchRange && (
-                  <span className="ml-2 px-2 py-0.5 bg-emerald-950 text-amber-300 rounded-lg text-[10.5px] font-black uppercase tracking-wider">
-                    {batchRange.startLabel} – {batchRange.endLabel}
-                  </span>
-                )}
-              </span>
+          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-4 sm:mb-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base font-black text-amber-900">
+                    Archived Calendar — Batch {archiveViewData.year}
+                  </h2>
+                  {batchRange && (
+                    <span className="px-2 py-0.5 bg-emerald-950 text-amber-300 rounded-lg text-[10.5px] font-black uppercase tracking-wider">
+                      {batchRange.startLabel} – {batchRange.endLabel}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-amber-700 font-medium">
+                  Viewing archived batch calendar. Editing is disabled.
+                </p>
+              </div>
             </div>
             <button
               type="button"
@@ -839,9 +846,10 @@ function Calendar() {
                 setViewingArchive(false);
                 setArchiveViewData(null);
               }}
-              className="bg-emerald-950 text-amber-300 hover:bg-emerald-900 px-3 py-1 rounded-xl text-xs font-black transition-colors cursor-pointer shrink-0 shadow-xs"
+              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
             >
-              Exit Archive
+              <RotateCcw className="w-4 h-4" />
+              <span>Back to Current</span>
             </button>
           </div>
         )}
