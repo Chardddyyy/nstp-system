@@ -6,13 +6,14 @@ import {
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
   BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
-  HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn, QrCode
+  HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn, QrCode, Award, FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
-import { downloadChedFormat, downloadChedFormA } from '../utils/chedExportGenerator';
+import { downloadChedFormat, downloadChedFormA, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 
@@ -402,6 +403,9 @@ function AdminDashboard() {
   
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
+  const [archiveExportModal, setArchiveExportModal] = useState(null); // { formType: 'Form A' | 'Form B', data: archiveViewData }
+  const [archiveExportDept, setArchiveExportDept] = useState('All');
+  const [isExportingArchive, setIsExportingArchive] = useState(false);
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(true);
   const [barChartMode] = useState('vertical');
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
@@ -423,6 +427,10 @@ function AdminDashboard() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
+        if (archiveExportModal) {
+          setArchiveExportModal(null);
+          return;
+        }
         if (photoViewer) {
           setPhotoViewer(null);
           return;
@@ -3781,9 +3789,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   {/* Form A Button */}
                   <button
                     type="button"
-                    onClick={() => downloadChedFormA(archiveViewData)}
+                    onClick={() => setArchiveExportModal({ formType: 'Form A', data: archiveViewData })}
                     className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
-                    title="Export CHED Form 2-A Summary Matrix"
+                    title="Export CHED Form 2-A Summary Matrix (PDF or Excel)"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Form A</span>
@@ -3792,9 +3800,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   {/* Form B Button */}
                   <button
                     type="button"
-                    onClick={() => downloadChedFormat(archiveViewData)}
+                    onClick={() => {
+                      setArchiveExportDept('All');
+                      setArchiveExportModal({ formType: 'Form B', data: archiveViewData });
+                    }}
                     className="bg-amber-400 hover:bg-amber-300 text-emerald-950 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95 border border-amber-500/50"
-                    title="Export Official CHED Form B Masterlist"
+                    title="Export Official CHED Form B Masterlist (PDF or Excel)"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-950" />
                     <span>Form B</span>
@@ -4247,6 +4258,193 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     <span>Back to Current</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── ARCHIVE EXPORT FORMAT SELECTION MODAL (PDF or Excel) ── */}
+        {archiveExportModal && (
+          <div
+            className="fixed inset-0 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center z-[60] p-4 animate-fade-in"
+            onClick={() => !isExportingArchive && setArchiveExportModal(null)}
+          >
+            <div
+              className="bg-white rounded-3xl shadow-2xl border border-emerald-800/40 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-emerald-800/60 shadow-md">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-amber-400/20 rounded-2xl p-2 flex items-center justify-center border border-amber-400/40 shrink-0">
+                    {archiveExportModal.formType === 'Form A' ? (
+                      <Award className="w-6 h-6 text-amber-400" />
+                    ) : (
+                      <FileSpreadsheet className="w-6 h-6 text-amber-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight">
+                      Export CHED {archiveExportModal.formType}
+                    </h3>
+                    <p className="text-[11px] text-emerald-300 font-medium">
+                      {archiveExportModal.formType === 'Form A'
+                        ? 'OSDS-NSTP Form 2-A Summary Matrix'
+                        : 'Official Student Directory & Masterlist'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isExportingArchive}
+                  onClick={() => setArchiveExportModal(null)}
+                  className="p-1.5 text-emerald-300 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 sm:p-6 space-y-4">
+                {/* Batch Info Pill */}
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs text-emerald-950 flex items-center justify-between">
+                  <span className="font-bold text-gray-500">Academic Batch:</span>
+                  <span className="font-black text-amber-800">
+                    Batch {archiveExportModal.data?.year || 'Archived'}
+                  </span>
+                </div>
+
+                {/* If Form B: Department Selection */}
+                {archiveExportModal.formType === 'Form B' && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                      Select Component Track
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {['All', 'CWTS', 'LTS', 'ROTC'].map((dept) => {
+                        const isSelected = archiveExportDept === dept;
+                        return (
+                          <button
+                            key={dept}
+                            type="button"
+                            disabled={isExportingArchive}
+                            onClick={() => setArchiveExportDept(dept)}
+                            className={`py-2 px-1 text-center rounded-xl font-black text-xs transition-all cursor-pointer ${
+                              isSelected
+                                ? 'bg-emerald-800 text-white shadow-xs'
+                                : 'bg-gray-100 hover:bg-emerald-50 text-gray-700 border border-gray-200'
+                            }`}
+                          >
+                            {dept === 'All' ? 'All' : dept}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Select Download Format
+                  </label>
+                  <p className="text-[11px] text-gray-500">
+                    Choose whether to download official printable PDF or editable Excel spreadsheet:
+                  </p>
+                </div>
+
+                {/* Format Selection Action Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* PDF Option Card */}
+                  <button
+                    type="button"
+                    disabled={isExportingArchive}
+                    onClick={async () => {
+                      try {
+                        setIsExportingArchive(true);
+                        if (archiveExportModal.formType === 'Form A') {
+                          await downloadChedFormAPdf(archiveExportModal.data);
+                          if (showToast) showToast('CHED Form 2-A PDF downloaded successfully!', 'success');
+                        } else {
+                          await downloadChedFormBPdf(archiveExportModal.data, null, archiveExportDept);
+                          const trackLabel = archiveExportDept === 'All' ? 'All Tracks' : archiveExportDept;
+                          if (showToast) showToast(`CHED Form B (${trackLabel}) PDF downloaded successfully!`, 'success');
+                        }
+                        setArchiveExportModal(null);
+                      } catch (err) {
+                        console.error('Export PDF error:', err);
+                        if (showToast) showToast('Failed to generate PDF. Please try again.', 'error');
+                      } finally {
+                        setIsExportingArchive(false);
+                      }
+                    }}
+                    className="group flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-amber-300 hover:border-amber-500 bg-gradient-to-b from-amber-50/60 to-amber-100/50 hover:from-amber-100 hover:to-amber-200/70 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 text-center"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                      <Download className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-black text-emerald-950">
+                      Download PDF
+                    </span>
+                    <span className="text-[10.5px] text-amber-900 font-semibold mt-0.5">
+                      Official Printable (.pdf)
+                    </span>
+                  </button>
+
+                  {/* Excel Option Card */}
+                  <button
+                    type="button"
+                    disabled={isExportingArchive}
+                    onClick={async () => {
+                      try {
+                        setIsExportingArchive(true);
+                        if (archiveExportModal.formType === 'Form A') {
+                          await downloadChedFormAExcel(archiveExportModal.data);
+                          if (showToast) showToast('CHED Form 2-A Excel downloaded successfully!', 'success');
+                        } else {
+                          await downloadChedFormBExcel(archiveExportModal.data, null, archiveExportDept);
+                          const trackLabel = archiveExportDept === 'All' ? 'All Tracks' : archiveExportDept;
+                          if (showToast) showToast(`CHED Form B (${trackLabel}) Excel downloaded successfully!`, 'success');
+                        }
+                        setArchiveExportModal(null);
+                      } catch (err) {
+                        console.error('Export Excel error:', err);
+                        if (showToast) showToast('Failed to generate Excel. Please try again.', 'error');
+                      } finally {
+                        setIsExportingArchive(false);
+                      }
+                    }}
+                    className="group flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-emerald-300 hover:border-emerald-600 bg-gradient-to-b from-emerald-50/60 to-emerald-100/50 hover:from-emerald-100 hover:to-emerald-200/70 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50 text-center"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-700 text-white flex items-center justify-center mb-2.5 shadow-sm group-hover:scale-110 transition-transform">
+                      <FileSpreadsheet className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-black text-emerald-950">
+                      Download Excel
+                    </span>
+                    <span className="text-[10.5px] text-emerald-800 font-semibold mt-0.5">
+                      Spreadsheet (.xlsx)
+                    </span>
+                  </button>
+                </div>
+
+                {isExportingArchive && (
+                  <div className="flex items-center justify-center gap-2 pt-2 text-xs font-bold text-emerald-800 animate-pulse">
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                    <span>Generating file, please wait...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-end">
+                <button
+                  type="button"
+                  disabled={isExportingArchive}
+                  onClick={() => setArchiveExportModal(null)}
+                  className="px-4 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-200 hover:bg-gray-300 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
