@@ -4502,165 +4502,230 @@ function getConsecutiveBatchDetails(currentBatchStr) {
         {/* Admin Enrollment Timed Schedule Modal */}
         {/* Enrollment Schedule Settings Modal */}
         {scheduleModalOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-[92%] sm:w-full overflow-hidden border border-gray-200 flex flex-col my-auto max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
-              <div className="bg-emerald-900 text-white p-3.5 sm:p-4 flex items-center justify-between shrink-0">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-200 shrink-0">
-                    <Calendar className="w-4 h-4" />
+          <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setScheduleModalOpen(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                    <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-bold tracking-tight">Enrollment Schedule Settings</h3>
-                    <p className="text-emerald-200 text-[10px] sm:text-xs">Configure portal dates and student announcement</p>
+                    <h3 className="text-base sm:text-lg font-black tracking-tight">Enrollment Schedule Settings</h3>
+                    <p className="text-emerald-200 text-xs font-medium">Configure portal dates, registration timeline &amp; student announcement</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setScheduleModalOpen(false)}
-                  className="w-7 h-7 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close modal"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="p-3.5 sm:p-5 space-y-3.5 overflow-y-auto max-h-[62vh]">
-                {/* Current Live Status Banner */}
-                <div className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+                {/* Live Portal Status Banner */}
+                <div className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
                   scheduleStatus.isOpen 
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
-                    : 'bg-rose-50 border-rose-200 text-rose-900'
+                    ? 'bg-gradient-to-r from-emerald-50/90 via-emerald-50/50 to-teal-50/70 border-emerald-200/90 text-emerald-950' 
+                    : 'bg-gradient-to-r from-rose-50/90 via-rose-50/50 to-amber-50/70 border-rose-200/90 text-rose-950'
                 }`}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="relative flex items-center justify-center shrink-0">
+                      <span className={`w-3.5 h-3.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-500 animate-ping absolute opacity-75' : 'hidden'}`}></span>
+                      <span className={`w-3.5 h-3.5 rounded-full relative ${scheduleStatus.isOpen ? 'bg-emerald-600' : 'bg-rose-600'}`}></span>
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold uppercase tracking-wider">{scheduleStatus.headline}</p>
-                      <p className="text-[11px] font-normal text-gray-600 mt-0.5">{scheduleStatus.subtext}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs sm:text-sm font-black tracking-wide uppercase">{scheduleStatus.headline}</p>
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                          scheduleStatus.isOpen 
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                            : 'bg-rose-100 text-rose-800 border-rose-300'
+                        }`}>
+                          {scheduleStatus.isOpen ? 'Portal Live & Open' : 'Portal Locked'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1 font-medium">{scheduleStatus.subtext}</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-white rounded-md border text-gray-700 shrink-0">
-                    Enrollment Schedule
-                  </span>
-                </div>
-
-                {/* Academic Year & Semester */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label htmlFor="schedule-academic-year" className="block text-[11px] font-bold text-gray-700 mb-1">
-                      Academic Year
-                    </label>
-                    <input
-                      type="text"
-                      id="schedule-academic-year"
-                      name="academicYear"
-                      value={scheduleConfig.academicYear || ''}
-                      onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
-                      placeholder="e.g. 2026-2027"
-                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="schedule-semester" className="block text-[11px] font-bold text-gray-700 mb-1">
-                      Semester
-                    </label>
-                    <select
-                      id="schedule-semester"
-                      name="semester"
-                      value={scheduleConfig.semester || '1st Semester'}
-                      onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
-                      className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
-                    >
-                      <option value="1st Semester">1st Semester</option>
-                      <option value="2nd Semester">2nd Semester</option>
-                      <option value="Summer">Summer</option>
-                    </select>
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    <span className="text-[11px] font-extrabold uppercase px-3 py-1 bg-white/90 rounded-xl border border-gray-200 text-gray-700 shadow-2xs">
+                      Current Mode: <span className="text-emerald-900 font-black">{scheduleConfig.mode || 'AUTO'}</span>
+                    </span>
                   </div>
                 </div>
 
-                {/* Opening Date & Time */}
-                <div>
-                  <label htmlFor="schedule-open-at" className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Opening Date &amp; Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    id="schedule-open-at"
-                    name="openAt"
-                    value={scheduleConfig.openAt || ''}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Leave empty to open immediately in Auto mode.</p>
+                {/* Section 1: Academic Period & Term Settings */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-emerald-700" />
+                    1. Academic Period &amp; Term Settings
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <div>
+                      <label htmlFor="schedule-academic-year" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                        Academic Year *
+                      </label>
+                      <input
+                        type="text"
+                        id="schedule-academic-year"
+                        name="academicYear"
+                        value={scheduleConfig.academicYear || ''}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
+                        placeholder="e.g. 2026-2027"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="schedule-semester" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                        Semester *
+                      </label>
+                      <select
+                        id="schedule-semester"
+                        name="semester"
+                        value={scheduleConfig.semester || '1st Semester'}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, semester: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
+                      >
+                        <option value="1st Semester">1st Semester</option>
+                        <option value="2nd Semester">2nd Semester</option>
+                        <option value="Summer">Summer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="schedule-portal-mode" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                        Portal Mode *
+                      </label>
+                      <select
+                        id="schedule-portal-mode"
+                        name="mode"
+                        value={scheduleConfig.mode || 'AUTO'}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, mode: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
+                      >
+                        <option value="AUTO">Automated (Follow Dates &amp; Time)</option>
+                        <option value="FORCE_OPEN">Force Open (Always Open)</option>
+                        <option value="FORCE_CLOSE">Force Closed (Temporarily Lock)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Closing Date & Time */}
-                <div>
-                  <label htmlFor="schedule-close-at" className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Closing Date &amp; Time (Deadline)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    id="schedule-close-at"
-                    name="closeAt"
-                    value={scheduleConfig.closeAt || ''}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Registration closes automatically when this deadline is reached.</p>
+                {/* Section 2: Registration Timeline & Automated Window */}
+                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-emerald-700" />
+                    2. Registration Timeline &amp; Automated Window
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="schedule-open-at" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Opening Date &amp; Time</span>
+                        <span className="text-[10px] text-emerald-700 font-bold lowercase">(optional)</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="schedule-open-at"
+                        name="openAt"
+                        value={scheduleConfig.openAt || ''}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, openAt: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1.5">Leave blank to open immediately when set to Auto mode.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="schedule-close-at" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center justify-between">
+                        <span>Closing Date &amp; Time (Deadline)</span>
+                        <span className="text-[10px] text-emerald-700 font-bold lowercase">(optional)</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        id="schedule-close-at"
+                        name="closeAt"
+                        value={scheduleConfig.closeAt || ''}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, closeAt: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1.5">Registration closes automatically when this deadline is reached.</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Announcement Notice */}
-                <div>
-                  <label htmlFor="schedule-custom-notice" className="block text-[11px] font-bold text-gray-700 mb-1">
-                    Public Notice to Applicants
-                  </label>
-                  <input
-                    type="text"
-                    id="schedule-custom-notice"
-                    name="customNotice"
-                    value={scheduleConfig.customNotice || ''}
-                    onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
-                    placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
-                    className="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium"
-                  />
-                </div>
+                {/* Section 3: Public Notice & Applicant Banner Preview */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-700" />
+                    3. Public Notice &amp; Applicant View Preview
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                    <div className="space-y-1.5">
+                      <label htmlFor="schedule-custom-notice" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                        Public Notice to Applicants
+                      </label>
+                      <textarea
+                        id="schedule-custom-notice"
+                        rows="3"
+                        name="customNotice"
+                        value={scheduleConfig.customNotice || ''}
+                        onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
+                        placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm resize-none"
+                      />
+                      <p className="text-[11px] text-gray-500">This notice appears at the top banner of the student online registration page.</p>
+                    </div>
 
-                {/* Live Student Preview */}
-                <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 block mb-1">
-                    Applicant View Preview
-                  </span>
-                  <div className="bg-emerald-900 text-white p-2.5 rounded-lg text-xs">
-                    <p className="font-semibold text-emerald-100">
-                      {scheduleConfig.customNotice || 'Online Enrollment is open.'}
-                    </p>
-                    <p className="text-[10px] text-emerald-300 mt-0.5">
-                      Academic Year: {scheduleConfig.academicYear || '2026-2027'} ({scheduleConfig.semester || '1st Semester'})
-                      {scheduleConfig.closeAt && ` • Deadline: ${new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`}
-                    </p>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                        Live Applicant View Preview
+                      </label>
+                      <div className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-950 text-white p-4 rounded-2xl shadow-sm border border-emerald-800/60 relative overflow-hidden flex flex-col justify-between min-h-[95px]">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-800/80 border border-emerald-700 text-emerald-200">
+                            Student Portal Banner
+                          </span>
+                          <span className="text-[10px] text-amber-300 font-bold">
+                            {scheduleConfig.semester || '1st Semester'} • AY {scheduleConfig.academicYear || '2026-2027'}
+                          </span>
+                        </div>
+                        <p className="font-semibold text-emerald-100 text-xs sm:text-sm">
+                          {scheduleConfig.customNotice || 'Online Enrollment is now open.'}
+                        </p>
+                        <div className="mt-2 pt-2 border-t border-emerald-800/50 flex items-center justify-between text-[10px] text-emerald-300 flex-wrap gap-1">
+                          <span>Mode: {scheduleConfig.mode || 'AUTO'}</span>
+                          <span>
+                            {scheduleConfig.closeAt ? `Deadline: ${new Date(scheduleConfig.closeAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : 'No set closing deadline'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2 shrink-0">
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setScheduleModalOpen(false)}
-                    className="px-3.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleSaveSchedule(scheduleConfig);
-                      setScheduleModalOpen(false);
-                    }}
-                    className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                  >
-                    Save Changes
-                  </button>
-                </div>
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setScheduleModalOpen(false)}
+                  className="px-5 py-2.5 text-gray-600 hover:bg-gray-200 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSaveSchedule(scheduleConfig);
+                    setScheduleModalOpen(false);
+                  }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60 flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </button>
               </div>
             </div>
           </div>
