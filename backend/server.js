@@ -812,17 +812,24 @@ async function seedPastBatches() {
       const studentData = b.list.map((s, idx) => {
         const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
         const gInfo = gradePool[idx % gradePool.length];
-        const isEnrolled2 = gInfo.enrolledSem2;
-        const isPassedBoth = isEnrolled2 && gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed';
+        const isEnrolled2 = (b.sem === '2nd Semester' || b.sem === 'Whole Academic Year') ? true : gInfo.enrolledSem2;
+        const sem2Grade = (b.sem === '2nd Semester' && (!gInfo.g2 || gInfo.g2 === '-')) ? gInfo.g1 : gInfo.g2;
+        const sem2Remark = (b.sem === '2nd Semester' && (!gInfo.r2 || gInfo.r2 === '-')) ? gInfo.r1 : gInfo.r2;
+
+        const isPassedBoth = isEnrolled2 && (
+          b.sem === '2nd Semester'
+            ? (sem2Remark === 'Passed' && sem2Grade && parseFloat(sem2Grade) <= 3.0)
+            : (gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed')
+        );
         const is2ndSemOrYear = b.sem === '2nd Semester' || b.sem === 'Whole Academic Year';
 
         const calcStatus = (!isEnrolled2 && gInfo.r1 === 'Failed') ? 'failed' :
                            (!isEnrolled2 && gInfo.r1 === 'Incomplete') ? 'incomplete' :
                            (!isEnrolled2) ? 'active' :
-                           isPassedBoth ? 'graduated' :
-                           (gInfo.r2 === 'Failed' || gInfo.r1 === 'Failed') ? 'failed' :
-                           (gInfo.r2 === 'Incomplete' || gInfo.r1 === 'Incomplete') ? 'incomplete' :
-                           (gInfo.r2 === 'Dropped') ? 'dropped' : 'active';
+                           (sem2Remark === 'Dropped' || gInfo.r2 === 'Dropped') ? 'dropped' :
+                           (sem2Remark === 'Failed' || sem2Grade === '5.00' || gInfo.r2 === 'Failed') ? 'failed' :
+                           (sem2Remark === 'Incomplete' || sem2Grade === 'INC' || gInfo.r2 === 'Incomplete') ? 'incomplete' :
+                           isPassedBoth ? 'graduated' : 'active';
 
         return {
           id: parseInt(`${b.prefix}${idx + 1}`),
@@ -863,12 +870,12 @@ async function seedPastBatches() {
           has_2nd_sem: isEnrolled2,
           status: calcStatus,
           final_grade_1: gInfo.g1,
-          final_grade_2: isEnrolled2 ? gInfo.g2 : '',
+          final_grade_2: isEnrolled2 ? sem2Grade : '',
           grade_sem1: gInfo.g1,
-          grade_sem2: isEnrolled2 ? gInfo.g2 : '',
+          grade_sem2: isEnrolled2 ? sem2Grade : '',
           midterm_grade: gInfo.g1,
-          final_grade: is2ndSemOrYear ? (isEnrolled2 ? gInfo.g2 : gInfo.g1) : gInfo.g1,
-          remarks: is2ndSemOrYear ? (isEnrolled2 ? gInfo.r2 : gInfo.r1) : gInfo.r1,
+          final_grade: is2ndSemOrYear ? (isEnrolled2 ? sem2Grade : gInfo.g1) : gInfo.g1,
+          remarks: is2ndSemOrYear ? (isEnrolled2 ? sem2Remark : gInfo.r1) : gInfo.r1,
           id_photo_2x2: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${(s.firstName?.[0] || 'S') + (s.lastName?.[0] || 'T')}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`,
           photo: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${(s.firstName?.[0] || 'S') + (s.lastName?.[0] || 'T')}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`,
           registrationPhoto: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sid}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.lastName}, ${s.firstName} ${s.middleName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.prog}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${b.sy} (${b.sem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${s.dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${s.dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`,

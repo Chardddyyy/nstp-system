@@ -465,19 +465,43 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
       return;
     }
 
+    const g1Str = String(st.final_grade_1 || st.grade_sem1 || (st.semester === '1st Semester' ? st.final_grade : '') || '').trim();
     const g2Str = String(st.final_grade_2 || st.grade_sem2 || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
-    const num2 = parseFloat(g2Str);
-    const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-    const isPass2 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && !isFailed2) || g2Str.toLowerCase() === 'passed';
+    const rawFinal = String(st.final_grade || st.grade || '').trim();
+    const rawStatus = String(st.status || '').toLowerCase().trim();
+    const rawRemarks = String(st.remarks || '').toLowerCase().trim();
 
-    const has2ndSemFlag = st.has_2nd_sem !== false && st.has_2nd_sem !== 0;
-    const isSem2Enrolled = has2ndSemFlag && Boolean(g2Str) && g2Str !== '-';
+    // Grade to check for graduation:
+    // In 2nd semester batch or whole year, check 2nd sem grade (g2Str), then rawFinal, then g1Str
+    const gradeToCheck = is2ndSemExplicit
+      ? (g2Str || rawFinal || g1Str)
+      : (g2Str || (st.has_2nd_sem ? rawFinal : ''));
+    const numGrad = parseFloat(gradeToCheck);
+
+    const isExplicitFailed = rawStatus === 'failed' || rawRemarks === 'failed' || gradeToCheck.toUpperCase().includes('FAIL') || gradeToCheck.includes('5.0') || numGrad > 3.0;
+    const isExplicitDropped = rawStatus === 'dropped' || rawRemarks === 'dropped' || gradeToCheck.toUpperCase().includes('DRP');
+    const isExplicitInc = rawStatus === 'incomplete' || rawRemarks === 'incomplete' || gradeToCheck.toUpperCase().includes('INC');
+
+    const isPassingGrade = !isNaN(numGrad) && numGrad >= 1.0 && numGrad <= 3.0 && !isExplicitFailed;
+    const isGraduated = !isExplicitFailed && !isExplicitDropped && !isExplicitInc && (
+      isPassingGrade || rawStatus === 'graduated' || rawStatus === 'passed'
+    );
+
+    // 2nd Semester Enrolled Check:
+    // Enrolled in 2nd sem if the batch is 2nd sem, or student semester is 2nd sem, or marked graduated,
+    // or has_2nd_sem is true, or has a valid 2nd sem / final grade
+    const isSem2Enrolled = is2ndSemExplicit ||
+      (st.semester && String(st.semester).toLowerCase().includes('2nd')) ||
+      rawStatus === 'graduated' ||
+      st.has_2nd_sem === true ||
+      Boolean(g2Str && g2Str !== '-') ||
+      (st.has_2nd_sem !== false && Boolean(gradeToCheck && gradeToCheck !== '-'));
 
     if (isSem2Enrolled) {
       statsMatrix.sem2[targetDept][genKey] += 1;
 
-      // Graduates: Nakabase LAMANG sa 2nd semester grade (1.00 hanggang 3.00 lamang, bawal ang 5.00/INC/DRP)
-      if (isPass2 && !isFailed2) {
+      // Graduates: Passed 2nd semester (1.00 - 3.00, not failed/dropped/incomplete)
+      if (isGraduated) {
         statsMatrix.graduates[targetDept][genKey] += 1;
       }
     }
@@ -987,9 +1011,9 @@ export async function downloadGradesSheetPdf({
       program: st.program || '',
       section: st.section || '',
       nstpSection: st.nstp_section || '',
-      midterm: g.midterm_grade || '-',
-      finalGrade: g.final_grade || '-',
-      remarks: g.remarks || (g.final_grade && parseFloat(g.final_grade) <= 3.0 ? 'Passed' : (g.final_grade ? 'Failed' : 'Pending'))
+      midterm: g.midterm_grade || st.midterm_grade || '-',
+      finalGrade: g.final_grade || st.final_grade || st.final_grade_2 || st.final_grade_1 || '-',
+      remarks: g.remarks || st.remarks || ((g.final_grade || st.final_grade) && parseFloat(g.final_grade || st.final_grade) <= 3.0 ? 'Passed' : ((g.final_grade || st.final_grade) ? 'Failed' : 'Pending'))
     };
 
     let x = leftMargin;

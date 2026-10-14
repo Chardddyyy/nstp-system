@@ -68,22 +68,41 @@ const OSDSNSTPForm = ({
 
       const sid = String(st.studentId || st.student_id || st.id || '').trim();
       const sem2GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_2nd Semester`] || gradesMap[sid]?.['2nd Semester'] || gradesMap[`${sid}_2nd`] || {}) : {};
+      const sem1GradeObj = (gradesMap && sid) ? (gradesMap[`${sid}_1st Semester`] || gradesMap[sid]?.['1st Semester'] || gradesMap[`${sid}_1st`] || {}) : {};
 
-      const g2Raw = st.final_grade_2 || st.grade_sem2 || sem2GradeObj.final_grade || sem2GradeObj.grade || (st.semester === '2nd Semester' ? st.final_grade : '') || '';
-      const g2Str = String(g2Raw).trim();
+      const g1Str = String(st.final_grade_1 || st.grade_sem1 || sem1GradeObj.final_grade || (st.semester === '1st Semester' ? st.final_grade : '') || '').trim();
+      const g2Str = String(st.final_grade_2 || st.grade_sem2 || sem2GradeObj.final_grade || sem2GradeObj.grade || (st.semester === '2nd Semester' ? st.final_grade : '') || '').trim();
+      const rawFinal = String(st.final_grade || st.grade || '').trim();
+      const rawStatus = String(st.status || '').toLowerCase().trim();
+      const rawRemarks = String(st.remarks || '').toLowerCase().trim();
 
-      const num2 = parseFloat(g2Str);
-      const isFailed2 = num2 > 3.0 || g2Str.includes('5.0') || g2Str.toUpperCase().includes('FAIL') || g2Str.toUpperCase().includes('INC') || g2Str.toUpperCase().includes('DRP');
-      const isPass2 = (!isNaN(num2) && num2 >= 1.0 && num2 <= 3.0 && !isFailed2) || g2Str.toLowerCase() === 'passed';
+      // Grade to check for graduation:
+      const gradeToCheck = is2ndSemExplicit
+        ? (g2Str || rawFinal || g1Str)
+        : (g2Str || (st.has_2nd_sem ? rawFinal : ''));
+      const numGrad = parseFloat(gradeToCheck);
 
-      const has2ndSemFlag = st.has_2nd_sem !== false && st.has_2nd_sem !== 0;
-      const isSem2Enrolled = has2ndSemFlag && Boolean(g2Str) && g2Str !== '-';
+      const isExplicitFailed = rawStatus === 'failed' || rawRemarks === 'failed' || gradeToCheck.toUpperCase().includes('FAIL') || gradeToCheck.includes('5.0') || numGrad > 3.0;
+      const isExplicitDropped = rawStatus === 'dropped' || rawRemarks === 'dropped' || gradeToCheck.toUpperCase().includes('DRP');
+      const isExplicitInc = rawStatus === 'incomplete' || rawRemarks === 'incomplete' || gradeToCheck.toUpperCase().includes('INC');
+
+      const isPassingGrade = !isNaN(numGrad) && numGrad >= 1.0 && numGrad <= 3.0 && !isExplicitFailed;
+      const isGraduated = !isExplicitFailed && !isExplicitDropped && !isExplicitInc && (
+        isPassingGrade || rawStatus === 'graduated' || rawStatus === 'passed'
+      );
+
+      // 2nd Semester Enrolled Check:
+      const isSem2Enrolled = is2ndSemExplicit ||
+        (st.semester && String(st.semester).toLowerCase().includes('2nd')) ||
+        rawStatus === 'graduated' ||
+        st.has_2nd_sem === true ||
+        Boolean(g2Str && g2Str !== '-') ||
+        (st.has_2nd_sem !== false && Boolean(gradeToCheck && gradeToCheck !== '-'));
 
       if (isSem2Enrolled) {
         data.sem2[targetDept][genKey] += 1;
 
-        // Graduates: Nakabase LAMANG sa 2nd semester grade (1.00 hanggang 3.00 lamang, bawal ang 5.00/INC/DRP)
-        if (isPass2 && !isFailed2) {
+        if (isGraduated) {
           data.graduates[targetDept][genKey] += 1;
         }
       }
