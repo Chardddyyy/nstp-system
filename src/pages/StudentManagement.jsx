@@ -779,7 +779,11 @@ function StudentManagement() {
         return String(val).toLowerCase().includes(query);
       });
 
-      const matchesDept = filterDept === 'All' || student.department === filterDept;
+      const matchesDept = filterDept === 'All' || (() => {
+        const d = String(student.department || student.nstpComponent || student.nstp_component || '').toUpperCase().trim();
+        const f = filterDept.toUpperCase().trim();
+        return d === f || d.includes(f);
+      })();
       const matchesCourse = filterCourse === 'All' || (() => {
         const p = (student.program || '').toUpperCase().trim();
         const f = filterCourse.toUpperCase().trim();

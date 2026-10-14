@@ -1925,15 +1925,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     <div
                                       key={item.program}
                                       onClick={() => {
-                                        const q = [];
-                                        if (item.program) q.push(`course=${encodeURIComponent(item.program)}`);
-                                        if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
-                                        navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
+                                        // Clicking the whole card filters by Program across ALL tracks (CWTS, LTS, ROTC)
+                                        navigate(`/students?course=${encodeURIComponent(item.program)}&dept=All`);
                                       }}
                                       className={`w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-all hover:scale-105 hover:bg-emerald-50/70 hover:ring-2 hover:ring-emerald-500 rounded-xl p-1 sm:p-1.5 active:scale-95 ${
                                         selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40 shadow-xs' : ''
                                       }`}
-                                      title={`Click to view all ${item.program} students in Student Management`}
+                                      title={`Click to view all ${item.program} students in Student Management (CWTS, LTS, ROTC)`}
                                     >
                                       {/* Bar Cluster on Baseline */}
                                       <div className="w-full flex items-end justify-center gap-1 sm:gap-1.5 h-full pb-1">
@@ -1944,7 +1942,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               e.stopPropagation();
                                               navigate(`/students?course=${encodeURIComponent(item.program)}&dept=CWTS`);
                                             }}
-                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/cwts"
                                             title={`Click to view ${item.program} - CWTS: ${item.cwts} student${item.cwts !== 1 ? 's' : ''} in Student Management`}
                                           >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
@@ -1953,10 +1951,14 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               {item.cwts}
                                             </span>
                                             <div
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/students?course=${encodeURIComponent(item.program)}&dept=CWTS`);
+                                              }}
                                               style={{ height: `${maxTrackVal > 0 ? Math.max(item.cwts > 0 ? 6 : 0, (item.cwts / maxTrackVal) * 100) : 0}%` }}
-                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
                                                 item.cwts > 0
-                                                  ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover:from-emerald-500 group-hover:to-emerald-300'
+                                                  ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover/cwts:from-emerald-500 group-hover/cwts:to-emerald-300 hover:ring-2 hover:ring-emerald-400'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
                                             />
@@ -1970,7 +1972,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               e.stopPropagation();
                                               navigate(`/students?course=${encodeURIComponent(item.program)}&dept=LTS`);
                                             }}
-                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/lts"
                                             title={`Click to view ${item.program} - LTS: ${item.lts} student${item.lts !== 1 ? 's' : ''} in Student Management`}
                                           >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
@@ -1979,10 +1981,14 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               {item.lts}
                                             </span>
                                             <div
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/students?course=${encodeURIComponent(item.program)}&dept=LTS`);
+                                              }}
                                               style={{ height: `${maxTrackVal > 0 ? Math.max(item.lts > 0 ? 6 : 0, (item.lts / maxTrackVal) * 100) : 0}%` }}
-                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
                                                 item.lts > 0
-                                                  ? 'bg-gradient-to-t from-purple-600 to-purple-400 group-hover:from-purple-500 group-hover:to-purple-300'
+                                                  ? 'bg-gradient-to-t from-purple-600 to-purple-400 group-hover/lts:from-purple-500 group-hover/lts:to-purple-300 hover:ring-2 hover:ring-purple-400'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
                                             />
@@ -1996,7 +2002,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               e.stopPropagation();
                                               navigate(`/students?course=${encodeURIComponent(item.program)}&dept=ROTC`);
                                             }}
-                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-90 active:scale-95 transition-transform"
+                                            className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/rotc"
                                             title={`Click to view ${item.program} - ROTC: ${item.rotc} student${item.rotc !== 1 ? 's' : ''} in Student Management`}
                                           >
                                             <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
@@ -2005,10 +2011,14 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                               {item.rotc}
                                             </span>
                                             <div
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(`/students?course=${encodeURIComponent(item.program)}&dept=ROTC`);
+                                              }}
                                               style={{ height: `${maxTrackVal > 0 ? Math.max(item.rotc > 0 ? 6 : 0, (item.rotc / maxTrackVal) * 100) : 0}%` }}
-                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs ${
+                                              className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
                                                 item.rotc > 0
-                                                  ? 'bg-gradient-to-t from-rose-600 to-rose-400 group-hover:from-rose-500 group-hover:to-rose-300'
+                                                  ? 'bg-gradient-to-t from-rose-600 to-rose-400 group-hover/rotc:from-rose-500 group-hover/rotc:to-rose-300 hover:ring-2 hover:ring-rose-400'
                                                   : 'bg-gray-200/50 h-1'
                                               }`}
                                             />
@@ -2087,12 +2097,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const q = [];
-                                  if (item.program) q.push(`course=${encodeURIComponent(item.program)}`);
-                                  if (selectedComponentFilter !== 'ALL') q.push(`dept=${encodeURIComponent(selectedComponentFilter)}`);
-                                  navigate(`/students${q.length > 0 ? `?${q.join('&')}` : ''}`);
+                                  navigate(`/students?course=${encodeURIComponent(item.program)}&dept=All`);
                                 }}
-                                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-0.5 rounded-md transition-colors"
+                                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2.5 py-0.5 rounded-md transition-colors cursor-pointer"
                               >
                                 View Students &rarr;
                               </button>
@@ -2102,36 +2109,57 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           {selectedComponentFilter === 'ALL' ? (
                             <div className="space-y-1.5 pt-1">
                               {/* CWTS Bar */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-emerald-800 w-12 shrink-0">CWTS</span>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/students?course=${encodeURIComponent(item.program)}&dept=CWTS`);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-emerald-100/50 p-1 rounded-lg transition-colors group/hcwts"
+                                title={`Click to view ${item.program} - CWTS: ${item.cwts} students in Student Management`}
+                              >
+                                <span className="text-[11px] font-bold text-emerald-800 w-12 shrink-0 group-hover/hcwts:underline">CWTS</span>
                                 <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
                                   <div
                                     style={{ width: `${maxProgramVal > 0 ? (item.cwts / maxProgramVal) * 100 : 0}%` }}
-                                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                    className="h-full bg-emerald-500 rounded-full transition-all duration-500 group-hover/hcwts:bg-emerald-600"
                                   />
                                 </div>
                                 <span className="text-xs font-black text-emerald-800 w-8 text-right shrink-0">{item.cwts}</span>
                               </div>
 
                               {/* LTS Bar */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-purple-800 w-12 shrink-0">LTS</span>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/students?course=${encodeURIComponent(item.program)}&dept=LTS`);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-purple-100/50 p-1 rounded-lg transition-colors group/hlts"
+                                title={`Click to view ${item.program} - LTS: ${item.lts} students in Student Management`}
+                              >
+                                <span className="text-[11px] font-bold text-purple-800 w-12 shrink-0 group-hover/hlts:underline">LTS</span>
                                 <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
                                   <div
                                     style={{ width: `${maxProgramVal > 0 ? (item.lts / maxProgramVal) * 100 : 0}%` }}
-                                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                    className="h-full bg-purple-500 rounded-full transition-all duration-500 group-hover/hlts:bg-purple-600"
                                   />
                                 </div>
                                 <span className="text-xs font-black text-purple-800 w-8 text-right shrink-0">{item.lts}</span>
                               </div>
 
                               {/* ROTC Bar */}
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-rose-800 w-12 shrink-0">ROTC</span>
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/students?course=${encodeURIComponent(item.program)}&dept=ROTC`);
+                                }}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-rose-100/50 p-1 rounded-lg transition-colors group/hrotc"
+                                title={`Click to view ${item.program} - ROTC: ${item.rotc} students in Student Management`}
+                              >
+                                <span className="text-[11px] font-bold text-rose-800 w-12 shrink-0 group-hover/hrotc:underline">ROTC</span>
                                 <div className="flex-1 bg-gray-200/80 rounded-full h-4 overflow-hidden flex items-center">
                                   <div
                                     style={{ width: `${maxProgramVal > 0 ? (item.rotc / maxProgramVal) * 100 : 0}%` }}
-                                    className="h-full bg-rose-500 rounded-full transition-all duration-500"
+                                    className="h-full bg-rose-500 rounded-full transition-all duration-500 group-hover/hrotc:bg-rose-600"
                                   />
                                 </div>
                                 <span className="text-xs font-black text-rose-800 w-8 text-right shrink-0">{item.rotc}</span>
