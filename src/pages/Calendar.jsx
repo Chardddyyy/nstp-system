@@ -742,6 +742,41 @@ function Calendar() {
       {/* Main Content */}
       <main className={`app-screen-height flex-1 min-h-0 flex flex-col overflow-hidden transition-all duration-300 p-2 sm:p-3 lg:p-4 pb-2 sm:pb-3 lg:pb-3 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
 
+        {/* Viewing Archive Banner */}
+        {viewingArchive && archiveViewData && (
+          <div className="flex-shrink-0 bg-amber-500/10 border border-amber-400/30 rounded-2xl sm:rounded-3xl p-3 sm:p-4 mb-2 sm:mb-3 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center space-x-3">
+              <Archive className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 shrink-0" />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-black text-amber-900">
+                    Archived Calendar — Batch {archiveViewData.year}
+                  </h2>
+                  {batchRange && (
+                    <span className="px-2 py-0.5 bg-emerald-950 text-amber-300 rounded-lg text-[10.5px] font-black uppercase tracking-wider">
+                      {batchRange.startLabel} – {batchRange.endLabel}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] sm:text-xs text-amber-700 font-medium">
+                  Viewing archived batch calendar. Editing is disabled.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setViewingArchive(false);
+                setArchiveViewData(null);
+              }}
+              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Back to Current</span>
+            </button>
+          </div>
+        )}
+
         {/* Hero Header Card */}
         <div className="flex-shrink-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-4 shadow-xl border border-emerald-800/40 relative mb-2 sm:mb-3 w-full">
           <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 relative z-10 w-full">
@@ -818,41 +853,6 @@ function Calendar() {
             </div>
           </div>
         </div>
-
-        {/* Viewing Archive Banner */}
-        {viewingArchive && archiveViewData && (
-          <div className="bg-amber-500/10 border border-amber-400/30 rounded-3xl p-4 sm:p-5 mb-4 sm:mb-6 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center space-x-3">
-              <Archive className="w-6 h-6 text-amber-600 shrink-0" />
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base font-black text-amber-900">
-                    Archived Calendar — Batch {archiveViewData.year}
-                  </h2>
-                  {batchRange && (
-                    <span className="px-2 py-0.5 bg-emerald-950 text-amber-300 rounded-lg text-[10.5px] font-black uppercase tracking-wider">
-                      {batchRange.startLabel} – {batchRange.endLabel}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-amber-700 font-medium">
-                  Viewing archived batch calendar. Editing is disabled.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setViewingArchive(false);
-                setArchiveViewData(null);
-              }}
-              className="bg-amber-500 hover:bg-amber-600 text-emerald-950 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-md flex items-center space-x-2 shrink-0 active:scale-95 cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Back to Current</span>
-            </button>
-          </div>
-        )}
 
         {/* VIEW MODE 1: MONTHLY CALENDAR GRID */}
         {viewMode === 'monthly' ? (
