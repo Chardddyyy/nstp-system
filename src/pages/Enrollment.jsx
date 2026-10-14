@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Sparkles, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { analyzeDocumentFile } from '../utils/documentValidation';
 
@@ -1153,7 +1153,6 @@ function Enrollment() {
           <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-4 sm:p-8 text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-80 h-80 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
             <span className="inline-flex items-center gap-1.5 bg-amber-400 text-gray-950 font-black text-[10px] sm:text-[11px] uppercase tracking-wider px-3 py-0.5 rounded-full mb-2 shadow-sm">
-              <Sparkles className="w-3 h-3 text-emerald-950" />
               Official Student Enrollment Form
             </span>
             <h2 className="text-lg sm:text-3xl font-black text-white tracking-tight">

@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Calendar as CalendarIcon, CalendarDays, Plus, X, Pencil,
   ChevronRight, ChevronLeft, Menu, CheckCircle, AlertCircle, Lock, History, Archive, RotateCcw,
-  List, Grid, Search, Filter, Download, Sparkles, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
+  List, Grid, Search, Filter, Download, Flag, BookOpen, Award, Shield, Users, Layers, Clock, Tag, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';

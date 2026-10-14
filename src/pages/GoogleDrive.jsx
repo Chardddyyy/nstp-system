@@ -15,7 +15,6 @@ import {
   ArrowLeft,
   Menu,
   Lock,
-  Sparkles,
   Info,
   RefreshCw,
   CloudUpload
@@ -240,7 +239,7 @@ export default function GoogleDrive() {
           {/* Folder Breakdown & Purposes */}
           <div>
             <h3 className="text-sm font-black uppercase tracking-wider text-gray-500 mb-3 px-1 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <HardDrive className="w-4 h-4 text-emerald-600" />
               <span>Drive Repository Contents & Integration</span>
             </h3>
 

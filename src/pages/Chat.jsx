@@ -10,7 +10,7 @@ import {
   Play, Menu, ArrowLeft, MicOff,
   Volume2, VolumeX, MessageSquare, Plus,
   FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter,
-  ChevronUp, ChevronDown, History, Info, Clock, Check, Sparkles
+  ChevronUp, ChevronDown, History, Info, Clock, Check
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';

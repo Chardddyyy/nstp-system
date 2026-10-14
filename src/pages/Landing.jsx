@@ -3,7 +3,7 @@ import {
   Shield, Users, GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp, 
   Target, Eye, BookOpen, MapPin, Phone, Mail, Facebook, Globe,
   CheckCircle2, Activity, Clock, Play, ArrowRight, HelpCircle, Compass,
-  Search, Check, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, Sparkles, AlertCircle
+  Search, Check, Menu, X, Layers, FileText, Camera, Mic, HardDrive, BellRing, AlertCircle
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getTelemetryStats, pingTelemetry } from '../services/api';
@@ -1107,7 +1107,7 @@ function Landing() {
             <div className="p-1.5 sm:p-2 bg-slate-100/90 rounded-2xl sm:rounded-full border border-slate-200/90 shadow-inner max-w-4xl mx-auto">
               <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
                 {[
-                  { name: 'All', icon: Sparkles, count: FAQ_ITEMS.length },
+                  { name: 'All', icon: Layers, count: FAQ_ITEMS.length },
                   { name: 'Enrollment', icon: CheckCircle2, count: FAQ_ITEMS.filter(f => f.category === 'Enrollment').length },
                   { name: 'CWTS', icon: Users, count: FAQ_ITEMS.filter(f => f.category === 'CWTS').length },
                   { name: 'ROTC', icon: Shield, count: FAQ_ITEMS.filter(f => f.category === 'ROTC').length },

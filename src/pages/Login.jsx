@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset, testBackendPing, getPrimaryApiUrl } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, Sparkles, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings, Clock } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings, Clock } from 'lucide-react';
 
 
 // Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
@@ -838,7 +838,7 @@ function Login() {
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
                 <div className="w-4 h-4 rounded-md bg-emerald-600/10 flex items-center justify-center text-emerald-700">
-                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <KeyRound className="w-3 h-3 text-emerald-700" />
                 </div>
                 <span className="text-[10px] sm:text-[11px] font-black text-emerald-950 uppercase tracking-wider">
                   Test Accounts (Tap to Fill)
@@ -888,7 +888,6 @@ function Login() {
               to="/enrollment" 
               className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold hover:underline py-0.5"
             >
-              <Sparkles className="w-3 h-3 text-amber-500" />
               <span>Online Enrollment &rarr;</span>
             </Link>
           </div>

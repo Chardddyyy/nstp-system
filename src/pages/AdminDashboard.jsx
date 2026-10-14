@@ -5,7 +5,7 @@ import {
   Users, FileText, MessageSquare,
   User, Shield,
   BookOpen, Bell, Calendar, X, CheckCircle, CheckCircle2, Power, Settings, Settings2, AlertCircle, AlertTriangle, Trash2, CheckSquare, Square,
-  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Sparkles, Download, FileCheck,
+  BarChart3, PieChart, Archive, RotateCcw, History, ChevronDown, ChevronUp, Menu, MailOpen, Search, Clock, Download, FileCheck,
   HeartPulse, Phone, Activity, GraduationCap, Heart, ClipboardList, Maximize2, Eye, ZoomIn, QrCode, Award, FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -4561,8 +4561,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 {/* Section 1: Academic Period & Term Settings */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4 text-emerald-700" />
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950">
                     1. Academic Period &amp; Term Settings
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -4617,8 +4616,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 {/* Section 2: Registration Timeline & Automated Window */}
                 <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-emerald-700" />
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950">
                     2. Registration Timeline &amp; Automated Window
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -4657,8 +4655,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 {/* Section 3: Public Notice & Applicant Banner Preview */}
                 <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-emerald-700" />
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950">
                     3. Public Notice &amp; Applicant View Preview
                   </h4>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
-  Sparkles, UserCheck, ShieldAlert, Lock
+  UserCheck, ShieldAlert, Lock
 } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -909,7 +909,7 @@ export function AttendanceScannerModal({
             {/* Step 1 Introduction Card */}
             <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-emerald-100 shadow-xs flex items-start gap-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-4 h-4" />
+                <Clock className="w-4 h-4" />
               </div>
               <div className="text-xs text-slate-600">
                 <p className="font-extrabold text-slate-800 text-sm">Before scanning student IDs:</p>
