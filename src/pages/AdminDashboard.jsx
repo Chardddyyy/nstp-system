@@ -4342,34 +4342,6 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </span>
                 </div>
 
-                {/* If Form B: Department Selection */}
-                {archiveExportModal.formType === 'Form B' && (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                      Select Component Track
-                    </label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {['All', 'CWTS', 'LTS', 'ROTC'].map((dept) => {
-                        const isSelected = archiveExportDept === dept;
-                        return (
-                          <button
-                            key={dept}
-                            type="button"
-                            disabled={isExportingArchive}
-                            onClick={() => setArchiveExportDept(dept)}
-                            className={`py-2 px-1 text-center rounded-xl font-black text-xs transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-emerald-800 text-white shadow-xs'
-                                : 'bg-gray-100 hover:bg-emerald-50 text-gray-700 border border-gray-200'
-                            }`}
-                          >
-                            {dept === 'All' ? 'All' : dept}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-1">
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
