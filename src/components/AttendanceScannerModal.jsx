@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
@@ -381,7 +381,7 @@ export function AttendanceScannerModal({
       });
       setTimeout(() => {
         isProcessingRef.current = false;
-      }, 1500);
+      }, 800);
       return;
     }
 
@@ -410,7 +410,7 @@ export function AttendanceScannerModal({
           });
           setTimeout(() => {
             isProcessingRef.current = false;
-          }, 1500);
+          }, 800);
           return; // Strictly stop: "walang lalabas", no student added to attendance roster
         }
       }
@@ -511,7 +511,7 @@ export function AttendanceScannerModal({
     } finally {
       setTimeout(() => {
         isProcessingRef.current = false;
-      }, 1500); // Cooldown to avoid duplicate burst reads
+      }, 1200); // 1.2s cooldown to avoid duplicate burst reads while staying snappy
     }
   }, [fullActivityTitle, scanType, selectedDay, sessionLogs, sessionStartTime, gracePeriod, currentDepartment, currentUser?.department, currentUser?.role, propStudents]);
 
@@ -521,7 +521,9 @@ export function AttendanceScannerModal({
       const scanner = scannerRef.current;
       scannerRef.current = null;
       try {
-        await scanner.stop().catch(() => {});
+        if (scanner.isScanning) {
+          await scanner.stop().catch(() => {});
+        }
         scanner.clear();
       } catch (_) {}
     }
@@ -531,55 +533,88 @@ export function AttendanceScannerModal({
   const startCamera = useCallback(async () => {
     try {
       if (scannerRef.current) {
-        await scannerRef.current.stop().catch(() => {});
+        const prev = scannerRef.current;
         scannerRef.current = null;
+        try {
+          if (prev.isScanning) {
+            await prev.stop().catch(() => {});
+          }
+          prev.clear();
+        } catch (_) {}
       }
 
       const container = document.getElementById('qr-reader-video-box');
       if (!container) return;
 
-      const html5QrCode = new Html5Qrcode('qr-reader-video-box');
+      // Restrict formatsToSupport ONLY to QR_CODE for fast scanning without 1D barcode overhead
+      const html5QrCode = new Html5Qrcode('qr-reader-video-box', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false
+      });
       scannerRef.current = html5QrCode;
 
+      // High-performance scanner configuration:
+      // 1. Omit qrbox: Decodes across the entire camera viewfinder instead of a tiny 200px box
+      // 2. Omit forced aspectRatio: Prevents OverconstrainedError / low-res degradation on mobile front cameras
+      // 3. disableFlip: false -> Automatically tries non-flipped + flipped detection for front cameras
+      // 4. experimentalFeatures: Hardware-accelerated BarcodeDetector API on modern Android & iOS Safari
       const config = {
-        fps: 25,
-        qrbox: (viewfinderWidth, viewfinderHeight) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const edgeSize = Math.floor(minEdge * 0.72);
-          return {
-            width: Math.max(180, Math.min(edgeSize, 250)),
-            height: Math.max(180, Math.min(edgeSize, 250))
-          };
-        },
-        aspectRatio: 1.0,
-        disableFlip: cameraFacing === 'environment',
+        fps: 24,
+        disableFlip: false,
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
         }
       };
 
-      await html5QrCode.start(
-        { facingMode: cameraFacing },
-        config,
-        (decodedText) => {
-          if (!isProcessingRef.current) {
-            handleProcessScan(decodedText);
-          }
-        },
-        () => {}
-      );
+      const onScanSuccess = (decodedText) => {
+        if (!isProcessingRef.current && decodedText) {
+          handleProcessScan(decodedText);
+        }
+      };
+
+      // Resilient camera starter: Try requested facing mode, then fallback to alternate or default camera
+      try {
+        await html5QrCode.start(
+          { facingMode: cameraFacing },
+          config,
+          onScanSuccess,
+          () => {}
+        );
+      } catch (firstErr) {
+        console.warn(`[Scanner] FacingMode "${cameraFacing}" failed, trying alternate camera:`, firstErr);
+        const altFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+        try {
+          await html5QrCode.start(
+            { facingMode: altFacing },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+          setCameraFacing(altFacing);
+        } catch (secondErr) {
+          console.warn('[Scanner] Alternate facingMode failed, falling back to any default camera device:', secondErr);
+          await html5QrCode.start(
+            true,
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        }
+      }
     } catch (err) {
-      console.warn('Camera start error:', err);
+      console.warn('[Scanner] Fatal camera initialization error:', err);
     }
   }, [cameraFacing, handleProcessScan]);
 
   // Control Camera strictly on Step 2
   useEffect(() => {
+    let isCancelled = false;
     if (isOpen && step === 2) {
       const timer = setTimeout(() => {
-        startCamera();
-      }, 300);
+        if (!isCancelled) startCamera();
+      }, 250);
       return () => {
+        isCancelled = true;
         clearTimeout(timer);
         stopCamera();
       };
@@ -1188,11 +1223,22 @@ export function AttendanceScannerModal({
               {/* Camera Switcher */}
               <button
                 type="button"
-                onClick={() => setCameraFacing(f => f === 'environment' ? 'user' : 'environment')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 flex items-center gap-1 cursor-pointer"
+                onClick={async () => {
+                  const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+                  if (scannerRef.current) {
+                    await stopCamera();
+                  }
+                  setCameraFacing(nextFacing);
+                }}
+                className={`px-3 py-1.5 font-bold text-xs rounded-xl border flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs ${
+                  cameraFacing === 'user'
+                    ? 'bg-emerald-800 text-white border-emerald-900 hover:bg-emerald-700'
+                    : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300'
+                }`}
+                title={`Currently using ${cameraFacing === 'environment' ? 'Rear / Back Camera' : 'Front / Webcam'}. Click to switch camera.`}
               >
-                <RefreshCw className="w-3 h-3" />
-                <span>{cameraFacing === 'environment' ? 'Rear Cam' : 'Front Cam'}</span>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>{cameraFacing === 'environment' ? 'Switch to Front Cam' : 'Switch to Back Cam'}</span>
               </button>
             </div>
 
@@ -1233,9 +1279,9 @@ export function AttendanceScannerModal({
                     </div>
 
                     {/* Guidance Pill Badge */}
-                    <div className="mt-3 px-3 py-1 rounded-full bg-black/75 backdrop-blur-xs border border-emerald-500/50 text-[10px] sm:text-[11px] font-black text-emerald-300 tracking-wide uppercase shadow-lg flex items-center gap-1.5">
+                    <div className="mt-3 px-3.5 py-1 rounded-full bg-black/75 backdrop-blur-xs border border-emerald-500/50 text-[10px] sm:text-[11px] font-black text-emerald-300 tracking-wide uppercase shadow-lg flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Scan QR Code on NSTP ID</span>
+                      <span>{cameraFacing === 'environment' ? 'Rear Cam Active • Align QR' : 'Front Cam Active • Align QR'}</span>
                     </div>
                   </div>
                 </div>
