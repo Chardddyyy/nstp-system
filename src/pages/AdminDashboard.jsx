@@ -12,7 +12,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { getEnrollmentSchedule, saveEnrollmentSchedule, calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { downloadOfficialLetter } from '../utils/letterDocumentGenerator';
-import { downloadChedFormat, downloadChedFormA, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
@@ -215,6 +215,7 @@ function AdminDashboard() {
     currentBatch = '2026-2027 1st Semester', 
     notifications = [], 
     messages = {},
+    conversations = [],
     setNotifications, 
     deleteNotifications,
     markAllNotificationsRead,
@@ -285,20 +286,77 @@ function AdminDashboard() {
     return systemUnreadCount;
   }, [systemUnreadCount]);
 
+  const [readTick, setReadTick] = useState(0);
+
+  useEffect(() => {
+    const handleReadEvent = () => setReadTick(t => t + 1);
+    window.addEventListener('nstp_conversation_read', handleReadEvent);
+    window.addEventListener('storage', handleReadEvent);
+    return () => {
+      window.removeEventListener('nstp_conversation_read', handleReadEvent);
+      window.removeEventListener('storage', handleReadEvent);
+    };
+  }, []);
+
   const messageUnreadCount = useMemo(() => {
-    const notifCount = messageNotifications.filter(n => !n.read).length;
-    let storeCount = 0;
-    if (user && messages && typeof window !== 'undefined') {
+    void readTick;
+    if (!user) return 0;
+    const currentUserId = String(user.id || user._id || '');
+
+    let readMap = {};
+    if (typeof window !== 'undefined') {
       try {
-        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
-        const currentUserId = String(user.id || user._id || '');
+        readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+      } catch {}
+    }
+
+    const userConvIdSet = new Set();
+    if (Array.isArray(conversations)) {
+      conversations.forEach(c => {
+        if (c && c.id) userConvIdSet.add(String(c.id));
+      });
+    }
+
+    const isUserConversation = (convIdStr) => {
+      if (!convIdStr) return false;
+      if (userConvIdSet.has(convIdStr)) return true;
+      if (convIdStr.startsWith('group-')) return true;
+      const parts = convIdStr.split('-');
+      if (parts.length === 2 && (parts[0] === currentUserId || parts[1] === currentUserId)) {
+        return true;
+      }
+      return false;
+    };
+
+    const notifCount = messageNotifications.filter(n => {
+      if (n.read) return false;
+      const sId = String(n.senderId || n.sender_id || '');
+      if (sId && sId === currentUserId) return false;
+      const cId = n.conversationId ? String(n.conversationId) : null;
+      if (cId && !isUserConversation(cId)) return false;
+
+      if (cId && readMap[cId]) {
+        const lastRead = new Date(readMap[cId]).getTime();
+        const notifTime = new Date(n.createdAt || n.time || 0).getTime();
+        if (lastRead > 0 && notifTime > 0 && notifTime <= lastRead) return false;
+      }
+      return true;
+    }).length;
+
+    let storeCount = 0;
+    if (messages && typeof window !== 'undefined') {
+      try {
         Object.entries(messages).forEach(([convId, msgList]) => {
+          const convIdStr = String(convId);
+          if (!isUserConversation(convIdStr)) return;
           if (!Array.isArray(msgList)) return;
-          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          const lastReadTime = readMap[convIdStr] ? new Date(readMap[convIdStr]).getTime() : 0;
           msgList.forEach(m => {
+            if (m.type === 'deleted' || m.is_deleted) return;
             const sId = String(m.sender_id || m.senderId || '');
+            if (!sId || sId === currentUserId) return;
             const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
-            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+            if (mTime > lastReadTime) {
               storeCount++;
             }
           });
@@ -306,7 +364,7 @@ function AdminDashboard() {
       } catch {}
     }
     return Math.max(notifCount, storeCount);
-  }, [messageNotifications, messages, user]);
+  }, [messageNotifications, messages, conversations, user, readTick]);
   
   // Real-time RegForm document validator audit hook
   const regformAudits = useRegformAuditor(pendingEnrollments);
@@ -471,7 +529,7 @@ function AdminDashboard() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [photoViewer, confirmDialog, selectedEnrollment, scheduleModalOpen, showInstructorList, showArchiveModal, showArchiveDetails, showNewBatchConfirm, showNotifications]);
+  }, [archiveExportModal, photoViewer, confirmDialog, selectedEnrollment, scheduleModalOpen, showInstructorList, showArchiveModal, showArchiveDetails, showNewBatchConfirm, showNotifications]);
 
   // Online Enrollment Portal Status Switch (stored in localStorage)
   const [_enrollmentOpen, _setEnrollmentOpen] = useState(() => {
@@ -486,7 +544,6 @@ function AdminDashboard() {
   };
   const [enrollmentSearch, setEnrollmentSearch] = useState('');
   const [selectedComponentFilter, setSelectedComponentFilter] = useState('ALL');
-  const [selectedProgramFocus, setSelectedProgramFocus] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [enrollmentSortCol, setEnrollmentSortCol] = useState(null);
   const [enrollmentSortDir, setEnrollmentSortDir] = useState('asc');
@@ -567,18 +624,13 @@ function AdminDashboard() {
     const mapped = Object.values(progMap).filter(p => p.total > 0);
 
     return mapped.sort((a, b) => {
-      // Put user-focused/selected program at the very top
-      if (selectedProgramFocus) {
-        if (a.program === selectedProgramFocus) return -1;
-        if (b.program === selectedProgramFocus) return 1;
-      }
       // Sort by active component so highest count is at the very top
       if (selectedComponentFilter === 'CWTS') return (b.cwts - a.cwts) || (b.total - a.total);
       if (selectedComponentFilter === 'LTS')  return (b.lts - a.lts)   || (b.total - a.total);
       if (selectedComponentFilter === 'ROTC') return (b.rotc - a.rotc) || (b.total - a.total);
       return b.total - a.total;
     });
-  }, [students, viewingArchive, archiveViewData, selectedComponentFilter, selectedProgramFocus]);
+  }, [students, viewingArchive, archiveViewData, selectedComponentFilter]);
 
   // Deep-link from notification or external navigation
   useEffect(() => {
@@ -1928,9 +1980,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                         // Clicking the whole card filters by Program across ALL tracks (CWTS, LTS, ROTC)
                                         navigate(`/students?course=${encodeURIComponent(item.program)}&dept=All`);
                                       }}
-                                      className={`w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-all hover:scale-105 hover:bg-emerald-50/70 hover:ring-2 hover:ring-emerald-500 rounded-xl p-1 sm:p-1.5 active:scale-95 ${
-                                        selectedProgramFocus === item.program ? 'scale-105 ring-2 ring-emerald-500 rounded-xl p-1 bg-emerald-50/40 shadow-xs' : ''
-                                      }`}
+                                      className="w-28 sm:w-36 flex flex-col items-center h-full justify-end group cursor-pointer transition-all hover:scale-105 hover:bg-emerald-50/70 hover:ring-2 hover:ring-emerald-500 rounded-xl p-1 sm:p-1.5 active:scale-95"
                                       title={`Click to view all ${item.program} students in Student Management (CWTS, LTS, ROTC)`}
                                     >
                                       {/* Bar Cluster on Baseline */}

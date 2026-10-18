@@ -1591,6 +1591,7 @@ export async function sendStudentDigitalId(studentOrId) {
   const targetId = typeof studentOrId === 'object' ? (studentOrId.id || studentOrId.studentId) : studentOrId;
 
   // Try backend first
+  let lastBackendError = null;
   try {
     const res = await apiCall(`/students/${targetId}/send-digital-id`, {
       method: 'POST',
@@ -1600,6 +1601,7 @@ export async function sendStudentDigitalId(studentOrId) {
       return res;
     }
   } catch (backendErr) {
+    lastBackendError = backendErr;
     console.warn('[API] Backend send-digital-id fallback to direct dispatcher:', backendErr.message);
   }
 
@@ -1820,26 +1822,31 @@ export async function sendStudentDigitalId(studentOrId) {
 </html>
   `;
 
-  const customWebhookUrl = '';
+  const customWebhookUrl = import.meta.env.VITE_GMAIL_WEBHOOK_URL || 'https://script.google.com/macros/s/AKfycbwesOlnmJSFFP14COeFZtdPjjj60THFYAn4i4-BQINZb3nVAlBFy2l77ZdjRtRuIc19fw/exec';
   if (customWebhookUrl) {
     try {
+      const refId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const manilaTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const uniqueSubject = `Official NSTP Digital ID: ${studentName} (${studentId}) [Ticket #${refId} • ${manilaTime}]`;
+
       await fetch(customWebhookUrl, {
         method: 'POST',
-        mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           to: deliveryEmail,
-          subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
-          text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId})`,
+          subject: uniqueSubject,
+          text: `CvSU Naic NSTP Digital ID for ${studentName} (${studentId}) [Ticket #${refId}]`,
           html: htmlContent
         })
       });
+      return { success: true, message: `Digital ID sent successfully to ${deliveryEmail}` };
     } catch (webhookErr) {
-      console.warn('[API] Webhook delivery note:', webhookErr);
+      console.warn('[API] Fallback webhook delivery failed:', webhookErr);
+      throw new Error(`Failed to deliver Digital ID email: ${webhookErr.message || lastBackendError?.message || 'Delivery error'}`);
     }
   }
 
-  return { success: true, message: `Digital ID sent successfully to ${deliveryEmail}` };
+  throw new Error(`Failed to deliver Digital ID email: ${lastBackendError?.message || 'Email delivery service unreachable'}`);
 }
 
 export const studentsAPI = {

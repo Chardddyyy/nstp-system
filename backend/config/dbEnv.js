@@ -66,6 +66,7 @@ function getDbConfig(options) {
     }
   }
 
+  config.isAiven = Boolean(isAivenOrSsl);
   return config;
 }
 

@@ -10,7 +10,7 @@ import {
   Play, Menu, ArrowLeft, MicOff,
   Volume2, VolumeX, MessageSquare, Plus,
   FolderOpen, FileText, File, Music, ExternalLink, Eye, Filter,
-  ChevronUp, ChevronDown, History, Info, Clock, Check
+  ChevronUp, ChevronDown, History, Info, Clock, Check, CheckCheck
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -93,7 +93,8 @@ function Chat() {
     _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
     setMessages,
     pendingAnsweredCall, setPendingAnsweredCall, showToast,
-    notifications: globalNotifications, markAllNotificationsRead } = useAuth();
+    notifications: globalNotifications, markAllNotificationsRead,
+    markConversationAsRead, markAllMessagesAsRead } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
@@ -222,24 +223,57 @@ function Chat() {
   useEffect(() => {
     if (!activeConversationId || !user) return;
 
+    try { localStorage.setItem('nstp_active_chat', activeConversationId); } catch (_) {}
+
+    const now = Date.now();
     setReadConversations(prev => {
-      const updated = { ...prev, [activeConversationId]: Date.now() };
+      const existing = prev ? prev[activeConversationId] : 0;
+      if (existing && now - existing < 3000) return prev;
+      const updated = { ...prev, [activeConversationId]: now };
       try {
         localStorage.setItem(getReadConversationsStorageKey(user), JSON.stringify(updated));
       } catch {}
       return updated;
     });
 
-    if (markAllNotificationsRead && Array.isArray(globalNotifications)) {
-      const targetNotifs = globalNotifications
-        .filter(n => (n.type === 'message' || n.conversationId) && String(n.conversationId) === String(activeConversationId) && !n.read)
-        .map(n => n.id);
-      if (targetNotifs.length > 0) {
-        markAllNotificationsRead(targetNotifs);
-      }
+    if (markConversationAsRead) {
+      markConversationAsRead(activeConversationId);
     }
-  }, [activeConversationId, user, globalNotifications, markAllNotificationsRead]);
+  }, [activeConversationId, user, markConversationAsRead]);
+
+  // Synchronize readConversations state on read events
+  useEffect(() => {
+    const handleReadSync = (e) => {
+      const data = e.detail;
+      if (data && data.conversationId) {
+        if (data.conversationId === 'all') {
+          const now = data.timestamp || Date.now();
+          setReadConversations(prev => {
+            let hasChange = false;
+            const bulk = { ...(prev || {}) };
+            (conversations || []).forEach(c => {
+              if (c && c.id && (!bulk[c.id] || bulk[c.id] < now)) {
+                bulk[c.id] = now;
+                hasChange = true;
+              }
+            });
+            return hasChange ? bulk : prev;
+          });
+        } else {
+          setReadConversations(prev => {
+            const currentTs = prev ? prev[data.conversationId] : 0;
+            if (currentTs && currentTs >= (data.timestamp || 0)) return prev;
+            return { ...prev, [data.conversationId]: data.timestamp || Date.now() };
+          });
+        }
+      }
+    };
+    window.addEventListener('nstp_conversation_read', handleReadSync);
+    return () => window.removeEventListener('nstp_conversation_read', handleReadSync);
+  }, [conversations]);
   const [messageText, setMessageText] = useState('');
+  const messageTextRef = useRef(messageText);
+  messageTextRef.current = messageText;
   const draftsByConvRef = useRef({});
   const prevActiveConvIdRef = useRef(activeConversationId);
 
@@ -247,8 +281,9 @@ function Chat() {
   useEffect(() => {
     const prevId = prevActiveConvIdRef.current;
     if (prevId && prevId !== activeConversationId) {
-      if (messageText && messageText.trim()) {
-        draftsByConvRef.current[prevId] = messageText;
+      const currentDraft = messageTextRef.current;
+      if (currentDraft && currentDraft.trim()) {
+        draftsByConvRef.current[prevId] = currentDraft;
       } else {
         delete draftsByConvRef.current[prevId];
       }
@@ -485,6 +520,7 @@ function Chat() {
     setActiveConversationId(id);
     setShowConversations(false); // Hide conversation list on mobile when chat opens
     setSidebarOpen(false); // Close main navigation sidebar
+    try { localStorage.setItem('nstp_active_chat', id); } catch (_) {}
 
     // Mark conversation as read
     setReadConversations(prev => {
@@ -493,7 +529,9 @@ function Chat() {
       return updated;
     });
 
-    if (markAllNotificationsRead && Array.isArray(globalNotifications)) {
+    if (markConversationAsRead) {
+      markConversationAsRead(id);
+    } else if (markAllNotificationsRead && Array.isArray(globalNotifications)) {
       const targetNotifs = globalNotifications
         .filter(n => (n.type === 'message' || n.conversationId) && String(n.conversationId) === String(id) && !n.read)
         .map(n => n.id);
@@ -513,8 +551,27 @@ function Chat() {
 
   const handleBackToConversations = () => {
     setActiveConversationId(null);
+    try { localStorage.removeItem('nstp_active_chat'); } catch (_) {}
     setShowConversations(true);
     setSidebarOpen(false);
+  };
+
+  const handleMarkAllRead = () => {
+    if (markAllMessagesAsRead) {
+      markAllMessagesAsRead();
+    }
+    const updated = {};
+    const now = Date.now();
+    (conversations || []).forEach(c => {
+      if (c && c.id) updated[c.id] = now;
+    });
+    setReadConversations(prev => ({ ...prev, ...updated }));
+    try {
+      localStorage.setItem(getReadConversationsStorageKey(user), JSON.stringify(updated));
+    } catch {}
+    if (typeof showToast === 'function') {
+      showToast('All conversations marked as read', 'success', '💬 Messages');
+    }
   };
 
   const handleFileAttach = () => {
@@ -2243,10 +2300,19 @@ function Chat() {
                     <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
                     <h1 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate">
                       Messages
                     </h1>
+                    <button
+                      type="button"
+                      onClick={handleMarkAllRead}
+                      className="px-2.5 py-1 text-[10px] sm:text-xs font-bold bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 hover:text-white rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-xs border border-emerald-600/50 shrink-0 active:scale-95"
+                      title="Mark all messages as read"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
+                      <span>Mark all read</span>
+                    </button>
                   </div>
                 </div>
               </div>

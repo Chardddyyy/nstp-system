@@ -449,10 +449,17 @@ function StudentManagement() {
       if (newValue.length === 4 && parseInt(newValue) > currentYear) {
         newValue = currentYear.toString();
       }
-    } else if (['firstName', 'lastName', 'middleName', 'suffix', 'emergencyContact', 'emergencyName'].includes(name)) {
-      newValue = toTitleCase(value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ0-9.\s'-]/g, ''));
-    } else if (['street', 'municipality', 'province'].includes(name)) {
-      newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, ''));
+    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact', 'emergencyName'].includes(name)) {
+      // Letters only, strictly no numbers
+      newValue = toTitleCase(value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, ''));
+    } else if (name === 'suffix') {
+      newValue = value;
+    } else if (['municipality', 'province'].includes(name)) {
+      // Municipality and Province: letters only, strictly no numbers
+      newValue = toTitleCase(value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, ''));
+    } else if (['street', 'barangay', 'address'].includes(name)) {
+      // Street / Barangay: allows numbers and letters
+      newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#-]/g, ''));
     }
 
     const updated = {

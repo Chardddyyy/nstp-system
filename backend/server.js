@@ -1904,25 +1904,6 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       if (!passwordMatch && users.length > 0) {
         passwordMatch = await bcrypt.compare(providedPassword.toLowerCase(), storedPassword);
       }
-      // Fallback 3: Standard admin default credentials
-      if (!passwordMatch && users[0] && (users[0].role === 'admin' || users[0].id === 1)) {
-        const adminAllowed = ['admin123', 'admin', 'admin@123', 'admin2026', 'admin2025'];
-        if (adminAllowed.includes(providedPassword.toLowerCase())) {
-          passwordMatch = true;
-          const newH = await bcrypt.hash(providedPassword, 12);
-          await pool.execute('UPDATE users SET password = ? WHERE id = ?', [newH, users[0].id]).catch(() => {});
-        }
-      }
-      // Fallback 4: Standard instructor default credentials
-      if (!passwordMatch && users[0] && users[0].role === 'instructor') {
-        const dept = (users[0].department || '').toLowerCase();
-        const instAllowed = [dept + '123', dept, dept + '@123', 'instructor123', 'admin123'];
-        if (instAllowed.includes(providedPassword.toLowerCase())) {
-          passwordMatch = true;
-          const newH = await bcrypt.hash(providedPassword, 12);
-          await pool.execute('UPDATE users SET password = ? WHERE id = ?', [newH, users[0].id]).catch(() => {});
-        }
-      }
     } else if (users.length > 0) {
       passwordMatch = (providedPassword === storedPassword || providedPassword.toLowerCase() === storedPassword.toLowerCase());
       if (passwordMatch) {
@@ -2851,6 +2832,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
 
   const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
   const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
+  const qrUrl = studentData.qr_code || studentData.qrCode || `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
   
   let rawSy = studentData.schoolYear || studentData.academicYear || studentData.batch || '';
   let schoolYear = '2026-2027';
@@ -2860,7 +2842,20 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
 
   const emergencyContact = studentData.emergencyContact || studentData.emergencyName || 'Emergency Contact';
   const emergencyNumber = studentData.emergencyNumber || studentData.contactNumber || '09000000000';
-  const photoSrc = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.profilePicture || null;
+  const photoSrc = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.registration_photo || studentData.profilePicture || null;
+
+  // Resolve raw photo buffer for CID email embedding and PDF rendering
+  let photoBuffer = null;
+  if (photoSrc && typeof photoSrc === 'string') {
+    const clean = photoSrc.trim();
+    if (clean.includes(';base64,')) {
+      photoBuffer = Buffer.from(clean.split(';base64,').pop(), 'base64');
+    } else if (clean.startsWith('data:image/')) {
+      photoBuffer = Buffer.from(clean.split(',').pop(), 'base64');
+    } else if (clean.length > 100 && !clean.includes(' ') && !clean.startsWith('http')) {
+      photoBuffer = Buffer.from(clean, 'base64');
+    }
+  }
 
   const trackLabels = {
     CWTS: 'CIVIC WELFARE TRAINING SERVICE',
@@ -2868,6 +2863,12 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     LTS: 'LITERACY TRAINING SERVICE'
   };
   const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
+
+  const refId = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const now = new Date();
+  const manilaTime = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const manilaDate = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
+  const uniqueSubject = `Official NSTP Digital ID: ${studentName} (${studentId}) [Ticket #${refId} • ${manilaTime}]`;
 
   const baseUrl = process.env.APP_URL || `http://localhost:${PORT || 3001}`;
   const directPdfDownloadUrl = `${baseUrl}/api/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
@@ -2893,6 +2894,21 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     console.warn('[DIGITAL ID PDF] Notice generating PDF attachment:', pdfErr.message);
   }
 
+  // HTML Photo Element: Use CID for reliable Gmail rendering without being blocked by Google proxy
+  const photoHtml = photoBuffer ? `
+    <img src="cid:student_photo_2x2" alt="Student Photo" width="84" height="88" style="width: 84px; height: 88px; object-fit: cover; display: block;" />
+  ` : (photoSrc && photoSrc.startsWith('http') ? `
+    <img src="${photoSrc}" alt="Student Photo" width="84" height="88" style="width: 84px; height: 88px; object-fit: cover; display: block;" />
+  ` : `
+    <table role="presentation" width="100%" height="88" cellspacing="0" cellpadding="0">
+      <tr>
+        <td align="center" valign="middle" style="color: #064e3b; font-size: 8.5px; font-weight: 900; font-family: monospace;">
+          2x2 PHOTO
+        </td>
+      </tr>
+    </table>
+  `);
+
   const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -2912,6 +2928,15 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" align="center" style="max-width: 440px; margin: 0 auto;">
     
+    <!-- Dispatch Ticket & Anti-Threading Header -->
+    <tr class="no-print">
+      <td align="center" style="padding-bottom: 10px;">
+        <span style="display: inline-block; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 700; padding: 4px 14px; border-radius: 20px; font-family: monospace; border: 1px solid #cbd5e1;">
+          Ticket #${refId} • Sent: ${manilaDate} at ${manilaTime} PHT
+        </span>
+      </td>
+    </tr>
+
     <!-- Top Action Button: Instant Direct PDF Download -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
@@ -2954,15 +2979,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
             
             <!-- 2x2 Photo Box with Emerald & Gold Ring -->
             <div style="width: 84px; height: 88px; margin: 0 auto 8px auto; background: #f8fafc; border-radius: 10px; border: 2px solid #064e3b; box-shadow: 0 0 0 1.5px #fbbf24; overflow: hidden;">
-              ${photoSrc ? `<img src="${photoSrc}" alt="2x2 Photo" width="84" height="88" style="width: 84px; height: 88px; object-fit: cover; display: block;" />` : `
-                <table role="presentation" width="100%" height="88" cellspacing="0" cellpadding="0">
-                  <tr>
-                    <td align="center" valign="middle" style="color: #064e3b; font-size: 8.5px; font-weight: 900; font-family: monospace;">
-                      2x2 PHOTO
-                    </td>
-                  </tr>
-                </table>
-              `}
+              ${photoHtml}
             </div>
 
             <!-- Student Name -->
@@ -3071,68 +3088,130 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const mailOptions = {
     from: `"CvSU NSTP Office" <${emailUser}>`,
     to: deliveryEmail,
-    subject: `Official NSTP Digital ID Card (A.Y. ${schoolYear}) - ${studentName} (${studentId})`,
-    text: `CvSU Naic NSTP Official Digital ID Card for ${studentName} (${studentId}) - Track: ${nstpDept} (${section}) - Serial: ${serialNo} - A.Y. ${schoolYear}`,
-    html: htmlContent
+    subject: uniqueSubject,
+    text: `CvSU Naic NSTP Official Digital ID Card for ${studentName} (${studentId})\nTicket Reference: #${refId}\nDispatched: ${manilaDate} at ${manilaTime} PHT\nTrack: ${nstpDept} (${section})\nSerial: ${serialNo}\nAcademic Year: ${schoolYear}`,
+    html: htmlContent,
+    headers: {
+      'X-Entity-Ref-ID': refId
+    },
+    attachments: []
   };
 
   if (pdfBuffer) {
-    mailOptions.attachments = [
-      {
-        filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }
-    ];
+    mailOptions.attachments.push({
+      filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    });
   }
 
-  const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
+  if (photoBuffer) {
+    mailOptions.attachments.push({
+      filename: `student_photo_${studentId}.jpg`,
+      content: photoBuffer,
+      cid: 'student_photo_2x2',
+      contentType: 'image/jpeg'
+    });
+  }
 
+  // 1. Prioritize Direct Gmail SMTP with multi-tier fallback (natively embeds CID inline images for Gmail)
+  if (emailUser && emailPass) {
+    try {
+      const t1 = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: emailUser, pass: emailPass },
+        connectionTimeout: 12000,
+        greetingTimeout: 9000,
+        socketTimeout: 12000
+      });
+      const info = await t1.sendMail(mailOptions);
+      console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service with PDF & CID photo to ${deliveryEmail} (${info.messageId})`);
+      return { sent: true, method: 'gmail-service', messageId: info.messageId };
+    } catch (err1) {
+      console.warn('[DIGITAL ID EMAIL] Gmail service warning:', err1.message);
+
+      try {
+        const t2 = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: { user: emailUser, pass: emailPass },
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 12000,
+          greetingTimeout: 9000,
+          socketTimeout: 12000
+        });
+        const info2 = await t2.sendMail(mailOptions);
+        console.log(`[DIGITAL ID EMAIL] Delivered via SSL 465 to ${deliveryEmail} (${info2.messageId})`);
+        return { sent: true, method: 'smtp-465', messageId: info2.messageId };
+      } catch (err2) {
+        console.warn('[DIGITAL ID EMAIL] SSL 465 fallback notice:', err2.message);
+        try {
+          const t3 = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            auth: { user: emailUser, pass: emailPass },
+            tls: { rejectUnauthorized: false },
+            connectionTimeout: 12000,
+            greetingTimeout: 9000,
+            socketTimeout: 12000
+          });
+          const info3 = await t3.sendMail(mailOptions);
+          console.log(`[DIGITAL ID EMAIL] Delivered via Port 587 to ${deliveryEmail} (${info3.messageId})`);
+          return { sent: true, method: 'smtp-587', messageId: info3.messageId };
+        } catch (err3) {
+          console.warn('[DIGITAL ID EMAIL] All direct SMTP transports failed:', err3.message);
+        }
+      }
+    }
+  }
+
+  // 2. Fallback to Webhook if SMTP failed or credentials not present
+  const webhookUrl = process.env.GMAIL_WEBHOOK_URL || process.env.EMAIL_WEBHOOK_URL || '';
   if (webhookUrl) {
     try {
       const webhookPayload = {
         to: deliveryEmail,
         subject: mailOptions.subject,
         text: mailOptions.text,
-        html: mailOptions.html
+        html: mailOptions.html,
+        attachments: []
       };
 
       if (pdfBuffer) {
-        webhookPayload.attachments = [
-          {
-            filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
-            base64: pdfBuffer.toString('base64'),
-            mimeType: 'application/pdf'
-          }
-        ];
+        webhookPayload.attachments.push({
+          filename: `NSTP_Official_ID_Card_${studentId}.pdf`,
+          base64: pdfBuffer.toString('base64'),
+          mimeType: 'application/pdf'
+        });
+      }
+
+      if (photoBuffer) {
+        webhookPayload.attachments.push({
+          filename: `student_photo_${studentId}.jpg`,
+          base64: photoBuffer.toString('base64'),
+          mimeType: 'image/jpeg'
+        });
       }
 
       const hookRes = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(webhookPayload),
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(12000),
         redirect: 'follow'
       });
       if (hookRes.ok) {
-        console.log(`[DIGITAL ID EMAIL] Delivered via Webhook with PDF attachment to ${deliveryEmail}`);
+        console.log(`[DIGITAL ID EMAIL] Delivered via Webhook fallback to ${deliveryEmail}`);
         return { sent: true, method: 'https-webhook' };
       }
-    } catch (_) {}
+    } catch (whErr) {
+      console.warn('[DIGITAL ID EMAIL] Webhook dispatch notice:', whErr.message);
+    }
   }
 
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: emailUser, pass: emailPass }
-    });
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service with PDF attachment to ${deliveryEmail} (${info.messageId})`);
-    return { sent: true, method: 'gmail-service', messageId: info.messageId };
-  } catch (err) {
-    console.warn('[DIGITAL ID EMAIL] Error:', err.message);
-    return { sent: false, error: err.message };
-  }
+  return { sent: false, error: 'Email service credentials not configured or unreachable' };
 }
 
 // ── Public Endpoint: Direct Instant PDF Download for Student ID Card ───────────
@@ -3165,6 +3244,15 @@ const handleDownloadIdPdf = async (req, res) => {
       };
     } else {
       studentData.id_photo_2x2 = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.registration_photo || null;
+      if (!studentData.id_photo_2x2 && (studentData.email || studentId)) {
+        const [epRows] = await pool.execute(
+          'SELECT id_photo_2x2, registration_photo, photo FROM enrollments WHERE email = ? OR studentId = ? LIMIT 1',
+          [studentData.email || '', studentId]
+        ).catch(() => [[]]);
+        if (epRows && epRows[0]) {
+          studentData.id_photo_2x2 = epRows[0].id_photo_2x2 || epRows[0].photo || epRows[0].registration_photo || null;
+        }
+      }
     }
 
     const pdfBuffer = await generateStudentIdPdf(studentData);
@@ -3180,9 +3268,11 @@ const handleDownloadIdPdf = async (req, res) => {
     res.status(500).json({ message: 'Error generating PDF ID card' });
   }
 };
-app.get('/api/students/:id/download-id-pdf', authenticateToken, handleDownloadIdPdf);
-app.get('/api/students/download-id-pdf', authenticateToken, handleDownloadIdPdf);
-app.get('/download-id-pdf', authenticateToken, handleDownloadIdPdf);
+app.get('/api/students/:id/download-id-pdf', handleDownloadIdPdf);
+app.get('/api/students/download-id-pdf', handleDownloadIdPdf);
+app.get('/students/:id/download-id-pdf', handleDownloadIdPdf);
+app.get('/students/download-id-pdf', handleDownloadIdPdf);
+app.get('/download-id-pdf', handleDownloadIdPdf);
 
 
 // Forgot Password — generate cryptographically secure OTP and send to registered email
@@ -3347,7 +3437,32 @@ const handleVerifyOtp = async (req, res) => {
 };
 app.post('/api/auth/verify-reset-otp', verifyOtpLimiter, handleVerifyOtp);
 app.post('/api/auth/verify-otp', verifyOtpLimiter, handleVerifyOtp);
-app.post('/verify-otp', verifyOtpLimiter, handleVerifyOtp);
+// Institutional Strict Password Policy Validator (NIST / OWASP standard)
+function validateStrictPassword(password) {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, message: 'Password is required' };
+  }
+  const str = String(password).trim();
+  if (str.length < 8) {
+    return { valid: false, message: 'Strict Policy: Password must be at least 8 characters long.' };
+  }
+  if (str.length > 128) {
+    return { valid: false, message: 'Strict Policy: Password is too long (maximum 128 characters).' };
+  }
+  if (!/[A-Z]/.test(str)) {
+    return { valid: false, message: 'Strict Policy: Password must contain at least one uppercase letter (A-Z).' };
+  }
+  if (!/[a-z]/.test(str)) {
+    return { valid: false, message: 'Strict Policy: Password must contain at least one lowercase letter (a-z).' };
+  }
+  if (!/[0-9]/.test(str)) {
+    return { valid: false, message: 'Strict Policy: Password must contain at least one number (0-9).' };
+  }
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(str)) {
+    return { valid: false, message: 'Strict Policy: Password must contain at least one special character (!@#$%^&*...).' };
+  }
+  return { valid: true };
+}
 
 // Reset Password — verify OTP and update user password
 const handleResetPassword = async (req, res) => {
@@ -3361,8 +3476,9 @@ const handleResetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email, verification code, and new password.' });
     }
 
-    if (String(new_password).length < 8) {
-      return res.status(400).json({ message: 'New password must be at least 8 characters long for account security.' });
+    var strictCheck = validateStrictPassword(new_password);
+    if (!strictCheck.valid) {
+      return res.status(400).json({ message: strictCheck.message });
     }
 
     var cleanEmail = String(email).trim().toLowerCase();
@@ -3403,13 +3519,39 @@ const handleResetPassword = async (req, res) => {
 
     var hashedPassword = await bcrypt.hash(String(new_password).trim(), 12);
 
-    // Update users table for Instructor or Admin
+    // Resolve user by email or aliases so the exact account is updated by primary ID
+    var aliases = [cleanEmail];
+    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'cvsunaicnstp@gmail.com' || cleanEmail === 'admin' || cleanEmail === 'admin@gmail.com' || cleanEmail === 'richardbelen99@gmail.com') {
+      aliases = ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com'];
+    } else if (cleanEmail === 'cwts@cvsu.edu.ph' || cleanEmail === 'belenjoshua58@gmail.com' || cleanEmail === 'clarkebelen28@gmail.com' || cleanEmail === 'cwts' || cleanEmail === 'instructor@cvsu.edu.ph' || cleanEmail === 'instructor' || cleanEmail === 'cwts@gmail.com') {
+      aliases = ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
+    } else if (cleanEmail === 'lts@cvsu.edu.ph' || cleanEmail === 'lts' || cleanEmail === 'lts@gmail.com') {
+      aliases = ['lts@cvsu.edu.ph', 'lts@gmail.com'];
+    } else if (cleanEmail === 'rotc@cvsu.edu.ph' || cleanEmail === 'rotc' || cleanEmail === 'rotc@gmail.com') {
+      aliases = ['rotc@cvsu.edu.ph', 'rotc@gmail.com'];
+    }
+
     try {
-      await pool.execute(
-        `UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL 
-         WHERE LOWER(TRIM(email)) = ?`,
-        [hashedPassword, cleanEmail]
+      var [foundUsers] = await pool.execute(
+        `SELECT id, email FROM users WHERE LOWER(TRIM(email)) IN (${aliases.map(() => '?').join(',')}) LIMIT 1`,
+        aliases
       );
+
+      if (foundUsers.length > 0) {
+        await pool.execute(
+          'UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL WHERE id = ?',
+          [hashedPassword, foundUsers[0].id]
+        );
+        resetLoginAttempts(foundUsers[0].email);
+        resetLoginAttempts(cleanEmail);
+      } else {
+        await pool.execute(
+          `UPDATE users SET password = ?, current_session_id = NULL, last_active_at = NULL 
+           WHERE LOWER(TRIM(email)) = ?`,
+          [hashedPassword, cleanEmail]
+        );
+        resetLoginAttempts(cleanEmail);
+      }
 
       if (dbResetId) {
         await pool.execute('UPDATE password_resets SET used = 1 WHERE id = ?', [dbResetId]);
@@ -3491,11 +3633,9 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
       return res.status(400).json({ message: 'Please enter a valid email address.' });
     }
-    if (String(password).length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters.' });
-    }
-    if (String(password).length > 128) {
-      return res.status(400).json({ message: 'Password is too long.' });
+    const strictCheck = validateStrictPassword(password);
+    if (!strictCheck.valid) {
+      return res.status(400).json({ message: strictCheck.message });
     }
     if (assignedRole === 'instructor' && !['CWTS', 'LTS', 'ROTC'].includes(department)) {
       return res.status(400).json({ message: 'Department must be CWTS, LTS, or ROTC for instructors.' });
@@ -3621,6 +3761,14 @@ async function handleUpdateUser(req, res) {
       return res.status(400).json({ message: 'Profile picture too large. Maximum 10 MB.' });
     }
 
+    // Validate password if updating
+    if (password !== undefined && password !== null && String(password).trim() !== '') {
+      const strictCheck = validateStrictPassword(password);
+      if (!strictCheck.valid) {
+        return res.status(400).json({ message: strictCheck.message });
+      }
+    }
+
     const [existingUserRows] = await pool.execute('SELECT * FROM users WHERE id = ?', [targetUserId]);
     if (existingUserRows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -3651,7 +3799,7 @@ async function handleUpdateUser(req, res) {
         targetRole,
         targetDept
       ];
-      if (password && String(password).trim().length >= 6) {
+      if (password && String(password).trim().length >= 8) {
         const hashed = await bcrypt.hash(String(password).trim(), 12);
         updateSql += ', password = ?';
         params.push(hashed);
@@ -3669,7 +3817,7 @@ async function handleUpdateUser(req, res) {
         targetAvatar,
         targetProfilePicture
       ];
-      if (password && String(password).trim().length >= 6) {
+      if (password && String(password).trim().length >= 8) {
         const hashed = await bcrypt.hash(String(password).trim(), 12);
         updateSql += ', password = ?';
         params.push(hashed);
@@ -3702,11 +3850,9 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
     if (parseInt(id) !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }
-    if (!newPassword || String(newPassword).length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
-    if (String(newPassword).length > 128) {
-      return res.status(400).json({ message: 'Password too long' });
+    const strictCheck = validateStrictPassword(newPassword);
+    if (!strictCheck.valid) {
+      return res.status(400).json({ message: strictCheck.message });
     }
 
     const [userRows] = await pool.execute('SELECT id, password FROM users WHERE id = ?', [id]);
@@ -7094,13 +7240,30 @@ const handleSendStudentDigitalId = async (req, res) => {
       }
     }
 
+    const dbPhoto = student ? (student.id_photo_2x2 || student.photo || student.registrationPhoto || student.registration_photo) : null;
+
     if (!student && req.body.student) {
       student = req.body.student;
+    } else if (student && req.body.student && typeof req.body.student === 'object') {
+      student = { ...student, ...req.body.student };
     }
 
     if (!student) {
       return res.status(404).json({ message: 'Student record not found' });
     }
+
+    // Preserve photo from database so client body cannot wipe it
+    student.id_photo_2x2 = dbPhoto || student.id_photo_2x2 || student.photo || student.registrationPhoto || student.registration_photo || null;
+    if (!student.id_photo_2x2) {
+      const [epRows] = await pool.execute(
+        'SELECT id_photo_2x2, registration_photo, photo FROM enrollments WHERE email = ? OR studentId = ? LIMIT 1',
+        [student.email || '', student.studentId || student.id]
+      ).catch(() => [[]]);
+      if (epRows && epRows[0]) {
+        student.id_photo_2x2 = epRows[0].id_photo_2x2 || epRows[0].photo || epRows[0].registration_photo || null;
+      }
+    }
+    student.photo = student.id_photo_2x2;
 
     const deliveryEmail = (req.body.email || student.email || '').trim();
 
@@ -7118,6 +7281,15 @@ const handleSendStudentDigitalId = async (req, res) => {
     }
 
     const result = await sendDigitalIdEmail(student, deliveryEmail);
+
+    if (result && result.sent === false) {
+      console.warn('[handleSendStudentDigitalId] Email delivery failed:', result.error);
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to deliver digital ID: ' + (result.error || 'Email service unavailable'),
+        delivery: result
+      });
+    }
 
     auditLog('send_digital_id', req.user?.id || 1, `Sent digital ID to ${deliveryEmail}`, req.ip || 'unknown');
 

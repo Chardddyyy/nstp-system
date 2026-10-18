@@ -189,9 +189,6 @@ function Calendar() {
     if (batchRange?.rawEnd) setEditRangeEnd(batchRange.rawEnd);
   }, [batchRange?.rawStart, batchRange?.rawEnd]);
 
-  const minCalendarAllowedMonth = useMemo(() => {
-    return `${new Date().getFullYear()}-01`;
-  }, []);
 
   const handleSaveSemesterRange = async (e) => {
     if (e && e.preventDefault) e.preventDefault();

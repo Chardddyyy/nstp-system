@@ -412,7 +412,8 @@ video {
   overflow-x: visible !important;
 }
 
-.recaptcha-center-wrapper .g-recaptcha {
+.recaptcha-center-wrapper .g-recaptcha,
+.recaptcha-center-wrapper .recaptcha-slot-container {
   display: inline-block !important;
   margin: 0 !important;
   width: 304px !important;
@@ -422,7 +423,8 @@ video {
   overflow: visible !important;
 }
 
-.recaptcha-center-wrapper .g-recaptcha > div {
+.recaptcha-center-wrapper .g-recaptcha > div,
+.recaptcha-center-wrapper .recaptcha-slot-container > div {
   margin: 0 !important;
   width: 304px !important;
   height: 78px !important;

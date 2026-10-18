@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
@@ -17,7 +17,8 @@ import {
   Lock,
   Info,
   RefreshCw,
-  CloudUpload
+  CloudUpload,
+  X
 } from 'lucide-react';
 
 const GDRIVE_URL = 'https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
@@ -43,8 +44,63 @@ export default function GoogleDrive() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [lastBackupTime, setLastBackupTime] = useState(null);
 
+  // Keyboard shortcut: Press Escape to close Google Drive and return to Dashboard
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        navigate('/admin/dashboard');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   const handleOpenDrive = () => {
-    window.open(GDRIVE_URL, '_blank', 'noopener,noreferrer');
+    // Open Google Drive in a new tab without noopener to allow monitoring window.closed
+    const driveWin = window.open(GDRIVE_URL, '_blank');
+
+    if (driveWin) {
+      let redirected = false;
+      const doRedirect = () => {
+        if (redirected) return;
+        redirected = true;
+        navigate('/admin/dashboard');
+      };
+
+      // Periodic check if the Google Drive tab was closed
+      const checkTimer = setInterval(() => {
+        try {
+          if (driveWin.closed) {
+            clearInterval(checkTimer);
+            window.removeEventListener('focus', onWindowFocus);
+            doRedirect();
+          }
+        } catch (_) {
+          clearInterval(checkTimer);
+        }
+      }, 400);
+
+      // Listen for window focus when user returns from the closed tab
+      const onWindowFocus = () => {
+        setTimeout(() => {
+          try {
+            if (!driveWin || driveWin.closed) {
+              clearInterval(checkTimer);
+              window.removeEventListener('focus', onWindowFocus);
+              doRedirect();
+            }
+          } catch (_) {}
+        }, 200);
+      };
+
+      window.addEventListener('focus', onWindowFocus);
+
+      // Failsafe cleanup after 30 minutes
+      setTimeout(() => {
+        clearInterval(checkTimer);
+        window.removeEventListener('focus', onWindowFocus);
+      }, 30 * 60 * 1000);
+    }
   };
 
   const handleCopyLink = () => {
@@ -117,6 +173,15 @@ export default function GoogleDrive() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => navigate('/admin/dashboard')}
+                title="Close Google Drive and return to Dashboard (Esc)"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-rose-600/90 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition-all shadow-md cursor-pointer active:scale-95"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Close</span>
+              </button>
               <button
                 type="button"
                 onClick={() => navigate('/admin/dashboard')}
@@ -225,14 +290,14 @@ export default function GoogleDrive() {
             {/* Direct Link Display */}
             <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <span className="font-semibold text-gray-500">Folder Destination:</span>
-              <a
-                href={GDRIVE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-emerald-700 hover:text-emerald-900 truncate max-w-md underline hover:no-underline bg-emerald-50/60 px-2.5 py-1 rounded-lg border border-emerald-100"
+              <button
+                type="button"
+                onClick={handleOpenDrive}
+                title="Open Folder in Google Drive"
+                className="font-mono text-emerald-700 hover:text-emerald-900 truncate max-w-md underline hover:no-underline bg-emerald-50/60 px-2.5 py-1 rounded-lg border border-emerald-100 text-left cursor-pointer"
               >
                 {GDRIVE_URL}
-              </a>
+              </button>
             </div>
           </div>
 
@@ -312,6 +377,27 @@ export default function GoogleDrive() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Quick Return to Dashboard Card */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white rounded-2xl p-4 sm:p-5 border border-emerald-900/10 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-900">Finished managing Google Drive files?</p>
+                <p className="text-[11px] text-gray-500">Close this view or press Esc to return straight to your Admin Dashboard.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/dashboard')}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
+            </button>
           </div>
 
           {/* Security & Access Alert */}

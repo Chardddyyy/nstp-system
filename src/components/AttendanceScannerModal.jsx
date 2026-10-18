@@ -939,193 +939,189 @@ export function AttendanceScannerModal({
         {/* STEP 1: SESSION SETUP SCREEN                                         */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {step === 1 && (
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50 space-y-4 sm:space-y-6">
+          <div className="p-3.5 sm:p-5 flex-1 bg-slate-50 flex flex-col justify-between space-y-3 sm:space-y-3.5 overflow-hidden">
             
-            {/* Step 1 Introduction Card */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-emerald-100 shadow-xs flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                <Clock className="w-4 h-4" />
+            {/* Step 1 Introduction Notice (Compact) */}
+            <div className="px-3.5 py-2 rounded-xl bg-white border border-emerald-100 shadow-2xs flex items-center justify-between gap-3 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
+                <span className="font-bold text-slate-800 text-xs">
+                  Set session schedule before scanning. Students timing in after cutoff are automatically marked as <b>Late (L)</b>.
+                </span>
               </div>
-              <div className="text-xs text-slate-600">
-                <p className="font-extrabold text-slate-800 text-sm">Before scanning student IDs:</p>
-                <p className="mt-0.5">
-                  Set the session Day (Day 1 - 15), activity title, and <b>scheduled class start time</b>. The system automatically marks students as <b>Late (L)</b> if they scan Time In after the scheduled cutoff time (+ grace period).
-                </p>
-              </div>
+              <span className="hidden sm:inline-block font-mono text-[10px] font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                {targetDept} Attendance
+              </span>
             </div>
 
-            {/* Attendance Day & Start Time Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* 2-Column Grid: Left (Day & Topic) | Right (Time & Grace Period) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
               
-              {/* Field 1: Attendance Day Selection */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-                <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-emerald-700" />
-                  <span>1. Attendance Day</span>
-                </label>
-                <select
-                  id="setup-attendance-day"
-                  value={selectedDay}
-                  onChange={(e) => setSelectedDay(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
-                >
-                  {ATTENDANCE_DAYS.map((day) => {
-                    const isCompleted = completedDays.has(day);
-                    return (
-                      <option 
-                        key={day} 
-                        value={day} 
-                        disabled={isCompleted}
-                        className={isCompleted ? 'text-slate-400 bg-slate-100 font-normal italic' : 'text-emerald-950 font-bold'}
+              {/* Left Column: Day & Session Topic */}
+              <div className="space-y-3">
+                {/* Field 1: Attendance Day */}
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="setup-attendance-day" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>1. Attendance Day</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">Day 1 to 15</span>
+                  </div>
+                  <select
+                    id="setup-attendance-day"
+                    value={selectedDay}
+                    onChange={(e) => setSelectedDay(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
+                  >
+                    {ATTENDANCE_DAYS.map((day) => {
+                      const isCompleted = completedDays.has(day);
+                      return (
+                        <option 
+                          key={day} 
+                          value={day} 
+                          disabled={isCompleted}
+                          className={isCompleted ? 'text-slate-400 bg-slate-100 font-normal italic' : 'text-emerald-950 font-bold'}
+                        >
+                          {day} {isCompleted ? '— (Conducted / Closed)' : '— (Available)'}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {completedDays.has(selectedDay) && (
+                    <p className="text-[10.5px] text-rose-700 font-bold flex items-center gap-1 mt-1 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                      <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                      <span>{selectedDay} conducted. Session locked.</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Field 2: Session / Activity Title */}
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="setup-activity-name" className="block text-xs font-black uppercase text-slate-700">
+                      2. Session / Activity Title
+                    </label>
+                    <span className="text-[10px] font-bold text-slate-400">Topic for {selectedDay}</span>
+                  </div>
+                  <input
+                    type="text"
+                    id="setup-activity-name"
+                    value={activityName}
+                    onChange={(e) => setActivityName(e.target.value)}
+                    placeholder="e.g., Community Profiling, Tree Planting..."
+                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/30"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Start Time & Grace Period */}
+              <div className="space-y-3">
+                {/* Field 3: Scheduled Start Time */}
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="setup-start-time" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>3. Class Start Time</span>
+                    </label>
+                    <span className="text-xs font-black font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      {formatTime12h(sessionStartTime)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      id="setup-start-time"
+                      value={sessionStartTime}
+                      onChange={(e) => setSessionStartTime(e.target.value)}
+                      className="w-28 sm:w-32 px-2.5 sm:px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-300 font-black text-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+                    />
+                    <div className="flex items-center gap-1 flex-wrap flex-1">
+                      {['07:00', '08:00', '08:30', '13:00'].map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setSessionStartTime(t)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            sessionStartTime === t ? 'bg-emerald-800 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          {formatTime12h(t)}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          const hh = String(d.getHours()).padStart(2, '0');
+                          const mm = String(d.getMinutes()).padStart(2, '0');
+                          setSessionStartTime(`${hh}:${mm}`);
+                        }}
+                        className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all cursor-pointer"
                       >
-                        {day} {isCompleted ? '— (Conducted / Closed)' : '— (Available)'}
-                      </option>
-                    );
-                  })}
-                </select>
-                {completedDays.has(selectedDay) ? (
-                  <p className="text-[11px] text-rose-700 font-bold flex items-center gap-1 mt-1 bg-rose-50 p-2 rounded-lg border border-rose-200">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                    <span>{selectedDay} has already been conducted for {targetDept}. This session is locked.</span>
+                        Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Field 4: Lateness Grace Period */}
+                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                      <span>4. Grace Period</span>
+                    </label>
+                    <span className="text-[11px] font-bold text-amber-700">
+                      Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { mins: 0, label: '0 min', sub: 'Strict' },
+                      { mins: 10, label: '+10m', sub: 'Grace' },
+                      { mins: 15, label: '+15m', sub: 'Standard' },
+                      { mins: 30, label: '+30m', sub: 'Extended' }
+                    ].map(opt => (
+                      <button
+                        key={opt.mins}
+                        type="button"
+                        onClick={() => setGracePeriod(opt.mins)}
+                        className={`p-1.5 sm:p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          gracePeriod === opt.mins
+                            ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/20'
+                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <p className={`text-xs font-black ${gracePeriod === opt.mins ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</p>
+                        <p className="text-[9px] text-slate-400 leading-tight">{opt.sub}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Unified Bar: Session Policy Summary + Proceed Button */}
+            <div className="p-3 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-200/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div className="text-xs min-w-0">
+                  <p className="font-extrabold text-slate-800 truncate">
+                    {fullActivityTitle}
                   </p>
-                ) : (
-                  <p className="text-[10px] text-slate-400 font-medium">Select an open session from Day 1 to Day 15</p>
-                )}
-              </div>
-
-              {/* Field 2: Scheduled Start Time ("Oras ng Pasok") */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="setup-start-time" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-emerald-700" />
-                    <span>2. Scheduled Start Time</span>
-                  </label>
-                  <span className="text-xs font-black font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
-                    {formatTime12h(sessionStartTime)}
-                  </span>
-                </div>
-
-                <input
-                  type="time"
-                  id="setup-start-time"
-                  value={sessionStartTime}
-                  onChange={(e) => setSessionStartTime(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 rounded-xl border border-slate-300 font-black text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
-                />
-
-                {/* Quick Presets */}
-                <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                  <span className="text-[10px] font-bold text-slate-400">Presets:</span>
-                  {['07:00', '07:30', '08:00', '08:30', '13:00'].map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setSessionStartTime(t)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                        sessionStartTime === t ? 'bg-emerald-800 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {formatTime12h(t)}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const d = new Date();
-                      const hh = String(d.getHours()).padStart(2, '0');
-                      const mm = String(d.getMinutes()).padStart(2, '0');
-                      setSessionStartTime(`${hh}:${mm}`);
-                    }}
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all cursor-pointer"
-                  >
-                    Current Time
-                  </button>
+                  <p className="text-slate-600 text-[11px]">
+                    Start: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b className="text-amber-800">{getCutoffTime12h(sessionStartTime, gracePeriod)}</b> (Late thereafter)
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Field 3: Activity / Topic Name (Clean input without suggestions) */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-              <label htmlFor="setup-activity-name" className="block text-xs font-black uppercase text-slate-700">
-                3. Session / Activity Title
-              </label>
-              <input
-                type="text"
-                id="setup-activity-name"
-                value={activityName}
-                onChange={(e) => setActivityName(e.target.value)}
-                placeholder="e.g., Community Profiling, Tree Planting, Seminar..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/30"
-              />
-              <p className="text-[10px] text-slate-400 font-medium">Specify the topic or field activity for {selectedDay}</p>
-            </div>
-
-            {/* Field 4: Grace Period / Lateness Cutoff */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-600" />
-                  <span>4. Lateness Grace Period</span>
-                </label>
-                <span className="text-[11px] font-bold text-amber-700">
-                  Late Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { mins: 0, label: 'Strict (0 min)', desc: 'Late immediately after start time' },
-                  { mins: 10, label: '+10 mins', desc: '10 minutes grace period' },
-                  { mins: 15, label: '+15 mins (Standard)', desc: '15 minutes grace period' },
-                  { mins: 30, label: '+30 mins', desc: '30 minutes grace period' }
-                ].map(opt => (
-                  <button
-                    key={opt.mins}
-                    type="button"
-                    onClick={() => setGracePeriod(opt.mins)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      gracePeriod === opt.mins
-                        ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/20'
-                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    <p className={`text-xs font-black ${gracePeriod === opt.mins ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</p>
-                    <p className="text-[9.5px] text-slate-400 mt-0.5 leading-tight">{opt.desc}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Visual Lateness Summary Card */}
-            <div className="p-3.5 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-200/60 flex items-center justify-between flex-wrap gap-2 text-xs">
-              <div className="space-y-0.5">
-                <p className="font-black text-slate-800 flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Session Policy:</span>
-                </p>
-                <p className="text-slate-600 text-[11px]">
-                  Class Start: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>. Students timing in after cutoff will be marked as <b>Late (L)</b>.
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-[10px] font-black text-emerald-900 bg-white/80 px-2 py-1 rounded-lg border border-emerald-200 shadow-2xs">
-                  {fullActivityTitle}
-                </span>
-              </div>
-            </div>
-
-            {/* Bottom Button to Proceed to Step 2 */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-              {completedDays.has(selectedDay) ? (
-                <p className="text-xs font-bold text-rose-700 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>Selected day already conducted. Please select another day.</span>
-                </p>
-              ) : (
-                <p className="text-xs text-slate-500 font-medium hidden sm:block">
-                  Ready to configure and open scanner for <b>{selectedDay}</b>
-                </p>
-              )}
               <button
                 type="button"
                 disabled={completedDays.has(selectedDay)}
@@ -1136,7 +1132,7 @@ export function AttendanceScannerModal({
                   }
                   setStep(2);
                 }}
-                className={`w-full sm:w-auto px-6 py-3 font-black text-xs sm:text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 ${
+                className={`w-full sm:w-auto px-5 py-2.5 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 ${
                   completedDays.has(selectedDay)
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
                     : 'bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white active:scale-95 cursor-pointer'

@@ -676,11 +676,27 @@ function Login() {
       return;
     }
     if (forgotNewPassword.length < 8) {
-      setForgotError('Password must be at least 8 characters for security');
+      setForgotError('Strict Security Policy: Password must be at least 8 characters long');
+      return;
+    }
+    if (!/[A-Z]/.test(forgotNewPassword)) {
+      setForgotError('Strict Security Policy: Password must contain at least one uppercase letter (A-Z)');
+      return;
+    }
+    if (!/[a-z]/.test(forgotNewPassword)) {
+      setForgotError('Strict Security Policy: Password must contain at least one lowercase letter (a-z)');
+      return;
+    }
+    if (!/[0-9]/.test(forgotNewPassword)) {
+      setForgotError('Strict Security Policy: Password must contain at least one number (0-9)');
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword)) {
+      setForgotError('Strict Security Policy: Password must contain at least one special symbol (!@#$%^&*...)');
       return;
     }
     if (forgotNewPassword !== forgotConfirmPassword) {
-      setForgotError('Passwords do not match');
+      setForgotError('Passwords do not match. Please ensure both fields match exactly.');
       return;
     }
     setForgotLoading(true);
@@ -833,55 +849,6 @@ function Login() {
             </button>
           </form>
 
-          {/* Institutional Testing & Demo Credentials Display */}
-          <div className="mt-2.5 sm:mt-3 p-2.5 sm:p-3 bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-emerald-50/90 rounded-xl sm:rounded-2xl border border-emerald-200/90 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <div className="w-4 h-4 rounded-md bg-emerald-600/10 flex items-center justify-center text-emerald-700">
-                  <KeyRound className="w-3 h-3 text-emerald-700" />
-                </div>
-                <span className="text-[10px] sm:text-[11px] font-black text-emerald-950 uppercase tracking-wider">
-                  Test Accounts (Tap to Fill)
-                </span>
-              </div>
-              <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-800 border border-amber-300/60">
-                Testing
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              {[
-                { role: 'Admin', email: 'richardbelen99@gmail.com', pass: 'admin123', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-                { role: 'CWTS', email: 'belenjoshua58@gmail.com', pass: 'cwts123', badge: 'bg-blue-100 text-blue-800 border-blue-300' },
-                { role: 'LTS', email: 'lts@gmail.com', pass: 'lts123', badge: 'bg-purple-100 text-purple-800 border-purple-300' },
-                { role: 'ROTC', email: 'rotc@gmail.com', pass: 'rotc123', badge: 'bg-red-100 text-red-800 border-red-300' },
-              ].map((item) => (
-                <button
-                  key={item.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(item.email);
-                    setPassword(item.pass);
-                    setError('');
-                    executeLogin(item.email, item.pass);
-                  }}
-                  className="p-1.5 sm:p-2 bg-white hover:bg-emerald-100/50 active:scale-95 rounded-lg sm:rounded-xl border border-emerald-200/80 transition-all text-left shadow-2xs hover:shadow-xs group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className={`text-[9px] sm:text-[9.5px] font-black px-1.5 py-0.2 rounded border ${item.badge}`}>
-                      {item.role}
-                    </span>
-                    <span className="text-[9px] sm:text-[9.5px] font-mono text-gray-500 font-bold group-hover:text-emerald-800">
-                      {item.pass}
-                    </span>
-                  </div>
-                  <p className="text-[10px] sm:text-[10.5px] font-extrabold text-gray-800 truncate">
-                    {item.email}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="mt-2 pt-2 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10.5px] sm:text-[11px]">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
@@ -1164,7 +1131,7 @@ function Login() {
                           data-lpignore="true"
                           className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
-                          minLength="6"
+                          minLength="8"
                           autoFocus
                         />
                         <button
@@ -1175,7 +1142,52 @@ function Login() {
                           {forgotShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-1">Minimum 6 characters.</p>
+                    </div>
+
+                    {/* Live Password Security Requirements Checklist */}
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-[11px]">
+                      <div className="flex items-center justify-between font-bold text-gray-700">
+                        <span className="flex items-center gap-1.5">
+                          <Shield className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Strict Password Requirements:</span>
+                        </span>
+                        <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          (forgotNewPassword.length >= 8 && /[A-Z]/.test(forgotNewPassword) && /[a-z]/.test(forgotNewPassword) && /[0-9]/.test(forgotNewPassword) && /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword))
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : (forgotNewPassword.length >= 6)
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-rose-100 text-rose-800 border border-rose-300'
+                        }`}>
+                          {(forgotNewPassword.length >= 8 && /[A-Z]/.test(forgotNewPassword) && /[a-z]/.test(forgotNewPassword) && /[0-9]/.test(forgotNewPassword) && /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword))
+                            ? 'Very Strong'
+                            : forgotNewPassword.length >= 6
+                              ? 'Moderate'
+                              : 'Weak'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 text-[10.5px]">
+                        <div className={`flex items-center gap-1.5 ${forgotNewPassword.length >= 8 ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                          {forgotNewPassword.length >= 8 ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                          <span>8+ characters</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(forgotNewPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                          {/[A-Z]/.test(forgotNewPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                          <span>Uppercase (A-Z)</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${/[a-z]/.test(forgotNewPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                          {/[a-z]/.test(forgotNewPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                          <span>Lowercase (a-z)</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 ${/[0-9]/.test(forgotNewPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                          {/[0-9]/.test(forgotNewPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                          <span>1+ number (0-9)</span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 col-span-2 ${/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                          {/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                          <span>Special symbol (!@#$%^&*...)</span>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -1201,14 +1213,23 @@ function Login() {
                           data-lpignore="true"
                           className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white outline-none font-medium transition-all"
                           required
-                          minLength="6"
+                          minLength="8"
                         />
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={forgotLoading || !forgotNewPassword || !forgotConfirmPassword}
+                      disabled={
+                        forgotLoading ||
+                        !forgotNewPassword ||
+                        !forgotConfirmPassword ||
+                        forgotNewPassword.length < 8 ||
+                        !/[A-Z]/.test(forgotNewPassword) ||
+                        !/[a-z]/.test(forgotNewPassword) ||
+                        !/[0-9]/.test(forgotNewPassword) ||
+                        !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(forgotNewPassword)
+                      }
                       className="w-full mt-2 py-3 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {forgotLoading ? (

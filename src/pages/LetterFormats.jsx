@@ -127,7 +127,7 @@ const DEFAULT_TEMPLATES = [
 ];
 
 export default function LetterFormats() {
-  const { user, logout, viewingArchive, archiveViewData, setViewingArchive, showToast } = useAuth();
+  const { user, logout, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, showToast } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -525,11 +525,15 @@ export default function LetterFormats() {
                       }`}>
                         {item.department === 'All' ? 'All Departments' : item.department}
                       </span>
-                      {(!String(item.id || '').startsWith('tpl-') || (new Date(item.createdAt || 0).getTime() > new Date('2025-01-01').getTime())) && (
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs">
-                          NEW
-                        </span>
-                      )}
+                      {(() => {
+                        const itemTime = new Date(item.createdAt || 0).getTime();
+                        const isRecent = itemTime > 0 && (Date.now() - itemTime < 3 * 24 * 60 * 60 * 1000);
+                        return isRecent ? (
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs">
+                            NEW
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     <span className="text-xs text-gray-400 font-medium">
                       {new Date(item.createdAt).toLocaleDateString()}

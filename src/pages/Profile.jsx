@@ -15,6 +15,18 @@ const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e'
 
 import { AVATAR_OPTIONS, getAvatarSrc } from '../utils/avatars';
 
+const isStrictPassword = (pwd) => {
+  if (!pwd || typeof pwd !== 'string') return false;
+  return (
+    pwd.length >= 8 &&
+    pwd.length <= 128 &&
+    /[A-Z]/.test(pwd) &&
+    /[a-z]/.test(pwd) &&
+    /[0-9]/.test(pwd) &&
+    /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pwd)
+  );
+};
+
 function Profile() {
   const { user, logout, updateUser, changePassword, showToast } = useAuth();
   const navigate = useNavigate();
@@ -410,9 +422,11 @@ function Profile() {
       showToast('Name and email are required.', 'warning');
       return;
     }
-    if (editInstructorForm.newPassword && editInstructorForm.newPassword.length < 6) {
-      showToast('New password must be at least 6 characters.', 'warning');
-      return;
+    if (editInstructorForm.newPassword) {
+      if (!isStrictPassword(editInstructorForm.newPassword)) {
+        showToast('Strict Password Policy: New password must be 8+ characters and contain uppercase, lowercase, number, and symbol (!@#$...).', 'warning');
+        return;
+      }
     }
     setIsSavingInstructor(true);
     try {
@@ -434,7 +448,7 @@ function Profile() {
       }
 
       // Include new password if entered
-      if (editInstructorForm.newPassword && editInstructorForm.newPassword.trim().length >= 6) {
+      if (editInstructorForm.newPassword && editInstructorForm.newPassword.trim().length >= 8) {
         updatePayload.password = editInstructorForm.newPassword.trim();
       }
 
@@ -467,8 +481,8 @@ function Profile() {
       showToast('Passwords do not match.', 'warning');
       return;
     }
-    if (instructorForm.password.length < 6) {
-      showToast('Password must be at least 6 characters.', 'warning');
+    if (!isStrictPassword(instructorForm.password)) {
+      showToast('Strict Password Policy: Password must be 8+ characters and contain uppercase, lowercase, number, and symbol (!@#$...).', 'warning');
       return;
     }
     setIsAddingInstructor(true);
@@ -533,8 +547,8 @@ function Profile() {
       showToast('Passwords do not match!', 'warning');
       return;
     }
-    if (formData.newPassword.length < 8) {
-      showToast('Password must be at least 8 characters!', 'warning');
+    if (!isStrictPassword(formData.newPassword)) {
+      showToast('Strict Password Policy: Password must be 8+ characters and contain uppercase, lowercase, number, and symbol (!@#$...).', 'warning');
       return;
     }
     setIsChangingPassword(true);
@@ -941,6 +955,54 @@ function Profile() {
                     />
                   </div>
                 </div>
+
+                {formData.newPassword.length > 0 && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-2 text-[11px] animate-fade-in">
+                    <div className="flex items-center justify-between font-bold text-gray-700">
+                      <span className="flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Strict Password Requirements:</span>
+                      </span>
+                      <span className={`text-[9.5px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        isStrictPassword(formData.newPassword)
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : (formData.newPassword.length >= 6)
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : 'bg-rose-100 text-rose-800 border border-rose-300'
+                      }`}>
+                        {isStrictPassword(formData.newPassword)
+                          ? 'Very Strong'
+                          : formData.newPassword.length >= 6
+                            ? 'Moderate'
+                            : 'Weak'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[10.5px]">
+                      <div className={`flex items-center gap-1.5 ${formData.newPassword.length >= 8 ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                        {formData.newPassword.length >= 8 ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                        <span>8+ characters</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(formData.newPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                        {/[A-Z]/.test(formData.newPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                        <span>Uppercase (A-Z)</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[a-z]/.test(formData.newPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                        {/[a-z]/.test(formData.newPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                        <span>Lowercase (a-z)</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[0-9]/.test(formData.newPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                        {/[0-9]/.test(formData.newPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                        <span>Number (0-9)</span>
+                      </div>
+                      <div className={`flex items-center gap-1.5 ${/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(formData.newPassword) ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                        {/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(formData.newPassword) ? <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0" />}
+                        <span>Special Symbol (!@#$)</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <button type="submit"
                   disabled={isChangingPassword}
                   className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-wait"
@@ -958,7 +1020,7 @@ function Profile() {
         const f = instructorForm;
         const nameOk    = f.name.trim().length > 0;
         const emailOk   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim());
-        const pwOk      = f.password.length >= 6;
+        const pwOk      = isStrictPassword(f.password);
         const confirmOk = f.password === f.confirmPassword && f.confirmPassword.length > 0;
         const deptOk    = f.role === 'admin' || !!f.department;
         const canSubmit = nameOk && emailOk && pwOk && confirmOk && deptOk;
@@ -1063,14 +1125,18 @@ function Profile() {
                     <input type={showInstructorPassword ? 'text' : 'password'} id="inst-password" name="instructorPassword"
                       value={f.password}
                       onChange={e => setInstructorForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="At least 6 characters" autoComplete="new-password"
+                      placeholder="8+ chars (upper, lower, num, symbol)" autoComplete="new-password"
                       className={`w-full px-3 py-2 pr-9 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${f.password.length > 0 && !pwOk ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
                     <button type="button" onClick={() => setShowInstructorPassword(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                       {showInstructorPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {f.password.length > 0 && !pwOk && <p className="text-red-500 text-xs mt-0.5">Password must be at least 6 characters</p>}
+                  {f.password.length > 0 && !pwOk && (
+                    <p className="text-red-500 text-[11px] mt-1 font-medium">
+                      Must be 8+ chars and contain uppercase, lowercase, number, and special symbol (!@#$...).
+                    </p>
+                  )}
                 </div>
 
                 {/* Confirm Password */}
@@ -1229,7 +1295,7 @@ function Profile() {
                     name="editInstructorNewPass"
                     value={editInstructorForm.newPassword}
                     onChange={e => setEditInstructorForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                    placeholder="Enter new password (min 6 chars)..."
+                    placeholder="Enter new password (8+ chars, upper, lower, num, symbol)..."
                     className="w-full px-4 py-2.5 pr-10 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                   />
                   <button
@@ -1240,6 +1306,11 @@ function Profile() {
                     {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {editInstructorForm.newPassword.length > 0 && !isStrictPassword(editInstructorForm.newPassword) && (
+                  <p className="text-amber-600 text-[11px] mt-1 font-semibold">
+                    Must be 8+ chars and contain uppercase, lowercase, number, and special symbol (!@#$...).
+                  </p>
+                )}
               </div>
             </div>
 

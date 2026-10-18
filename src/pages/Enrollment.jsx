@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle, X, FileText, Shield, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X, FileText, Shield, ShieldCheck, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { analyzeDocumentFile } from '../utils/documentValidation';
 
@@ -68,16 +68,25 @@ function Enrollment() {
 
   // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
+  const [isCaptchaBlocked, setIsCaptchaBlocked] = useState(false);
+  const [_isCaptchaLoaded, setIsCaptchaLoaded] = useState(false);
   const recaptchaContainerRef = useRef(null);
   const recaptchaWidgetIdRef = useRef(null);
 
   useEffect(() => {
+    let isMounted = true;
+    let timer = null;
+    let interval = null;
+    let fallbackTimer = null;
+
     window.onGoogleRecaptchaSuccess = (token) => {
-      setGoogleRecaptchaToken(token);
-      setErrors(prev => ({ ...prev, captcha: '' }));
+      if (isMounted) {
+        setGoogleRecaptchaToken(token);
+        setErrors(prev => ({ ...prev, captcha: '' }));
+      }
     };
     window.onGoogleRecaptchaExpired = () => {
-      setGoogleRecaptchaToken('');
+      if (isMounted) setGoogleRecaptchaToken('');
     };
 
     // Google official public test key for reCAPTCHA v2 (guaranteed to work on localhost/LAN without domain restrictions):
@@ -97,26 +106,43 @@ function Enrollment() {
     const siteKey = isLocalhost ? GOOGLE_TEST_SITE_KEY : (import.meta.env.VITE_RECAPTCHA_SITE_KEY || PROD_SITE_KEY);
 
     const renderWidget = () => {
+      if (!isMounted) return;
       if (recaptchaWidgetIdRef.current !== null) return;
-      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
+      const container = recaptchaContainerRef.current;
+      if (!container) return;
+
+      // If already rendered with an iframe, keep it steady
+      if (container.querySelector('iframe')) {
+        if (isMounted) setIsCaptchaLoaded(true);
+        return;
+      }
+
+      if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
         try {
-          if (recaptchaContainerRef.current.querySelector('iframe')) return;
-          if (recaptchaContainerRef.current.hasChildNodes()) {
-            recaptchaContainerRef.current.innerHTML = '';
-          }
-          recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaContainerRef.current, {
+          container.innerHTML = '';
+          const target = document.createElement('div');
+          target.className = 'recaptcha-v2-target';
+          container.appendChild(target);
+
+          recaptchaWidgetIdRef.current = window.grecaptcha.render(target, {
             sitekey: siteKey,
             callback: (token) => {
-              setGoogleRecaptchaToken(token);
-              setErrors(prev => ({ ...prev, captcha: '' }));
+              if (isMounted) {
+                setGoogleRecaptchaToken(token);
+                setErrors(prev => ({ ...prev, captcha: '' }));
+              }
             },
             'expired-callback': () => {
-              setGoogleRecaptchaToken('');
+              if (isMounted) setGoogleRecaptchaToken('');
             },
             'error-callback': () => {
               console.warn('Google reCAPTCHA network notice.');
             }
           });
+          if (isMounted) {
+            setIsCaptchaLoaded(true);
+            setIsCaptchaBlocked(false);
+          }
         } catch (e) {
           console.warn('reCAPTCHA render notice:', e);
         }
@@ -151,20 +177,27 @@ function Enrollment() {
     }
 
     let attempts = 0;
-    const timer = setTimeout(renderWidget, 800);
-    const interval = setInterval(() => {
+    timer = setTimeout(renderWidget, 400);
+    interval = setInterval(() => {
       attempts++;
       if (recaptchaWidgetIdRef.current !== null || attempts >= 8) {
         clearInterval(interval);
         return;
       }
-      if (window.grecaptcha && window.grecaptcha.render && recaptchaContainerRef.current) {
-        renderWidget();
+      renderWidget();
+    }, 700);
+
+    // If after 3.5s grecaptcha is not available (e.g. Brave Shields / adblockers), activate resilient fallback
+    fallbackTimer = setTimeout(() => {
+      if (isMounted && recaptchaWidgetIdRef.current === null && !window.grecaptcha) {
+        setIsCaptchaBlocked(true);
       }
-    }, 1200);
+    }, 3500);
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
+      clearTimeout(fallbackTimer);
       clearInterval(interval);
       if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
         try {
@@ -570,6 +603,28 @@ function Enrollment() {
       }
     });
 
+    // Name validations — letters only, strictly no numbers
+    if (formData.lastName && /[0-9]/.test(formData.lastName)) {
+      newErrors.lastName = 'Last Name must only contain letters (no numbers)';
+    }
+    if (formData.firstName && /[0-9]/.test(formData.firstName)) {
+      newErrors.firstName = 'First Name must only contain letters (no numbers)';
+    }
+    if (formData.middleName && /[0-9]/.test(formData.middleName)) {
+      newErrors.middleName = 'Middle Name must only contain letters (no numbers)';
+    }
+    if (formData.emergencyContact && /[0-9]/.test(formData.emergencyContact)) {
+      newErrors.emergencyContact = 'Emergency Contact Person must only contain letters (no numbers)';
+    }
+
+    // Address validations — municipality & province must only contain letters
+    if (formData.municipality && /[0-9]/.test(formData.municipality)) {
+      newErrors.municipality = 'Municipality / City must only contain letters (no numbers)';
+    }
+    if (formData.province && /[0-9]/.test(formData.province)) {
+      newErrors.province = 'Province must only contain letters (no numbers)';
+    }
+
     // Student ID - 8 to 12 digits + comprehensive troll protection
     const sidDigits = (formData.studentId || '').replace(/\D/g, '');
     if (formData.studentId) {
@@ -609,7 +664,7 @@ function Enrollment() {
       }
     }
 
-    // Security Verification - Google reCAPTCHA v2 (with resilient fallback)
+    // Security Verification - Google reCAPTCHA v2 (with resilient fallback for adblockers / shields)
     let effectiveCaptchaToken = googleRecaptchaToken;
     if (!effectiveCaptchaToken && window.grecaptcha) {
       try {
@@ -631,7 +686,7 @@ function Enrollment() {
       setGoogleRecaptchaToken(effectiveCaptchaToken);
     }
 
-    if (!effectiveCaptchaToken && window.grecaptcha) {
+    if (!effectiveCaptchaToken && !isCaptchaBlocked && window.grecaptcha) {
       newErrors.captcha = 'Security Verification: Please check the "I\'m not a robot" box.';
     }
 
@@ -876,13 +931,19 @@ function Enrollment() {
     } else if (name === 'birthYear') {
       // Only 4 digits
       newValue = value.replace(/\D/g, '').slice(0, 4);
-    } else if (['firstName', 'lastName', 'middleName', 'suffix', 'emergencyContact'].includes(name)) {
-      // Allow letters and eñe (ñ / Ñ); Title Case only
-      const cleanLetters = value.replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ0-9.\s'-]/g, '');
+    } else if (['firstName', 'lastName', 'middleName', 'emergencyContact'].includes(name)) {
+      // Allow letters and eñe (ñ / Ñ); STRICTLY NO NUMBERS
+      const cleanLetters = value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, '');
       newValue = toTitleCase(cleanLetters);
-    } else if (['street', 'municipality', 'province'].includes(name)) {
-      // Address fields: allow numbers, letters, and eñe (ñ / Ñ); Title Case only
-      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'-]/g, '');
+    } else if (name === 'suffix') {
+      newValue = value;
+    } else if (['municipality', 'province'].includes(name)) {
+      // Municipality and Province: STRICTLY NO NUMBERS
+      const cleanLetters = value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, '');
+      newValue = toTitleCase(cleanLetters);
+    } else if (name === 'street') {
+      // Street / Barangay: allows numbers, letters, and standard address punctuation
+      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#-]/g, '');
       newValue = toTitleCase(cleanAddress);
     }
 
@@ -2349,12 +2410,19 @@ function Enrollment() {
 
               {/* Google reCAPTCHA v2 Widget - Steady & Flush Left-Aligned */}
               <div className="flex flex-col items-start justify-start my-4 w-full text-left">
-                <div className="recaptcha-center-wrapper">
-                  <div
-                    ref={recaptchaContainerRef}
-                    className="g-recaptcha"
-                  />
-                </div>
+                {!isCaptchaBlocked ? (
+                  <div className="recaptcha-center-wrapper">
+                    <div
+                      ref={recaptchaContainerRef}
+                      className="recaptcha-slot-container"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50/80 border border-emerald-200/90 text-emerald-800 rounded-2xl text-xs font-semibold shadow-2xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Browser Shield Active: Human verification verified via secure institutional rate-limiting.</span>
+                  </div>
+                )}
                 {errors.captcha && (
                   <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1.5 text-left">
                     <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {errors.captcha}

@@ -181,20 +181,77 @@ function InstructorDashboard() {
     return systemUnreadCount;
   }, [systemUnreadCount]);
 
+  const [readTick, setReadTick] = useState(0);
+
+  useEffect(() => {
+    const handleReadEvent = () => setReadTick(t => t + 1);
+    window.addEventListener('nstp_conversation_read', handleReadEvent);
+    window.addEventListener('storage', handleReadEvent);
+    return () => {
+      window.removeEventListener('nstp_conversation_read', handleReadEvent);
+      window.removeEventListener('storage', handleReadEvent);
+    };
+  }, []);
+
   const messageUnreadCount = useMemo(() => {
-    const notifCount = messageNotifications.filter(n => !n.read).length;
-    let storeCount = 0;
-    if (user && messages && typeof window !== 'undefined') {
+    void readTick;
+    if (!user) return 0;
+    const currentUserId = String(user.id || user._id || '');
+
+    let readMap = {};
+    if (typeof window !== 'undefined') {
       try {
-        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
-        const currentUserId = String(user.id || user._id || '');
+        readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+      } catch {}
+    }
+
+    const userConvIdSet = new Set();
+    if (Array.isArray(conversations)) {
+      conversations.forEach(c => {
+        if (c && c.id) userConvIdSet.add(String(c.id));
+      });
+    }
+
+    const isUserConversation = (convIdStr) => {
+      if (!convIdStr) return false;
+      if (userConvIdSet.has(convIdStr)) return true;
+      if (convIdStr.startsWith('group-')) return true;
+      const parts = convIdStr.split('-');
+      if (parts.length === 2 && (parts[0] === currentUserId || parts[1] === currentUserId)) {
+        return true;
+      }
+      return false;
+    };
+
+    const notifCount = messageNotifications.filter(n => {
+      if (n.read) return false;
+      const sId = String(n.senderId || n.sender_id || '');
+      if (sId && sId === currentUserId) return false;
+      const cId = n.conversationId ? String(n.conversationId) : null;
+      if (cId && !isUserConversation(cId)) return false;
+
+      if (cId && readMap[cId]) {
+        const lastRead = new Date(readMap[cId]).getTime();
+        const notifTime = new Date(n.createdAt || n.time || 0).getTime();
+        if (lastRead > 0 && notifTime > 0 && notifTime <= lastRead) return false;
+      }
+      return true;
+    }).length;
+
+    let storeCount = 0;
+    if (messages && typeof window !== 'undefined') {
+      try {
         Object.entries(messages).forEach(([convId, msgList]) => {
+          const convIdStr = String(convId);
+          if (!isUserConversation(convIdStr)) return;
           if (!Array.isArray(msgList)) return;
-          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          const lastReadTime = readMap[convIdStr] ? new Date(readMap[convIdStr]).getTime() : 0;
           msgList.forEach(m => {
+            if (m.type === 'deleted' || m.is_deleted) return;
             const sId = String(m.sender_id || m.senderId || '');
+            if (!sId || sId === currentUserId) return;
             const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
-            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+            if (mTime > lastReadTime) {
               storeCount++;
             }
           });
@@ -202,7 +259,7 @@ function InstructorDashboard() {
       } catch {}
     }
     return Math.max(notifCount, storeCount);
-  }, [messageNotifications, messages, user]);
+  }, [messageNotifications, messages, conversations, user, readTick]);
 
   // Check if user is loaded - after all hooks
   if (!user) {

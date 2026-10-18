@@ -937,22 +937,34 @@ function App() {
   }, [user, notifications]);
 
   const markAllNotificationsRead = useCallback((idsToMark = null) => {
+    let hasChange = false;
     let updatedNotifs = [];
     setNotifications(prev => {
+      const list = prev || [];
       if (Array.isArray(idsToMark) && idsToMark.length > 0) {
         const idSet = new Set(idsToMark.map(String));
-        updatedNotifs = (prev || []).map(n => idSet.has(String(n.id)) ? { ...n, read: true } : n);
+        updatedNotifs = list.map(n => {
+          if (idSet.has(String(n.id)) && !n.read) {
+            hasChange = true;
+            return { ...n, read: true };
+          }
+          return n;
+        });
       } else {
-        updatedNotifs = (prev || []).map(n => ({ ...n, read: true }));
+        hasChange = list.some(n => !n.read);
+        if (hasChange) {
+          updatedNotifs = list.map(n => ({ ...n, read: true }));
+        }
+      }
+      if (!hasChange) return prev;
+      if (user) {
+        const notifKey = getNotificationStorageKey(user);
+        safeSetStorage(notifKey, updatedNotifs);
       }
       return updatedNotifs;
     });
 
     if (user) {
-      // Immediately write updated notifications to storage
-      const notifKey = getNotificationStorageKey(user);
-      safeSetStorage(notifKey, updatedNotifs);
-
       // Persist read IDs Set so restart and background re-poll never restore them as unread
       try {
         const readStorageKey = getReadNotificationsStorageKey(user);
@@ -961,8 +973,7 @@ function App() {
         if (Array.isArray(idsToMark) && idsToMark.length > 0) {
           idsToMark.forEach(id => readSet.add(String(id)));
         } else {
-          notifications.forEach(n => readSet.add(String(n.id)));
-          updatedNotifs.forEach(n => readSet.add(String(n.id)));
+          (notificationsRef.current || []).forEach(n => readSet.add(String(n.id)));
         }
         safeSetStorage(readStorageKey, Array.from(readSet).slice(-1000));
       } catch {}
@@ -972,8 +983,70 @@ function App() {
         localStorage.removeItem('nstp_admin_notifications');
         localStorage.removeItem('nstp_instructor_notifications');
       } catch {}
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('nstp_conversation_read', {
+          detail: { conversationId: 'all', userId: user.id, timestamp: Date.now() }
+        }));
+      }
     }
-  }, [user, notifications]);
+  }, [user]);
+
+  const markConversationAsRead = useCallback((convId) => {
+    if (!user || !convId) return;
+    const convIdStr = String(convId);
+    const now = Date.now();
+    const readKey = getReadConversationsKey(user);
+
+    // 1. Persist to localStorage read map
+    try {
+      const currentMap = JSON.parse(localStorage.getItem(readKey) || '{}');
+      if (!currentMap[convIdStr] || now - currentMap[convIdStr] >= 2000) {
+        currentMap[convIdStr] = now;
+        safeSetStorage(readKey, currentMap);
+      }
+    } catch {}
+
+    // 2. Mark matching notifications as read
+    setNotifications(prev => {
+      const list = prev || [];
+      let hasChange = false;
+      const updatedNotifs = list.map(n => {
+        const matchesConv = (n.type === 'message' || Boolean(n.conversationId)) &&
+          (String(n.conversationId) === convIdStr ||
+           String(n.id).includes(convIdStr) ||
+           (n.link && String(n.link).includes(convIdStr)));
+        if (matchesConv && !n.read) {
+          hasChange = true;
+          return { ...n, read: true };
+        }
+        return n;
+      });
+      if (!hasChange) return prev;
+      safeSetStorage(getNotificationStorageKey(user), updatedNotifs);
+      return updatedNotifs;
+    });
+
+    // 3. Persist IDs to read registry so re-poll doesn't bring them back
+    try {
+      const readStorageKey = getReadNotificationsStorageKey(user);
+      const existing = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+      const readSet = new Set(existing.map(String));
+      (notificationsRef.current || []).forEach(n => {
+        if (String(n.conversationId) === convIdStr || (n.link && String(n.link).includes(convIdStr))) {
+          readSet.add(String(n.id));
+        }
+      });
+      safeSetStorage(readStorageKey, Array.from(readSet).slice(-1000));
+    } catch {}
+
+    // 4. Dispatch global event so Sidebar, Chat, and Dashboards update immediately
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nstp_conversation_read', {
+        detail: { conversationId: convIdStr, userId: user.id, timestamp: now }
+      }));
+    }
+  }, [user]);
 
   const dismissToast = useCallback((toastId) => {
     setToasts(prev => prev.filter(t => t.id !== toastId));
@@ -3146,6 +3219,50 @@ function App() {
 
   const userConversations = useMemo(() => getUserConversations(), [getUserConversations]);
 
+  const markAllMessagesAsRead = useCallback(() => {
+    if (!user) return;
+    const now = Date.now();
+    const readKey = getReadConversationsKey(user);
+
+    try {
+      const currentMap = JSON.parse(localStorage.getItem(readKey) || '{}');
+      const userConvs = getUserConversations();
+      (userConvs || []).forEach(c => {
+        if (c && c.id) currentMap[String(c.id)] = now;
+      });
+      safeSetStorage(readKey, currentMap);
+    } catch {}
+
+    let updatedNotifs = [];
+    setNotifications(prev => {
+      const list = prev || [];
+      updatedNotifs = list.map(n => {
+        const isMsg = n.type === 'message' || Boolean(n.conversationId);
+        return isMsg ? { ...n, read: true } : n;
+      });
+      safeSetStorage(getNotificationStorageKey(user), updatedNotifs);
+      return updatedNotifs;
+    });
+
+    try {
+      const readStorageKey = getReadNotificationsStorageKey(user);
+      const existing = JSON.parse(localStorage.getItem(readStorageKey) || '[]');
+      const readSet = new Set(existing.map(String));
+      (notificationsRef.current || []).forEach(n => {
+        if (n.type === 'message' || n.conversationId) {
+          readSet.add(String(n.id));
+        }
+      });
+      safeSetStorage(readStorageKey, Array.from(readSet).slice(-1000));
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('nstp_conversation_read', {
+        detail: { conversationId: 'all', userId: user.id, timestamp: now }
+      }));
+    }
+  }, [user, getUserConversations]);
+
   const contextValue = {
     user, login, verify2FA, resend2FA, logout, updateUser: updateUserData, changePassword: changeUserPassword, allUsers: users,
     students, setStudents, reports, conversations: userConversations, messages, setMessages, pendingEnrollments,
@@ -3162,6 +3279,7 @@ function App() {
     approveEnrollment: approveEnrollmentFunc, declineEnrollment: declineEnrollmentFunc,
     loading, refreshData: loadAllData, refreshLiveData,
     notifications, setNotifications, pushNotification, deleteNotifications, markAllNotificationsRead,
+    markConversationAsRead, markAllMessagesAsRead,
     toasts, dismissToast, showToast,
     incomingCall, outgoingCallStatus,
     pendingAnsweredCall, setPendingAnsweredCall,

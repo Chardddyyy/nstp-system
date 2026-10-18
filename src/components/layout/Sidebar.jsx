@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -24,28 +24,117 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
   const setViewingArchive = auth.setViewingArchive || (() => {});
   const setArchiveViewData = auth.setArchiveViewData || (() => {});
 
+  const [readTick, setReadTick] = useState(0);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  useEffect(() => {
+    const handleReadEvent = () => setReadTick(t => t + 1);
+    window.addEventListener('nstp_conversation_read', handleReadEvent);
+    window.addEventListener('nstp_chat_message', handleReadEvent);
+    window.addEventListener('storage', handleReadEvent);
+    return () => {
+      window.removeEventListener('nstp_conversation_read', handleReadEvent);
+      window.removeEventListener('nstp_chat_message', handleReadEvent);
+      window.removeEventListener('storage', handleReadEvent);
+    };
+  }, []);
+
   const totalUnreadMessages = useMemo(() => {
-    const notifCount = (auth.notifications || []).filter(n => (n.type === 'message' || n.conversationId) && !n.read).length;
-    let storeCount = 0;
-    if (user && auth.messages && typeof window !== 'undefined') {
+    void readTick;
+    if (!user) return 0;
+    const currentUserId = String(user.id || user._id || '');
+    const isCurrentlyOnChat = location.pathname === '/chat';
+
+    // 1. Read conversations map
+    let readMap = {};
+    if (typeof window !== 'undefined') {
       try {
-        const readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
-        const currentUserId = String(user.id || user._id || '');
+        readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
+      } catch {}
+    }
+
+    const activeChatId = isCurrentlyOnChat && typeof window !== 'undefined'
+      ? (localStorage.getItem('nstp_active_chat') || null)
+      : null;
+
+    // 2. Identify all conversations the current user actually belongs to
+    const userConvIdSet = new Set();
+    if (Array.isArray(auth.conversations)) {
+      auth.conversations.forEach(c => {
+        if (c && c.id) userConvIdSet.add(String(c.id));
+      });
+    }
+
+    const isUserConversation = (convIdStr) => {
+      if (!convIdStr) return false;
+      if (userConvIdSet.has(convIdStr)) return true;
+      if (convIdStr.startsWith('group-')) return true;
+      const parts = convIdStr.split('-');
+      if (parts.length === 2 && (parts[0] === currentUserId || parts[1] === currentUserId)) {
+        return true;
+      }
+      return false;
+    };
+
+    // 3. Count unread message notifications strictly for this user's conversations
+    const notifCount = (auth.notifications || []).filter(n => {
+      const isMsg = n.type === 'message' || Boolean(n.conversationId);
+      if (!isMsg || n.read) return false;
+
+      // Exclude own messages
+      const senderId = String(n.senderId || n.sender_id || '');
+      if (senderId && senderId === currentUserId) return false;
+
+      // Exclude conversations user is not a participant in
+      const cId = n.conversationId ? String(n.conversationId) : null;
+      if (cId && !isUserConversation(cId)) return false;
+
+      // If user is currently looking at this active chat, don't count it as unread
+      if (isCurrentlyOnChat && activeChatId && cId === String(activeChatId)) return false;
+
+      // If marked as read in readMap
+      if (cId && readMap[cId]) {
+        const lastRead = new Date(readMap[cId]).getTime();
+        const notifTime = new Date(n.createdAt || n.time || 0).getTime();
+        if (lastRead > 0 && notifTime > 0 && notifTime <= lastRead) {
+          return false;
+        }
+      }
+
+      return true;
+    }).length;
+
+    // 4. Count in-memory messages strictly for this user's conversations
+    let storeCount = 0;
+    if (auth.messages && typeof window !== 'undefined') {
+      try {
         Object.entries(auth.messages).forEach(([convId, msgList]) => {
+          const convIdStr = String(convId);
+          // Strictly skip conversations that do NOT belong to this user!
+          if (!isUserConversation(convIdStr)) return;
+
+          // If user is currently looking at this active chat, don't count it as unread
+          if (isCurrentlyOnChat && activeChatId && convIdStr === String(activeChatId)) return;
+
           if (!Array.isArray(msgList)) return;
-          const lastReadTime = readMap[convId] ? new Date(readMap[convId]).getTime() : 0;
+          const lastReadTime = readMap[convIdStr] ? new Date(readMap[convIdStr]).getTime() : 0;
+
           msgList.forEach(m => {
+            if (m.type === 'deleted' || m.is_deleted) return;
             const sId = String(m.sender_id || m.senderId || '');
+            if (!sId || sId === currentUserId) return; // Own message
+
             const mTime = new Date(m.created_at || m.timestamp || 0).getTime();
-            if (sId && sId !== currentUserId && mTime > lastReadTime) {
+            if (mTime > lastReadTime) {
               storeCount++;
             }
           });
         });
       } catch {}
     }
+
     return Math.max(notifCount, storeCount);
-  }, [auth.notifications, auth.messages, user]);
+  }, [auth.notifications, auth.messages, auth.conversations, user, location.pathname, readTick]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +161,62 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
     setArchiveViewData(null);
     navigate(dashPath);
     onClose();
+  }
+
+  function handleOpenGoogleDrive(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    onClose();
+
+    // Open Google Drive in a new tab
+    const driveWin = window.open(GDRIVE_URL, '_blank');
+
+    if (driveWin) {
+      let redirected = false;
+      const doRedirect = () => {
+        if (redirected) return;
+        redirected = true;
+        navigate(dashPath);
+      };
+
+      // Periodic check if the Google Drive tab was closed
+      const checkTimer = setInterval(() => {
+        try {
+          if (driveWin.closed) {
+            clearInterval(checkTimer);
+            window.removeEventListener('focus', onWindowFocus);
+            doRedirect();
+          }
+        } catch (_) {
+          clearInterval(checkTimer);
+        }
+      }, 400);
+
+      // Also listen for window focus when user returns from the closed tab
+      const onWindowFocus = () => {
+        setTimeout(() => {
+          try {
+            if (!driveWin || driveWin.closed) {
+              clearInterval(checkTimer);
+              window.removeEventListener('focus', onWindowFocus);
+              doRedirect();
+            }
+          } catch (_) {}
+        }, 200);
+      };
+
+      window.addEventListener('focus', onWindowFocus);
+
+      // Clean up after 30 minutes
+      setTimeout(() => {
+        clearInterval(checkTimer);
+        window.removeEventListener('focus', onWindowFocus);
+      }, 30 * 60 * 1000);
+    } else {
+      navigate('/admin/google-drive');
+    }
   }
 
   function navClass(path) {
@@ -246,19 +391,17 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                 </span>
               </button>
             ) : (
-              <a
-                href={GDRIVE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onClose}
-                title="CvSU NSTP Google Drive Repository"
+              <button
+                type="button"
+                onClick={handleOpenGoogleDrive}
+                title="Open Google Drive (Directs to Dashboard when closed)"
                 className={navClass('/admin/google-drive')}
               >
                 <div className="flex items-center space-x-3">
                   <HardDrive className="w-5 h-5" />
                   <span>Google Drive</span>
                 </div>
-              </a>
+              </button>
             )
           )}
 
@@ -310,7 +453,7 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
 
         {/* Logout Footer */}
         <div className="p-4 border-t border-emerald-800/60 bg-emerald-950/40 shrink-0">
-          <button type="button" onClick={onLogout}
+          <button type="button" onClick={() => setShowLogoutConfirm(true)}
             className="w-full min-h-[44px] flex items-center justify-center space-x-3 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-md shadow-red-950/30 transition-all duration-200 font-bold active:scale-95 text-xs sm:text-sm cursor-pointer"
           >
             <LogOut className="w-5 h-5" />
@@ -318,6 +461,53 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-gray-100 text-gray-900 animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3.5">
+              <LogOut className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base sm:text-lg font-black text-center text-gray-900 mb-1">
+              Confirm Sign Out
+            </h3>
+            <p className="text-xs sm:text-sm text-center text-gray-500 mb-5">
+              Are you sure you want to log out of your account?
+            </p>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  onClose();
+                  if (typeof onLogout === 'function') {
+                    onLogout();
+                  }
+                }}
+                className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-md shadow-rose-950/20 cursor-pointer active:scale-95"
+              >
+                Yes, Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

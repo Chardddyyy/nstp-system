@@ -479,7 +479,7 @@ function Reports() {
                     <h3 className="text-sm sm:text-lg font-bold text-gray-800 leading-snug truncate">{report.title}</h3>
                     {(() => {
                       const repTime = new Date(report.created_at || report.createdAt || report.date || 0).getTime();
-                      const isRecent = repTime > 0 && (Date.now() - repTime < 7 * 24 * 60 * 60 * 1000);
+                      const isRecent = repTime > 0 && (Date.now() - repTime < 3 * 24 * 60 * 60 * 1000);
                       return isRecent ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-300 shadow-2xs uppercase tracking-wider">
                           NEW
