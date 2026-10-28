@@ -206,8 +206,8 @@ function DigitalIdViewer() {
           <div className="w-11 h-1.5 bg-emerald-900 rounded-full border border-white/30 mx-auto mb-1.5"></div>
           
           <div className="flex items-center justify-between gap-2">
-            <div className="w-8 h-8 rounded-full bg-white p-0.5 shadow-md shrink-0">
-              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+            <div className="w-8 h-8 flex items-center justify-center shrink-0">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
 
             <div className="text-left flex-1 min-w-0">

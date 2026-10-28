@@ -1092,8 +1092,8 @@ function Enrollment() {
         <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full shrink-0">
           <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>
@@ -1187,8 +1187,8 @@ function Enrollment() {
       <header className="sticky top-0 z-40 bg-emerald-900/95 backdrop-blur-md text-white shadow-md border-b border-emerald-800/80 w-full">
         <div className="w-full px-4 sm:px-8 lg:px-12 py-2.5 sm:py-3.5 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-[11px] xs:text-xs sm:text-lg font-black tracking-tight truncate">Cavite State University Naic</h1>

@@ -168,6 +168,8 @@ function isAllowedOrigin(origin) {
   if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
   if (/^https:\/\/.*\.github\.io$/.test(clean)) return true;
   if (/^https:\/\/.*\.onrender\.com$/.test(clean)) return true;
+  if (/^https:\/\/.*\.pages\.dev$/.test(clean)) return true;
+  if (/^https:\/\/.*\.railway\.app$/.test(clean)) return true;
   return false;
 }
 
@@ -1635,7 +1637,7 @@ async function send2FAEmail(targetEmail, otpCode, userName, customRefId, roleTit
   var manilaDate = now.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' });
 
   console.log(`\n======================================================`);
-  console.log(`[${roleTitle.toUpperCase()} 2FA CODE] Generated 2FA OTP for ${targetEmail}: [ ${otpCode} ] (Ticket #${refId}) (Valid 10 mins)`);
+  console.log(`[${roleTitle.toUpperCase()} 2FA CODE] Generated 2FA OTP for ${targetEmail}: [ ${otpCode} ] (Ticket #${refId}) (Valid 20 mins)`);
   console.log(`======================================================\n`);
 
   // Clean, RFC-compliant headers: Omit custom Message-ID & spam flags so Gmail DKIM signs properly
@@ -1651,7 +1653,7 @@ Timestamp: ${manilaDate} at ${manilaTime} (PHT)
 Recipient: ${deliveryEmail}
 
 Important Security Notice:
-- This one-time verification code is strictly valid for 10 minutes.
+- This one-time verification code is strictly valid for 20 minutes.
 - Do NOT share this code with anyone. CvSU administrators will NEVER ask for this code.
 - If you did not initiate this sign-in attempt, please reset your password immediately.
 
@@ -1667,7 +1669,7 @@ CvSU NSTP Security Portal`,
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
   <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #ffffff; opacity: 0; mso-hide: all;">
-    Your CvSU NSTP ${roleTitle.toLowerCase()} security code is ${otpCode}. Reference #${refId}. Valid for 10 minutes.
+    Your CvSU NSTP ${roleTitle.toLowerCase()} security code is ${otpCode}. Reference #${refId}. Valid for 20 minutes.
   </div>
   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 24px 12px;">
     <tr>
@@ -1696,7 +1698,7 @@ CvSU NSTP Security Portal`,
                   ${otpCode}
                 </div>
                 <p style="font-size: 11.5px; color: #065f46; font-weight: 600; margin: 12px 0 0 0;">
-                  Valid for 10 minutes • Expires after one use
+                  Valid for 20 minutes • Expires after one use
                 </p>
               </div>
               <table width="100%" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 11.5px; color: #475569; margin: 14px 0;">
@@ -1962,7 +1964,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       var tempToken = jwt.sign(
         { id: user.id, email: user.email, deliveryEmail: deliveryEmail, role: user.role, temp2FA: true },
         JWT_SECRET,
-        { expiresIn: '10m' }
+        { expiresIn: '20m' }
       );
 
       var record = {
@@ -1973,7 +1975,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
         user: user,
         deliveryEmail: deliveryEmail,
         sentAt: now,
-        expiresAt: now + 10 * 60 * 1000,
+        expiresAt: now + 20 * 60 * 1000,
         attempts: 0
       };
       inMemory2FA.set(userKey, record);
@@ -1983,7 +1985,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
       var roleTitle = user.role === 'admin' ? 'Admin' : `${user.department || 'NSTP'} Instructor`;
       console.log(`\n======================================================`);
-      console.log(`[${roleTitle.toUpperCase()} 2FA CODE] Generated FRESH 2FA OTP for ${user.email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${refId}) (Valid 10 mins) (Send #${sendInfo.count}/4)`);
+      console.log(`[${roleTitle.toUpperCase()} 2FA CODE] Generated FRESH 2FA OTP for ${user.email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${refId}) (Valid 20 mins) (Send #${sendInfo.count}/4)`);
       console.log(`======================================================\n`);
       auditLog(`${user.role}_2fa_prompted`, user.id, `Sending to ${deliveryEmail}`, ip);
 
@@ -2248,11 +2250,11 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
     var freshTempToken = jwt.sign(
       { id: decoded.id, email: decoded.email, deliveryEmail: deliveryEmail, role: decoded.role, temp2FA: true },
       JWT_SECRET,
-      { expiresIn: '10m' }
+      { expiresIn: '20m' }
     );
     var resendRoleTitle = decoded.role === 'admin' ? 'Admin' : 'Instructor';
 
-    console.log(`\n[${resendRoleTitle.toUpperCase()} 2FA RESEND] Fresh 2FA OTP for ${email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${resendRefId}) (Send #${sendInfo.count}/4) (Valid 10 mins)\n`);
+    console.log(`\n[${resendRoleTitle.toUpperCase()} 2FA RESEND] Fresh 2FA OTP for ${email} (sending to ${deliveryEmail}): [ ${otp2fa} ] (Ticket #${resendRefId}) (Send #${sendInfo.count}/4) (Valid 20 mins)\n`);
 
     var freshRecord = {
       otp: otp2fa,
@@ -2262,7 +2264,7 @@ app.post('/api/auth/resend-2fa', verifyOtpLimiter, async (req, res) => {
       user: (record && record.user) || { id: decoded.id, email: decoded.email, role: decoded.role },
       deliveryEmail: deliveryEmail,
       sentAt: Date.now(),
-      expiresAt: Date.now() + 10 * 60 * 1000,
+      expiresAt: Date.now() + 20 * 60 * 1000,
       attempts: 0
     };
     inMemory2FA.set(deliveryEmail, freshRecord);
@@ -7997,7 +7999,7 @@ app.get(['/api/audit-logs', '/api/admin/audit-logs'], authenticateToken, require
   try {
     const limit = Math.min(parseInt(req.query.limit) || 100, 500);
     const [logs] = await pool.execute(
-      `SELECT al.*, u.name as user_name, u.email as user_email
+      `SELECT al.*, u.name as user_name, u.email as user_email, u.role as user_role, u.department as user_department, u.avatar as user_avatar, u.profilePicture as user_profile_picture
        FROM audit_logs al
        LEFT JOIN users u ON al.user_id = u.id
        ORDER BY al.created_at DESC LIMIT ${limit}`

@@ -2296,8 +2296,8 @@ function Chat() {
                     <Menu className="w-5 h-5" />
                   </button>
 
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                    <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
+                    <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-md scale-105" />
                   </div>
 
                   <div className="min-w-0 flex-1 flex items-center justify-between gap-2">

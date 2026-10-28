@@ -479,8 +479,8 @@ function Landing() {
             className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1 group cursor-pointer"
             title="Cavite State University - Naic Campus"
           >
-            <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md sm:shadow-lg ring-1.5 sm:ring-2 ring-amber-400/40 group-hover:scale-105 transition-transform duration-300">
-              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 md:w-12 md:h-12 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1 sm:gap-1.5">
@@ -1272,8 +1272,8 @@ function Landing() {
             {/* About (Left Side) */}
             <div className="min-w-0">
               <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-1.5 sm:ring-2 ring-amber-400/40">
-                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
+                  <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-xs sm:text-lg md:text-xl font-black leading-tight text-white truncate">Cavite State University</h4>

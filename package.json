@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"cd backend && node server.js\"",
+    "pma": "/Applications/XAMPP/xamppfiles/bin/php -S localhost:8080 -t /Applications/XAMPP/xamppfiles/phpmyadmin",
     "prebuild": "node scripts/generate-version.js",
     "build": "vite build",
     "postbuild": "node scripts/generate-spa-routes.js",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "concurrently": "^9.2.1",
+    "docx": "^9.12.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

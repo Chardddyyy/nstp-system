@@ -3,12 +3,13 @@ import {
   Users, User, Camera, Mail, Phone,
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
   Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
-  UserPlus, Trash2
+  UserPlus, Trash2, Activity, History, RefreshCw, Search, Download, Filter, ChevronLeft, ChevronRight,
+  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { usersAPI, getAllInstructorsGroup } from '../services/api';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { usersAPI, getAllInstructorsGroup, auditLogsAPI } from '../services/api';
 
 const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
@@ -472,6 +473,164 @@ function Profile() {
     }).catch(() => {});
   }, [isAdmin, user?.id]);
 
+  // ── System Activity & Forensic Audit Log (Admin Only) ──────────────────────
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditFilterType, setAuditFilterType] = useState('all');
+  const [auditFilterUser, setAuditFilterUser] = useState('all');
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPageSize, setAuditPageSize] = useState(15);
+
+  const fetchAuditLogs = useCallback(async () => {
+    if (!isAdmin) return;
+    setAuditLoading(true);
+    try {
+      const data = await auditLogsAPI.getLogs(400);
+      setAuditLogs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn('Failed to fetch audit logs:', err);
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchAuditLogs();
+    }
+  }, [isAdmin, fetchAuditLogs]);
+
+  // Human-readable format mapping for audit actions
+  const formatAuditAction = useCallback((action) => {
+    const map = {
+      login_success: { label: 'User Logged In', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'auth', icon: LogIn },
+      login_failed: { label: 'Failed Login', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'auth', icon: AlertTriangle },
+      admin_2fa_success: { label: '2FA Verified', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'auth', icon: ShieldCheck },
+      admin_2fa_prompted: { label: '2FA Code Sent', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'auth', icon: Key },
+      admin_2fa_failed: { label: '2FA Failed', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'auth', icon: AlertTriangle },
+      admin_2fa_locked: { label: 'Account Locked', color: 'bg-red-50 text-red-800 border-red-300', type: 'auth', icon: Lock },
+      instructor_2fa_prompted: { label: 'Instructor 2FA Code', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'auth', icon: Key },
+      login_prompt_active_session: { label: 'Active Session Notice', color: 'bg-blue-50 text-blue-800 border-blue-200', type: 'auth', icon: Activity },
+      login_blocked_active_session: { label: 'Session Blocked', color: 'bg-orange-50 text-orange-800 border-orange-200', type: 'auth', icon: AlertCircle },
+      
+      attendance_scanned: { label: 'Attendance Scanned', color: 'bg-sky-50 text-sky-800 border-sky-200', type: 'attendance', icon: CheckCircle2 },
+      attendance_excused: { label: 'Attendance Excused', color: 'bg-indigo-50 text-indigo-800 border-indigo-200', type: 'attendance', icon: CheckCircle },
+      attendance_override: { label: 'Attendance Override', color: 'bg-purple-50 text-purple-800 border-purple-200', type: 'attendance', icon: Pencil },
+      
+      enrollment_approved: { label: 'Enrollment Approved', color: 'bg-teal-50 text-teal-800 border-teal-200', type: 'student', icon: CheckCircle2 },
+      enrollment_declined: { label: 'Enrollment Declined', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'student', icon: X },
+      send_digital_id: { label: 'Digital ID Sent', color: 'bg-cyan-50 text-cyan-800 border-cyan-200', type: 'student', icon: FileText },
+      student_created: { label: 'Student Enrolled', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'student', icon: UserPlus },
+      student_updated: { label: 'Student Record Updated', color: 'bg-blue-50 text-blue-800 border-blue-200', type: 'student', icon: Pencil },
+      student_deleted: { label: 'Student Deleted', color: 'bg-red-50 text-red-800 border-red-200', type: 'student', icon: Trash2 },
+      serial_number_generated: { label: 'Serial Generated', color: 'bg-teal-50 text-teal-800 border-teal-200', type: 'student', icon: FileText },
+      
+      password_changed: { label: 'Password Changed', color: 'bg-violet-50 text-violet-800 border-violet-200', type: 'system', icon: Key },
+      password_reset_success: { label: 'Password Reset', color: 'bg-purple-50 text-purple-800 border-purple-200', type: 'system', icon: RotateCcw },
+      update_enrollment_schedule: { label: 'Schedule Updated', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'system', icon: Calendar },
+      user_account_deleted: { label: 'Account Deleted', color: 'bg-red-50 text-red-800 border-red-300', type: 'system', icon: Trash2 }
+    };
+    
+    if (map[action]) return map[action];
+    const cleaned = String(action || 'Activity').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return { label: cleaned, color: 'bg-gray-50 text-gray-700 border-gray-200', type: 'system', icon: Activity };
+  }, []);
+
+  // Filtered audit logs (All, Admin Actions, or Instructor Actions)
+  const filteredAuditLogs = useMemo(() => {
+    return auditLogs.filter(log => {
+      const parsed = formatAuditAction(log.action);
+      
+      // Role filter: all, admin, instructor
+      if (auditFilterUser !== 'all') {
+        const isAdm = log.user_role === 'admin' || String(log.user_name || '').toLowerCase().includes('admin');
+        if (auditFilterUser === 'admin' && !isAdm) return false;
+        if (auditFilterUser === 'instructor' && isAdm) return false;
+      }
+      
+      // Search term
+      if (auditSearch.trim()) {
+        const q = auditSearch.toLowerCase();
+        const matchName = String(log.user_name || '').toLowerCase().includes(q);
+        const matchEmail = String(log.user_email || '').toLowerCase().includes(q);
+        const matchAction = String(log.action || '').toLowerCase().includes(q) || parsed.label.toLowerCase().includes(q);
+        const matchDetail = String(log.detail || '').toLowerCase().includes(q);
+        const matchIp = String(log.ip || '').toLowerCase().includes(q);
+        if (!matchName && !matchEmail && !matchAction && !matchDetail && !matchIp) return false;
+      }
+      return true;
+    });
+  }, [auditLogs, auditSearch, auditFilterUser, formatAuditAction]);
+
+  const totalAuditPages = Math.max(1, Math.ceil(filteredAuditLogs.length / auditPageSize));
+  const paginatedAuditLogs = useMemo(() => {
+    const start = (auditPage - 1) * auditPageSize;
+    return filteredAuditLogs.slice(start, start + auditPageSize);
+  }, [filteredAuditLogs, auditPage, auditPageSize]);
+
+  // Export filtered logs to CSV
+  const handleExportAuditLogs = () => {
+    if (!filteredAuditLogs.length) {
+      showToast('No activity logs match the current filters.', 'info');
+      return;
+    }
+    const headers = ['Log ID', 'Date & Time', 'User Name', 'Email', 'Role', 'Department', 'Action', 'Details', 'IP Address'];
+    const rows = filteredAuditLogs.map(log => [
+      log.id,
+      `"${new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila' })}"`,
+      `"${(log.user_name || 'System / Automated').replace(/"/g, '""')}"`,
+      `"${(log.user_email || 'N/A').replace(/"/g, '""')}"`,
+      log.user_role || (String(log.user_name || '').toLowerCase().includes('admin') ? 'Admin' : 'Instructor'),
+      log.user_department || 'N/A',
+      `"${formatAuditAction(log.action).label}"`,
+      `"${(log.detail || '').replace(/"/g, '""')}"`,
+      log.ip || '127.0.0.1'
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `cvsu_nstp_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${filteredAuditLogs.length} audit records to CSV successfully.`, 'success');
+  };
+
+  const formatAuditTimestamp = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatAuditParts = (dateStr) => {
+    if (!dateStr) return { date: 'N/A', time: '' };
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { date: dateStr, time: '' };
+    return {
+      date: d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      time: d.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
+  };
+
   const handleAddInstructor = async () => {
     if (!instructorForm.name.trim() || !instructorForm.email.trim() || !instructorForm.password) {
       showToast('Name, email, and password are required.', 'warning');
@@ -597,8 +756,8 @@ function Profile() {
                 <Menu className="w-5 h-5" />
               </button>
 
-              <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs scale-105" />
+              <div className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-md scale-105" />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -608,18 +767,35 @@ function Profile() {
                 </h1>
               </div>
             </div>
-            <button type="button"
-              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-              disabled={isSaving}
-              className={`flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center font-bold shadow-md active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-60 shrink-0 ${
-                isEditing
-                  ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20'
-                  : 'bg-emerald-800/90 hover:bg-emerald-700 text-white border border-emerald-700/60'
-              }`}
-            >
-              {isEditing ? <Save className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAuditModal(true);
+                    fetchAuditLogs();
+                  }}
+                  className="flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center font-bold shadow-md active:scale-95 text-[11px] sm:text-sm cursor-pointer shrink-0 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white border border-emerald-700/60"
+                  title="System Activity & Audit Trail"
+                >
+                  <Activity className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden xs:inline">Audit Trail</span>
+                </button>
+              )}
+
+              <button type="button"
+                onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                disabled={isSaving}
+                className={`flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl sm:rounded-2xl transition-all duration-200 justify-center font-bold shadow-md active:scale-95 text-[11px] sm:text-sm cursor-pointer disabled:opacity-60 shrink-0 ${
+                  isEditing
+                    ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20'
+                    : 'bg-emerald-800/90 hover:bg-emerald-700 text-white border border-emerald-700/60'
+                }`}
+              >
+                {isEditing ? <Save className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1013,7 +1189,269 @@ function Profile() {
             </div>
           </div>
         </div>
+
       </main>
+
+      {/* ── System Activity & Forensic Audit Log Modal (Admin Only) ───────── */}
+      {isAdmin && showAuditModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+          onClick={() => setShowAuditModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shrink-0">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white">System Activity &amp; Audit Trail</h3>
+                  <p className="text-emerald-200 text-xs font-medium">Audit log of Administrator and Instructor portal activities</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchAuditLogs}
+                  disabled={auditLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white rounded-xl text-xs font-bold border border-emerald-700/60 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  title="Refresh logs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">{auditLoading ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAuditModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="p-3.5 sm:p-4 bg-gray-50/80 border-b border-gray-100 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between shrink-0">
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search action, details, user, IP..."
+                  value={auditSearch}
+                  onChange={(e) => { setAuditSearch(e.target.value); setAuditPage(1); }}
+                  className="w-full pl-9 pr-8 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium placeholder:text-gray-400"
+                />
+                {auditSearch && (
+                  <button
+                    type="button"
+                    onClick={() => { setAuditSearch(''); setAuditPage(1); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Role Filter Dropdown: Admin & Instructor Actions only */}
+              <select
+                value={auditFilterUser}
+                onChange={(e) => { setAuditFilterUser(e.target.value); setAuditPage(1); }}
+                className="text-xs sm:text-sm bg-white border border-gray-200 text-gray-700 py-2 px-3 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none cursor-pointer"
+              >
+                <option value="all">All Actions</option>
+                <option value="admin">Admin Actions</option>
+                <option value="instructor">Instructor Actions</option>
+              </select>
+            </div>
+
+            {/* Content Area - Scrollable (No Horizontal Scroll) */}
+            <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 divide-y divide-gray-100">
+              {auditLoading && auditLogs.length === 0 ? (
+                <div className="py-16 text-center text-gray-400 flex flex-col items-center justify-center gap-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+                  <p className="text-xs font-semibold text-gray-500">Fetching system activity audit trail...</p>
+                </div>
+              ) : filteredAuditLogs.length === 0 ? (
+                <div className="py-16 text-center px-4">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-2 text-gray-400">
+                    <History className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-gray-700">No activity logs found</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Try clearing your search keyword or changing filter options.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Desktop Table View (Full width, no horizontal scroll) */}
+                  <div className="hidden sm:block w-full overflow-hidden">
+                    <table className="w-full table-fixed text-left border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100/90 sticky top-0 z-10 backdrop-blur-xs border-b border-gray-200 text-[10px] sm:text-[10.5px] uppercase font-black tracking-wider text-gray-500">
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[140px] lg:w-[155px]">Timestamp</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[170px] lg:w-[190px]">User / Actor</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[130px] lg:w-[145px]">Action</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5">Details &amp; Context</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 text-right w-[95px] lg:w-[105px]">IP Address</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
+                        {paginatedAuditLogs.map((log) => {
+                          const act = formatAuditAction(log.action);
+                          const ActionIcon = act.icon || Activity;
+                          const isUserAdmin = log.user_role === 'admin' || String(log.user_name || '').toLowerCase().includes('admin');
+                          const deptBadgeColor = log.user_department === 'ROTC' ? 'bg-red-50 text-red-700 border-red-200' : log.user_department === 'LTS' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-blue-50 text-blue-700 border-blue-200';
+                          const ts = formatAuditParts(log.created_at);
+                          
+                          return (
+                            <tr key={log.id} className="hover:bg-emerald-50/40 transition-colors">
+                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                                <div className="flex items-center gap-1.5 leading-tight">
+                                  <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0 self-start mt-0.5" />
+                                  <div className="flex flex-col font-mono leading-snug">
+                                    <span className="text-[11px] font-semibold text-gray-800 whitespace-nowrap">{ts.date}</span>
+                                    <span className="text-[10px] font-bold text-emerald-800 whitespace-nowrap">{ts.time}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs ${
+                                    isUserAdmin ? 'bg-emerald-700 text-white' : 'bg-blue-600 text-white'
+                                  }`}>
+                                    {(log.user_name || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <span className="font-bold text-gray-900 truncate text-xs">{log.user_name || 'System / Auto'}</span>
+                                      <span className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded border shrink-0 ${
+                                        isUserAdmin ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : deptBadgeColor
+                                      }`}>
+                                        {isUserAdmin ? 'Admin' : (log.user_department || 'Instructor')}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 truncate">{log.user_email || 'system-event@portal'}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold border truncate max-w-full ${act.color}`}>
+                                  <ActionIcon className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{act.label}</span>
+                                </span>
+                              </td>
+                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                                <p className="text-gray-700 text-xs leading-relaxed break-words line-clamp-2" title={log.detail || '—'}>
+                                  {log.detail || '—'}
+                                </p>
+                              </td>
+                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 text-right align-middle">
+                                <span className="font-mono text-[10px] sm:text-[10.5px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 inline-block">
+                                  {log.ip || '127.0.0.1'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="sm:hidden divide-y divide-gray-100">
+                    {paginatedAuditLogs.map((log) => {
+                      const act = formatAuditAction(log.action);
+                      const ActionIcon = act.icon || Activity;
+                      const isUserAdmin = log.user_role === 'admin' || String(log.user_name || '').toLowerCase().includes('admin');
+                      const ts = formatAuditParts(log.created_at);
+                      return (
+                        <div key={log.id} className="p-3.5 space-y-2 hover:bg-gray-50/60 transition-colors">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${act.color}`}>
+                              <ActionIcon className="w-2.5 h-2.5 shrink-0" />
+                              <span>{act.label}</span>
+                            </span>
+                            <div className="text-right text-[10px] font-mono leading-tight shrink-0">
+                              <span className="text-gray-700 font-semibold block whitespace-nowrap">{ts.date}</span>
+                              <span className="text-emerald-700 font-bold block whitespace-nowrap">{ts.time}</span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-gray-800 leading-snug">{log.detail || '—'}</p>
+
+                          <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-50">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="font-bold text-gray-900 truncate">{log.user_name || 'System'}</span>
+                              <span className={`text-[9px] font-extrabold px-1 rounded uppercase ${isUserAdmin ? 'text-emerald-700' : 'text-blue-700'}`}>
+                                ({isUserAdmin ? 'Admin' : log.user_department || 'Instructor'})
+                              </span>
+                            </div>
+                            <span className="font-mono text-gray-400">{log.ip || '127.0.0.1'}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Pagination Footer */}
+            {filteredAuditLogs.length > 0 && (
+              <div className="p-3 sm:p-4 bg-gray-50/60 border-t border-gray-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span>Showing <strong>{Math.min(filteredAuditLogs.length, (auditPage - 1) * auditPageSize + 1)}</strong> to <strong>{Math.min(filteredAuditLogs.length, auditPage * auditPageSize)}</strong> of <strong>{filteredAuditLogs.length}</strong> events</span>
+                  <span className="text-gray-300">|</span>
+                  <div className="flex items-center gap-1">
+                    <span>Per page:</span>
+                    <select
+                      value={auditPageSize}
+                      onChange={(e) => { setAuditPageSize(Number(e.target.value)); setAuditPage(1); }}
+                      className="bg-white border border-gray-300 rounded px-1.5 py-0.5 text-xs outline-none cursor-pointer"
+                    >
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                    disabled={auditPage === 1}
+                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Prev</span>
+                  </button>
+
+                  <span className="px-2 font-bold text-gray-700">
+                    {auditPage} / {totalAuditPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
+                    disabled={auditPage === totalAuditPages}
+                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Instructor Modal */}
       {showAddInstructor && (() => {

@@ -8,37 +8,33 @@ import {
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-// Web Audio API Beep Generator (100% self-contained sound effect)
-function playScanBeep(success = true) {
+// Web Audio API Beep Generator - Silenced completely to eliminate continuous beeps or audio feedback
+function playScanBeep(_success = true) {
+  // Silent: Zero sound generated to prevent continuous audio loops or hardware feedback
+}
+
+// Forcefully stop all video and audio tracks on camera video elements
+function stopAllCameraStreams() {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    if (success) {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
-      osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.12);
-    } else {
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.25);
+    const container = document.getElementById('qr-reader-video-box');
+    if (container) {
+      const videos = container.querySelectorAll('video');
+      videos.forEach(v => {
+        try {
+          if (v.srcObject && typeof v.srcObject.getTracks === 'function') {
+            v.srcObject.getTracks().forEach(track => {
+              try { track.stop(); } catch (_) {}
+            });
+          }
+          v.srcObject = null;
+          v.muted = true;
+          v.pause();
+          v.removeAttribute('src');
+          v.load();
+        } catch (_) {}
+      });
     }
-  } catch (_) {
-    // Non-fatal audio fallback
-  }
+  } catch (_) {}
 }
 
 const ATTENDANCE_DAYS = Array.from({ length: 15 }, (_, i) => `Day ${i + 1}`);
@@ -248,6 +244,7 @@ export function AttendanceScannerModal({
 
   const scannerRef = useRef(null);
   const isProcessingRef = useRef(false);
+  const isCameraCancelledRef = useRef(false);
 
   const fullActivityTitle = `${selectedDay} - ${activityName.trim() || 'NSTP Session'}`;
 
@@ -515,22 +512,31 @@ export function AttendanceScannerModal({
     }
   }, [fullActivityTitle, scanType, selectedDay, sessionLogs, sessionStartTime, gracePeriod, currentDepartment, currentUser?.department, currentUser?.role, propStudents]);
 
-  // Stop QR Camera Scanner
+  // Stop QR Camera Scanner and forcefully release all media tracks
   const stopCamera = useCallback(async () => {
+    isCameraCancelledRef.current = true;
+    stopAllCameraStreams();
+
     if (scannerRef.current) {
       const scanner = scannerRef.current;
       scannerRef.current = null;
       try {
         if (scanner.isScanning) {
           await scanner.stop().catch(() => {});
+        } else {
+          await scanner.stop().catch(() => {});
         }
+      } catch (_) {}
+      try {
         scanner.clear();
       } catch (_) {}
     }
+    stopAllCameraStreams();
   }, []);
 
   // Start QR Camera Scanner
   const startCamera = useCallback(async () => {
+    isCameraCancelledRef.current = false;
     try {
       if (scannerRef.current) {
         const prev = scannerRef.current;
@@ -542,9 +548,10 @@ export function AttendanceScannerModal({
           prev.clear();
         } catch (_) {}
       }
+      stopAllCameraStreams();
 
       const container = document.getElementById('qr-reader-video-box');
-      if (!container) return;
+      if (!container || isCameraCancelledRef.current) return;
 
       // Restrict formatsToSupport ONLY to QR_CODE for fast scanning without 1D barcode overhead
       const html5QrCode = new Html5Qrcode('qr-reader-video-box', {
@@ -567,7 +574,7 @@ export function AttendanceScannerModal({
       };
 
       const onScanSuccess = (decodedText) => {
-        if (!isProcessingRef.current && decodedText) {
+        if (!isCameraCancelledRef.current && !isProcessingRef.current && decodedText) {
           handleProcessScan(decodedText);
         }
       };
@@ -581,6 +588,11 @@ export function AttendanceScannerModal({
           () => {}
         );
       } catch (firstErr) {
+        if (isCameraCancelledRef.current) {
+          try { html5QrCode.clear(); } catch (_) {}
+          stopAllCameraStreams();
+          return;
+        }
         console.warn(`[Scanner] FacingMode "${cameraFacing}" failed, trying alternate camera:`, firstErr);
         const altFacing = cameraFacing === 'environment' ? 'user' : 'environment';
         try {
@@ -592,6 +604,11 @@ export function AttendanceScannerModal({
           );
           setCameraFacing(altFacing);
         } catch (secondErr) {
+          if (isCameraCancelledRef.current) {
+            try { html5QrCode.clear(); } catch (_) {}
+            stopAllCameraStreams();
+            return;
+          }
           console.warn('[Scanner] Alternate facingMode failed, falling back to any default camera device:', secondErr);
           await html5QrCode.start(
             true,
@@ -601,8 +618,23 @@ export function AttendanceScannerModal({
           );
         }
       }
+
+      // Check if cancelled or closed while starting
+      if (isCameraCancelledRef.current) {
+        try {
+          if (html5QrCode.isScanning) {
+            await html5QrCode.stop().catch(() => {});
+          }
+          html5QrCode.clear();
+        } catch (_) {}
+        if (scannerRef.current === html5QrCode) {
+          scannerRef.current = null;
+        }
+        stopAllCameraStreams();
+      }
     } catch (err) {
       console.warn('[Scanner] Fatal camera initialization error:', err);
+      stopAllCameraStreams();
     }
   }, [cameraFacing, handleProcessScan]);
 
@@ -622,6 +654,22 @@ export function AttendanceScannerModal({
       stopCamera();
     }
   }, [isOpen, step, startCamera, stopCamera]);
+
+  // Force stop camera whenever modal is closed or unmounted
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [isOpen, stopCamera]);
+
+  const handleCloseModal = useCallback(async () => {
+    await stopCamera();
+    setStep(1);
+    onClose?.();
+  }, [stopCamera, onClose]);
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
@@ -928,7 +976,7 @@ export function AttendanceScannerModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-sm font-black transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />

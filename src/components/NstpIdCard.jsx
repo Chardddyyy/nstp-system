@@ -86,7 +86,7 @@ export function NstpIdCard({ student }) {
             <img 
               src={`${import.meta.env.BASE_URL}cvsu.png`} 
               alt="CvSU Logo" 
-              className="w-5 h-5 object-contain bg-white rounded-full p-0.5 shrink-0 shadow-xs" 
+              className="w-5 h-5 object-contain shrink-0 drop-shadow-xs" 
             />
             <div className="leading-tight truncate">
               <h4 className="text-[6.2px] font-black uppercase tracking-tight text-white leading-none">CAVITE STATE UNIVERSITY</h4>

@@ -57,10 +57,11 @@ function maskEmailLocal(email) {
   return name.slice(0, 2) + '***' + name.slice(-2) + '@' + domain;
 }
 
-// ── Persistent cooldown helpers using sessionStorage ──────────────────────────
+// ── Persistent cooldown & session helpers using sessionStorage ──────────────
 const STORAGE_KEY_2FA = 'nstp_2fa_cooldown_expiry';
 const STORAGE_KEY_2FA_LOCKOUT = 'nstp_2fa_lockout_expiry';
 const STORAGE_KEY_FORGOT = 'nstp_forgot_cooldown_expiry';
+const STORAGE_KEY_2FA_SESSION = 'nstp_2fa_pending_session_v3';
 
 function storeExpiry(key, seconds) {
   try { sessionStorage.setItem(key, String(Date.now() + seconds * 1000)); } catch (_) {}
@@ -76,6 +77,23 @@ function readRemaining(key) {
 
 function clearExpiry(key) {
   try { sessionStorage.removeItem(key); } catch (_) {}
+}
+
+function storePending2FASession(session) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY_2FA_SESSION, JSON.stringify({
+      ...session,
+      savedAt: Date.now(),
+      expiresAt: Date.now() + 20 * 60 * 1000 // 20 minutes lifetime
+    }));
+  } catch (_) {}
+}
+
+function clearPending2FASession() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY_2FA_SESSION);
+    localStorage.removeItem(STORAGE_KEY_2FA_SESSION);
+  } catch (_) {}
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -101,7 +119,7 @@ function Login() {
   // Initialize resend cooldown from sessionStorage so it persists across back-navigation
   const [resendCooldown, setResendCooldown] = useState(() => readRemaining(STORAGE_KEY_FORGOT));
 
-  // Institutional Two-Factor Authentication (2FA) state
+  // Institutional Two-Factor Authentication (2FA) state - Strictly false on initial load/logout
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [twoFactorRole, setTwoFactorRole] = useState('admin');
   const [twoFactorOtp, setTwoFactorOtp] = useState('');
@@ -151,6 +169,12 @@ function Login() {
   useEffect(() => {
     runPingCheck();
   }, [runPingCheck]);
+
+  // Ensure user always lands directly on the clean Portal Login form upon mount or after logout
+  useEffect(() => {
+    clearPending2FASession();
+    setShow2FAModal(false);
+  }, []);
 
   const handleSaveBackendUrl = (urlToSave) => {
     const clean = String(urlToSave || '').trim();
@@ -317,6 +341,7 @@ function Login() {
       if (res.success) {
         clearExpiry(STORAGE_KEY_2FA);
         clearExpiry(STORAGE_KEY_2FA_LOCKOUT);
+        clearPending2FASession();
         setShow2FAModal(false);
         setTwoFactorError('');
         setTwoFactorSuccess('');
@@ -345,6 +370,14 @@ function Login() {
     }
   };
 
+  const close2FAModal = () => {
+    clearPending2FASession();
+    setShow2FAModal(false);
+    setTwoFactorOtp('');
+    setTwoFactorError('');
+    setTwoFactorSuccess('');
+  };
+
   const handleResend2FA = async () => {
     if (twoFactorLockoutRemaining > 0 || twoFactorResendCooldown > 0 || twoFactorResending) return;
     setTwoFactorError('');
@@ -365,10 +398,22 @@ function Login() {
         storeExpiry(STORAGE_KEY_2FA, cooldown);
         setTwoFactorResendCooldown(cooldown);
         setTwoFactorOtp('');
-        if (res.tempToken) setTwoFactorTempToken(res.tempToken);
-        if (res.ticketId) setTwoFactorTicketId(res.ticketId);
+        const freshToken = res.tempToken || twoFactorTempToken;
+        const freshTicket = res.ticketId || twoFactorTicketId;
+        const freshMsg = freshTicket ? `Fresh code dispatched! Look for Ticket #${freshTicket} in your inbox.` : 'A fresh 6-digit verification code has been dispatched to your email.';
+        if (res.tempToken) setTwoFactorTempToken(freshToken);
+        if (res.ticketId) setTwoFactorTicketId(freshTicket);
         setTwoFactorError('');
-        setTwoFactorSuccess(res.ticketId ? `Fresh code dispatched! Look for Ticket #${res.ticketId} in your inbox.` : 'A fresh 6-digit verification code has been dispatched to your email.');
+        setTwoFactorSuccess(freshMsg);
+
+        storePending2FASession({
+          role: twoFactorRole,
+          tempToken: freshToken,
+          email: twoFactorEmail,
+          maskedEmail: twoFactorMaskedEmail,
+          ticketId: freshTicket,
+          successMsg: freshMsg
+        });
       } else {
         const serverRemaining = res.cooldownRemaining;
         if (serverRemaining && serverRemaining > 0) {
@@ -393,6 +438,52 @@ function Login() {
     } finally {
       setTwoFactorResending(false);
     }
+  };
+
+  const activate2FASession = (result, fallbackEmail) => {
+    const emailToUse = result.email || fallbackEmail;
+    const masked = result.maskedEmail || maskEmailLocal(result.deliveryEmail || emailToUse);
+    const successMsg = result.ticketId
+      ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.`
+      : 'A 6-digit verification code has been dispatched to your email.';
+
+    setTwoFactorRole(result.role || 'admin');
+    setTwoFactorTempToken(result.tempToken || '');
+    setTwoFactorEmail(emailToUse);
+    setTwoFactorMaskedEmail(masked);
+    setTwoFactorTicketId(result.ticketId || '');
+    setTwoFactorOtp('');
+    setTwoFactorError('');
+
+    if (result.isLocked || result.lockoutRemaining > 0) {
+      const lockSec = result.lockoutRemaining || 600;
+      storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
+      setTwoFactorLockoutRemaining(lockSec);
+      setTwoFactorError(result.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
+      setTwoFactorSuccess('');
+      setShow2FAModal(true);
+      return;
+    }
+
+    const existingRemaining = readRemaining(STORAGE_KEY_2FA);
+    if (existingRemaining > 0) {
+      setTwoFactorResendCooldown(existingRemaining);
+    } else {
+      const serverCooldown = result.cooldownRemaining || 60;
+      storeExpiry(STORAGE_KEY_2FA, serverCooldown);
+      setTwoFactorResendCooldown(serverCooldown);
+    }
+
+    setTwoFactorSuccess(successMsg);
+    storePending2FASession({
+      role: result.role || 'admin',
+      tempToken: result.tempToken || '',
+      email: emailToUse,
+      maskedEmail: masked,
+      ticketId: result.ticketId || '',
+      successMsg: successMsg
+    });
+    setShow2FAModal(true);
   };
 
   const executeLogin = async (targetEmail, targetPassword) => {
@@ -427,44 +518,13 @@ function Login() {
       clearTimeout(timer2);
 
       if (result.require2FA) {
-        setTwoFactorRole(result.role || 'admin');
-        setTwoFactorTempToken(result.tempToken || '');
-        setTwoFactorEmail(result.email || cleanEmail);
-        setTwoFactorMaskedEmail(result.maskedEmail || maskEmailLocal(result.deliveryEmail || result.email || cleanEmail));
-        setTwoFactorTicketId(result.ticketId || '');
-        setTwoFactorOtp('');
-        setTwoFactorError('');
-
-        if (result.isLocked || result.lockoutRemaining > 0) {
-          const lockSec = result.lockoutRemaining || 600;
-          storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
-          setTwoFactorLockoutRemaining(lockSec);
-          setTwoFactorError(result.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
-          setTwoFactorSuccess('');
-          setShow2FAModal(true);
-          return;
-        }
-
-        // Keep active cooldown counting down — do NOT reset back to 60s
-        const existingRemaining = readRemaining(STORAGE_KEY_2FA);
-        if (existingRemaining > 0) {
-          setTwoFactorResendCooldown(existingRemaining);
-        } else {
-          const serverCooldown = result.cooldownRemaining || 60;
-          storeExpiry(STORAGE_KEY_2FA, serverCooldown);
-          setTwoFactorResendCooldown(serverCooldown);
-        }
-
-        setTwoFactorSuccess(
-          result.ticketId
-            ? `Verification code dispatched! Look for Ticket #${result.ticketId} in your inbox.`
-            : 'A 6-digit verification code has been dispatched to your email.'
-        );
-        setShow2FAModal(true);
+        activate2FASession(result, cleanEmail);
         return;
       }
 
       if (result.success) {
+        clearPending2FASession();
+        setShow2FAModal(false);
         if (result.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
@@ -474,38 +534,12 @@ function Login() {
         if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
           const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
-            setTwoFactorRole(retryResult.role || 'admin');
-            setTwoFactorTempToken(retryResult.tempToken || '');
-            setTwoFactorEmail(retryResult.email || cleanEmail);
-            setTwoFactorMaskedEmail(retryResult.maskedEmail || cleanEmail);
-            setTwoFactorTicketId(retryResult.ticketId || '');
-            setTwoFactorOtp('');
-            setTwoFactorError('');
-
-            if (retryResult.isLocked || retryResult.lockoutRemaining > 0) {
-              const lockSec = retryResult.lockoutRemaining || 600;
-              storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
-              setTwoFactorLockoutRemaining(lockSec);
-              setTwoFactorError(retryResult.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts). Two-factor authentication is temporarily locked for 10 minutes.');
-              setTwoFactorSuccess('');
-              setShow2FAModal(true);
-              return;
-            }
-
-            const existingR = readRemaining(STORAGE_KEY_2FA);
-            if (existingR > 0) {
-              setTwoFactorResendCooldown(existingR);
-            } else {
-              const cooldownR = retryResult.cooldownRemaining || 60;
-              storeExpiry(STORAGE_KEY_2FA, cooldownR);
-              setTwoFactorResendCooldown(cooldownR);
-            }
-
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
-            setShow2FAModal(true);
+            activate2FASession(retryResult, cleanEmail);
             return;
           }
           if (retryResult.success) {
+            clearPending2FASession();
+            setShow2FAModal(false);
             if (retryResult.role === 'admin') {
               navigate('/admin/dashboard');
             } else {
@@ -536,36 +570,12 @@ function Login() {
         try {
           const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
-            setTwoFactorTempToken(retryResult.tempToken || '');
-            setTwoFactorEmail(retryResult.email || cleanEmail);
-            setTwoFactorMaskedEmail(retryResult.maskedEmail || cleanEmail);
-            setTwoFactorTicketId(retryResult.ticketId || '');
-            setTwoFactorOtp('');
-            setTwoFactorError('');
-
-            if (retryResult.isLocked || retryResult.lockoutRemaining > 0) {
-              const lockSec = retryResult.lockoutRemaining || 600;
-              storeExpiry(STORAGE_KEY_2FA_LOCKOUT, lockSec);
-              setTwoFactorLockoutRemaining(lockSec);
-              setTwoFactorError(retryResult.message || 'Security Protection: Maximum verification attempts exceeded (4 attempts).');
-              setShow2FAModal(true);
-              return;
-            }
-
-            const existingR = readRemaining(STORAGE_KEY_2FA);
-            if (existingR > 0) {
-              setTwoFactorResendCooldown(existingR);
-            } else {
-              const cooldownR = retryResult.cooldownRemaining || 60;
-              storeExpiry(STORAGE_KEY_2FA, cooldownR);
-              setTwoFactorResendCooldown(cooldownR);
-            }
-
-            setTwoFactorSuccess(retryResult.ticketId ? `Verification code dispatched! Look for Ticket #${retryResult.ticketId} in your inbox.` : 'A 6-digit verification code has been dispatched to your email.');
-            setShow2FAModal(true);
+            activate2FASession(retryResult, cleanEmail);
             return;
           }
           if (retryResult.success) {
+            clearPending2FASession();
+            setShow2FAModal(false);
             if (retryResult.role === 'admin') {
               navigate('/admin/dashboard');
             } else {
@@ -721,8 +731,8 @@ function Login() {
       <header className="bg-emerald-900/90 backdrop-blur-md text-white border-b border-emerald-800/80 shrink-0 z-10 w-full max-w-full overflow-hidden">
         <div className="w-full max-w-full px-3 sm:px-8 lg:px-12 py-2 sm:py-2.5 flex justify-between items-center gap-2">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-            <div className="w-7 h-7 sm:w-9 sm:h-9 bg-white rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+            <div className="w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center shrink-0">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
             <div className="min-w-0 flex-1">
               <h1 className="text-[10px] xs:text-xs sm:text-base font-black tracking-tight truncate">Cavite State University Naic</h1>
@@ -744,8 +754,8 @@ function Login() {
       <main className="flex-1 flex items-center justify-center px-4 py-1.5 sm:py-3 relative z-10 w-full max-w-full overflow-hidden">
         <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden p-3.5 sm:p-6">
           <div className="text-center mb-2.5 sm:mb-4">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-emerald-50 rounded-xl sm:rounded-2xl p-1 mx-auto mb-2 flex items-center justify-center shadow-xs border border-emerald-200">
-              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2 flex items-center justify-center">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
             <h2 className="text-lg sm:text-xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
             <p className="text-gray-500 text-[10px] sm:text-[11.5px] mt-0.5">Sign in with your official CvSU faculty or admin credentials</p>
@@ -1284,11 +1294,9 @@ function Login() {
       {show2FAModal && (
         <div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={() => !twoFactorLoading && setShow2FAModal(false)}
         >
           <div
             className="bg-white text-gray-900 rounded-2xl sm:rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-emerald-800/30 relative my-auto"
-            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between border-b border-emerald-800/60">
@@ -1306,7 +1314,7 @@ function Login() {
               <button
                 type="button"
                 disabled={twoFactorLoading}
-                onClick={() => setShow2FAModal(false)}
+                onClick={close2FAModal}
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer shrink-0 disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
@@ -1378,7 +1386,7 @@ function Login() {
                   />
                 </div>
                 <p className="text-[10.5px] sm:text-[11px] text-gray-400 text-center leading-normal">
-                  Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. The code expires in 10 minutes.
+                  Check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder. The code expires in 20 minutes.
                 </p>
               </div>
 
@@ -1421,7 +1429,7 @@ function Login() {
 
                   <button
                     type="button"
-                    onClick={() => setShow2FAModal(false)}
+                    onClick={close2FAModal}
                     disabled={twoFactorLoading || twoFactorResending}
                     className="text-gray-500 hover:text-gray-800 font-semibold hover:underline cursor-pointer"
                   >

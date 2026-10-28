@@ -2744,6 +2744,20 @@ function App() {
     localStorage.removeItem('nstp_cached_conversations');
     localStorage.removeItem('nstp_cached_messages');
     localStorage.removeItem('nstp_active_chat');
+
+    // Completely clear all pending 2FA sessions, cooldowns, and lockout timers so logout lands on clean Portal Login
+    try {
+      sessionStorage.removeItem('nstp_2fa_pending_session_v3');
+      sessionStorage.removeItem('nstp_2fa_pending_session');
+      sessionStorage.removeItem('nstp_2fa_resend_cooldown');
+      sessionStorage.removeItem('nstp_2fa_lockout_timer');
+      sessionStorage.removeItem('nstp_forgot_resend_cooldown');
+      localStorage.removeItem('nstp_2fa_pending_session_v3');
+      localStorage.removeItem('nstp_2fa_pending_session');
+      localStorage.removeItem('nstp_2fa_resend_cooldown');
+      localStorage.removeItem('nstp_2fa_lockout_timer');
+    } catch (_) {}
+
     if (user) {
       safeSetStorage(getNotificationStorageKey(user), notifications);
       try {

@@ -1246,8 +1246,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 <Menu className="w-5 h-5" />
               </button>
               
-              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-white rounded-xl sm:rounded-2xl p-0.5 sm:p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md border border-emerald-700">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-xs" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
+                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-md" />
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs xs:text-sm sm:text-lg lg:text-xl font-black tracking-tight text-white leading-tight truncate">
