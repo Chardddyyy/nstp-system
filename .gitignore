@@ -21,6 +21,7 @@ dist-ssr
 backups/
 *.sql
 *.sql.gz
+!backend/database/*.sql
 
 # Editor directories and files
 .vscode/*
