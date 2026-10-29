@@ -23,6 +23,7 @@ const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 const { generateStudentIdPdf } = require('./utils/pdfIdGenerator');
+const { getPhilippineHolidaysForBatch } = require('./utils/philippineHolidays');
 const app = express();
 // Enable reverse proxy trust (critical for accurate client IP in rate limiting & logs behind reverse proxy/Cloudflare)
 app.set('trust proxy', 1);
@@ -7774,9 +7775,20 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
     // Snapshot letter templates
     const letterData = Array.isArray(letterTemplates) ? letterTemplates : [];
 
-    // Snapshot calendar events
+    // Snapshot calendar events + automatic Philippine holidays for the semester
     const [calendarEventsRaw] = await pool.query('SELECT * FROM calendar_events ORDER BY date ASC').catch(() => [[]]);
-    const calendarData = Array.isArray(calendarEventsRaw) ? calendarEventsRaw : [];
+    const autoHolidays = getPhilippineHolidaysForBatch(archiveYear, start_month || calendar_start_date, end_month || calendar_end_date);
+    
+    // Merge custom events with auto-holidays without duplicates
+    const combinedCalendar = [...(Array.isArray(calendarEventsRaw) ? calendarEventsRaw : [])];
+    const existingDateTitles = new Set(combinedCalendar.map(e => `${e.date}_${(e.title || '').trim().toLowerCase()}`));
+    for (const hol of autoHolidays) {
+      const key = `${hol.date}_${(hol.title || '').trim().toLowerCase()}`;
+      if (!existingDateTitles.has(key)) {
+        combinedCalendar.push(hol);
+      }
+    }
+    const calendarData = combinedCalendar;
 
     const totalStudents = studentCount.reduce((sum, row) => sum + row.count, 0);
     const cwts = studentCount.find(r => r.department === 'CWTS')?.count || 0;
@@ -8354,6 +8366,24 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
 });
 
+// Ensure all batch archives have full Philippine semester holidays automatically populated
+async function ensureArchiveCalendarHolidays() {
+  try {
+    const [batches] = await pool.query('SELECT id, year, data FROM archived_years');
+    for (const b of batches) {
+      let data = {};
+      try { data = typeof b.data === 'string' ? JSON.parse(b.data) : (b.data || {}); } catch (_) {}
+      if (!Array.isArray(data.calendarData) || data.calendarData.length === 0) {
+        const holidays = getPhilippineHolidaysForBatch(b.year, data.start_month, data.end_month);
+        data.calendarData = holidays;
+        await pool.execute('UPDATE archived_years SET data = ? WHERE id = ?', [JSON.stringify(data), b.id]);
+      }
+    }
+  } catch (err) {
+    console.warn('[Auto-Holidays] Notice:', err.message);
+  }
+}
+
 let dbInitialized = false;
 
 async function runDatabaseInitialization() {
@@ -8376,7 +8406,8 @@ async function runDatabaseInitialization() {
     ensureReportComments(),
     ensureConversationLastSender(),
     restoreCorFromEnrollments(),
-    ensurePerformanceIndexes()
+    ensurePerformanceIndexes(),
+    ensureArchiveCalendarHolidays()
   ]).catch(function(err) {
     console.warn('Schema migration warning:', err.message);
   });

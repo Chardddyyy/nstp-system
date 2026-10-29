@@ -16,6 +16,7 @@ import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExp
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { getRegformAuditStatus, useRegformAuditor } from '../utils/documentValidation';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
+import { getPhilippineHolidaysForBatch } from '../data/philippineHolidays';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -1105,27 +1106,31 @@ function getConsecutiveBatchDetails(currentBatchStr) {
     const existingStudentData = yearData.data?.studentData || yearData.studentData || [];
     const existingReportData = yearData.data?.reportData || yearData.reportData || [];
     const existingLetterData = yearData.data?.letterData || yearData.letterData || [];
+    const existingCalendarData = yearData.data?.calendarData || yearData.calendarData || [];
 
     setArchiveViewData({
       ...yearData,
       studentData: existingStudentData,
       reportData: existingReportData,
-      letterData: existingLetterData
+      letterData: existingLetterData,
+      calendarData: existingCalendarData
     });
     setViewingArchive(true);
 
     // If student list was empty, hydrate in background without blocking
-    if (existingStudentData.length === 0) {
+    if (existingStudentData.length === 0 || existingCalendarData.length === 0) {
       archivesAPI.getByYear(yearData.year).then((detailed) => {
         const sData = detailed.studentData || detailed.data?.studentData || [];
         const rData = detailed.reportData || detailed.data?.reportData || [];
         const lData = detailed.letterData || detailed.data?.letterData || [];
+        const cData = detailed.calendarData || detailed.data?.calendarData || existingCalendarData;
         setArchiveViewData((prev) => ({
           ...prev,
           ...yearData,
           studentData: sData,
           reportData: rData,
-          letterData: lData
+          letterData: lData,
+          calendarData: cData
         }));
       }).catch(() => {});
     }
@@ -4201,7 +4206,28 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(() => {
                       const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
-                      const events = Array.isArray(customCalendar) ? customCalendar : [];
+                      let events = Array.isArray(customCalendar) && customCalendar.length > 0 ? [...customCalendar] : [];
+
+                      // Automatically load official Philippine Holidays for this batch semester if empty or merge missing
+                      const autoBatchHolidays = getPhilippineHolidaysForBatch(
+                        archiveViewData?.year,
+                        archiveViewData?.start_month || archiveViewData?.data?.start_month,
+                        archiveViewData?.end_month || archiveViewData?.data?.end_month
+                      );
+
+                      if (events.length === 0) {
+                        events = autoBatchHolidays;
+                      } else {
+                        const existingKeys = new Set(events.map(e => `${e.date}_${(e.title || '').trim().toLowerCase()}`));
+                        for (const hol of autoBatchHolidays) {
+                          const key = `${hol.date}_${(hol.title || '').trim().toLowerCase()}`;
+                          if (!existingKeys.has(key)) {
+                            events.push(hol);
+                          }
+                        }
+                        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                      }
+
                       if (events.length === 0) {
                         return <p className="text-gray-500 text-xs col-span-2 text-center py-3 font-medium">No activity schedule recorded for this batch archive.</p>;
                       }

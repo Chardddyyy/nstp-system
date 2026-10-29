@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 import { getAvatarSrc } from '../utils/avatars';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
+import { getPhilippineHolidaysForBatch } from '../data/philippineHolidays';
 
 function InstructorDashboard() {
   const { 
@@ -78,12 +79,14 @@ function InstructorDashboard() {
     const existingReportData = (batch.data?.reportData || batch.reportData || [])
       .filter(r => r && (r.department === 'All' || r.department === user?.department));
     const existingLetterData = batch.data?.letterData || batch.letterData || [];
+    const existingCalendarData = batch.data?.calendarData || batch.calendarData || [];
 
     setArchiveViewData({
       ...batch,
       studentData: existingStudentData,
       reportData: existingReportData,
-      letterData: existingLetterData
+      letterData: existingLetterData,
+      calendarData: existingCalendarData
     });
     setViewingArchive(true);
 
@@ -93,12 +96,14 @@ function InstructorDashboard() {
       const rData = (full.reportData || full.data?.reportData || [])
         .filter(r => r && (r.department === 'All' || r.department === user?.department));
       const lData = full.letterData || full.data?.letterData || [];
+      const cData = full.calendarData || full.data?.calendarData || existingCalendarData;
       setArchiveViewData((prev) => ({
         ...prev,
         ...batch,
         studentData: sData,
         reportData: rData,
-        letterData: lData
+        letterData: lData,
+        calendarData: cData
       }));
     }).catch(() => {});
   };
@@ -1544,7 +1549,28 @@ function InstructorDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(() => {
                       const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
-                      const events = Array.isArray(customCalendar) ? customCalendar : [];
+                      let events = Array.isArray(customCalendar) && customCalendar.length > 0 ? [...customCalendar] : [];
+
+                      // Automatically load official Philippine Holidays for this batch semester if empty or merge missing
+                      const autoBatchHolidays = getPhilippineHolidaysForBatch(
+                        archiveViewData?.year,
+                        archiveViewData?.start_month || archiveViewData?.data?.start_month,
+                        archiveViewData?.end_month || archiveViewData?.data?.end_month
+                      );
+
+                      if (events.length === 0) {
+                        events = autoBatchHolidays;
+                      } else {
+                        const existingKeys = new Set(events.map(e => `${e.date}_${(e.title || '').trim().toLowerCase()}`));
+                        for (const hol of autoBatchHolidays) {
+                          const key = `${hol.date}_${(hol.title || '').trim().toLowerCase()}`;
+                          if (!existingKeys.has(key)) {
+                            events.push(hol);
+                          }
+                        }
+                        events.sort((a, b) => new Date(a.date) - new Date(b.date));
+                      }
+
                       const deptEvents = events.filter(e => (e.dept || e.track) === 'All' || (e.dept || e.track) === 'All Tracks' || e.category === 'Holiday' || e.type === 'holiday' || (e.dept || e.track) === user?.department);
                       if (deptEvents.length === 0) {
                         return <p className="text-gray-500 text-xs col-span-2 text-center py-3 font-medium">No activity schedule recorded for this batch archive.</p>;
@@ -1560,7 +1586,7 @@ function InstructorDashboard() {
                               }`}>{evt.category === 'Holiday' || evt.type === 'holiday' ? 'PH Holiday' : (evt.dept || 'All')}</span>
                             </div>
                             <h5 className="font-black text-gray-900 text-xs leading-tight mb-1">{evt.title}</h5>
-                            <p className="text-[11px] text-gray-600 line-clamp-2">{evt.desc}</p>
+                            <p className="text-[11px] text-gray-600 line-clamp-2">{evt.desc || evt.description}</p>
                           </div>
                         </div>
                       ));
