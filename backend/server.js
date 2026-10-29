@@ -6626,23 +6626,41 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       }
     });
 
-    res.status(201).json({
+    const finalStudentName = name || `${lastName}, ${firstName}${middleName ? ' ' + middleName : ''}${suffix ? ' ' + suffix : ''}`.trim();
+    const newEnrollmentPayload = {
       id: insertId,
-      student_name: name || null,
-      firstName, lastName,
+      student_name: finalStudentName,
+      fullName: finalStudentName,
+      name: finalStudentName,
+      firstName,
+      lastName,
       middleName: middleName || null,
       suffix: suffix || null,
-      email,
+      email: String(email).trim(),
       department: nstpComponent || 'CWTS',
-      studentId,
-      contactNumber,
+      nstpComponent: nstpComponent || 'CWTS',
+      studentId: sid,
+      contactNumber: contactDigits,
       program,
+      course: program,
       section,
       yearLevel,
       registeredVoter: finalVoter,
       status: 'Pending',
       submitted_at: new Date().toISOString(),
-    });
+      created_at: new Date().toISOString()
+    };
+
+    if (io) {
+      try {
+        io.emit('enrollment:new', { enrollment: newEnrollmentPayload });
+        console.log(`[SOCKET EMIT] Real-time 'enrollment:new' emitted for student "${finalStudentName}" (ID: ${insertId})`);
+      } catch (socketErr) {
+        console.warn('[SOCKET ERROR] Failed to emit enrollment:new:', socketErr.message);
+      }
+    }
+
+    res.status(201).json(newEnrollmentPayload);
   } catch (error) {
     console.error('Submit enrollment error:', error);
     if (error.status === 409 || error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
@@ -6849,6 +6867,11 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
     }
 
     const [updated] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
+    if (io) {
+      try {
+        io.emit('enrollment:updated', { id: Number(id), status });
+      } catch (_) {}
+    }
     res.json(updated[0]);
   } catch (error) {
     console.error('Update enrollment error:', error);

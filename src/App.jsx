@@ -1186,16 +1186,37 @@ function App() {
     // 3. Instant New Enrollment Notification (Admin)
     const handleNewEnrollment = (payload) => {
       if (user.role === 'admin' && payload?.enrollment) {
-        setPendingEnrollments(prev => [payload.enrollment, ...prev]);
-        const enrollName = payload.enrollment.name || payload.enrollment.fullName || payload.enrollment.studentId || 'A student';
+        const newEnroll = payload.enrollment;
+        const enrollName = newEnroll.student_name || newEnroll.fullName || newEnroll.name || `${newEnroll.firstName || ''} ${newEnroll.lastName || ''}`.trim() || newEnroll.studentId || 'Student Applicant';
+        const dept = newEnroll.department || newEnroll.nstpComponent || 'NSTP';
+        const eKey = `enrollment-${newEnroll.id}`;
+
+        if (newEnroll.id) {
+          seenEnrollmentIds.current.add(newEnroll.id);
+        }
+
+        setPendingEnrollments(prev => {
+          const list = prev || [];
+          if (list.some(e => String(e.id) === String(newEnroll.id))) return list;
+          return [newEnroll, ...list];
+        });
+
         pushNotification({
-          title: 'New Online Enrollment',
-          message: `${enrollName} submitted an enrollment application`,
+          id: eKey,
+          title: `Pending Enrollment: ${enrollName}`,
+          message: `${enrollName} submitted an enrollment application for ${dept}. Awaiting review.`,
           type: 'enrollment',
           link: '/admin/dashboard',
-          enrollmentId: payload.enrollment.id,
+          enrollmentId: newEnroll.id,
           studentName: enrollName
         });
+      }
+    };
+
+    const handleEnrollmentUpdated = (payload) => {
+      if (payload?.id && (payload.status === 'Approved' || payload.status === 'Declined')) {
+        setPendingEnrollments(prev => (prev || []).filter(e => Number(e.id) !== Number(payload.id)));
+        deleteNotifications([`enrollment-${payload.id}`, String(payload.id)]);
       }
     };
 
@@ -1217,6 +1238,7 @@ function App() {
     socket.on('new_message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
+    socket.on('enrollment:updated', handleEnrollmentUpdated);
     socket.on('call:incoming', handleIncomingCall);
     socket.on('call:ended', handleCallEnded);
 
@@ -1225,10 +1247,11 @@ function App() {
       socket.off('new_message', handleChatMessage);
       socket.off('attendance:scanned', handleAttendanceScanned);
       socket.off('enrollment:new', handleNewEnrollment);
+      socket.off('enrollment:updated', handleEnrollmentUpdated);
       socket.off('call:incoming', handleIncomingCall);
       socket.off('call:ended', handleCallEnded);
     };
-  }, [user, pushNotification, showToast]);
+  }, [user, pushNotification, showToast, deleteNotifications]);
 
   function resetRealtimeBaseline() {
     baselineReady.current = false;
@@ -1367,15 +1390,15 @@ function App() {
         if (!e || !e.id) return;
         const eKey = `enrollment-${e.id}`;
         if (dismissedSet.has(eKey) || dismissedSet.has(String(e.id))) return;
-        const enrollName = e.student_name || e.fullName || e.firstName || 'Student Applicant';
+        const enrollName = e.student_name || e.fullName || e.name || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.studentId || 'Student Applicant';
         systemItems.push({
           id: eKey,
           title: `Pending Enrollment: ${enrollName}`,
-          message: `${enrollName} submitted an enrollment application for ${e.department || 'NSTP'}. Awaiting review and approval.`,
+          message: `${enrollName} submitted an enrollment application for ${e.department || e.nstpComponent || 'NSTP'}. Awaiting review and approval.`,
           type: 'enrollment',
           read: readNotifSet.has(eKey),
-          time: formatRelativeTime(e.created_at),
-          createdAt: e.created_at || new Date().toISOString(),
+          time: formatRelativeTime(e.submitted_at || e.created_at),
+          createdAt: e.submitted_at || e.created_at || new Date().toISOString(),
           link: '/admin/dashboard',
           enrollmentId: e.id,
           studentName: enrollName
@@ -1674,11 +1697,12 @@ function App() {
         if (!seenEnrollmentIds.current.has(enrollment.id)) {
           seenEnrollmentIds.current.add(enrollment.id);
           newlySeen = true;
-          const enrollName = enrollment.student_name || enrollment.fullName || enrollment.firstName || 'A student';
+          const enrollName = enrollment.student_name || enrollment.fullName || enrollment.name || `${enrollment.firstName || ''} ${enrollment.lastName || ''}`.trim() || enrollment.studentId || 'A student';
+          const dept = enrollment.department || enrollment.nstpComponent || 'NSTP';
           safePush({
             id: eKey,
             title: `Pending Enrollment: ${enrollName}`,
-            message: `${enrollName} submitted an enrollment application for ${enrollment.department || 'NSTP'}. Awaiting review.`,
+            message: `${enrollName} submitted an enrollment application for ${dept}. Awaiting review.`,
             type: 'enrollment',
             link: '/admin/dashboard',
             enrollmentId: enrollment.id,
@@ -2214,8 +2238,8 @@ function App() {
       if (!baselineReady.current) {
         seedRealtimeBaseline(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
       } else {
-        reconcileSystemNotifications(pending, activeReports, activeStudents, activeEvents, activeLetters, activeUsers, user);
         detectRealtimeChanges(pending, activeReports, activeConvs, activeStudents, activeUsers, activeEvents, activeLetters, user);
+        reconcileSystemNotifications(pending, activeReports, activeStudents, activeEvents, activeLetters, activeUsers, user);
         await checkConversationMessages(activeConvs, user);
       }
     } catch (error) {
@@ -2506,8 +2530,12 @@ function App() {
       if (isAdmin) {
         enrollmentsAPI.getAll().then(enrollmentsData => {
           if (enrollmentsData && Array.isArray(enrollmentsData)) {
-            setPendingEnrollments(enrollmentsData.filter(e => e.status === 'Pending'));
+            const pendingList = enrollmentsData.filter(e => e.status === 'Pending');
+            setPendingEnrollments(pendingList);
             safeSetStorage('nstp_cached_enrollments', enrollmentsData);
+            if (activeUser && activeUser.role === 'admin') {
+              reconcileSystemNotifications(pendingList, reports, students, [], [], users, activeUser);
+            }
           }
         }).catch(err => console.warn('Enrollments load error:', err));
       }
@@ -2862,6 +2890,7 @@ function App() {
   async function approveEnrollmentFunc(id, designatedSection) {
     const updated = await enrollmentsAPI.update(id, 'Approved', designatedSection);
     setPendingEnrollments(prev => prev.filter(e => e.id !== id));
+    deleteNotifications([`enrollment-${id}`, String(id)]);
     const studentsData = await studentsAPI.getAll();
     setStudents(studentsData);
     return updated;
@@ -2870,6 +2899,7 @@ function App() {
   async function declineEnrollmentFunc(id) {
     await enrollmentsAPI.update(id, 'Declined');
     setPendingEnrollments(prev => prev.filter(e => e.id !== id));
+    deleteNotifications([`enrollment-${id}`, String(id)]);
   }
 
   // ── Report management ─────────────────────────────────────────────────────────

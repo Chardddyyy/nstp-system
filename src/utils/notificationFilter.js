@@ -50,8 +50,9 @@ export function isNotificationAllowedForRole(notif, currentUser) {
     const isPendingEnrollment =
       type === 'enrollment' ||
       id.startsWith('enrollment-') ||
-      title.includes('Pending Enrollment') ||
-      title.includes('Enrollment Application');
+      Boolean(notif.enrollmentId) ||
+      title.toLowerCase().includes('enroll') ||
+      message.toLowerCase().includes('enroll');
 
     if (isPendingEnrollment) return true;
 
