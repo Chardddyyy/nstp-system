@@ -6323,6 +6323,99 @@ function enqueueEnrollmentTask(taskFn) {
   });
 }
 
+// ── Student Enrollment Conflict & Prior-Archive Verification Helper ────────────
+async function checkStudentEnrollmentConflict(studentId, email) {
+  const sidRaw = String(studentId || '').replace(/\D/g, '').trim();
+  const sid = (sidRaw.length >= 8 && sidRaw.length <= 12) ? sidRaw : sidRaw;
+  const cleanEmail = String(email || '').trim().toLowerCase();
+
+  // 1. Check if already active in current active batch
+  if (sid || cleanEmail) {
+    const [active] = await pool.execute(
+      "SELECT id, studentId, name, department FROM students WHERE (studentId = ? OR (email = ? AND email != '')) AND (status IS NULL OR status != 'Inactive') LIMIT 1",
+      [sid || '___none___', cleanEmail || '___none___']
+    ).catch(() => [[]]);
+    if (active && active.length > 0) {
+      return {
+        blocked: true,
+        reason: 'active_batch',
+        message: `Hindi na maaaring mag-enroll: Ang Student Number (${sid || cleanEmail}) ay opisyal nang naka-enroll sa kasalukuyang active batch (${active[0].department || 'NSTP'}).`
+      };
+    }
+  }
+
+  // 2. Check if already pending review
+  if (sid || cleanEmail) {
+    const [pending] = await pool.execute(
+      "SELECT id, department FROM enrollments WHERE (studentId = ? OR (email = ? AND email != '')) AND status = 'Pending' LIMIT 1",
+      [sid || '___none___', cleanEmail || '___none___']
+    ).catch(() => [[]]);
+    if (pending && pending.length > 0) {
+      return {
+        blocked: true,
+        reason: 'pending_enrollment',
+        message: `Ang Student Number (${sid || cleanEmail}) ay mayroon nang enrollment application na kasalukuyang sinusuri (Pending) ng NSTP Administrator.`
+      };
+    }
+  }
+
+  // 3. Check if previous enrollment was already Approved
+  if (sid || cleanEmail) {
+    const [approved] = await pool.execute(
+      "SELECT id, department FROM enrollments WHERE (studentId = ? OR (email = ? AND email != '')) AND status = 'Approved' LIMIT 1",
+      [sid || '___none___', cleanEmail || '___none___']
+    ).catch(() => [[]]);
+    if (approved && approved.length > 0) {
+      return {
+        blocked: true,
+        reason: 'approved_previous',
+        message: `Bawal mag-enroll: Ang Student Number (${sid || cleanEmail}) ay nakapag-enroll na at aprubado na sa sistema. Makipag-ugnayan sa NSTP Office kung kailangan ng assistance o special permission.`
+      };
+    }
+  }
+
+  // 4. Check if student exists in archived_years (past academic years / archives)
+  if (sid || cleanEmail) {
+    const sidQuery = sid ? `%"studentId":"${sid}"%` : '___none___';
+    const sidQuerySpace = sid ? `%"studentId": "${sid}"%` : '___none___';
+    const emailQuery = cleanEmail ? `%"email":"${cleanEmail}"%` : '___none___';
+    const emailQuerySpace = cleanEmail ? `%"email": "${cleanEmail}"%` : '___none___';
+
+    const [archived] = await pool.execute(
+      `SELECT year FROM archived_years 
+       WHERE data LIKE ? OR data LIKE ? OR data LIKE ? OR data LIKE ?
+       LIMIT 1`,
+      [sidQuery, sidQuerySpace, emailQuery, emailQuerySpace]
+    ).catch(() => [[]]);
+
+    if (archived && archived.length > 0) {
+      const pastBatch = archived[0].year || 'nakaraang batch';
+      return {
+        blocked: true,
+        reason: 'archived_past_batch',
+        message: `Bawal mag-enroll: Ang Student Number (${sid || cleanEmail}) ay nakatala nang nakapag-enroll sa nakaraang academic year / archive batch (${pastBatch}). Makipag-ugnayan sa NSTP Office o Coordinator kung kailangan ng assistance o special retake.`
+      };
+    }
+  }
+
+  return { blocked: false };
+}
+
+// Check enrollment eligibility in real-time (Step 1 validation)
+app.get('/api/enrollments/check-eligibility', async (req, res) => {
+  try {
+    const { studentId, email } = req.query;
+    const conflict = await checkStudentEnrollmentConflict(studentId, email);
+    if (conflict.blocked) {
+      return res.status(200).json({ eligible: false, message: conflict.message, reason: conflict.reason });
+    }
+    return res.status(200).json({ eligible: true });
+  } catch (error) {
+    console.error('Check eligibility error:', error);
+    res.status(500).json({ eligible: true, notice: 'Check skipped due to server error' });
+  }
+});
+
 // Submit enrollment
 app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
   // Ensure all required columns exist (runs once, then cached)
@@ -6382,16 +6475,12 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     if (!validComponents.includes(body.nstpComponent)) {
       return res.status(400).json({ message: 'Invalid NSTP component' });
     }
-    // Block duplicate pending enrollment for the same student ID or email
-    try {
-      const [dupCheck] = await pool.execute(
-        "SELECT id FROM enrollments WHERE (studentId = ? OR email = ?) AND status = 'Pending'",
-        [sid, sanitizeStr(body.email, 100).trim()]
-      );
-      if (dupCheck && dupCheck.length > 0) {
-        return res.status(409).json({ message: 'An enrollment for this Student ID or Email is already pending review.' });
-      }
-    } catch (_) { /* table check fallback */ }
+
+    // Comprehensive Prior-Enrollment Protection (Blocks students in Active Batch, Archive, or Previous Enrollments)
+    const conflict = await checkStudentEnrollmentConflict(sid, body.email);
+    if (conflict.blocked) {
+      return res.status(409).json({ message: conflict.message, reason: conflict.reason });
+    }
     // ──────────────────────────────────────────────────────────────────────
 
     const {

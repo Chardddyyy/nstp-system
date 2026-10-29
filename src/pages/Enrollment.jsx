@@ -66,6 +66,52 @@ function Enrollment() {
   const [weightUnit, setWeightUnit] = useState('kg');
   const [weightInput, setWeightInput] = useState('');
 
+  // Prior Enrollment / Archive Eligibility Protection State
+  const [eligibilityNotice, setEligibilityNotice] = useState('');
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+
+  // Real-time verification against Active Batch, Archives, and Previous Enrollments
+  useEffect(() => {
+    const sid = (formData.studentId || '').replace(/\D/g, '').trim();
+    const email = (formData.email || '').trim();
+
+    if (sid.length < 8 && !email.includes('@')) {
+      setEligibilityNotice('');
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (sid.length >= 8 || (email.includes('@') && email.includes('.'))) {
+        try {
+          setIsCheckingEligibility(true);
+          const query = new URLSearchParams();
+          if (sid.length >= 8) query.append('studentId', sid);
+          if (email.includes('@')) query.append('email', email);
+          const res = await fetch(`/api/enrollments/check-eligibility?${query.toString()}`);
+          const data = await res.json();
+          if (data && data.eligible === false) {
+            setEligibilityNotice(data.message);
+            setErrors(prev => ({ ...prev, studentId: data.message }));
+          } else {
+            setEligibilityNotice('');
+            setErrors(prev => {
+              const next = { ...prev };
+              if (next.studentId && (next.studentId.includes('Bawal mag-enroll') || next.studentId.includes('Hindi na maaaring'))) {
+                delete next.studentId;
+              }
+              return next;
+            });
+          }
+        } catch (_) {
+        } finally {
+          setIsCheckingEligibility(false);
+        }
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [formData.studentId, formData.email]);
+
   // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
   const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
   const [isCaptchaBlocked, setIsCaptchaBlocked] = useState(false);
@@ -653,6 +699,8 @@ function Enrollment() {
           : `Student ID is too long — ${sidDigits.length} digit${sidDigits.length !== 1 ? 's' : ''} entered, max 12 digits`;
       } else if (isTrollSid(sidDigits)) {
         newErrors.studentId = 'Invalid Student ID — Please enter your authentic CvSU Student Number (e.g. 202410001).';
+      } else if (eligibilityNotice) {
+        newErrors.studentId = eligibilityNotice;
       }
     }
 
@@ -1071,13 +1119,15 @@ function Enrollment() {
       console.error('❌ Enrollment submission failed:', error);
       const raw = error?.message || '';
       const isNet = raw.toLowerCase().includes('fetch') || raw.toLowerCase().includes('network') || raw.toLowerCase().includes('timeout') || !navigator.onLine;
-      const friendly = raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate')
-        ? `Student ID "${formData.studentId}" is already registered in the system. Please verify your Student ID.`
-        : isNet
-          ? 'Internet connection was interrupted during submission. Your form entries remain securely saved. Please click "Retry Submission" below.'
-          : raw
-            ? `Submission Notice: ${raw}`
-            : 'Unable to submit due to unstable network connectivity. Your saved data is preserved. Please click Submit again once connection stabilizes.';
+      const friendly = (raw.includes('Bawal mag-enroll') || raw.includes('Hindi na maaaring'))
+        ? raw
+        : (raw.toLowerCase().includes('already exists') || raw.toLowerCase().includes('duplicate'))
+          ? `Student ID "${formData.studentId}" is already registered in the system. Please verify your Student ID.`
+          : isNet
+            ? 'Internet connection was interrupted during submission. Your form entries remain securely saved. Please click "Retry Submission" below.'
+            : raw
+              ? `Submission Notice: ${raw}`
+              : 'Unable to submit due to unstable network connectivity. Your saved data is preserved. Please click Submit again once connection stabilizes.';
       showToast(friendly, 'error');
       setSubmitErrorNotice(friendly);
     } finally {
@@ -1447,7 +1497,22 @@ function Enrollment() {
                       onChange={handleChange}
                       className={`w-full px-4 py-2.5 text-xs sm:text-sm bg-white border rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none transition-all font-medium ${errors.studentId ? 'border-red-500 bg-red-50/50' : 'border-gray-200'}`}
                     />
-                    {errors.studentId && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.studentId}</p>}
+                    {errors.studentId && !eligibilityNotice && <p className="text-red-500 text-[11px] font-bold mt-1">{errors.studentId}</p>}
+                    {isCheckingEligibility && (
+                      <p className="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full border border-emerald-600 border-t-transparent animate-spin"></span>
+                        Checking student enrollment history...
+                      </p>
+                    )}
+                    {eligibilityNotice && (
+                      <div className="mt-2 p-2.5 bg-red-50 border border-red-300 rounded-xl text-red-900 text-xs font-bold flex items-start gap-2 shadow-2xs animate-fade-in">
+                        <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-black text-red-950 text-[11px] uppercase tracking-wide">Bawal Mag-enroll (Already Enrolled)</p>
+                          <p className="font-medium text-[11px] text-red-800 mt-0.5 leading-snug">{eligibilityNotice}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
