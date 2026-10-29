@@ -750,24 +750,24 @@ function Login() {
         </div>
       </header>
 
-      {/* Main Content Area - Static Centered Card with Zero Overflow */}
-      <main className="flex-1 flex items-center justify-center px-4 py-1.5 sm:py-3 relative z-10 w-full max-w-full overflow-hidden">
-        <div className="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/40 text-gray-900 overflow-hidden p-3.5 sm:p-6">
-          <div className="text-center mb-2.5 sm:mb-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-2 flex items-center justify-center">
+      {/* Main Content Area - Static Centered Card with Responsive Desktop Sizing */}
+      <main className="flex-1 flex items-center justify-center px-4 py-2 sm:py-4 md:py-6 relative z-10 w-full max-w-full overflow-y-auto">
+        <div className="max-w-md md:max-w-lg lg:max-w-xl w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl md:rounded-[32px] shadow-2xl border border-white/40 text-gray-900 overflow-hidden p-4 sm:p-6 md:p-8 lg:p-9 my-auto">
+          <div className="text-center mb-3 sm:mb-4 md:mb-5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-18 md:h-18 lg:w-20 lg:h-20 mx-auto mb-2.5 md:mb-3 flex items-center justify-center">
               <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
-            <h2 className="text-lg sm:text-xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
-            <p className="text-gray-500 text-[10px] sm:text-[11.5px] mt-0.5">Sign in with your official CvSU faculty or admin credentials</p>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-emerald-950 tracking-tight">Portal Login</h2>
+            <p className="text-gray-500 text-xs sm:text-sm md:text-base mt-1">Sign in with your official CvSU faculty or admin credentials</p>
           </div>
 
-          <form onSubmit={handleSubmit} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" className="space-y-2.5 sm:space-y-3">
+          <form onSubmit={handleSubmit} autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false" data-lpignore="true" className="space-y-3 sm:space-y-3.5 md:space-y-4 lg:space-y-5">
             <div>
-              <label htmlFor="email" className="block text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-[11px] sm:text-xs md:text-sm font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-600/80" />
+                <Mail className="absolute left-3.5 md:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-emerald-600/80 pointer-events-none" />
                 <input
                   type="email"
                   id="email"
@@ -778,7 +778,7 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full min-h-[42px] sm:min-h-[44px] pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  className="w-full min-h-[42px] sm:min-h-[46px] md:min-h-[52px] pl-10 md:pl-12 pr-4 py-2 sm:py-2.5 md:py-3 text-sm md:text-base text-gray-900 placeholder:text-gray-400 bg-gray-50/80 border border-gray-200 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="Admin@gmail.com"
                   autoComplete="off"
                   required
@@ -787,19 +787,19 @@ function Login() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="block text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-gray-700">
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-[11px] sm:text-xs md:text-sm font-extrabold uppercase tracking-wider text-gray-700">
                   Password
                 </label>
                 {error && (
-                  <span className="text-[10px] sm:text-[11px] font-bold text-red-600 animate-fade-in flex items-center gap-1">
+                  <span className="text-[10px] sm:text-[11px] md:text-xs font-bold text-red-600 animate-fade-in flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
                     {error}
                   </span>
                 )}
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Lock className="absolute left-3.5 md:left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
@@ -810,7 +810,7 @@ function Login() {
                   autoCorrect="off"
                   spellCheck="false"
                   data-lpignore="true"
-                  className="w-full min-h-[42px] sm:min-h-[44px] pl-10 pr-10 py-2 text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
+                  className="w-full min-h-[42px] sm:min-h-[46px] md:min-h-[52px] pl-10 md:pl-12 pr-11 md:pr-12 py-2 sm:py-2.5 md:py-3 text-sm md:text-base bg-gray-50/80 border border-gray-200 rounded-xl md:rounded-2xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
                   placeholder="••••••••••••"
                   autoComplete="new-password"
                   required
@@ -818,12 +818,12 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 min-h-[38px] min-w-[38px] flex items-center justify-center text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 md:p-2 min-h-[38px] min-w-[38px] md:min-h-[44px] md:min-w-[44px] flex items-center justify-center text-gray-400 hover:text-emerald-700 cursor-pointer transition-colors rounded-lg"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4 md:w-5 md:h-5" /> : <Eye className="w-4 h-4 md:w-5 md:h-5" />}
                 </button>
               </div>
-              <div className="flex justify-end mt-1">
+              <div className="flex justify-end mt-1.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -835,9 +835,9 @@ function Login() {
                     setForgotError('');
                     setShowForgotPassword(true);
                   }}
-                  className="text-[10.5px] sm:text-[11px] text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95 py-0.5"
+                  className="text-xs sm:text-xs md:text-sm text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer transition-colors inline-flex items-center gap-1 active:scale-95 py-0.5"
                 >
-                  <KeyRound className="w-3.5 h-3.5 text-blue-600" />
+                  <KeyRound className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
                   <span>Forgot Password?</span>
                 </button>
               </div>
@@ -846,11 +846,11 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full min-h-[44px] mt-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 rounded-xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] sm:min-h-[48px] md:min-h-[52px] lg:min-h-[56px] mt-2 md:mt-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black py-2.5 sm:py-3 md:py-3.5 rounded-xl md:rounded-2xl transition-all shadow-md shadow-amber-950/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 text-xs sm:text-sm md:text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-emerald-950 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-emerald-950 border-t-transparent rounded-full animate-spin"></div>
                   <span>{loadingText}</span>
                 </>
               ) : (
@@ -859,7 +859,7 @@ function Login() {
             </button>
           </form>
 
-          <div className="mt-2 pt-2 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[10.5px] sm:text-[11px]">
+          <div className="mt-3 md:mt-4 pt-2.5 md:pt-3.5 border-t border-gray-100 flex flex-row items-center justify-between gap-1 text-[11px] sm:text-xs md:text-sm">
             <span className="text-gray-500">Incoming Student?</span>
             <Link 
               to="/enrollment" 
