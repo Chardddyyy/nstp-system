@@ -2582,6 +2582,14 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     </table>
   `);
 
+  // Official Coordinator E-Signature for CID inline embedding
+  const sigFilePath = path.join(__dirname, '..', 'public', 'signature.png');
+  const fallbackSigPath = path.join(__dirname, 'public', 'signature.png');
+  const targetSigPath = fs.existsSync(sigFilePath) ? sigFilePath : (fs.existsSync(fallbackSigPath) ? fallbackSigPath : null);
+  const sigBuffer = targetSigPath ? fs.readFileSync(targetSigPath) : null;
+  const sigBase64 = sigBuffer ? `data:image/png;base64,${sigBuffer.toString('base64')}` : 'https://chardddyyy.github.io/nstp-system/signature.png';
+  const sigImgSrc = sigBuffer ? 'cid:coordinator_signature' : sigBase64;
+
   const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -2696,10 +2704,10 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
               <span style="font-weight: 800; color: #0f172a;">Emergency Contact:</span> ${emergencyContact} (${emergencyNumber})
             </div>
 
-            <!-- Coordinator Signature Area with PNG Signature -->
+            <!-- Coordinator Signature Area with CID Signature -->
             <div style="margin-top: 6px; padding-top: 2px;">
-              <div style="height: 34px; margin-bottom: -8px; text-align: center;">
-                <img src="https://chardddyyy.github.io/nstp-system/signature.png" alt="Coordinator E-Signature" width="120" height="34" style="display: inline-block; max-height: 34px; width: auto;" />
+              <div style="height: 38px; margin-bottom: -10px; text-align: center;">
+                <img src="${sigImgSrc}" alt="Coordinator E-Signature" width="120" height="38" style="display: inline-block; max-height: 38px; width: auto;" />
               </div>
               <div style="width: 140px; border-top: 1px solid #475569; margin: 2px auto 2px auto;"></div>
               <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">HENRY R. BALANZA</div>
@@ -2787,6 +2795,15 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     });
   }
 
+  if (sigBuffer) {
+    mailOptions.attachments.push({
+      filename: 'coordinator_signature.png',
+      content: sigBuffer,
+      cid: 'coordinator_signature',
+      contentType: 'image/png'
+    });
+  }
+
   // 1. Prioritize Direct Gmail SMTP with multi-tier fallback (natively embeds CID inline images for Gmail)
   if (emailUser && emailPass) {
     try {
@@ -2848,7 +2865,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
         to: deliveryEmail,
         subject: mailOptions.subject,
         text: mailOptions.text,
-        html: mailOptions.html,
+        html: mailOptions.html.replace(/cid:coordinator_signature/g, sigBase64),
         attachments: []
       };
 

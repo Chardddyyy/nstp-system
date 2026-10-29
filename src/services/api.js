@@ -1,3 +1,5 @@
+import { DEMO_COORDINATOR_SIGNATURE_SVG, COORDINATOR_NAME } from '../utils/signatureAssets';
+
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
     var custom = localStorage.getItem('nstp_custom_api_url') || localStorage.getItem('nstp_backend_url');
@@ -1120,13 +1122,13 @@ export async function sendStudentDigitalId(studentOrId) {
               <span style="font-weight: 800; color: #0f172a;">Emergency Contact:</span> ${emergencyContact} (${emergencyNumber})
             </div>
 
-            <!-- Coordinator Signature Area with PNG Signature -->
+            <!-- Coordinator Signature Area with Inline E-Signature -->
             <div style="margin-top: 6px; padding-top: 2px;">
-              <div style="height: 34px; margin-bottom: -8px; text-align: center;">
-                <img src="https://chardddyyy.github.io/nstp-system/signature.png" alt="Coordinator E-Signature" width="120" height="34" style="display: inline-block; max-height: 34px; width: auto;" />
+              <div style="height: 38px; margin-bottom: -10px; text-align: center;">
+                <img src="${DEMO_COORDINATOR_SIGNATURE_SVG}" alt="Coordinator E-Signature" width="120" height="38" style="display: inline-block; max-height: 38px; width: auto;" />
               </div>
               <div style="width: 140px; border-top: 1px solid #475569; margin: 2px auto 2px auto;"></div>
-              <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">HENRY R. BALANZA</div>
+              <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">${COORDINATOR_NAME}</div>
               <div style="font-size: 6.5px; font-weight: 800; color: #047857; text-transform: uppercase;">NSTP CAMPUS COORDINATOR</div>
               <div style="font-size: 6px; color: #64748b;">Cavite State University - Naic</div>
             </div>
