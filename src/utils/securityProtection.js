@@ -143,6 +143,29 @@ function sanitizeLogArg(arg, depth = 0) {
   return arg;
 }
 
+// Non-critical / benign messages to suppress from console noise
+const NOISY_PATTERNS = [
+  'react-devtools',
+  'React DevTools',
+  'Download the React DevTools',
+  'requestStorageAccess',
+  'StorageAccess',
+  'Permission denied',
+];
+
+function shouldSuppressLog(args) {
+  try {
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      const str = typeof a === 'string' ? a : (a && a.message) || (a && typeof a.toString === 'function' ? a.toString() : '');
+      for (let j = 0; j < NOISY_PATTERNS.length; j++) {
+        if (str.includes(NOISY_PATTERNS[j])) return true;
+      }
+    }
+  } catch (_) {}
+  return false;
+}
+
 // 3. Install Console Sanitizer
 function installConsoleSanitizer() {
   if (typeof window === 'undefined' || !window.console) return;
@@ -154,25 +177,27 @@ function installConsoleSanitizer() {
     const origError = window.console.error.bind(window.console);
 
     window.console.log = function (...args) {
+      if (shouldSuppressLog(args)) return;
       origLog(...args.map((a) => sanitizeLogArg(a)));
     };
     window.console.info = function (...args) {
+      if (shouldSuppressLog(args)) return;
       origInfo(...args.map((a) => sanitizeLogArg(a)));
     };
     window.console.warn = function (...args) {
+      if (shouldSuppressLog(args)) return;
       origWarn(...args.map((a) => sanitizeLogArg(a)));
     };
     window.console.error = function (...args) {
+      if (shouldSuppressLog(args)) return;
       origError(...args.map((a) => sanitizeLogArg(a)));
     };
 
-    // Print professional institutional banner in DevTools console
-    origInfo(
-      '%c Cavite State University - Naic Campus %c NSTP Portal %c Data Privacy Protected (R.A. 10173) ',
-      'background: #166534; color: #fff; font-weight: bold; padding: 3px 6px; border-radius: 4px; font-size: 11px;',
-      'background: #ca8a04; color: #000; font-weight: bold; padding: 3px 6px; border-radius: 4px; font-size: 11px;',
-      'color: #475569; font-style: italic; padding: 3px 6px; font-size: 11px;'
-    );
+    window.addEventListener('unhandledrejection', function (e) {
+      if (e && e.reason && shouldSuppressLog([e.reason])) {
+        e.preventDefault();
+      }
+    });
   } catch (_) {}
 }
 
