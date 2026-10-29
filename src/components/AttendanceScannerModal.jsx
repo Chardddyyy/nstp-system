@@ -699,10 +699,17 @@ export function AttendanceScannerModal({
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
-    if (manualInput.trim()) {
-      handleProcessScan(manualInput.trim());
-      setManualInput('');
+    const cleanId = manualInput.replace(/\D/g, '').trim();
+    if (!cleanId) {
+      showToast?.('Please enter a 9-digit Student ID.', 'warning');
+      return;
     }
+    if (cleanId.length !== 9) {
+      showToast?.('Student ID must be exactly 9 digits (e.g., 202410001).', 'error');
+      return;
+    }
+    handleProcessScan(cleanId);
+    setManualInput('');
   };
 
   // Excuse Student confirmation handler
@@ -1376,23 +1383,42 @@ export function AttendanceScannerModal({
                   </div>
                 </div>
 
-                {/* Manual ID Input Fallback */}
-                <form onSubmit={handleManualSubmit} className="w-full max-w-[310px] flex gap-2">
-                  <input
-                    type="text"
-                    id="scanner-manual-input"
-                    name="manualStudentId"
-                    value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    placeholder="Type Student ID number..."
-                    className="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
-                  >
-                    Submit
-                  </button>
+                {/* Manual ID Input Fallback (Strict 9 digits) */}
+                <form onSubmit={handleManualSubmit} className="w-full max-w-[310px] flex flex-col gap-1">
+                  <div className="flex gap-2 w-full">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{9}"
+                      maxLength={9}
+                      id="scanner-manual-input"
+                      name="manualStudentId"
+                      value={manualInput}
+                      onChange={(e) => {
+                        const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 9);
+                        setManualInput(digitsOnly);
+                      }}
+                      placeholder="9-digit Student ID..."
+                      className="flex-1 px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs font-bold font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="none"
+                      spellCheck="false"
+                      data-lpignore="true"
+                    />
+                    <button
+                      type="submit"
+                      disabled={manualInput.length !== 9}
+                      className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                  {manualInput.length > 0 && manualInput.length < 9 && (
+                    <span className="text-[10px] text-amber-700 font-bold px-1">
+                      {manualInput.length}/9 digits entered
+                    </span>
+                  )}
                 </form>
               </div>
 
