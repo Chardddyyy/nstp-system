@@ -308,18 +308,20 @@ async function importStudents() {
       console.log(`[ARCHIVED] ${sem1Key}: ${sem1Students.length} students (CWTS: ${cwts}, ROTC: ${rotc}, LTS: ${lts})`);
     }
 
-    // Handle 2nd Semester (always archived)
-    sem2Students.forEach(s => s.status = 'Completed');
-    const cwts2 = sem2Students.filter(s => s.department === 'CWTS').length;
-    const rotc2 = sem2Students.filter(s => s.department === 'ROTC').length;
-    const lts2 = sem2Students.filter(s => s.department === 'LTS').length;
-    archivedBatches.push({
-      year: sem2Key,
-      studentsCount: sem2Students.length,
-      cwts: cwts2, rotc: rotc2, lts: lts2,
-      students: sem2Students
-    });
-    console.log(`[ARCHIVED] ${sem2Key}: ${sem2Students.length} students (CWTS: ${cwts2}, ROTC: ${rotc2}, LTS: ${lts2}) [Mirrored 1st Sem Data]`);
+    // Handle 2nd Semester: only for completed/past school years (exclude current active year 2026-2027)
+    if (year !== '2026-2027') {
+      sem2Students.forEach(s => s.status = 'Completed');
+      const cwts2 = sem2Students.filter(s => s.department === 'CWTS').length;
+      const rotc2 = sem2Students.filter(s => s.department === 'ROTC').length;
+      const lts2 = sem2Students.filter(s => s.department === 'LTS').length;
+      archivedBatches.push({
+        year: sem2Key,
+        studentsCount: sem2Students.length,
+        cwts: cwts2, rotc: rotc2, lts: lts2,
+        students: sem2Students
+      });
+      console.log(`[ARCHIVED] ${sem2Key}: ${sem2Students.length} students (CWTS: ${cwts2}, ROTC: ${rotc2}, LTS: ${lts2}) [Mirrored 1st Sem Data]`);
+    }
   }
 
   // 1. POPULATE ACTIVE STUDENTS TABLE (2026-2027 1st Semester)
