@@ -267,7 +267,10 @@ const OSDSNSTPForm = ({
       {/* Signatories Footer */}
       <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs font-semibold">
         <div>
-          <p className="border-b border-black w-48 mx-auto mb-1"></p>
+          <div className="h-10 flex items-end justify-center -mb-2 pointer-events-none">
+            <img src={`${import.meta.env.BASE_URL}signature.png`} alt="Coordinator Signature" className="h-8 object-contain" />
+          </div>
+          <p className="border-b border-black w-48 mx-auto mb-1 font-bold text-slate-900 uppercase">HENRY R. BALANZA</p>
           <p className="font-bold">Prepared by:</p>
           <p className="text-gray-600 font-normal">NSTP Coordinator</p>
         </div>

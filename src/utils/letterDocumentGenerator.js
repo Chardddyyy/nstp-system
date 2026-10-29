@@ -448,9 +448,12 @@ export function generateOfficialLetterHTML(template, batchYear = '2024-2025') {
   <table class="signatures">
     <tr>
       <td style="width: 50%;">
-        Prepared &amp; Endorsed by:<br/><br/><br/>
-        <span class="sign-title">NSTP COORDINATOR</span><br/>
-        <span class="sign-pos">${tDept} Department Head / Facilitator</span><br/>
+        Prepared &amp; Endorsed by:<br/>
+        <div style="height: 38px; margin-bottom: -8px;">
+          <img src="${window.location.origin}${import.meta.env.BASE_URL}signature.png" alt="Coordinator E-Signature" style="max-height: 38px; width: auto;" onerror="this.style.display='none'" />
+        </div>
+        <span class="sign-title">HENRY R. BALANZA</span><br/>
+        <span class="sign-pos">NSTP Campus Coordinator</span><br/>
         <span class="sign-pos">Cavite State University - Naic</span>
       </td>
       <td style="width: 50%;">

@@ -1126,7 +1126,7 @@ export async function sendStudentDigitalId(studentOrId) {
                 <img src="https://chardddyyy.github.io/nstp-system/signature.png" alt="Coordinator E-Signature" width="120" height="34" style="display: inline-block; max-height: 34px; width: auto;" />
               </div>
               <div style="width: 140px; border-top: 1px solid #475569; margin: 2px auto 2px auto;"></div>
-              <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">FN MI. LN</div>
+              <div style="font-size: 8px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">HENRY R. BALANZA</div>
               <div style="font-size: 6.5px; font-weight: 800; color: #047857; text-transform: uppercase;">NSTP CAMPUS COORDINATOR</div>
               <div style="font-size: 6px; color: #64748b;">Cavite State University - Naic</div>
             </div>

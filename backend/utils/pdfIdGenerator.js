@@ -228,13 +228,13 @@ async function generateStudentIdPdf(studentData) {
       const sigY = emY + 8;
       const sigPath = path.join(__dirname, '..', '..', 'public', 'signature.png');
       if (fs.existsSync(sigPath)) {
-        doc.image(sigPath, cardX + (cardWidth - 55) / 2, sigY - 3, { width: 55, height: 16 });
+        doc.image(sigPath, cardX + (cardWidth - 55) / 2, sigY - 5, { fit: [55, 17], align: 'center' });
       }
       doc.moveTo(cardX + (cardWidth - 80) / 2, sigY + 12).lineTo(cardX + (cardWidth + 80) / 2, sigY + 12)
         .lineWidth(0.6).strokeColor('#475569').stroke();
 
       doc.font('Helvetica-Bold').fontSize(5).fillColor('#0f172a')
-        .text('FN MI. LN', cardX + 6, sigY + 13.5, { width: cardWidth - 12, align: 'center' });
+        .text('HENRY R. BALANZA', cardX + 6, sigY + 13.5, { width: cardWidth - 12, align: 'center' });
       doc.font('Helvetica-Bold').fontSize(4.2).fillColor('#047857')
         .text('NSTP CAMPUS COORDINATOR', cardX + 6, sigY + 18.5, { width: cardWidth - 12, align: 'center' });
 

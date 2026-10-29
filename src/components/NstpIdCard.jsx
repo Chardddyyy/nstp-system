@@ -159,14 +159,15 @@ export function NstpIdCard({ student }) {
           <span className="font-bold text-slate-900">Emergency Contact:</span> {emergencyName} ({emergencyContact})
         </div>
 
-        {/* NSTP Coordinator Signature Area (With Demo E-Signature & FN MI. LN) */}
+        {/* NSTP Coordinator Signature Area (Official E-Signature: HENRY R. BALANZA) */}
         <div className="w-full pt-0.5 flex flex-col items-center justify-center">
-          {/* Demo E-Signature Graphic above name */}
-          <div className="h-[5.5mm] w-28 flex items-center justify-center -mb-1">
+          {/* Coordinator E-Signature Graphic above name */}
+          <div className="h-[6mm] w-28 flex items-center justify-center -mb-1">
             <img 
-              src={DEMO_COORDINATOR_SIGNATURE_SVG} 
+              src={`${import.meta.env.BASE_URL}signature.png`} 
               alt="Coordinator E-Signature" 
               className="h-full w-full object-contain pointer-events-none" 
+              onError={(e) => { e.currentTarget.src = DEMO_COORDINATOR_SIGNATURE_SVG; }}
             />
           </div>
           
