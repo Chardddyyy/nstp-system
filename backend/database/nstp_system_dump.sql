@@ -162,6 +162,24 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_audit_logs_no_delete` BEFORE DELETE ON `audit_logs` FOR EACH ROW BEGIN
+          SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Audit logs are immutable: DELETE operations are strictly prohibited.';
+        END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `calendar_events`
@@ -747,7 +765,7 @@ CREATE TABLE `system_settings` (
 
 LOCK TABLES `system_settings` WRITE;
 /*!40000 ALTER TABLE `system_settings` DISABLE KEYS */;
-INSERT INTO `system_settings` VALUES ('enrollment_schedule','{\"mode\":\"FORCE_OPEN\",\"openAt\":\"\",\"closeAt\":\"\",\"academicYear\":\"2026-2027\",\"semester\":\"1st Semester\",\"customNotice\":\"Online Enrollment is now open.\"}','2026-10-13 22:55:53'),('last_backup_daily_midnight','2026-10-28T16:00:31.433Z','2026-10-28 16:00:31'),('last_backup_manual','2026-08-22T15:06:11.050Z','2026-08-22 15:06:11'),('telemetry_cumulative_visitors','{\"visitors\":[\"vid_t30cm1cpmue7fyhi\",\"vid_8q6lqv500mt8wt1rt\",\"vid_fvsb5ds40mt8wtaju\",\"vid_vcgiefmuwmt8wteyi\",\"vid_z109ft59nmt8wvsqw\",\"vid_szej4la25mt9cx56l\",\"vid_e2d7x2ylymszirsfi\",\"vid_okgqjbkjmtinid8u\",\"vid_1ghopud4mtdu0fx3\",\"vid_lw9498i7jmt4b3g9q\",\"vid_pgr5agicmtd1to13\",\"vid_d9m7g7zlmto833nr\",\"test_client_1\",\"vid_6zsy0i0snmserdhkz\",\"vid_d4ekhpdomttqoj0g\",\"vid_lshg29s6mttr5hgd\",\"vid_n5b5g0g7mtrybg83\",\"vid_5nyovuw34msju3peg\",\"vid_0oknsgqgmueu7dae\",\"0462a968-2a22-46a2-8e52-ff7f853d4a71\",\"dca09422-a26a-424f-ae5e-58fa2d157b7e\",\"479edb07-7c7e-423a-83c9-dbb020265038\",\"ab258dbe-ffab-4cce-913b-6283ef284363\",\"549340d0-17ec-4431-9556-091f8ba75b12\",\"70cbf0a9-110c-4955-8f13-7816f0a0dc12\"],\"totalCount\":25,\"totalVisitors\":25,\"updatedAt\":\"2026-10-28T11:14:53.244Z\"}','2026-10-28 11:14:53');
+INSERT INTO `system_settings` VALUES ('enrollment_schedule','{\"mode\":\"FORCE_OPEN\",\"openAt\":\"\",\"closeAt\":\"\",\"academicYear\":\"2026-2027\",\"semester\":\"1st Semester\",\"customNotice\":\"Online Enrollment is now open.\"}','2026-10-13 22:55:53'),('last_backup_daily_midnight','2026-10-28T16:00:31.433Z','2026-10-28 16:00:31'),('last_backup_manual','2026-08-22T15:06:11.050Z','2026-08-22 15:06:11'),('telemetry_cumulative_visitors','{\"visitors\":[\"vid_t30cm1cpmue7fyhi\",\"vid_8q6lqv500mt8wt1rt\",\"vid_fvsb5ds40mt8wtaju\",\"vid_vcgiefmuwmt8wteyi\",\"vid_z109ft59nmt8wvsqw\",\"vid_szej4la25mt9cx56l\",\"vid_e2d7x2ylymszirsfi\",\"vid_okgqjbkjmtinid8u\",\"vid_1ghopud4mtdu0fx3\",\"vid_lw9498i7jmt4b3g9q\",\"vid_pgr5agicmtd1to13\",\"vid_d9m7g7zlmto833nr\",\"test_client_1\",\"vid_6zsy0i0snmserdhkz\",\"vid_d4ekhpdomttqoj0g\",\"vid_lshg29s6mttr5hgd\",\"vid_n5b5g0g7mtrybg83\",\"vid_5nyovuw34msju3peg\",\"vid_0oknsgqgmueu7dae\",\"0462a968-2a22-46a2-8e52-ff7f853d4a71\",\"dca09422-a26a-424f-ae5e-58fa2d157b7e\",\"479edb07-7c7e-423a-83c9-dbb020265038\",\"ab258dbe-ffab-4cce-913b-6283ef284363\",\"549340d0-17ec-4431-9556-091f8ba75b12\",\"70cbf0a9-110c-4955-8f13-7816f0a0dc12\"],\"totalCount\":25,\"totalVisitors\":25,\"updatedAt\":\"2026-10-29T01:54:37.587Z\"}','2026-10-29 01:54:37');
 /*!40000 ALTER TABLE `system_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -784,7 +802,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'richardbelen99@gmail.com','$2a$12$sP0tr8FOwf936kJEFyv6b.AzlgXX6635ZvRQybH3tHACk6u0VPJUO','admin','NSTP Administrator','NSTP Office','avatar-4',NULL,'','Testing','2026-03-13 16:04:59','2026-10-29 01:52:25','2026-10-29 09:52:25',NULL),(2,'belenjoshua58@gmail.com','$2a$12$tx.XRJ496jMUdCtKYNey9uKpjV4LzW9pMwTRkcGtjQCyg88yr4Wzm','instructor','CWTS Facilitator','CWTS','avatar-2',NULL,NULL,'CWTS Safe Update','2026-03-13 16:04:59','2026-10-28 11:03:56',NULL,NULL),(3,'lts@gmail.com','$2a$12$xJbobWiihuTYz2G//fbSoeH0wnp4x5jerDoszxc9irWqgNVZee3ne','instructor','LTS Facilitator','LTS','avatar-6',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL),(4,'rotc@gmail.com','$2a$12$2q1kcf1G9bYuNr2/07tCk.LOw.EBT7l4fiMYKxIXDyo4PT3s4KkWS','instructor','ROTC Training Staff','ROTC','avatar-8',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL);
+INSERT INTO `users` VALUES (1,'richardbelen99@gmail.com','$2a$12$sP0tr8FOwf936kJEFyv6b.AzlgXX6635ZvRQybH3tHACk6u0VPJUO','admin','NSTP Administrator','NSTP Office','avatar-4',NULL,'','Testing','2026-03-13 16:04:59','2026-10-29 01:54:55','2026-10-29 09:54:55',NULL),(2,'belenjoshua58@gmail.com','$2a$12$tx.XRJ496jMUdCtKYNey9uKpjV4LzW9pMwTRkcGtjQCyg88yr4Wzm','instructor','CWTS Facilitator','CWTS','avatar-2',NULL,NULL,'CWTS Safe Update','2026-03-13 16:04:59','2026-10-28 11:03:56',NULL,NULL),(3,'lts@gmail.com','$2a$12$xJbobWiihuTYz2G//fbSoeH0wnp4x5jerDoszxc9irWqgNVZee3ne','instructor','LTS Facilitator','LTS','avatar-6',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL),(4,'rotc@gmail.com','$2a$12$2q1kcf1G9bYuNr2/07tCk.LOw.EBT7l4fiMYKxIXDyo4PT3s4KkWS','instructor','ROTC Training Staff','ROTC','avatar-8',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -801,4 +819,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-29  9:52:46
+-- Dump completed on 2026-10-29  9:55:45
