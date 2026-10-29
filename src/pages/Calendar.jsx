@@ -233,26 +233,46 @@ function Calendar() {
       setRangeSaving(false);
     }
   };
-  const DEFAULT_CUSTOM_EVENTS = [
-    { id: 'cev-1', title: 'CWTS Community Coastal Cleanup & Profiling', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Cleanup and waste profiling along Bucana Malaki shoreline in coordination with MENRO Naic.' },
-    { id: 'cev-2', title: 'ROTC Cadre Inspection & Tactical Drills', date: '2026-09-26', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Battalion parade formation and field manual compliance inspection at tactical parade grounds.' },
-    { id: 'cev-3', title: 'LTS Adopted School Storytelling Workshop', date: '2026-10-03', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Phonics storytelling and learning kit distribution for Grade 2 and 3 pupils in Naic partner schools.' }
-  ];
 
   const [events, setEvents] = useState(() => {
     try {
       const saved = localStorage.getItem('nstp_calendar_events');
-      return saved !== null ? (JSON.parse(saved) || []) : DEFAULT_CUSTOM_EVENTS;
-    } catch (_) { return DEFAULT_CUSTOM_EVENTS; }
+      if (saved !== null) {
+        let parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          parsed = parsed.filter(e => !String(e.id || '').startsWith('cev-'));
+          return parsed;
+        }
+      }
+      return [];
+    } catch (_) { return []; }
   });
+
+  // Purge any residual mock custom events from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nstp_calendar_events');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(e => !String(e.id || '').startsWith('cev-'));
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem('nstp_calendar_events', JSON.stringify(cleaned));
+            setEvents(cleaned);
+          }
+        }
+      }
+    } catch (_) {}
+  }, []);
 
   // Load events from backend DB on mount (overrides localStorage with authoritative data)
   useEffect(() => {
     let cancelled = false;
     calendarAPI.getEvents().then(dbEvents => {
-      if (!cancelled && Array.isArray(dbEvents) && dbEvents.length > 0) {
-        setEvents(dbEvents);
-        try { localStorage.setItem('nstp_calendar_events', JSON.stringify(dbEvents)); } catch (_) {}
+      if (!cancelled && Array.isArray(dbEvents)) {
+        const cleaned = dbEvents.filter(e => !String(e.id || '').startsWith('cev-'));
+        setEvents(cleaned);
+        try { localStorage.setItem('nstp_calendar_events', JSON.stringify(cleaned)); } catch (_) {}
       }
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -421,9 +441,8 @@ function Calendar() {
   const summaryMetrics = useMemo(() => {
     const total = filteredSummaryEvents.length;
     const holidays = filteredSummaryEvents.filter(e => e.type === 'holiday' || e.category === 'Holiday').length;
-    const custom = total - holidays;
 
-    return { total, holidays, custom };
+    return { total, holidays };
   }, [filteredSummaryEvents]);
 
   const getEventsForDate = (date) => {
@@ -954,7 +973,7 @@ function Calendar() {
             </div>
 
             {/* KPI Metrics Strip */}
-            <div className={`grid ${summaryMetrics.custom > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 my-3 shrink-0`}>
+            <div className="grid grid-cols-2 gap-2 my-3 shrink-0">
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
                 <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Scheduled</span>
                 <span className="text-base sm:text-lg font-black text-slate-900">{summaryMetrics.total}</span>
@@ -963,12 +982,6 @@ function Calendar() {
                 <span className="block text-[10px] font-bold text-red-700 uppercase tracking-wider">Philippine Holidays</span>
                 <span className="text-base sm:text-lg font-black text-red-900">{summaryMetrics.holidays}</span>
               </div>
-              {summaryMetrics.custom > 0 && (
-                <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 text-center">
-                  <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Custom Events</span>
-                  <span className="text-base sm:text-lg font-black text-emerald-900">{summaryMetrics.custom}</span>
-                </div>
-              )}
             </div>
 
             {/* Filter Controls Bar */}
