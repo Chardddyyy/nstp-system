@@ -2732,10 +2732,10 @@ function StudentManagement() {
                   {/* 2x2 ID Photo Capture / Upload with White Background & White Shirt */}
                   <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200">
                     <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1">
-                      2x2 ID Picture (White Background, White Shirt) *
+                      2x2 ID Picture (White Background, White Shirt) * / Opisyal na 2x2 ID Picture
                     </label>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Required for official NSTP ID Card printing. Use live camera or upload photo file.
+                      Required for official NSTP ID Card printing. Gamitin ang live camera o mag-upload ng 2x2 photo (puting background, may kwelyo, nakaharap nang maayos).
                     </p>
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">
@@ -4055,10 +4055,10 @@ function StudentManagement() {
                   <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 mt-3">
                     <label className="block text-xs font-black uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-emerald-700" />
-                      4. Official 2x2 ID Photo
+                      4. Official 2x2 ID Photo / Opisyal na 2x2 ID Picture
                     </label>
                     <p className="text-[11px] text-slate-500 mb-3">
-                      Update student 2x2 photo for official NSTP ID card generation and record verification.
+                      Update student 2x2 photo for official NSTP ID card generation and record verification (Puting background, may kwelyo, nakaharap nang maayos).
                     </p>
                     
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5">

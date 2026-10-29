@@ -2093,6 +2093,7 @@ function Enrollment() {
                       <h3 className="text-base font-black text-emerald-950">5. Certificate of Registration (COR / Registration Form) *</h3>
                     </div>
                     <p className="text-xs text-gray-500 font-medium mt-1">Attach an official digital copy or photo of your CvSU Registration Form (COR) to verify your enrolled subjects and enrollment validity.</p>
+                    <p className="text-[11.5px] text-emerald-800 font-semibold mt-0.5">🇵🇭 Gabay: Mag-attach ng malinaw na kopya o litrato ng iyong CvSU Registration Form (COR) upang mapatunayan ang iyong mga naka-enroll na asignatura.</p>
                   </div>
                 </div>
 
@@ -2106,7 +2107,7 @@ function Enrollment() {
                         onClick={() => setShowSampleCorModal(true)}
                         className="text-[11px] text-emerald-800 font-extrabold underline mt-1 inline-flex items-center gap-1 cursor-pointer"
                       >
-                        <span>View valid RegForm sample</span> &rarr;
+                        <span>Tingnan ang tamang halimbawa ng RegForm / COR</span> &rarr;
                       </button>
                     </div>
                   </div>
@@ -2141,9 +2142,12 @@ function Enrollment() {
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Upload className="w-7 h-7" />
                     </div>
-                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload Registration Form (COR)</h4>
-                    <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
+                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload Registration Form (COR) / I-upload ang COR</h4>
+                    <p className="text-xs text-gray-500 mb-1 max-w-sm mx-auto">
                       Supports PDF, PNG, JPG, or HEIC files. Ensure student number, name, and enrolled courses are clearly readable.
+                    </p>
+                    <p className="text-[11px] text-emerald-800 font-bold mb-5 max-w-sm mx-auto">
+                      Tumatanggap ng PDF, PNG, JPG, o HEIC. Siguraduhing malinaw at nababasa ang Student Number, Buong Pangalan, at mga Kurso/Subjects.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
@@ -2152,7 +2156,7 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
-                        Choose RegForm File
+                        <span>Choose RegForm File / Pumili ng File</span>
                       </button>
                       <button
                         type="button"
@@ -2160,7 +2164,7 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Camera className="w-4 h-4 text-amber-400" />
-                        Scan / Take RegForm Photo
+                        <span>Scan / Kumuha ng Litrato</span>
                       </button>
                     </div>
                   </div>
@@ -2230,6 +2234,7 @@ function Enrollment() {
                   <div>
                     <h3 className="text-base font-black text-emerald-950">6. Official 2x2 ID Picture (White Background &amp; White Shirt) *</h3>
                     <p className="text-xs text-gray-500 font-medium">Attach your official 2x2 ID picture (Plain White Background, White Shirt / Collared). This photo will be printed directly on your official NSTP ID Card.</p>
+                    <p className="text-[11.5px] text-emerald-800 font-semibold mt-0.5">🇵🇭 Gabay: Mag-attach ng pormal na 2x2 ID picture (Malinis na Puting Background, Puting Polo/Damit na may Kwelyo). Ang litratong ito ang direktang ipiprinta sa iyong opisyal na NSTP ID Card.</p>
                   </div>
                 </div>
 
@@ -2262,9 +2267,12 @@ function Enrollment() {
                     <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                       <Camera className="w-7 h-7" />
                     </div>
-                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Photo</h4>
-                    <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
+                    <h4 className="text-sm font-black text-emerald-950 mb-1">Upload 2x2 ID Photo / I-upload ang 2x2 ID Picture</h4>
+                    <p className="text-xs text-gray-500 mb-1 max-w-sm mx-auto">
                       Please upload a formal 2x2 photo with a plain white background and a collared shirt.
+                    </p>
+                    <p className="text-[11px] text-emerald-800 font-bold mb-4 max-w-sm mx-auto">
+                      Dapat ay pormal, nakaharap nang diretso sa kamera, nakalantad ang mga tainga, at may malinis na puting background.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button
@@ -2273,7 +2281,7 @@ function Enrollment() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <Upload className="w-4 h-4" />
-                        Choose 2x2 Photo
+                        <span>Choose 2x2 Photo / Pumili ng Larawan</span>
                       </button>
                       <button
                         type="button"
@@ -2281,7 +2289,7 @@ function Enrollment() {
                         className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer active:scale-95 transition-all"
                       >
                         <Camera className="w-4 h-4 text-amber-300" />
-                        <span>Take Photo with Camera</span>
+                        <span>Take Photo / Kumuha Gamit ang Camera</span>
                       </button>
                     </div>
                   </div>
@@ -2797,7 +2805,7 @@ function Enrollment() {
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black tracking-tight">Official Registration Form (COR) Specimen &amp; Guide</h3>
-                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Guidelines for taking a clear photo and attaching your official CvSU Certificate of Registration</p>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Gabay at alituntunin sa pagkuha ng malinaw na kopya ng iyong CvSU Registration Form (COR)</p>
                 </div>
               </div>
               <button
@@ -2817,7 +2825,7 @@ function Enrollment() {
                 <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Official CvSU Naic Document Specimen
+                      Opisyal na Halimbawa ng CvSU Naic COR
                     </span>
                     <span className="text-[11px] text-gray-500 font-semibold hidden sm:inline">
                       (CvSU Naic Certificate of Registration)
@@ -2829,7 +2837,7 @@ function Enrollment() {
                     rel="noopener noreferrer"
                     className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1"
                   >
-                    <span>Open Full Size</span>
+                    <span>Tingnan nang Malaki (Full Size)</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -2846,17 +2854,17 @@ function Enrollment() {
                   {/* Floating callout badges highlighting key inspection areas */}
                   <div className="absolute top-3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
                     <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                    <span>1. Student Number &amp; Name</span>
+                    <span>1. Student Number &amp; Pangalan</span>
                   </div>
 
                   <div className="absolute top-1/3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
                     <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span>2. Enrolled NSTP Subject Row</span>
+                    <span>2. Linya ng Naka-enroll na NSTP</span>
                   </div>
 
                   <div className="absolute bottom-3 left-3 bg-emerald-900/90 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs border border-emerald-700/80 shadow-md flex items-center gap-1.5 pointer-events-none">
                     <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                    <span>3. Registrar "ENROLLED" Stamp</span>
+                    <span>3. Tatak na "ENROLLED" ng Registrar</span>
                   </div>
                 </div>
               </div>
@@ -2866,24 +2874,42 @@ function Enrollment() {
                 <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-xs text-emerald-950">
                   <p className="font-black text-emerald-900 flex items-center gap-1.5 mb-1.5">
                     <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                    DOs / BEST PRACTICES:
+                    MGA DAPAT GAWIN (DOs):
                   </p>
-                  <ul className="space-y-1.5 text-[11.5px] text-emerald-900/90 font-medium">
-                    <li>• Capture the <strong>full physical page</strong> of your Certificate of Registration (COR).</li>
-                    <li>• Ensure <strong>Student Number, Full Name, and Courses</strong> are clearly readable.</li>
-                    <li>• Place the document on a flat, well-lit surface without glare or shadows.</li>
+                  <ul className="space-y-2 text-[11px] text-emerald-900/90 font-medium">
+                    <li>
+                      • Kuhanan ang <strong>buong pahina</strong> ng iyong Certificate of Registration (COR).
+                      <span className="block text-[10.5px] text-emerald-700 font-normal">Dapat kita mula itaas hanggang ibaba ng papel.</span>
+                    </li>
+                    <li>
+                      • Siguraduhing <strong>malinaw at nababasa</strong> ang Student Number, Buong Pangalan, at mga asignatura.
+                      <span className="block text-[10.5px] text-emerald-700 font-normal">Iwasan ang malabong kuha o pixelated na kopya.</span>
+                    </li>
+                    <li>
+                      • Ilapag ang papel sa <strong>patag at maliwanag na lugar</strong>.
+                      <span className="block text-[10.5px] text-emerald-700 font-normal">Iwasan ang mga anino o masilaw na flash sa kamera.</span>
+                    </li>
                   </ul>
                 </div>
 
                 <div className="p-3.5 bg-red-50/80 rounded-2xl border border-red-200 text-xs text-red-950">
                   <p className="font-black text-red-900 flex items-center gap-1.5 mb-1.5">
                     <X className="w-4 h-4 text-red-600 shrink-0" />
-                    DON'Ts / PROHIBITED UPLOADS:
+                    MGA BAWAL (DON'Ts):
                   </p>
-                  <ul className="space-y-1.5 text-[11.5px] text-red-900/90 font-medium">
-                    <li>• <strong>DO NOT</strong> upload a 2x2 portrait photo or selfie in this section.</li>
-                    <li>• <strong>DO NOT</strong> upload screenshots of social media, messaging apps, or random pictures.</li>
-                    <li>• <strong>DO NOT</strong> submit cropped, blurred, or cut-off documents.</li>
+                  <ul className="space-y-2 text-[11px] text-red-900/90 font-medium">
+                    <li>
+                      • <strong>BAWAL:</strong> Huwag mag-upload ng 2x2 picture o selfie dito.
+                      <span className="block text-[10.5px] text-red-700 font-normal">Ang 2x2 ID picture ay sa kasunod na Step 6 ilalagay.</span>
+                    </li>
+                    <li>
+                      • <strong>BAWAL:</strong> Huwag mag-upload ng screenshot ng Messenger, Facebook, o ibang litrato.
+                      <span className="block text-[10.5px] text-red-700 font-normal">Tanging opisyal na CvSU COR lamang ang tatanggapin.</span>
+                    </li>
+                    <li>
+                      • <strong>BAWAL:</strong> Huwag magpasa ng putol, madilim, o natatakpang papel.
+                      <span className="block text-[10.5px] text-red-700 font-normal">Madedeklina ang iyong enrollment kapag hindi nababasa ang datos.</span>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -2892,8 +2918,8 @@ function Enrollment() {
 
             {/* Modal Footer */}
             <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
-              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                Ensure your document matches the official CvSU COR specimen before proceeding.
+              <span className="text-xs text-gray-600 font-medium text-center sm:text-left">
+                Tiyaking tumutugma ang iyong dokumento sa opisyal na halimbawa ng CvSU bago magpatuloy.
               </span>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
@@ -2901,7 +2927,7 @@ function Enrollment() {
                   onClick={() => setShowSampleCorModal(false)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  Cancel
+                  Kanselahin
                 </button>
                 <button
                   type="button"
@@ -2911,12 +2937,12 @@ function Enrollment() {
                   {corGuideAction === 'camera' ? (
                     <>
                       <Camera className="w-4 h-4 text-amber-300" />
-                      <span>Confirm &amp; Open Camera</span>
+                      <span>Kumpirmahin at Buksan ang Camera</span>
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4" />
-                      <span>Confirm &amp; Choose File</span>
+                      <span>Kumpirmahin at Pumili ng File</span>
                     </>
                   )}
                 </button>
@@ -2945,7 +2971,7 @@ function Enrollment() {
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base font-black tracking-tight">Official 2x2 ID Photo Specimen &amp; Guide</h3>
-                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Standards for official NSTP ID Card portrait photo</p>
+                  <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">Gabay at pamantayan sa tamang 2x2 portrait photo para sa opisyal na NSTP ID Card</p>
                 </div>
               </div>
               <button
@@ -2964,9 +2990,9 @@ function Enrollment() {
               <div className="bg-white rounded-2xl p-4 sm:p-5 border border-emerald-200 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 text-[11px] font-black uppercase px-2.5 py-1 rounded-full w-fit">
-                    <CheckCircle className="w-3.5 h-3.5 text-emerald-700" /> Standard NSTP 2x2 ID Photo Specimen
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-700" /> Tamang Halimbawa ng 2x2 ID Photo
                   </div>
-                  <span className="text-[11px] font-bold text-gray-500">Plain White Background • Formal White Attire</span>
+                  <span className="text-[11px] font-bold text-gray-500">Puting Background • Puting Pormal na Damit</span>
                 </div>
 
                 {/* Side-by-Side 2x2 Photo Specimens */}
@@ -2980,12 +3006,12 @@ function Enrollment() {
                         className="w-full h-full object-cover rounded-xl"
                       />
                       <div className="absolute top-1.5 right-1.5 bg-emerald-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
-                        Female
+                        Female / Babae
                       </div>
                     </div>
-                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Female Student</h5>
+                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Babaeng Mag-aaral</h5>
                     <p className="text-[10px] sm:text-[11px] text-gray-600 font-medium mt-0.5 leading-snug">
-                      White shirt, visible ears, centered neutral face
+                      Puting damit/blouse, nakalantad ang magkabilang tainga, nakaharap nang diretso
                     </p>
                   </div>
 
@@ -2998,19 +3024,19 @@ function Enrollment() {
                         className="w-full h-full object-cover rounded-xl"
                       />
                       <div className="absolute top-1.5 right-1.5 bg-emerald-700 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
-                        Male
+                        Male / Lalaki
                       </div>
                     </div>
-                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Male Student</h5>
+                    <h5 className="text-xs sm:text-sm font-black text-emerald-950">Lalakeng Mag-aaral</h5>
                     <p className="text-[10px] sm:text-[11px] text-gray-600 font-medium mt-0.5 leading-snug">
-                      White collared polo, looking straight ahead
+                      Puting polo na may kwelyo, gupit-binata, nakatingin nang diretso sa kamera
                     </p>
                   </div>
                 </div>
 
                 <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl text-left">
                   <p className="text-xs text-emerald-950 font-bold leading-relaxed">
-                    💡 <strong>Official Specification:</strong> This photograph will be printed directly onto your official physical NSTP PVC ID Card. Ensure balanced lighting, plain background without shadows, and adherence to the samples above.
+                    💡 <strong>Paalala:</strong> Ang litratong ito ang direktang ipiprinta sa iyong opisyal na physical NSTP PVC ID Card. Siguraduhing maliwanag, walang anino, at sumusunod sa mga pamantayan sa itaas.
                   </p>
                 </div>
               </div>
@@ -3020,28 +3046,28 @@ function Enrollment() {
                 <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
                   <p className="font-black text-emerald-950 text-xs flex items-center gap-1.5 mb-1.5">
                     <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                    DOs (Acceptable Photo):
+                    MGA DAPAT GAWIN (DOs):
                   </p>
-                  <ul className="space-y-1 text-[11px] text-emerald-900/90 font-medium">
-                    <li>✓ Plain solid white background</li>
-                    <li>✓ White polo, blouse, or collared shirt</li>
-                    <li>✓ Face and eyes looking straight ahead</li>
-                    <li>✓ Neutral expression, mouth closed</li>
-                    <li>✓ Ears uncovered and visible</li>
+                  <ul className="space-y-1.5 text-[11px] text-emerald-900/90 font-medium">
+                    <li>✓ <strong>Malinis na puting background</strong> (solid white background lamang).</li>
+                    <li>✓ <strong>Puting polo, polo shirt, o blouse</strong> na may kwelyo.</li>
+                    <li>✓ <strong>Nakaharap nang diretso</strong> ang mukha at mga mata sa kamera.</li>
+                    <li>✓ <strong>Pormal na ekspresyon</strong>, nakasara ang bibig (bawal ang nakangiwi).</li>
+                    <li>✓ <strong>Nakalantad ang mga tainga</strong> (hawiin ang buhok sa likod ng tainga).</li>
                   </ul>
                 </div>
 
                 <div className="p-3.5 bg-red-50/80 border border-red-200 rounded-2xl">
                   <p className="font-black text-red-950 text-xs flex items-center gap-1.5 mb-1.5">
                     <X className="w-4 h-4 text-red-600 shrink-0" />
-                    DON'Ts (Will be Declined):
+                    MGA BAWAL (DON'Ts):
                   </p>
-                  <ul className="space-y-1 text-[11px] text-red-900/90 font-medium">
-                    <li>✗ No colored walls, doors, or curtains</li>
-                    <li>✗ No selfies, angled heads, or peace signs</li>
-                    <li>✗ No eyeglasses, sunglasses, or caps</li>
-                    <li>✗ No sleeveless shirts or casual sando</li>
-                    <li>✗ Do not upload full body pictures</li>
+                  <ul className="space-y-1.5 text-[11px] text-red-900/90 font-medium">
+                    <li>✗ <strong>Bawal</strong> ang may kulay na dingding, kurtina, o pader sa likod.</li>
+                    <li>✗ <strong>Bawal</strong> ang selfie, nakatagilid ang ulo, o may peace sign / pose.</li>
+                    <li>✗ <strong>Bawal</strong> ang nakasalamin sa mata, sunglasses, o may sumbrero/bonnet.</li>
+                    <li>✗ <strong>Bawal</strong> ang sando, sleeveless, spaghetti strap, o pambahay na damit.</li>
+                    <li>✗ <strong>Bawal</strong> ang buong katawan (dapat ay portrait mula dibdib pataas lamang).</li>
                   </ul>
                 </div>
               </div>
@@ -3050,8 +3076,8 @@ function Enrollment() {
 
             {/* Modal Footer */}
             <div className="bg-gray-100 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200">
-              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                Ready to attach your official 2x2 ID picture?
+              <span className="text-xs text-gray-600 font-medium text-center sm:text-left">
+                Handa ka na bang i-attach ang iyong opisyal na 2x2 ID picture?
               </span>
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <button
@@ -3059,7 +3085,7 @@ function Enrollment() {
                   onClick={() => setShowSample2x2Modal(false)}
                   className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
                 >
-                  Cancel
+                  Kanselahin
                 </button>
                 <button
                   type="button"
@@ -3069,12 +3095,12 @@ function Enrollment() {
                   {photoGuideAction === 'camera' ? (
                     <>
                       <Camera className="w-4 h-4 text-amber-300" />
-                      <span>Confirm &amp; Open Camera</span>
+                      <span>Kumpirmahin at Buksan ang Camera</span>
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4" />
-                      <span>Confirm &amp; Choose 2x2 Photo</span>
+                      <span>Kumpirmahin at Pumili ng 2x2 Photo</span>
                     </>
                   )}
                 </button>
