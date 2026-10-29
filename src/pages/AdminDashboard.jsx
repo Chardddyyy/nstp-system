@@ -19,6 +19,16 @@ import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
+function toTitleCase(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/(?:^|[\s,.\-\/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
+    .replace(/\b(ii|iii|iv|vi|vii|viii|ix|x)\b/gi, (roman) => roman.toUpperCase())
+    .replace(/\b(jr|sr)\b/gi, (sfx) => sfx.charAt(0).toUpperCase() + sfx.slice(1).toLowerCase());
+}
+
 function getStudentProgram(s) {
   const raw = String(s?.program || s?.course || s?.degreeProgram || s?.degree_program || '').trim();
   if (!raw) return 'BSIT';
@@ -2408,7 +2418,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1 flex-wrap">
                               <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{enrollment.fullName}</p>
+                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{toTitleCase(enrollment.fullName)}</p>
                                 {(() => {
                                   const audit = getRegformAuditStatus(enrollment, regformAudits);
                                   if (audit.isSuspicious) {
@@ -2576,7 +2586,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-black text-gray-900">{enrollment.fullName}</p>
+                                  <p className="text-sm font-black text-gray-900">{toTitleCase(enrollment.fullName)}</p>
                                   {(() => {
                                     const audit = getRegformAuditStatus(enrollment, regformAudits);
                                     if (audit.isSuspicious) {
@@ -3281,7 +3291,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 bg-green-800 text-white rounded-t-2xl sm:rounded-t-2xl flex-shrink-0">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm sm:text-base font-bold truncate">{selectedEnrollment.fullName}</h3>
+                  <h3 className="text-sm sm:text-base font-bold truncate">{toTitleCase(selectedEnrollment.fullName)}</h3>
                   <p className="text-xs text-green-200 mt-0.5 truncate">{selectedEnrollment.studentId} · {selectedEnrollment.nstpComponent}</p>
                 </div>
                 <button type="button" onClick={() => setSelectedEnrollment(null)} className="p-1.5 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0 ml-2 cursor-pointer">
@@ -3369,7 +3379,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             <CheckCircle className="w-3 h-3 text-emerald-600" /> Official Portrait ID
                           </span>
                           <h4 className="text-xs font-black text-gray-900 truncate">
-                            {selectedEnrollment.fullName || selectedEnrollment.student_name || 'Student 2x2 Photo'}
+                            {toTitleCase(selectedEnrollment.fullName || selectedEnrollment.student_name || 'Student 2x2 Photo')}
                           </h4>
                           <p className="text-[11px] text-gray-500 mt-0.5">Click thumbnail to inspect full size 2x2 portrait photo</p>
                         </div>
@@ -3443,9 +3453,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 {/* 2. PERSONAL & ACADEMIC SECTION (Combined with Demographic & Health) */}
                 {(enrollmentReviewTab === 'all' || enrollmentReviewTab === 'academic') && (() => {
-                  const lastName = selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—');
-                  const firstName = selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—');
-                  const middleName = selectedEnrollment.middleName || '—';
+                  const lastName = toTitleCase(selectedEnrollment.lastName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[0]?.trim() : '—'));
+                  const firstName = toTitleCase(selectedEnrollment.firstName || (selectedEnrollment.fullName?.includes(',') ? selectedEnrollment.fullName.split(',')[1]?.trim().split(' ')[0] : '—'));
+                  const middleName = toTitleCase(selectedEnrollment.middleName || '—');
                   const suffix = selectedEnrollment.suffix || '—';
                   const studentId = selectedEnrollment.studentId || selectedEnrollment.student_id || '—';
                   const email = selectedEnrollment.email || '—';
@@ -4094,8 +4104,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                   <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
                                     <td className="px-3 py-2.5 text-center text-gray-400 font-mono text-[11px]">{idx + 1}</td>
                                     <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
-                                    <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
-                                    <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
+                                    <td className="px-3 py-2.5 font-semibold text-gray-900">{toTitleCase(student.name)}</td>
+                                    <td className="px-3 py-2.5 text-gray-600 font-bold">{String(student.program || '').toUpperCase()}</td>
                                     <td className="px-3 py-2.5 text-center">
                                       <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
                                         student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
@@ -4103,7 +4113,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                         student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
                                         'bg-gray-100 text-gray-700'
                                       }`}>
-                                        {student.department}
+                                        {String(student.department || '').toUpperCase()}
                                       </span>
                                     </td>
                                     <td className="px-3 py-2.5 text-center">

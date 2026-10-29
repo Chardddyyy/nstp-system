@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     plugins: [
-      react(), 
+      react(),
       tailwindcss()
     ],
     build: {
@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     esbuild: {
-      drop: ['debugger'],
+      drop: ['console', 'debugger'],
       legalComments: 'none'
     }
   };

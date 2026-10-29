@@ -418,9 +418,11 @@ function StudentManagement() {
   const toTitleCase = (str) => {
     if (!str || typeof str !== 'string') return '';
     return str
-      .split(' ')
-      .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : '')
-      .join(' ');
+      .trim()
+      .toLowerCase()
+      .replace(/(?:^|[\s,.\-\/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
+      .replace(/\b(ii|iii|iv|vi|vii|viii|ix|x)\b/gi, (roman) => roman.toUpperCase())
+      .replace(/\b(jr|sr)\b/gi, (sfx) => sfx.charAt(0).toUpperCase() + sfx.slice(1).toLowerCase());
   };
 
   const handleFormFieldChange = (e) => {
@@ -1065,8 +1067,8 @@ function StudentManagement() {
       firstName: toTitleCase(firstName),
       middleName: toTitleCase(middleName),
       suffix: student.suffix ? String(student.suffix) : '',
-      name: String(student.name || ''),
-      email: String(student.email || ''),
+      name: toTitleCase(student.name || ''),
+      email: String(student.email || '').toLowerCase(),
       department: String(student.department || 'CWTS'),
       year: String(student.year || student.yearLevel || '1st Year'),
       yearLevel: String(student.yearLevel || student.year || '1st Year'),
@@ -1089,7 +1091,7 @@ function StudentManagement() {
       street: toTitleCase(street),
       municipality: toTitleCase(municipality),
       province: toTitleCase(province),
-      address: String(student.address || student.homeAddress || ''),
+      address: toTitleCase(student.address || student.homeAddress || ''),
       emergencyContact: toTitleCase(String(student.emergencyContact || student.emergencyName || '')),
       emergencyName: toTitleCase(String(student.emergencyName || student.emergencyContact || '')),
       emergencyNumber: emerNo.slice(0, 11),
@@ -1549,7 +1551,7 @@ function StudentManagement() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-gray-900 truncate">{student.name}</p>
+                        <p className="text-xs font-black text-gray-900 truncate">{toTitleCase(student.name)}</p>
                         <p className="text-[11px] text-gray-500 font-mono mt-0.5">
                           {student.studentId} • <span className="font-bold text-gray-700">School: {student.section || '-'}</span> | <span className="font-black text-emerald-800">NSTP: {student.nstp_section || student.nstpSection || '-'}</span>
                         </p>
@@ -1805,7 +1807,7 @@ function StudentManagement() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentId}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                          <p className="text-sm font-medium text-gray-900">{toTitleCase(student.name)}</p>
                           <p className="text-xs text-gray-500">{student.email}</p>
                         </div>
                       </td>
@@ -2879,19 +2881,19 @@ function StudentManagement() {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Last Name</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
-                        {currentViewStudent.lastName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[0]?.trim() : currentViewStudent.name?.split(' ').slice(-1)[0]) || '-'}
+                        {toTitleCase(currentViewStudent.lastName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[0]?.trim() : currentViewStudent.name?.split(' ').slice(-1)[0]) || '') || '-'}
                       </div>
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">First Name</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
-                        {currentViewStudent.firstName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ')[0] : currentViewStudent.name?.split(' ')[0]) || '-'}
+                        {toTitleCase(currentViewStudent.firstName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ')[0] : currentViewStudent.name?.split(' ')[0]) || '') || '-'}
                       </div>
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Middle Name</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
-                        {currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '—'}
+                        {toTitleCase(currentViewStudent.middleName || (currentViewStudent.name?.includes(',') ? currentViewStudent.name.split(',')[1]?.trim().split(' ').slice(1).join(' ') : (currentViewStudent.name?.split(' ').length > 2 ? currentViewStudent.name?.split(' ').slice(1, -1).join(' ') : '')) || '') || '—'}
                       </div>
                     </div>
                     <div>
@@ -3026,25 +3028,25 @@ function StudentManagement() {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Street / Barangay</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
-                        {currentViewStudent.street || '-'}
+                        {toTitleCase(currentViewStudent.street) || '-'}
                       </div>
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Municipality / City</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
-                        {currentViewStudent.municipality || '-'}
+                        {toTitleCase(currentViewStudent.municipality) || '-'}
                       </div>
                     </div>
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Province</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-800 shadow-2xs">
-                        {currentViewStudent.province || '-'}
+                        {toTitleCase(currentViewStudent.province) || '-'}
                       </div>
                     </div>
                     <div className="sm:col-span-3">
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Full Combined Address</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
-                        {currentViewStudent.address || currentViewStudent.homeAddress || `${currentViewStudent.street || ''}, ${currentViewStudent.municipality || ''}, ${currentViewStudent.province || ''}`}
+                        {toTitleCase(currentViewStudent.address || currentViewStudent.homeAddress || `${currentViewStudent.street || ''}, ${currentViewStudent.municipality || ''}, ${currentViewStudent.province || ''}`) || '-'}
                       </div>
                     </div>
                   </div>
@@ -3217,7 +3219,7 @@ function StudentManagement() {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Emergency Contact Person</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs">
-                        {currentViewStudent.emergencyContact || currentViewStudent.emergencyName || '-'}
+                        {toTitleCase(currentViewStudent.emergencyContact || currentViewStudent.emergencyName) || '-'}
                       </div>
                     </div>
                     <div>

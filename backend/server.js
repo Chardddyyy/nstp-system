@@ -3553,6 +3553,72 @@ app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
   }
 });
 
+function toEnrollmentTitleCase(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/(?:^|[\s,.\-\/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
+    .replace(/\b(ii|iii|iv|vi|vii|viii|ix|x)\b/gi, (roman) => roman.toUpperCase())
+    .replace(/\b(jr|sr)\b/gi, (sfx) => sfx.charAt(0).toUpperCase() + sfx.slice(1).toLowerCase());
+}
+
+function normalizeStudentCasing(st) {
+  if (!st || typeof st !== 'object') return st;
+
+  const lName = toEnrollmentTitleCase(st.lastName || st.last_name || '');
+  const fName = toEnrollmentTitleCase(st.firstName || st.first_name || '');
+  const mName = toEnrollmentTitleCase(st.middleName || st.middle_name || '');
+  const sfx = (st.suffix || '').trim();
+
+  let formattedName = '';
+  if (st.name && typeof st.name === 'string') {
+    formattedName = toEnrollmentTitleCase(st.name);
+  } else if (lName && fName) {
+    formattedName = `${lName}, ${fName}${mName ? ' ' + mName : ''}${sfx ? ' ' + sfx : ''}`.trim();
+  }
+
+  const street = toEnrollmentTitleCase(st.street || '');
+  const municipality = toEnrollmentTitleCase(st.municipality || '');
+  const province = toEnrollmentTitleCase(st.province || '');
+  let address = toEnrollmentTitleCase(st.address || st.homeAddress || '');
+  if (!address && (street || municipality || province)) {
+    address = [street, municipality, province].filter(Boolean).join(', ');
+  }
+
+  return {
+    ...st,
+    name: formattedName || st.name,
+    fullName: formattedName || st.fullName || st.name,
+    student_name: formattedName || st.student_name || st.name,
+    lastName: lName || st.lastName,
+    firstName: fName || st.firstName,
+    middleName: mName || st.middleName,
+    suffix: sfx || st.suffix,
+    program: String(st.program || st.course || '').toUpperCase(),
+    course: String(st.course || st.program || '').toUpperCase(),
+    department: String(st.department || st.nstpComponent || '').toUpperCase(),
+    nstpComponent: String(st.nstpComponent || st.department || '').toUpperCase(),
+    section: String(st.section || '').toUpperCase(),
+    nstp_section: String(st.nstp_section || st.section || '').toUpperCase(),
+    email: String(st.email || '').trim().toLowerCase(),
+    street: street || st.street,
+    municipality: municipality || st.municipality,
+    province: province || st.province,
+    address: address || st.address,
+    emergencyContact: toEnrollmentTitleCase(st.emergencyContact || st.emergencyName || ''),
+    emergencyName: toEnrollmentTitleCase(st.emergencyName || st.emergencyContact || ''),
+    bloodType: String(st.bloodType || st.blood_type || '').toUpperCase(),
+    gender: toEnrollmentTitleCase(st.gender || st.sex || ''),
+    sex: toEnrollmentTitleCase(st.sex || st.gender || ''),
+    civilStatus: toEnrollmentTitleCase(st.civilStatus || st.civil_status || ''),
+    citizenship: toEnrollmentTitleCase(st.citizenship || ''),
+    religion: toEnrollmentTitleCase(st.religion || ''),
+    status: toEnrollmentTitleCase(st.status || 'Active'),
+    registeredVoter: toEnrollmentTitleCase(st.registeredVoter || st.registered_voter || st.isVoter || '')
+  };
+}
+
 // ===== STUDENT ROUTES =====
 
 const handleGetStudents = async (req, res) => {
@@ -3610,7 +3676,7 @@ const handleGetStudents = async (req, res) => {
       let finalGrade = is2ndSem ? (g2 || g1) : (g2 ? (g2 === '5.00' || g1 === '5.00' ? '5.00' : (g2 === 'INC' || g1 === 'INC' ? 'INC' : g2)) : g1);
       let remarks = is2ndSem ? (r2 || r1) : (g2 ? (r2 === 'Failed' || r1 === 'Failed' ? 'Failed' : (r2 === 'Incomplete' || r1 === 'Incomplete' ? 'Incomplete' : r2)) : r1);
 
-      return {
+      const studentObj = {
         ...st,
         final_grade_1: g1,
         final_grade_2: g2,
@@ -3621,6 +3687,7 @@ const handleGetStudents = async (req, res) => {
         remarks: remarks || (finalGrade ? (parseFloat(finalGrade) <= 3.0 ? 'Passed' : 'Failed') : ''),
         has_2nd_sem: has2ndSem
       };
+      return normalizeStudentCasing(studentObj);
     });
 
     res.json(enriched);
@@ -3636,7 +3703,7 @@ const handleGetStudents = async (req, res) => {
           [req.user.department]
         );
       }
-      res.json(fallback);
+      res.json((fallback || []).map(normalizeStudentCasing));
     } catch (e2) {
       res.status(500).json({ message: 'Server error retrieving students' });
     }
@@ -6738,33 +6805,33 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               const enrollment2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || null;
               const enrollmentReg = enrollment.registration_photo || enrollment.registrationPhoto || enrollment.reg_form || null;
 
-              const fName = enrollment.firstName || enrollment.first_name || '';
-              const lName = enrollment.lastName || enrollment.last_name || '';
-              const mName = enrollment.middleName || enrollment.middle_name || '';
-              const sfx = enrollment.suffix || '';
-              const fullName = enrollment.student_name || enrollment.fullName || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim();
-              const dept = enrollment.department || enrollment.nstpComponent || 'CWTS';
-              const emailVal = enrollment.email || '';
-              const prog = enrollment.program || enrollment.course || '';
+              const fName = toEnrollmentTitleCase(enrollment.firstName || enrollment.first_name || '');
+              const lName = toEnrollmentTitleCase(enrollment.lastName || enrollment.last_name || '');
+              const mName = toEnrollmentTitleCase(enrollment.middleName || enrollment.middle_name || '');
+              const sfx = (enrollment.suffix || '').trim();
+              const fullName = toEnrollmentTitleCase(enrollment.student_name || enrollment.fullName || `${lName}, ${fName} ${mName}${sfx ? ' ' + sfx : ''}`.replace(/\s+/g, ' ').trim());
+              const dept = String(enrollment.department || enrollment.nstpComponent || 'CWTS').toUpperCase();
+              const emailVal = String(enrollment.email || '').trim().toLowerCase();
+              const prog = String(enrollment.program || enrollment.course || '').toUpperCase();
               const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
-              const streetVal = enrollment.street || '';
-              const munVal = enrollment.municipality || '';
-              const provVal = enrollment.province || '';
-              const addr = enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '';
+              const streetVal = toEnrollmentTitleCase(enrollment.street || '');
+              const munVal = toEnrollmentTitleCase(enrollment.municipality || '');
+              const provVal = toEnrollmentTitleCase(enrollment.province || '');
+              const addr = toEnrollmentTitleCase(enrollment.homeAddress || enrollment.address || [streetVal, munVal, provVal].filter(Boolean).join(', ') || '');
               const contact = enrollment.contactNumber || enrollment.contact_number || '';
-              const gndr = enrollment.gender || enrollment.sex || '';
+              const gndr = toEnrollmentTitleCase(enrollment.gender || enrollment.sex || '');
               const bMonth = enrollment.birthMonth || enrollment.birth_month || null;
               const bDay = enrollment.birthDay || enrollment.birth_day || null;
               const bYear = enrollment.birthYear || enrollment.birth_year || null;
               const ageVal = enrollment.age || null;
-              const civStat = enrollment.civilStatus || enrollment.civil_status || null;
+              const civStat = toEnrollmentTitleCase(enrollment.civilStatus || enrollment.civil_status || '');
               const hVal = enrollment.height || null;
               const wVal = enrollment.weight || null;
-              const bType = enrollment.bloodType || enrollment.blood_type || null;
+              const bType = String(enrollment.bloodType || enrollment.blood_type || '').toUpperCase();
               const fbVal = enrollment.facebookAccount || enrollment.facebook_account || null;
-              const emergName = enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || null;
+              const emergName = toEnrollmentTitleCase(enrollment.emergencyContact || enrollment.emergency_contact || enrollment.emergencyName || '');
               const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
-              const voterVal = enrollment.registeredVoter || enrollment.registered_voter || 'No';
+              const voterVal = toEnrollmentTitleCase(enrollment.registeredVoter || enrollment.registered_voter || 'No');
 
               await pool.execute(
                 `INSERT INTO students (
@@ -7657,7 +7724,7 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
       lts: ltsCount,
       rotc: rotcCount,
       data: parsedData,
-      studentData: finalStudents,
+      studentData: (finalStudents || []).map(normalizeStudentCasing),
       reportData: finalReports,
       letterData: finalLetters
     });
