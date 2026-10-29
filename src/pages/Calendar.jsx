@@ -120,9 +120,9 @@ function Calendar() {
       }
 
       if (!startStr || !endStr) {
-        const yr = String(currentBatch || '2024-2025 1st Semester');
+        const yr = String(currentBatch || '2026-2027 1st Semester');
         const match = yr.match(/(\d{4})/);
-        const baseYear = match ? parseInt(match[1], 10) : 2024;
+        const baseYear = match ? parseInt(match[1], 10) : 2026;
         if (yr.includes('1st Sem')) {
           startStr = `${baseYear}-08`;
           endStr = `${baseYear}-12`;
@@ -205,7 +205,7 @@ function Calendar() {
     setRangeSaving(true);
     try {
       const payload = {
-        year: currentBatch || '2024-2025 1st Semester',
+        year: currentBatch || '2026-2027 1st Semester',
         start_month: editRangeStart,
         end_month: editRangeEnd,
         startMonth: editRangeStart,
@@ -959,11 +959,11 @@ function Calendar() {
                     <h2 className="text-sm sm:text-lg font-black text-slate-900 leading-tight">
                       {viewingArchive && archiveViewData?.year
                         ? `Archived Schedule — Batch ${archiveViewData.year}`
-                        : `Academic Schedule — ${currentBatch || 'A.Y. 2024-2025 1st Semester'}`}
+                        : `Academic Schedule — ${currentBatch || 'A.Y. 2026-2027 1st Semester'}`}
                     </h2>
                   </div>
                   <span className="self-start sm:self-auto text-[10px] sm:text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300 whitespace-nowrap ml-7 sm:ml-0">
-                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : (currentBatch || 'A.Y. 2024-2025 1st Sem')}
+                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : (currentBatch || 'A.Y. 2026-2027 1st Sem')}
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 ml-7 sm:ml-0">

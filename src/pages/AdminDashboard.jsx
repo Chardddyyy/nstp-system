@@ -212,7 +212,7 @@ function AdminDashboard() {
     declineEnrollment, 
     refreshData, 
     archivedYears = [], 
-    currentBatch = '2024-2025 1st Semester', 
+    currentBatch = '2026-2027 1st Semester', 
     notifications = [], 
     messages = {},
     conversations = [],
@@ -1936,26 +1936,18 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         ),
                         2
                       );
-                      const yTicks = Array.from({ length: maxTrackVal + 1 }, (_, i) => maxTrackVal - i);
-
                       return (
                         <div className="relative">
                           {/* Y-Axis Gridlines & Plot Area */}
                           <div className="relative h-64 sm:h-72 w-full flex">
-                            {/* Y-Axis Numerical Labels */}
-                            <div className="w-8 sm:w-10 flex flex-col justify-between items-end pr-2 text-[10px] sm:text-xs font-black text-gray-400 select-none pb-7">
-                              {yTicks.map(val => (
-                                <span key={val}>{val}</span>
-                              ))}
-                            </div>
-
                             {/* Main Bar Plot Area */}
                             <div className="relative flex-1 flex flex-col justify-between pb-7">
                               {/* Horizontal Background Gridlines */}
-                              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7">
-                                {yTicks.map(val => (
-                                  <div key={val} className="w-full border-b border-gray-200/70"></div>
-                                ))}
+                              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7 opacity-50">
+                                <div className="w-full border-b border-gray-200/80"></div>
+                                <div className="w-full border-b border-gray-200/80"></div>
+                                <div className="w-full border-b border-gray-200/80"></div>
+                                <div className="w-full border-b border-gray-300"></div>
                               </div>
 
                               {/* Bars Container */}

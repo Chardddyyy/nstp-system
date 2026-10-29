@@ -614,7 +614,7 @@ function App() {
     const checkInterval = setInterval(checkVersion, 30000);
     return () => clearInterval(checkInterval);
   }, []);
-  const [currentBatch, setCurrentBatch] = useState('2024-2025 1st Semester');
+  const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
 
   // Desktop Display Zoom Scale (25% zoom out = 75% crisp scale)
   const [displayZoom, setDisplayZoomState] = useState(() => {
@@ -2560,7 +2560,7 @@ function App() {
       });
 
       archivesAPI.getCurrentBatch().then(batchData => {
-        setCurrentBatch(batchData?.year ? batchData.year.toString() : '2024-2025 1st Semester');
+        setCurrentBatch(batchData?.year ? batchData.year.toString() : '2026-2027 1st Semester');
         if (batchData && (batchData.start_month || batchData.end_month || batchData.startMonth || batchData.endMonth)) {
           updateActiveBatchRange({
             startMonth: batchData.start_month || batchData.startMonth,

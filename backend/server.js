@@ -823,7 +823,7 @@ async function ensureNstpIdAndAttendanceTables() {
     try {
       const [cbRows] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
       if (!cbRows || cbRows.length === 0) {
-        await pool.execute("INSERT INTO current_batch (id, year, semester, start_month, end_month, start_date, end_date) VALUES (1, '2024-2025 1st Semester', '1st Semester', '2024-08', '2024-12', '2024-08-15', '2024-12-20')");
+        await pool.execute("INSERT INTO current_batch (id, year, semester, start_month, end_month, start_date, end_date) VALUES (1, '2026-2027 1st Semester', '1st Semester', '2026-08', '2026-12', '2026-08-15', '2026-12-20')");
       }
     } catch (_) {}
     try { await pool.execute("ALTER TABLE reports MODIFY COLUMN batch_year VARCHAR(100) NULL"); } catch (_) {}
@@ -6190,10 +6190,10 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
   try {
     await ensureCurrentBatchColumns().catch(() => {});
     const [batches] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
-    res.json(batches[0] || { year: '2024-2025 1st Semester', semester: '1st Semester', start_month: '2024-08', end_month: '2024-12' });
+    res.json(batches[0] || { year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
   } catch (error) {
     console.error('Get current batch error:', error);
-    res.json({ year: '2024-2025 1st Semester', semester: '1st Semester', start_month: '2024-08', end_month: '2024-12' });
+    res.json({ year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
   }
 });
 

@@ -26,7 +26,7 @@ function InstructorDashboard() {
     setNotifications,
     deleteNotifications,
     markAllNotificationsRead,
-    currentBatch = '2024-2025 1st Semester',
+    currentBatch = '2026-2027 1st Semester',
     viewingArchive = false,
     setViewingArchive = () => {},
     archiveViewData = null,

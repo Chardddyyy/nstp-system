@@ -511,7 +511,7 @@ function StudentManagement() {
   const [exportDept, setExportDept] = useState('All');
   const [exportCourse, setExportCourse] = useState('All');
   const [exportSem, setExportSem] = useState('1st Semester');
-  const [exportAcadYear, setExportAcadYear] = useState(currentBatch || '2024-2025 1st Semester');
+  const [exportAcadYear, setExportAcadYear] = useState(currentBatch || '2026-2027 1st Semester');
   const [isDownloadingFormA, setIsDownloadingFormA] = useState(false);
   const [isDownloadingFormB, setIsDownloadingFormB] = useState(false);
 

@@ -27,7 +27,8 @@ async function importStudents() {
   const fileStream = fs.createReadStream(sqlFilePath);
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-  const batchMap = new Map();
+  // Map of schoolYear -> array of students
+  const yearCohorts = new Map();
   const seenStudentIds = new Set();
   const emailSet = new Set();
 
@@ -105,26 +106,7 @@ async function importStudents() {
         continue;
       }
 
-      // Standardize semester name
-      let semester = '1st Semester';
-      const semUpper = (rawSemesterAdmitted || '').toUpperCase();
-      if (semUpper.includes('SECOND') || semUpper === '2') {
-        semester = '2nd Semester';
-      } else if (semUpper.includes('SUMMER') || semUpper.includes('MID')) {
-        semester = 'Midyear';
-      }
-
       const schoolYear = rawYearAdmitted.trim();
-      const batchKey = `${schoolYear} ${semester}`;
-
-      if (!batchMap.has(batchKey)) {
-        batchMap.set(batchKey, {
-          schoolYear,
-          semester,
-          batchKey,
-          students: []
-        });
-      }
 
       // Format Date of Birth
       let birthDate = null;
@@ -190,7 +172,11 @@ async function importStudents() {
 
       const course = rawCourse || 'BSIT';
 
-      batchMap.get(batchKey).students.push({
+      if (!yearCohorts.has(schoolYear)) {
+        yearCohorts.set(schoolYear, []);
+      }
+
+      yearCohorts.get(schoolYear).push({
         studentId: studentNumber,
         name: fullName,
         firstName,
@@ -199,7 +185,6 @@ async function importStudents() {
         suffix,
         email: finalEmail,
         schoolYear,
-        semester,
         course,
         program: course,
         year: '1st Year',
@@ -224,45 +209,27 @@ async function importStudents() {
   }
 
   console.log(`Parsed ${lineCount} SQL lines. Total unique students found (>= 2012): ${seenStudentIds.size}`);
-  console.log(`Total distinct batches found: ${batchMap.size}`);
+  console.log(`Distinct school years found: ${yearCohorts.size}`);
 
-  // Sort batches chronologically
-  const sortedBatchKeys = Array.from(batchMap.keys()).sort((a, b) => {
-    const parseKey = (str) => {
-      const matchYear = str.match(/(\d{4})/);
-      const startYear = matchYear ? parseInt(matchYear[1], 10) : 0;
-      let semRank = 1;
-      if (str.includes('2nd')) semRank = 2;
-      else if (str.includes('Midyear') || str.includes('Summer')) semRank = 3;
-      return startYear * 10 + semRank;
-    };
-    return parseKey(a) - parseKey(b);
+  // Sort school years chronologically
+  const sortedYears = Array.from(yearCohorts.keys()).sort((a, b) => {
+    const yA = parseInt(a.slice(0, 4), 10) || 0;
+    const yB = parseInt(b.slice(0, 4), 10) || 0;
+    return yA - yB;
   });
 
-  const ACTIVE_BATCH_KEY = '2024-2025 1st Semester';
-  let activeBatchStudents = [];
-  const archivedBatches = [];
-
-  for (const bKey of sortedBatchKeys) {
-    const bData = batchMap.get(bKey);
-    const students = bData.students;
-
-    // Group students by course
+  // Assign track distribution (60% CWTS, 25% ROTC, 15% LTS) per course for each cohort
+  for (const year of sortedYears) {
+    const students = yearCohorts.get(year);
     const courseMap = {};
     for (const s of students) {
       if (!courseMap[s.course]) courseMap[s.course] = [];
       courseMap[s.course].push(s);
     }
 
-    let cwtsCount = 0;
-    let rotcCount = 0;
-    let ltsCount = 0;
-
-    // Proportional 60% CWTS, 25% ROTC, 15% LTS distribution per course
-    for (const [courseName, courseStudents] of Object.entries(courseMap)) {
-      const N = courseStudents.length;
+    for (const [cName, list] of Object.entries(courseMap)) {
+      const N = list.length;
       let nCWTS, nROTC, nLTS;
-
       if (N >= 3) {
         nCWTS = Math.round(N * 0.60);
         nROTC = Math.max(1, Math.round(N * 0.25));
@@ -278,51 +245,84 @@ async function importStudents() {
         nLTS = 0;
       }
 
-      // Department counters for sections
-      let deptSecCount = { CWTS: 0, ROTC: 0, LTS: 0 };
-
-      courseStudents.forEach((student, idx) => {
+      const deptSecCount = { CWTS: 0, ROTC: 0, LTS: 0 };
+      list.forEach((s, idx) => {
         let dept = 'CWTS';
-        if (idx < nCWTS) {
-          dept = 'CWTS';
-          cwtsCount++;
-        } else if (idx < nCWTS + nROTC) {
-          dept = 'ROTC';
-          rotcCount++;
-        } else {
-          dept = 'LTS';
-          ltsCount++;
-        }
+        if (idx < nCWTS) dept = 'CWTS';
+        else if (idx < nCWTS + nROTC) dept = 'ROTC';
+        else dept = 'LTS';
 
         deptSecCount[dept]++;
-        const secIndex = Math.ceil(deptSecCount[dept] / 40); // 40 students per section
-        const sectionLetter = String.fromCharCode(64 + Math.min(secIndex, 26)); // A, B, C...
+        const secIndex = Math.ceil(deptSecCount[dept] / 40);
+        const secLetter = String.fromCharCode(64 + Math.min(secIndex, 26));
 
-        student.department = dept;
-        student.section = `1-${sectionLetter}`;
-        student.nstp_section = `${dept}-${secIndex}`;
+        s.department = dept;
+        s.section = `1-${secLetter}`;
+        s.nstp_section = `${dept}-${secIndex}`;
       });
-    }
-
-    if (bKey === ACTIVE_BATCH_KEY) {
-      students.forEach(s => s.status = 'Active');
-      activeBatchStudents = students;
-      console.log(`[ACTIVE BATCH] ${bKey}: ${students.length} students (CWTS: ${cwtsCount}, ROTC: ${rotcCount}, LTS: ${ltsCount})`);
-    } else {
-      students.forEach(s => s.status = 'Completed');
-      archivedBatches.push({
-        year: bKey,
-        studentsCount: students.length,
-        cwts: cwtsCount,
-        rotc: rotcCount,
-        lts: ltsCount,
-        students
-      });
-      console.log(`[ARCHIVED] ${bKey}: ${students.length} students (CWTS: ${cwtsCount}, ROTC: ${rotcCount}, LTS: ${ltsCount})`);
     }
   }
 
-  // 1. POPULATE ACTIVE STUDENTS TABLE (2024-2025 1st Semester)
+  // Active batch is: 2026-2027 1st Semester
+  const ACTIVE_BATCH_KEY = '2026-2027 1st Semester';
+  let activeBatchStudents = [];
+  const archivedBatches = [];
+
+  // Generate 1st Semester and 2nd Semester for EVERY school year
+  for (const year of sortedYears) {
+    const baseStudents = yearCohorts.get(year);
+
+    // 1. 1st Semester
+    const sem1Key = `${year} 1st Semester`;
+    const sem1Students = baseStudents.map(s => ({
+      ...s,
+      semester: '1st Semester'
+    }));
+
+    // 2. 2nd Semester (Identical data to 1st Semester, per user request)
+    const sem2Key = `${year} 2nd Semester`;
+    const sem2Students = baseStudents.map(s => ({
+      ...s,
+      semester: '2nd Semester'
+    }));
+
+    // Handle 1st Semester
+    if (sem1Key === ACTIVE_BATCH_KEY) {
+      sem1Students.forEach(s => s.status = 'Active');
+      activeBatchStudents = sem1Students;
+      const cwts = sem1Students.filter(s => s.department === 'CWTS').length;
+      const rotc = sem1Students.filter(s => s.department === 'ROTC').length;
+      const lts = sem1Students.filter(s => s.department === 'LTS').length;
+      console.log(`[ACTIVE BATCH] ${sem1Key}: ${sem1Students.length} students (CWTS: ${cwts}, ROTC: ${rotc}, LTS: ${lts})`);
+    } else {
+      sem1Students.forEach(s => s.status = 'Completed');
+      const cwts = sem1Students.filter(s => s.department === 'CWTS').length;
+      const rotc = sem1Students.filter(s => s.department === 'ROTC').length;
+      const lts = sem1Students.filter(s => s.department === 'LTS').length;
+      archivedBatches.push({
+        year: sem1Key,
+        studentsCount: sem1Students.length,
+        cwts, rotc, lts,
+        students: sem1Students
+      });
+      console.log(`[ARCHIVED] ${sem1Key}: ${sem1Students.length} students (CWTS: ${cwts}, ROTC: ${rotc}, LTS: ${lts})`);
+    }
+
+    // Handle 2nd Semester (always archived)
+    sem2Students.forEach(s => s.status = 'Completed');
+    const cwts2 = sem2Students.filter(s => s.department === 'CWTS').length;
+    const rotc2 = sem2Students.filter(s => s.department === 'ROTC').length;
+    const lts2 = sem2Students.filter(s => s.department === 'LTS').length;
+    archivedBatches.push({
+      year: sem2Key,
+      studentsCount: sem2Students.length,
+      cwts: cwts2, rotc: rotc2, lts: lts2,
+      students: sem2Students
+    });
+    console.log(`[ARCHIVED] ${sem2Key}: ${sem2Students.length} students (CWTS: ${cwts2}, ROTC: ${rotc2}, LTS: ${lts2}) [Mirrored 1st Sem Data]`);
+  }
+
+  // 1. POPULATE ACTIVE STUDENTS TABLE (2026-2027 1st Semester)
   console.log('\n--- INSERTING ACTIVE BATCH INTO STUDENTS TABLE ---');
   await pool.query('TRUNCATE TABLE students');
   console.log('Cleared existing rows from students table.');
@@ -353,18 +353,22 @@ async function importStudents() {
   }
 
   const [activeCountRes] = await pool.query('SELECT count(*) as count FROM students');
-  console.log(`Successfully inserted ${activeCountRes[0].count} active students into students table!`);
+  console.log(`Successfully inserted ${activeCountRes[0].count} active students for batch ${ACTIVE_BATCH_KEY} into students table!`);
 
-  // Ensure current_batch table is set to 2024-2025 1st Semester
+  // Ensure current_batch table is set to 2026-2027 1st Semester
   await pool.query(`
-    INSERT INTO current_batch (id, year, semester, start_date, end_date) 
-    VALUES (1, '2024-2025 1st Semester', '1st Semester', '2024-08-15', '2024-12-20')
+    INSERT INTO current_batch (id, year, semester, start_month, end_month, start_date, end_date) 
+    VALUES (1, '2026-2027 1st Semester', '1st Semester', '2026-08', '2026-12', '2026-08-15', '2026-12-20')
     ON DUPLICATE KEY UPDATE 
-    year = '2024-2025 1st Semester', 
+    year = '2026-2027 1st Semester', 
     semester = '1st Semester',
+    start_month = '2026-08',
+    end_month = '2026-12',
+    start_date = '2026-08-15',
+    end_date = '2026-12-20',
     updated_at = NOW()
   `);
-  console.log('Current batch set to 2024-2025 1st Semester in database.');
+  console.log('Current batch set to 2026-2027 1st Semester in database.');
 
   // 2. POPULATE ARCHIVED YEARS TABLE
   console.log('\n--- INSERTING HISTORICAL BATCHES INTO ARCHIVED_YEARS TABLE ---');
@@ -372,6 +376,12 @@ async function importStudents() {
   console.log('Cleared existing rows from archived_years table.');
 
   for (const arch of archivedBatches) {
+    const isFirstSem = arch.year.includes('1st Sem');
+    const startYearMatch = arch.year.match(/(\d{4})/);
+    const startYr = startYearMatch ? parseInt(startYearMatch[1], 10) : 2024;
+    const startMonth = isFirstSem ? `${startYr}-08` : `${startYr + 1}-01`;
+    const endMonth = isFirstSem ? `${startYr}-12` : `${startYr + 1}-05`;
+
     const archiveData = {
       year: arch.year,
       students: arch.studentsCount,
@@ -381,7 +391,11 @@ async function importStudents() {
       reports: 0,
       studentData: arch.students,
       reportData: [],
-      letterData: []
+      letterData: [],
+      start_month: startMonth,
+      end_month: endMonth,
+      calendar_start_date: `${startMonth}-15`,
+      calendar_end_date: `${endMonth}-20`
     };
 
     await pool.query(
