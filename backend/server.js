@@ -671,16 +671,11 @@ async function ensureAllCoreTables() {
     console.warn('Admin seed notice:', err.message);
   }
 
-    // Seed 20+ students for past batches (2023-2024 and 2024-2025) into archived_years
-    try {
-      await seedPastBatches();
-    } catch (err) {
-      console.warn('Past batches seed notice:', err.message);
-    }
   }
 
-// ── Seed Past Batches (2023-2024, 2024-2025, 2025-2026 1st & 2nd Semesters) ──
+// ── Seed Past Batches (Disabled for Clean Production Setup) ─────────────────
 async function seedPastBatches() {
+  return;
   try {
     // Purge legacy non-semester batch entries so the archives remain clean and consecutive
     try {
@@ -7738,15 +7733,8 @@ app.get('/api/archives', authenticateToken, async (req, res) => {
       return [fallback || []];
     });
 
-    if (!archives || archives.length === 0) {
-      await seedPastBatches();
-      const [reloaded] = await pool.query(
-        'SELECT a.* FROM archived_years a JOIN (SELECT id FROM archived_years ORDER BY year DESC) sub ON a.id = sub.id'
-      ).catch(async () => {
-        const [fallback] = await pool.query('SELECT * FROM archived_years ORDER BY id DESC').catch(() => [[]]);
-        return [fallback || []];
-      });
-      archives = reloaded || [];
+    if (!archives) {
+      archives = [];
     }
 
     const isInstructor = req.user && req.user.role === 'instructor';
