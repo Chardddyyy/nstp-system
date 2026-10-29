@@ -43,6 +43,31 @@
         }
       }(window.location));
 
+      // Early suppressor for non-critical third-party and dev-mode console noise
+      (function() {
+        if (!window.console) return;
+        var noisy = ['react-devtools', 'React DevTools', 'Download the React DevTools', 'requestStorageAccess', 'StorageAccess', 'Permission denied'];
+        function isNoisy(args) {
+          try {
+            for (var i = 0; i < args.length; i++) {
+              var str = typeof args[i] === 'string' ? args[i] : (args[i] && args[i].message) || '';
+              for (var j = 0; j < noisy.length; j++) {
+                if (str.indexOf(noisy[j]) !== -1) return true;
+              }
+            }
+          } catch (_) {}
+          return false;
+        }
+        var _log = window.console.log, _info = window.console.info, _warn = window.console.warn, _err = window.console.error;
+        window.console.log = function() { if (!isNoisy(arguments)) _log.apply(window.console, arguments); };
+        window.console.info = function() { if (!isNoisy(arguments)) _info.apply(window.console, arguments); };
+        window.console.warn = function() { if (!isNoisy(arguments)) _warn.apply(window.console, arguments); };
+        window.console.error = function() { if (!isNoisy(arguments)) _err.apply(window.console, arguments); };
+        window.addEventListener('unhandledrejection', function(e) {
+          if (e && e.reason && isNoisy([e.reason])) { e.preventDefault(); }
+        });
+      })();
+
       // Automatically recover when a new deploy invalidates old cached chunk filenames
       window.addEventListener('vite:preloadError', function(event) {
         console.warn('Vite preload error (new deployment detected), refreshing...');
@@ -62,16 +87,14 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://nstp-system-iw5p.onrender.com">
-    <link rel="preconnect" href="https://nstp-system-iw5p.onrender.com" crossorigin>
-    <script type="module" crossorigin src="/nstp-system/assets/index-B0hdai9W.js"></script>
+    <script type="module" crossorigin src="/nstp-system/assets/index-BVsb5DQw.js"></script>
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-react-mDFdBO3z.js">
-    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-BdLnfGzn.js">
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-icons-CKYnHitP.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-excel-VK2LHPLw.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-pdf-kzylB5Iy.js">
-    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-qr-B0k6H4Z1.js">
+    <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-qr-DwBUZoeX.js">
     <link rel="modulepreload" crossorigin href="/nstp-system/assets/vendor-media-CzAtys5V.js">
-    <link rel="stylesheet" crossorigin href="/nstp-system/assets/index-DiAlM-PP.css">
+    <link rel="stylesheet" crossorigin href="/nstp-system/assets/index-2qEU35zB.css">
   </head>
   <body>
     <div id="root"></div> 
