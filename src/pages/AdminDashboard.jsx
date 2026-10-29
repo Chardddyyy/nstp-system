@@ -2833,12 +2833,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               if (batch.rawArchive) {
                                 handleViewBatch(batch.rawArchive);
                               } else {
-                                navigate('/admin/students');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
                               }
                             }}
                             className={`flex-1 flex items-end justify-center gap-[3px] group relative cursor-pointer hover:bg-emerald-50/40 rounded-xl transition-all p-1`}
                             style={{ height: `${CHART_H}px` }}
-                            title={batch.rawArchive ? `Click to inspect ${batch.year} archive` : 'Active batch — click to view students'}
+                            title={batch.rawArchive ? `Click to inspect ${batch.year} archive` : 'Active batch — click to return to top'}
                           >
                             {/* Hover tooltip */}
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-gray-900 text-white rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap min-w-[140px]">
@@ -2855,7 +2856,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                 </div>
                               ) : (
                                 <div className="mt-1.5 pt-1 border-t border-gray-800 text-[8.5px] text-amber-300 font-extrabold flex items-center justify-center gap-1">
-                                  <span>Active Batch • Open Students ↗</span>
+                                  <span>Active Batch • Back to Top ↑</span>
                                 </div>
                               )}
                               {/* Arrow */}
@@ -2943,11 +2944,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               if (batch.rawArchive) {
                                 handleViewBatch(batch.rawArchive);
                               } else {
-                                navigate('/admin/students');
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
                               }
                             }}
                             className="flex-1 flex flex-col items-center gap-0.5 cursor-pointer hover:opacity-80 transition-opacity"
-                            title={batch.rawArchive ? `View ${batch.year} Archive` : 'View Active Students'}
+                            title={batch.rawArchive ? `View ${batch.year} Archive` : 'Active batch — click to return to top'}
                           >
                             <span className={`text-[9px] sm:text-[10px] font-black text-center leading-tight ${batch.isActive ? 'text-emerald-700 font-extrabold' : 'text-gray-700'}`}>
                               {academicYear}
