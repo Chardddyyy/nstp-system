@@ -505,37 +505,37 @@ function Profile() {
   // Human-readable format mapping for audit actions
   const formatAuditAction = useCallback((action) => {
     const map = {
-      login_success: { label: 'User Logged In', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'auth', icon: LogIn },
-      login_failed: { label: 'Failed Login', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'auth', icon: AlertTriangle },
-      admin_2fa_success: { label: '2FA Verified', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'auth', icon: ShieldCheck },
-      admin_2fa_prompted: { label: '2FA Code Sent', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'auth', icon: Key },
-      admin_2fa_failed: { label: '2FA Failed', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'auth', icon: AlertTriangle },
-      admin_2fa_locked: { label: 'Account Locked', color: 'bg-red-50 text-red-800 border-red-300', type: 'auth', icon: Lock },
-      instructor_2fa_prompted: { label: 'Instructor 2FA Code', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'auth', icon: Key },
-      login_prompt_active_session: { label: 'Active Session Notice', color: 'bg-blue-50 text-blue-800 border-blue-200', type: 'auth', icon: Activity },
-      login_blocked_active_session: { label: 'Session Blocked', color: 'bg-orange-50 text-orange-800 border-orange-200', type: 'auth', icon: AlertCircle },
+      login_success: { label: 'User Logged In', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'auth', icon: LogIn },
+      login_failed: { label: 'Failed Login', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'auth', icon: AlertTriangle },
+      admin_2fa_success: { label: '2FA Verified', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'auth', icon: ShieldCheck },
+      admin_2fa_prompted: { label: '2FA Code Sent', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'auth', icon: Key },
+      admin_2fa_failed: { label: '2FA Failed', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'auth', icon: AlertTriangle },
+      admin_2fa_locked: { label: 'Account Locked', color: 'bg-red-100 text-red-950 border-red-300', type: 'auth', icon: Lock },
+      instructor_2fa_prompted: { label: 'Instructor 2FA Code', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'auth', icon: Key },
+      login_prompt_active_session: { label: 'Active Session Notice', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'auth', icon: Activity },
+      login_blocked_active_session: { label: 'Session Blocked', color: 'bg-orange-100/90 text-orange-950 border-orange-300', type: 'auth', icon: AlertCircle },
       
-      attendance_scanned: { label: 'Attendance Scanned', color: 'bg-sky-50 text-sky-800 border-sky-200', type: 'attendance', icon: CheckCircle2 },
-      attendance_excused: { label: 'Attendance Excused', color: 'bg-indigo-50 text-indigo-800 border-indigo-200', type: 'attendance', icon: CheckCircle },
-      attendance_override: { label: 'Attendance Override', color: 'bg-purple-50 text-purple-800 border-purple-200', type: 'attendance', icon: Pencil },
+      attendance_scanned: { label: 'Attendance Scanned', color: 'bg-sky-100/90 text-sky-950 border-sky-300', type: 'attendance', icon: CheckCircle2 },
+      attendance_excused: { label: 'Attendance Excused', color: 'bg-indigo-100/90 text-indigo-950 border-indigo-300', type: 'attendance', icon: CheckCircle },
+      attendance_override: { label: 'Attendance Override', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'attendance', icon: Pencil },
       
-      enrollment_approved: { label: 'Enrollment Approved', color: 'bg-teal-50 text-teal-800 border-teal-200', type: 'student', icon: CheckCircle2 },
-      enrollment_declined: { label: 'Enrollment Declined', color: 'bg-rose-50 text-rose-800 border-rose-200', type: 'student', icon: X },
-      send_digital_id: { label: 'Digital ID Sent', color: 'bg-cyan-50 text-cyan-800 border-cyan-200', type: 'student', icon: FileText },
-      student_created: { label: 'Student Enrolled', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type: 'student', icon: UserPlus },
-      student_updated: { label: 'Student Record Updated', color: 'bg-blue-50 text-blue-800 border-blue-200', type: 'student', icon: Pencil },
-      student_deleted: { label: 'Student Deleted', color: 'bg-red-50 text-red-800 border-red-200', type: 'student', icon: Trash2 },
-      serial_number_generated: { label: 'Serial Generated', color: 'bg-teal-50 text-teal-800 border-teal-200', type: 'student', icon: FileText },
+      enrollment_approved: { label: 'Enrollment Approved', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'student', icon: CheckCircle2 },
+      enrollment_declined: { label: 'Enrollment Declined', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'student', icon: X },
+      send_digital_id: { label: 'Digital ID Sent', color: 'bg-cyan-100/90 text-cyan-950 border-cyan-300', type: 'student', icon: FileText },
+      student_created: { label: 'Student Enrolled', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'student', icon: UserPlus },
+      student_updated: { label: 'Student Record Updated', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'student', icon: Pencil },
+      student_deleted: { label: 'Student Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'student', icon: Trash2 },
+      serial_number_generated: { label: 'Serial Generated', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'student', icon: FileText },
       
-      password_changed: { label: 'Password Changed', color: 'bg-violet-50 text-violet-800 border-violet-200', type: 'system', icon: Key },
-      password_reset_success: { label: 'Password Reset', color: 'bg-purple-50 text-purple-800 border-purple-200', type: 'system', icon: RotateCcw },
-      update_enrollment_schedule: { label: 'Schedule Updated', color: 'bg-amber-50 text-amber-800 border-amber-200', type: 'system', icon: Calendar },
-      user_account_deleted: { label: 'Account Deleted', color: 'bg-red-50 text-red-800 border-red-300', type: 'system', icon: Trash2 }
+      password_changed: { label: 'Password Changed', color: 'bg-violet-100/90 text-violet-950 border-violet-300', type: 'system', icon: Key },
+      password_reset_success: { label: 'Password Reset', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'system', icon: RotateCcw },
+      update_enrollment_schedule: { label: 'Schedule Updated', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'system', icon: Calendar },
+      user_account_deleted: { label: 'Account Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'system', icon: Trash2 }
     };
     
     if (map[action]) return map[action];
     const cleaned = String(action || 'Activity').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return { label: cleaned, color: 'bg-gray-50 text-gray-700 border-gray-200', type: 'system', icon: Activity };
+    return { label: cleaned, color: 'bg-gray-100 text-gray-950 border-gray-300', type: 'system', icon: Activity };
   }, []);
 
   // Filtered audit logs (All, Admin Actions, or Instructor Actions)
@@ -1293,9 +1293,9 @@ function Profile() {
                     <table className="w-full table-fixed text-left border-collapse">
                       <thead>
                         <tr className="bg-gray-100/90 sticky top-0 z-10 backdrop-blur-xs border-b border-gray-200 text-[10px] sm:text-[10.5px] uppercase font-black tracking-wider text-gray-500">
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[140px] lg:w-[155px]">Timestamp</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[170px] lg:w-[190px]">User / Actor</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[130px] lg:w-[145px]">Action</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[135px] lg:w-[145px]">Timestamp</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[165px] lg:w-[185px]">User / Actor</th>
+                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[185px] lg:w-[205px]">Action</th>
                           <th className="py-2.5 sm:py-3 px-3 sm:px-3.5">Details &amp; Context</th>
                           <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 text-right w-[95px] lg:w-[105px]">IP Address</th>
                         </tr>
@@ -1340,9 +1340,9 @@ function Profile() {
                                 </div>
                               </td>
                               <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-bold border truncate max-w-full ${act.color}`}>
-                                  <ActionIcon className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{act.label}</span>
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black border shadow-2xs whitespace-nowrap ${act.color}`}>
+                                  <ActionIcon className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{act.label}</span>
                                 </span>
                               </td>
                               <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
@@ -1372,8 +1372,8 @@ function Profile() {
                       return (
                         <div key={log.id} className="p-3.5 space-y-2 hover:bg-gray-50/60 transition-colors">
                           <div className="flex items-center justify-between gap-2">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${act.color}`}>
-                              <ActionIcon className="w-2.5 h-2.5 shrink-0" />
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border shadow-2xs whitespace-nowrap ${act.color}`}>
+                              <ActionIcon className="w-3 h-3 shrink-0" />
                               <span>{act.label}</span>
                             </span>
                             <div className="text-right text-[10px] font-mono leading-tight shrink-0">
