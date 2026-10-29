@@ -4211,11 +4211,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <span className="text-xs font-black text-emerald-950">{ev.title}</span>
                               <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                ev.category === 'Holiday' || ev.type === 'holiday' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                                 ev.dept === 'CWTS' ? 'bg-green-100 text-green-800' :
                                 ev.dept === 'LTS' ? 'bg-purple-100 text-purple-800' :
                                 ev.dept === 'ROTC' ? 'bg-red-100 text-red-800' :
                                 'bg-blue-100 text-blue-800'
-                              }`}>{ev.dept}</span>
+                              }`}>{ev.category === 'Holiday' || ev.type === 'holiday' ? 'PH Holiday' : (ev.dept || 'All')}</span>
                             </div>
                             <p className="text-[11px] text-gray-600 mb-1.5">{ev.desc || ev.description}</p>
                           </div>

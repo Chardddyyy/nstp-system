@@ -7726,7 +7726,8 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
       data: parsedData,
       studentData: (finalStudents || []).map(normalizeStudentCasing),
       reportData: finalReports,
-      letterData: finalLetters
+      letterData: finalLetters,
+      calendarData: parsedData?.calendarData || []
     });
   } catch (error) {
     console.error('Get archive error:', error);
@@ -7773,6 +7774,10 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
     // Snapshot letter templates
     const letterData = Array.isArray(letterTemplates) ? letterTemplates : [];
 
+    // Snapshot calendar events
+    const [calendarEventsRaw] = await pool.query('SELECT * FROM calendar_events ORDER BY date ASC').catch(() => [[]]);
+    const calendarData = Array.isArray(calendarEventsRaw) ? calendarEventsRaw : [];
+
     const totalStudents = studentCount.reduce((sum, row) => sum + row.count, 0);
     const cwts = studentCount.find(r => r.department === 'CWTS')?.count || 0;
     const lts = studentCount.find(r => r.department === 'LTS')?.count || 0;
@@ -7792,7 +7797,7 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
         reportCount[0]?.count || 0,
         JSON.stringify({
           year: archiveYear, students: totalStudents, cwts, lts, rotc, reports: reportCount[0]?.count || 0,
-          studentData, reportData, letterData,
+          studentData, reportData, letterData, calendarData,
           start_month: start_month || calendar_start_date || null,
           end_month: end_month || calendar_end_date || null,
           calendar_start_date: calendar_start_date || start_month || null,

@@ -1545,7 +1545,7 @@ function InstructorDashboard() {
                     {(() => {
                       const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
                       const events = Array.isArray(customCalendar) ? customCalendar : [];
-                      const deptEvents = events.filter(e => (e.dept || e.track) === 'All' || (e.dept || e.track) === user?.department);
+                      const deptEvents = events.filter(e => (e.dept || e.track) === 'All' || (e.dept || e.track) === 'All Tracks' || e.category === 'Holiday' || e.type === 'holiday' || (e.dept || e.track) === user?.department);
                       if (deptEvents.length === 0) {
                         return <p className="text-gray-500 text-xs col-span-2 text-center py-3 font-medium">No activity schedule recorded for this batch archive.</p>;
                       }
@@ -1555,7 +1555,9 @@ function InstructorDashboard() {
                           <div>
                             <div className="flex items-center justify-between gap-1 mb-1">
                               <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-mono">{evt.date}</span>
-                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">{evt.dept}</span>
+                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                                evt.category === 'Holiday' || evt.type === 'holiday' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-gray-200 text-gray-700'
+                              }`}>{evt.category === 'Holiday' || evt.type === 'holiday' ? 'PH Holiday' : (evt.dept || 'All')}</span>
                             </div>
                             <h5 className="font-black text-gray-900 text-xs leading-tight mb-1">{evt.title}</h5>
                             <p className="text-[11px] text-gray-600 line-clamp-2">{evt.desc}</p>
