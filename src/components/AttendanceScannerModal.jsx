@@ -3,7 +3,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
-  UserCheck, ShieldAlert, Lock
+  UserCheck, ShieldAlert, Lock, RotateCcw
 } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -233,7 +233,21 @@ export function AttendanceScannerModal({
       return {};
     }
   });
+
   const [isClosingClass, setIsClosingClass] = useState(false);
+
+  // Reset all attendance sessions back to Day 1 for all departments
+  const handleResetToDay1 = useCallback(() => {
+    try {
+      localStorage.removeItem('nstp_closed_attendance_days');
+      localStorage.removeItem('nstp_cached_attendance_records');
+      Object.keys(localStorage).filter(k => k.startsWith('nstp_draft_session_logs_')).forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+    setClosedDaysMap({});
+    setSelectedDay('Day 1');
+    setSessionLogs([]);
+    showToast?.('Attendance reset to Day 1 for all departments.', 'success');
+  }, [showToast]);
 
   // Excuse Student Modal State
   const [showExcuseModal, setShowExcuseModal] = useState(false);
@@ -300,16 +314,28 @@ export function AttendanceScannerModal({
   useEffect(() => {
     if (isOpen) {
       setStep(1);
+      setSelectedDay('Day 1');
       setScanStatus(null);
       setLastScannedStudent(null);
 
       let isMounted = true;
       attendanceAPI.getRecords({ limit: 5000 })
         .then(recs => {
-          if (isMounted && Array.isArray(recs) && recs.length > 0) {
-            try {
-              localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(recs));
-            } catch (_) {}
+          if (isMounted) {
+            if (Array.isArray(recs) && recs.length > 0) {
+              try {
+                localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(recs));
+              } catch (_) {}
+            } else {
+              // When database has no records, ensure Day 1 is 100% active and unlocked
+              try {
+                localStorage.removeItem('nstp_closed_attendance_days');
+                localStorage.removeItem('nstp_cached_attendance_records');
+                Object.keys(localStorage).filter(k => k.startsWith('nstp_draft_session_logs_')).forEach(k => localStorage.removeItem(k));
+              } catch (_) {}
+              setClosedDaysMap({});
+              setSelectedDay('Day 1');
+            }
           }
         })
         .catch(() => {});
@@ -1016,7 +1042,18 @@ export function AttendanceScannerModal({
                       <Calendar className="w-3.5 h-3.5 text-emerald-700" />
                       <span>1. Attendance Day</span>
                     </label>
-                    <span className="text-[10px] text-slate-400 font-medium">Day 1 to 15</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleResetToDay1}
+                        className="text-[10px] text-emerald-700 hover:text-emerald-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Reset all days and return to Day 1"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5 text-emerald-600" />
+                        <span>Reset to Day 1</span>
+                      </button>
+                      <span className="text-[10px] text-slate-400 font-medium">Day 1 to 15</span>
+                    </div>
                   </div>
                   <select
                     id="setup-attendance-day"
@@ -1039,10 +1076,19 @@ export function AttendanceScannerModal({
                     })}
                   </select>
                   {completedDays.has(selectedDay) && (
-                    <p className="text-[10.5px] text-rose-700 font-bold flex items-center gap-1 mt-1 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
-                      <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                      <span>{selectedDay} conducted. Session locked.</span>
-                    </p>
+                    <div className="flex items-center justify-between text-[10.5px] text-rose-700 font-bold mt-1 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                        <span>{selectedDay} conducted. Session locked.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetToDay1}
+                        className="text-[9.5px] bg-rose-600 hover:bg-rose-700 text-white font-black px-2 py-0.5 rounded cursor-pointer transition-colors"
+                      >
+                        Reopen Day 1
+                      </button>
+                    </div>
                   )}
                 </div>
 

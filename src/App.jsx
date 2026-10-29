@@ -2172,6 +2172,15 @@ function App() {
         lettersData = JSON.parse(localStorage.getItem('nstp_letter_templates') || 'null');
       } catch {}
 
+      // Ensure Day 1 attendance is unlocked for all departments when database is reset
+      try {
+        const cachedAttendance = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+        if (!Array.isArray(cachedAttendance) || cachedAttendance.length === 0) {
+          localStorage.removeItem('nstp_closed_attendance_days');
+          Object.keys(localStorage).filter(k => k.startsWith('nstp_draft_session_logs_')).forEach(k => localStorage.removeItem(k));
+        }
+      } catch (_) {}
+
       if (reportsData && Array.isArray(reportsData)) setReports(reportsData);
       if (usersData && Array.isArray(usersData) && usersData.length > 0) {
         setUsers(usersData);
