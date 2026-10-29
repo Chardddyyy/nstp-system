@@ -79,9 +79,9 @@ async function generateStudentIdPdf(studentData) {
       }
       const section = nstpSection.replace('-', ' ').trim();
 
-      const serialNo = studentData.nstp_serial_id || `NSTP-${department}-2026-00001`;
+      const serialNo = studentData.nstp_serial_id || `NSTP-${department}-2024-00001`;
       const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
-      const schoolYear = studentData.schoolYear || '2026-2027';
+      const schoolYear = studentData.schoolYear || '2024-2025';
       const emergencyContact = studentData.emergencyContact || 'Emergency Contact';
       const emergencyNumber = studentData.emergencyNumber || '09000000000';
       const rawPhoto = studentData.id_photo_2x2 || studentData.photo || studentData.registrationPhoto || studentData.registration_photo || studentData.profilePicture || null;

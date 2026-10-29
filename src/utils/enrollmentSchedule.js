@@ -8,9 +8,9 @@ export const DEFAULT_SCHEDULE = {
   mode: 'AUTO', // 'AUTO' | 'FORCE_OPEN' | 'FORCE_CLOSE'
   openAt: '',   // e.g. "2026-08-01T08:00"
   closeAt: '',  // e.g. "2026-08-31T17:00"
-  academicYear: '2026-2027',
+  academicYear: '2024-2025',
   semester: '1st Semester',
-  customNotice: 'Online Enrollment for Academic Year 2026-2027 is now open.'
+  customNotice: 'Online Enrollment for Academic Year 2024-2025 is now open.'
 };
 
 /**

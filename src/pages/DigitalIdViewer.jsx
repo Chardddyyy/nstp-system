@@ -27,8 +27,8 @@ function DigitalIdViewer() {
     return `${department} ${secNum}`;
   })();
 
-  const serialNo = searchParams.get('serial') || searchParams.get('serialNo') || `NSTP-${department}-2026-00001`;
-  const schoolYear = searchParams.get('sy') || searchParams.get('schoolYear') || '2026-2027';
+  const serialNo = searchParams.get('serial') || searchParams.get('serialNo') || `NSTP-${department}-2024-00001`;
+  const schoolYear = searchParams.get('sy') || searchParams.get('schoolYear') || '2024-2025';
   const emergencyContact = searchParams.get('contact') || searchParams.get('emergencyContact') || 'Emergency Contact';
   const emergencyNumber = searchParams.get('phone') || searchParams.get('emergencyNumber') || '09000000000';
   const photoUrl = searchParams.get('photo') || null;

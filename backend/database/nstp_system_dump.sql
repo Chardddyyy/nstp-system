@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 9.6.0, for macos26.2 (arm64)
+-- MariaDB dump 10.19  Distrib 10.4.28-MariaDB, for osx10.10 (x86_64)
 --
 -- Host: localhost    Database: nstp_system
 -- ------------------------------------------------------
@@ -7,7 +7,7 @@
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8mb4 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -16,20 +16,12 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Current Database: `nstp_system`
---
-
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `nstp_system` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-
-USE `nstp_system`;
-
---
 -- Table structure for table `active_visitors`
 --
 
 DROP TABLE IF EXISTS `active_visitors`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `active_visitors` (
   `visitor_id` varchar(128) NOT NULL,
   `page_url` varchar(500) NOT NULL,
@@ -47,7 +39,7 @@ CREATE TABLE `active_visitors` (
 
 LOCK TABLES `active_visitors` WRITE;
 /*!40000 ALTER TABLE `active_visitors` DISABLE KEYS */;
-INSERT INTO `active_visitors` VALUES ('0462a968-2a22-46a2-8e52-ff7f853d4a71','/','Web Client Ping','2026-09-25 04:02:58','2026-09-25 04:02:59'),('479edb07-7c7e-423a-83c9-dbb020265038','/','Web Client Ping','2026-10-02 03:26:03','2026-10-29 01:42:32'),('549340d0-17ec-4431-9556-091f8ba75b12','/login','Web Client Ping','2026-10-13 23:21:01','2026-10-13 23:24:47'),('70cbf0a9-110c-4955-8f13-7816f0a0dc12','/login','Web Client Ping','2026-10-13 23:24:58','2026-10-13 23:24:58'),('ab258dbe-ffab-4cce-913b-6283ef284363','/login','Web Client Ping','2026-10-13 23:20:41','2026-10-13 23:20:41'),('dca09422-a26a-424f-ae5e-58fa2d157b7e','/nstp-system/enrollment','Web Client Ping','2026-09-25 01:20:00','2026-09-28 01:01:00'),('test_client_1','/','Web Client Ping','2026-09-06 14:57:40','2026-09-06 14:57:40'),('vid_0oknsgqgmueu7dae','/','Web Client Ping','2026-09-24 01:12:19','2026-09-24 01:12:19'),('vid_1ghopud4mtdu0fx3','/','Web Client Ping','2026-08-29 03:39:27','2026-09-03 03:58:29'),('vid_5nyovuw34msju3peg','/nstp-system/profile','Web Client Ping','2026-08-25 15:51:53','2026-09-17 12:03:42'),('vid_6zsy0i0snmserdhkz','/','Web Client Ping','2026-09-01 12:36:19','2026-09-08 07:14:32'),('vid_8q6lqv500mt8wt1rt','/nstp-system/login','Web Client Ping','2026-08-25 16:58:50','2026-08-25 16:58:50'),('vid_d4ekhpdomttqoj0g','/','Web Client Ping','2026-09-09 06:50:32','2026-09-09 06:50:56'),('vid_d9m7g7zlmto833nr','/nstp-system/','Web Client Ping','2026-09-05 10:11:07','2026-09-05 10:13:42'),('vid_e2d7x2ylymszirsfi','/nstp-system/login','Web Client Ping','2026-08-25 15:46:35','2026-08-26 09:26:36'),('vid_fvsb5ds40mt8wtaju','/nstp-system/login','Web Client Ping','2026-08-25 16:59:01','2026-08-25 16:59:01'),('vid_lshg29s6mttr5hgd','/','Web Client Ping','2026-09-09 06:58:38','2026-09-09 06:59:03'),('vid_lw9498i7jmt4b3g9q','/nstp-system/','Web Client Ping','2026-08-29 03:39:27','2026-09-03 03:58:33'),('vid_n5b5g0g7mtrybg83','/','Web Client Ping','2026-09-09 12:21:46','2026-09-14 10:33:20'),('vid_okgqjbkjmtinid8u','/','Web Client Ping','2026-09-01 12:36:17','2026-09-01 12:36:18'),('vid_pgr5agicmtd1to13','/','Web Client Ping','2026-08-28 14:30:22','2026-09-05 09:34:56'),('vid_szej4la25mt9cx56l','/nstp-system/login','Web Client Ping','2026-08-26 00:29:55','2026-08-26 00:29:55'),('vid_t30cm1cpmue7fyhi','/nstp-system/admin/dashboard','Web Client Ping','2026-09-24 01:21:47','2026-09-29 17:42:46'),('vid_vcgiefmuwmt8wteyi','/nstp-system/login','Web Client Ping','2026-08-25 16:59:07','2026-08-25 16:59:07'),('vid_z109ft59nmt8wvsqw','/nstp-system/login','Web Client Ping','2026-08-25 17:00:58','2026-08-25 17:00:58'),('vis_test_1787703152233','/audit-test','Web Client Ping','2026-08-26 00:12:32','2026-08-26 00:12:32'),('vis_test_1787703196813','/audit-test','Web Client Ping','2026-08-26 00:13:17','2026-08-26 00:13:17'),('vis_test_1787703232548','/audit-test','Web Client Ping','2026-08-26 00:13:52','2026-08-26 00:13:52'),('vis_test_1787741847161','/audit-test','Web Client Ping','2026-08-26 10:57:27','2026-08-26 10:57:27'),('vis_test_1787741882902','/audit-test','Web Client Ping','2026-08-26 10:58:03','2026-08-26 10:58:03'),('vis_test_1787741953775','/audit-test','Web Client Ping','2026-08-26 10:59:14','2026-08-26 10:59:14'),('vis_test_1788069995917','/audit-test','Web Client Ping','2026-08-30 06:06:36','2026-08-30 06:06:36'),('vis_test_1788070032916','/audit-test','Web Client Ping','2026-08-30 06:07:13','2026-08-30 06:07:13'),('vis_test_1788839582569','/audit-test','Web Client Ping','2026-09-08 03:53:02','2026-09-08 03:53:02');
+INSERT INTO `active_visitors` VALUES ('0462a968-2a22-46a2-8e52-ff7f853d4a71','/','Web Client Ping','2026-09-25 04:02:58','2026-09-25 04:02:59'),('479edb07-7c7e-423a-83c9-dbb020265038','/','Web Client Ping','2026-10-02 03:26:03','2026-10-29 02:39:37'),('549340d0-17ec-4431-9556-091f8ba75b12','/login','Web Client Ping','2026-10-13 23:21:01','2026-10-13 23:24:47'),('70cbf0a9-110c-4955-8f13-7816f0a0dc12','/login','Web Client Ping','2026-10-13 23:24:58','2026-10-13 23:24:58'),('ab258dbe-ffab-4cce-913b-6283ef284363','/login','Web Client Ping','2026-10-13 23:20:41','2026-10-13 23:20:41'),('dca09422-a26a-424f-ae5e-58fa2d157b7e','/nstp-system/enrollment','Web Client Ping','2026-09-25 01:20:00','2026-09-28 01:01:00'),('test_client_1','/','Web Client Ping','2026-09-06 14:57:40','2026-09-06 14:57:40'),('vid_0oknsgqgmueu7dae','/','Web Client Ping','2026-09-24 01:12:19','2026-09-24 01:12:19'),('vid_1ghopud4mtdu0fx3','/','Web Client Ping','2026-08-29 03:39:27','2026-09-03 03:58:29'),('vid_5nyovuw34msju3peg','/nstp-system/profile','Web Client Ping','2026-08-25 15:51:53','2026-09-17 12:03:42'),('vid_6zsy0i0snmserdhkz','/','Web Client Ping','2026-09-01 12:36:19','2026-09-08 07:14:32'),('vid_8q6lqv500mt8wt1rt','/nstp-system/login','Web Client Ping','2026-08-25 16:58:50','2026-08-25 16:58:50'),('vid_d4ekhpdomttqoj0g','/','Web Client Ping','2026-09-09 06:50:32','2026-09-09 06:50:56'),('vid_d9m7g7zlmto833nr','/nstp-system/','Web Client Ping','2026-09-05 10:11:07','2026-09-05 10:13:42'),('vid_e2d7x2ylymszirsfi','/nstp-system/login','Web Client Ping','2026-08-25 15:46:35','2026-08-26 09:26:36'),('vid_fvsb5ds40mt8wtaju','/nstp-system/login','Web Client Ping','2026-08-25 16:59:01','2026-08-25 16:59:01'),('vid_lshg29s6mttr5hgd','/','Web Client Ping','2026-09-09 06:58:38','2026-09-09 06:59:03'),('vid_lw9498i7jmt4b3g9q','/nstp-system/','Web Client Ping','2026-08-29 03:39:27','2026-09-03 03:58:33'),('vid_n5b5g0g7mtrybg83','/','Web Client Ping','2026-09-09 12:21:46','2026-09-14 10:33:20'),('vid_okgqjbkjmtinid8u','/','Web Client Ping','2026-09-01 12:36:17','2026-09-01 12:36:18'),('vid_pgr5agicmtd1to13','/','Web Client Ping','2026-08-28 14:30:22','2026-09-05 09:34:56'),('vid_szej4la25mt9cx56l','/nstp-system/login','Web Client Ping','2026-08-26 00:29:55','2026-08-26 00:29:55'),('vid_t30cm1cpmue7fyhi','/nstp-system/admin/dashboard','Web Client Ping','2026-09-24 01:21:47','2026-09-29 17:42:46'),('vid_vcgiefmuwmt8wteyi','/nstp-system/login','Web Client Ping','2026-08-25 16:59:07','2026-08-25 16:59:07'),('vid_z109ft59nmt8wvsqw','/nstp-system/login','Web Client Ping','2026-08-25 17:00:58','2026-08-25 17:00:58'),('vis_test_1787703152233','/audit-test','Web Client Ping','2026-08-26 00:12:32','2026-08-26 00:12:32'),('vis_test_1787703196813','/audit-test','Web Client Ping','2026-08-26 00:13:17','2026-08-26 00:13:17'),('vis_test_1787703232548','/audit-test','Web Client Ping','2026-08-26 00:13:52','2026-08-26 00:13:52'),('vis_test_1787741847161','/audit-test','Web Client Ping','2026-08-26 10:57:27','2026-08-26 10:57:27'),('vis_test_1787741882902','/audit-test','Web Client Ping','2026-08-26 10:58:03','2026-08-26 10:58:03'),('vis_test_1787741953775','/audit-test','Web Client Ping','2026-08-26 10:59:14','2026-08-26 10:59:14'),('vis_test_1788069995917','/audit-test','Web Client Ping','2026-08-30 06:06:36','2026-08-30 06:06:36'),('vis_test_1788070032916','/audit-test','Web Client Ping','2026-08-30 06:07:13','2026-08-30 06:07:13'),('vis_test_1788839582569','/audit-test','Web Client Ping','2026-09-08 03:53:02','2026-09-08 03:53:02');
 /*!40000 ALTER TABLE `active_visitors` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -57,7 +49,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `archived_years`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `archived_years` (
   `id` int NOT NULL AUTO_INCREMENT,
   `year` varchar(100) NOT NULL,
@@ -85,7 +77,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `attendance_records`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `attendance_records` (
   `id` int NOT NULL AUTO_INCREMENT,
   `student_id` varchar(50) NOT NULL,
@@ -121,7 +113,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `audit_logs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `audit_logs` (
   `id` int NOT NULL AUTO_INCREMENT,
   `action` varchar(100) NOT NULL,
@@ -187,7 +179,7 @@ DELIMITER ;
 
 DROP TABLE IF EXISTS `calendar_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `calendar_events` (
   `id` varchar(64) NOT NULL,
   `title` varchar(255) NOT NULL,
@@ -216,7 +208,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `calls`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `calls` (
   `id` int NOT NULL AUTO_INCREMENT,
   `conversation_id` varchar(255) NOT NULL,
@@ -259,7 +251,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `conversation_participants`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversation_participants` (
   `conversation_id` varchar(255) NOT NULL,
   `user_id` int NOT NULL,
@@ -287,7 +279,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `conversations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `conversations` (
   `id` varchar(255) NOT NULL,
   `participant_1_id` int DEFAULT NULL,
@@ -328,7 +320,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `current_batch`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `current_batch` (
   `id` int NOT NULL DEFAULT '1',
   `year` varchar(100) NOT NULL,
@@ -349,7 +341,7 @@ CREATE TABLE `current_batch` (
 
 LOCK TABLES `current_batch` WRITE;
 /*!40000 ALTER TABLE `current_batch` DISABLE KEYS */;
-INSERT INTO `current_batch` VALUES (1,'2026-2027 1st Semester','2026-03-17 03:14:06','2026-09-08 08:34:07','1st Semester',NULL,NULL,NULL,NULL);
+INSERT INTO `current_batch` VALUES (1,'2024-2025 1st Semester','2026-03-17 03:14:06','2026-10-29 02:12:42','1st Semester','2024-08','2024-12','2024-08-15','2024-12-20');
 /*!40000 ALTER TABLE `current_batch` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -359,7 +351,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `enrollments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `enrollments` (
   `id` int NOT NULL AUTO_INCREMENT,
   `student_name` varchar(255) NOT NULL,
@@ -434,7 +426,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `messages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `messages` (
   `id` int NOT NULL AUTO_INCREMENT,
   `conversation_id` varchar(255) NOT NULL,
@@ -476,7 +468,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `password_resets`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `password_resets` (
   `id` int NOT NULL AUTO_INCREMENT,
   `email` varchar(255) NOT NULL,
@@ -504,7 +496,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `report_comments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `report_comments` (
   `id` int NOT NULL AUTO_INCREMENT,
   `report_id` int NOT NULL,
@@ -534,7 +526,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `report_submissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `report_submissions` (
   `id` int NOT NULL AUTO_INCREMENT,
   `report_id` int NOT NULL,
@@ -566,7 +558,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `reports`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `reports` (
   `id` int NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
@@ -604,7 +596,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `sms_notifications_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `sms_notifications_log` (
   `id` int NOT NULL AUTO_INCREMENT,
   `recipient_phone` varchar(50) NOT NULL,
@@ -634,7 +626,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `student_grades`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `student_grades` (
   `id` int NOT NULL AUTO_INCREMENT,
   `student_id` int NOT NULL,
@@ -675,7 +667,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `students`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `students` (
   `id` int NOT NULL AUTO_INCREMENT,
   `studentId` varchar(50) NOT NULL,
@@ -750,7 +742,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `system_settings`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `system_settings` (
   `setting_key` varchar(100) NOT NULL,
   `setting_value` longtext,
@@ -765,7 +757,7 @@ CREATE TABLE `system_settings` (
 
 LOCK TABLES `system_settings` WRITE;
 /*!40000 ALTER TABLE `system_settings` DISABLE KEYS */;
-INSERT INTO `system_settings` VALUES ('enrollment_schedule','{\"mode\":\"FORCE_OPEN\",\"openAt\":\"\",\"closeAt\":\"\",\"academicYear\":\"2026-2027\",\"semester\":\"1st Semester\",\"customNotice\":\"Online Enrollment is now open.\"}','2026-10-13 22:55:53'),('last_backup_daily_midnight','2026-10-28T16:00:31.433Z','2026-10-28 16:00:31'),('last_backup_manual','2026-08-22T15:06:11.050Z','2026-08-22 15:06:11'),('telemetry_cumulative_visitors','{\"visitors\":[\"vid_t30cm1cpmue7fyhi\",\"vid_8q6lqv500mt8wt1rt\",\"vid_fvsb5ds40mt8wtaju\",\"vid_vcgiefmuwmt8wteyi\",\"vid_z109ft59nmt8wvsqw\",\"vid_szej4la25mt9cx56l\",\"vid_e2d7x2ylymszirsfi\",\"vid_okgqjbkjmtinid8u\",\"vid_1ghopud4mtdu0fx3\",\"vid_lw9498i7jmt4b3g9q\",\"vid_pgr5agicmtd1to13\",\"vid_d9m7g7zlmto833nr\",\"test_client_1\",\"vid_6zsy0i0snmserdhkz\",\"vid_d4ekhpdomttqoj0g\",\"vid_lshg29s6mttr5hgd\",\"vid_n5b5g0g7mtrybg83\",\"vid_5nyovuw34msju3peg\",\"vid_0oknsgqgmueu7dae\",\"0462a968-2a22-46a2-8e52-ff7f853d4a71\",\"dca09422-a26a-424f-ae5e-58fa2d157b7e\",\"479edb07-7c7e-423a-83c9-dbb020265038\",\"ab258dbe-ffab-4cce-913b-6283ef284363\",\"549340d0-17ec-4431-9556-091f8ba75b12\",\"70cbf0a9-110c-4955-8f13-7816f0a0dc12\"],\"totalCount\":25,\"totalVisitors\":25,\"updatedAt\":\"2026-10-29T01:54:37.587Z\"}','2026-10-29 01:54:37');
+INSERT INTO `system_settings` VALUES ('enrollment_schedule','{\"mode\": \"FORCE_OPEN\", \"openAt\": \"\", \"closeAt\": \"\", \"semester\": \"1st Semester\", \"academicYear\": \"2024-2025\", \"customNotice\": \"Online Enrollment for Academic Year 2024-2025 is now open.\"}','2026-10-29 02:12:42'),('last_backup_daily_midnight','2026-10-28T16:00:31.433Z','2026-10-28 16:00:31'),('last_backup_manual','2026-08-22T15:06:11.050Z','2026-08-22 15:06:11'),('telemetry_cumulative_visitors','{\"visitors\":[\"vid_t30cm1cpmue7fyhi\",\"vid_8q6lqv500mt8wt1rt\",\"vid_fvsb5ds40mt8wtaju\",\"vid_vcgiefmuwmt8wteyi\",\"vid_z109ft59nmt8wvsqw\",\"vid_szej4la25mt9cx56l\",\"vid_e2d7x2ylymszirsfi\",\"vid_okgqjbkjmtinid8u\",\"vid_1ghopud4mtdu0fx3\",\"vid_lw9498i7jmt4b3g9q\",\"vid_pgr5agicmtd1to13\",\"vid_d9m7g7zlmto833nr\",\"test_client_1\",\"vid_6zsy0i0snmserdhkz\",\"vid_d4ekhpdomttqoj0g\",\"vid_lshg29s6mttr5hgd\",\"vid_n5b5g0g7mtrybg83\",\"vid_5nyovuw34msju3peg\",\"vid_0oknsgqgmueu7dae\",\"0462a968-2a22-46a2-8e52-ff7f853d4a71\",\"dca09422-a26a-424f-ae5e-58fa2d157b7e\",\"479edb07-7c7e-423a-83c9-dbb020265038\",\"ab258dbe-ffab-4cce-913b-6283ef284363\",\"549340d0-17ec-4431-9556-091f8ba75b12\",\"70cbf0a9-110c-4955-8f13-7816f0a0dc12\"],\"totalCount\":25,\"totalVisitors\":25,\"updatedAt\":\"2026-10-29T01:54:37.587Z\"}','2026-10-29 01:54:37');
 /*!40000 ALTER TABLE `system_settings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -775,7 +767,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `email` varchar(255) NOT NULL,
@@ -802,13 +794,9 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'richardbelen99@gmail.com','$2a$12$sP0tr8FOwf936kJEFyv6b.AzlgXX6635ZvRQybH3tHACk6u0VPJUO','admin','NSTP Administrator','NSTP Office','avatar-4',NULL,'','Testing','2026-03-13 16:04:59','2026-10-29 01:54:55','2026-10-29 09:54:55',NULL),(2,'belenjoshua58@gmail.com','$2a$12$tx.XRJ496jMUdCtKYNey9uKpjV4LzW9pMwTRkcGtjQCyg88yr4Wzm','instructor','CWTS Facilitator','CWTS','avatar-2',NULL,NULL,'CWTS Safe Update','2026-03-13 16:04:59','2026-10-28 11:03:56',NULL,NULL),(3,'lts@gmail.com','$2a$12$xJbobWiihuTYz2G//fbSoeH0wnp4x5jerDoszxc9irWqgNVZee3ne','instructor','LTS Facilitator','LTS','avatar-6',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL),(4,'rotc@gmail.com','$2a$12$2q1kcf1G9bYuNr2/07tCk.LOw.EBT7l4fiMYKxIXDyo4PT3s4KkWS','instructor','ROTC Training Staff','ROTC','avatar-8',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL);
+INSERT INTO `users` VALUES (1,'richardbelen99@gmail.com','$2a$12$sP0tr8FOwf936kJEFyv6b.AzlgXX6635ZvRQybH3tHACk6u0VPJUO','admin','NSTP Administrator','NSTP Office','avatar-4',NULL,'','Testing','2026-03-13 16:04:59','2026-10-29 02:39:36','2026-10-29 10:39:36',NULL),(2,'belenjoshua58@gmail.com','$2a$12$tx.XRJ496jMUdCtKYNey9uKpjV4LzW9pMwTRkcGtjQCyg88yr4Wzm','instructor','CWTS Facilitator','CWTS','avatar-2',NULL,NULL,'CWTS Safe Update','2026-03-13 16:04:59','2026-10-28 11:03:56',NULL,NULL),(3,'lts@gmail.com','$2a$12$xJbobWiihuTYz2G//fbSoeH0wnp4x5jerDoszxc9irWqgNVZee3ne','instructor','LTS Facilitator','LTS','avatar-6',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL),(4,'rotc@gmail.com','$2a$12$2q1kcf1G9bYuNr2/07tCk.LOw.EBT7l4fiMYKxIXDyo4PT3s4KkWS','instructor','ROTC Training Staff','ROTC','avatar-8',NULL,NULL,NULL,'2026-03-13 16:04:59','2026-10-18 00:39:31',NULL,NULL);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping routines for database 'nstp_system'
---
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -819,4 +807,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-29  9:55:45
+-- Dump completed on 2026-10-29 10:39:39

@@ -6,125 +6,7 @@ import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertC
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
 import xss from 'xss';
 
-const DEFAULT_TEMPLATES = [
-  {
-    id: 'tpl-1',
-    title: 'Student Absence Excuse Letter & Medical Certificate Submission',
-    department: 'All',
-    description: 'Official student absence justification and health excuse letter endorsing submitted medical certificates for make-up clearance.',
-    file: { name: 'CvSU_NSTP_Student_Medical_Excuse_Letter.doc', size: '124.5 KB', type: 'application/msword' },
-    createdBy: 'NSTP Office',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-2',
-    title: 'Barangay Immersion & Community Service Request Letter',
-    department: 'CWTS',
-    description: 'Official formal institutional endorsement requesting barangay clearance and partner community facilitation for NSTP-CWTS immersion projects.',
-    file: { name: 'CvSU_CWTS_Barangay_Immersion_Request.doc', size: '142.5 KB', type: 'application/msword' },
-    createdBy: 'CWTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-3',
-    title: 'Coastal Cleanup & Mangrove Planting Environmental Partnership',
-    department: 'CWTS',
-    description: 'Formal partnership endorsement to CENRO and Barangay Bucana Malaki for coastal solid waste management and mangrove propagation.',
-    file: { name: 'CvSU_CWTS_Coastal_Cleanup_Mangrove_Endorsement.doc', size: '138.2 KB', type: 'application/msword' },
-    createdBy: 'CWTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-4',
-    title: 'Barangay Health Center Supplementary Feeding & Hygiene Drive',
-    department: 'CWTS',
-    description: 'Collaborative endorsement requesting authorization to conduct child nutrition profiling, feeding drive, and handwashing seminars.',
-    file: { name: 'CvSU_CWTS_Barangay_Feeding_Health_Drive.doc', size: '131.0 KB', type: 'application/msword' },
-    createdBy: 'CWTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-5',
-    title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement',
-    department: 'LTS',
-    description: 'Formal request to elementary school principals for student-led reading tutorials and literacy clinic sessions.',
-    file: { name: 'CvSU_LTS_School_Outreach_Permission.doc', size: '128.0 KB', type: 'application/msword' },
-    createdBy: 'LTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-6',
-    title: 'Public Elementary School Remedial Reading Center Collaboration',
-    department: 'LTS',
-    description: 'Formal coordination letter requesting classroom space and teacher coordinator assistance for weekend Alagang Basa sessions.',
-    file: { name: 'CvSU_LTS_Elementary_Reading_Collaboration.doc', size: '135.4 KB', type: 'application/msword' },
-    createdBy: 'LTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-7',
-    title: 'Children Storytelling & Illustrated Book Donation Handover',
-    department: 'LTS',
-    description: 'Official institutional deed of handover for storybooks, literacy flashcards, and learning materials donated to the partner school reading corner.',
-    file: { name: 'CvSU_LTS_Book_Donation_Handover.doc', size: '119.8 KB', type: 'application/msword' },
-    createdBy: 'LTS Department Coordinator',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-8',
-    title: 'ROTC Field Training Exercise & Range Facility Request',
-    department: 'ROTC',
-    description: 'Endorsement to Armed Forces / Naval training Command for weekend field tactics, land navigation, and range handling exercises.',
-    file: { name: 'CvSU_ROTC_Tactical_Training_Endorsement.doc', size: '165.2 KB', type: 'application/msword' },
-    createdBy: 'ROTC Commandant',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-9',
-    title: 'ROTC Annual Tactical Inspection (ATI) & Pass-in-Review Invitation',
-    department: 'ROTC',
-    description: 'Official formal invitation addressed to Philippine Navy & DMST Inspection Board for the annual cadet battalion inspection and parade.',
-    file: { name: 'CvSU_ROTC_Annual_Tactical_Inspection_Invitation.doc', size: '152.0 KB', type: 'application/msword' },
-    createdBy: 'ROTC Commandant',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-10',
-    title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form',
-    department: 'All',
-    description: 'Standard institutional waiver and health declaration required for all off-campus community and training engagements.',
-    file: { name: 'CvSU_NSTP_Parent_Consent_Waiver.doc', size: '98.4 KB', type: 'application/msword' },
-    createdBy: 'NSTP Office',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-11',
-    title: 'Notice of Incomplete Attendance & Special Make-Up Service Agreement',
-    department: 'All',
-    description: 'Official student covenant and faculty agreement designating compensatory community hours to convert an Incomplete (INC) status.',
-    file: { name: 'CvSU_NSTP_INC_Makeup_Service_Agreement.doc', size: '127.3 KB', type: 'application/msword' },
-    createdBy: 'NSTP Office',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-12',
-    title: 'Certificate of Good Moral Character & Satisfactory NSTP Service Clearance',
-    department: 'All',
-    description: 'Official university clearance certifying commendable civic demeanor, community service hours completion, and liability clearance.',
-    file: { name: 'CvSU_NSTP_Good_Moral_Service_Clearance.doc', size: '116.0 KB', type: 'application/msword' },
-    createdBy: 'NSTP Office',
-    createdAt: '2024-09-01T08:00:00Z'
-  },
-  {
-    id: 'tpl-13',
-    title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement',
-    department: 'All',
-    description: 'Official CHED submission document certifying graduates and requesting assigned national serial numbers.',
-    file: { name: 'CvSU_OSDS_CHED_Serial_Endorsement.doc', size: '184.8 KB', type: 'application/msword' },
-    createdBy: 'NSTP Director',
-    createdAt: '2024-09-01T08:00:00Z'
-  }
-];
+const DEFAULT_TEMPLATES = [];
 
 export default function LetterFormats() {
   const { user, logout, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, showToast } = useAuth();
@@ -146,21 +28,33 @@ export default function LetterFormats() {
       if (saved !== null) {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Clean up any legacy custom templates that had fabricated mock attachments without real file data
-          parsed = parsed.map(item => {
-            if (!String(item.id || '').startsWith('tpl-') && item.file && !item.file.data) {
-              return { ...item, file: null };
-            }
-            return item;
-          });
-          return parsed;
+          // Keep only user-created letter templates with uploaded file attachments
+          const valid = parsed.filter(item => !String(item.id || '').startsWith('tpl-') && item.file && item.file.data);
+          return valid;
         }
       }
-      return DEFAULT_TEMPLATES;
+      return [];
     } catch {
-      return DEFAULT_TEMPLATES;
+      return [];
     }
   });
+
+  // Purge any residual mock templates from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nstp_letter_templates');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter(item => !String(item.id || '').startsWith('tpl-') && item.file && item.file.data);
+          if (valid.length !== parsed.length) {
+            localStorage.setItem('nstp_letter_templates', JSON.stringify(valid));
+            setTemplates(valid);
+          }
+        }
+      }
+    } catch {}
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -225,8 +119,8 @@ export default function LetterFormats() {
       return;
     }
 
-    // Require an actual uploaded file for new custom templates
-    const hasExistingFile = editingTemplate && editingTemplate.file && (editingTemplate.file.data || String(editingTemplate.id || '').startsWith('tpl-'));
+    // Require an actual uploaded file for custom templates
+    const hasExistingFile = editingTemplate && editingTemplate.file && editingTemplate.file.data;
     if (!attachedFile && !hasExistingFile) {
       showToast('Please attach a document file (PDF, Word, or Image) before saving.', 'warning');
       return;

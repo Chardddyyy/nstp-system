@@ -212,7 +212,7 @@ function AdminDashboard() {
     declineEnrollment, 
     refreshData, 
     archivedYears = [], 
-    currentBatch = '2026-2027 1st Semester', 
+    currentBatch = '2024-2025 1st Semester', 
     notifications = [], 
     messages = {},
     conversations = [],
@@ -1689,7 +1689,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   
                   {(scheduleConfig.academicYear || scheduleConfig.semester || scheduleConfig.closeAt) && (
                     <div className="flex items-center gap-2 sm:gap-3 mt-2 text-[11px] text-gray-600 font-semibold flex-wrap">
-                      <span>Academic Year {scheduleConfig.academicYear || '2026-2027'}</span>
+                      <span>Academic Year {scheduleConfig.academicYear || '2024-2025'}</span>
                       <span>•</span>
                       <span>{scheduleConfig.semester || '1st Semester'}</span>
                       {scheduleConfig.closeAt && (
@@ -4190,45 +4190,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(() => {
-                      const yr = String(archiveViewData?.year || '');
                       const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
-                      const events = (Array.isArray(customCalendar) && customCalendar.length > 0)
-                        ? customCalendar
-                        : (yr.includes('2023-2024')
-                            ? (yr.includes('1st Semester')
-                                ? [
-                                    { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
-                                    { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
-                                    { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
-                                    { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
-                                    { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
-                                    { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
-                                  ]
-                                : [
-                                    { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
-                                    { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
-                                    { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
-                                    { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
-                                    { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
-                                    { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
-                                  ])
-                            : (yr.includes('1st Semester')
-                                ? [
-                                    { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
-                                    { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
-                                    { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
-                                    { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
-                                    { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
-                                    { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
-                                  ]
-                                : [
-                                    { date: '2025-02-08', title: 'NSTP 2 Project Launch & Field Immersion', desc: 'Mobilization of students for second semester projects in Naic.', dept: 'All' },
-                                    { date: '2025-03-08', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', desc: 'Workshop on community organic composting and eco-crafts.', dept: 'CWTS' },
-                                    { date: '2025-03-22', title: 'LTS Mini-Library Handover & Literacy Graduation', desc: 'Turnover of 300 children storybooks and graduation.', dept: 'LTS' },
-                                    { date: '2025-04-05', title: 'ROTC Annual Tactical Inspection & Drill Review', desc: 'Annual tactical evaluation by Naval Reserve Command.', dept: 'ROTC' },
-                                    { date: '2025-04-12', title: 'NSTP Final Culminating Defense & Document Audit', desc: 'Final requirements audit for CHED serial numbers.', dept: 'All' },
-                                    { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Pass-in-Review', desc: 'Formal graduation pass-in-review and certificate awarding ceremony.', dept: 'All' },
-                                  ]));
+                      const events = Array.isArray(customCalendar) ? customCalendar : [];
+                      if (events.length === 0) {
+                        return <p className="text-gray-500 text-xs col-span-2 text-center py-3 font-medium">No activity schedule recorded for this batch archive.</p>;
+                      }
                       return events.map((ev, i) => (
                         <div key={i} className="bg-gray-50 rounded-xl p-3 border border-gray-200 flex flex-col justify-between">
                           <div>
@@ -4625,7 +4591,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         name="academicYear"
                         value={scheduleConfig.academicYear || ''}
                         onChange={(e) => setScheduleConfig(prev => ({ ...prev, academicYear: e.target.value }))}
-                        placeholder="e.g. 2026-2027"
+                        placeholder="e.g. 2024-2025"
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
                       />
                     </div>
@@ -4719,7 +4685,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         name="customNotice"
                         value={scheduleConfig.customNotice || ''}
                         onChange={(e) => setScheduleConfig(prev => ({ ...prev, customNotice: e.target.value }))}
-                        placeholder="e.g. Online Enrollment for Academic Year 2026-2027 is now open."
+                        placeholder="e.g. Online Enrollment for Academic Year 2024-2025 is now open."
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm resize-none"
                       />
                       <p className="text-[11px] text-gray-500">This notice appears at the top banner of the student online registration page.</p>
@@ -4735,7 +4701,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             Student Portal Banner
                           </span>
                           <span className="text-[10px] text-amber-300 font-bold">
-                            {scheduleConfig.semester || '1st Semester'} • AY {scheduleConfig.academicYear || '2026-2027'}
+                            {scheduleConfig.semester || '1st Semester'} • AY {scheduleConfig.academicYear || '2024-2025'}
                           </span>
                         </div>
                         <p className="font-semibold text-emerald-100 text-xs sm:text-sm">

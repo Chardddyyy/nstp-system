@@ -24,12 +24,12 @@ const path = require('path');
 const fs = require('fs');
 const { generateStudentIdPdf } = require('./utils/pdfIdGenerator');
 const app = express();
-// Enable reverse proxy trust (critical for accurate client IP in rate limiting & logs behind Render/Cloudflare)
+// Enable reverse proxy trust (critical for accurate client IP in rate limiting & logs behind reverse proxy/Cloudflare)
 app.set('trust proxy', 1);
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// ── Global Process Crash Guards (Prevents Render Server Downtime) ─────────────
+// ── Global Process Crash Guards ───────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[CRASH GUARD] Unhandled Promise Rejection:', reason?.stack || reason);
 });
@@ -38,7 +38,7 @@ process.on('uncaughtException', (err) => {
   console.error('[CRASH GUARD] Uncaught Exception:', err?.stack || err);
 });
 
-// Root Health Check for Render Service Monitors
+// Root Health Check
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'NSTP System Backend API', timestamp: new Date().toISOString() });
 });
@@ -73,7 +73,7 @@ app.use((req, res, next) => {
 let JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('[SECURITY CRITICAL] JWT_SECRET environment variable is NOT SET in production. Set it in Render before deployment.');
+    throw new Error('[SECURITY CRITICAL] JWT_SECRET environment variable is NOT SET in production. Set it in your environment before deployment.');
   }
   console.warn('[SECURITY NOTICE] JWT_SECRET environment variable not set. Falling back to a development-only key.');
   JWT_SECRET = 'nstp-system-dev-secret-change-before-production';
@@ -167,7 +167,6 @@ function isAllowedOrigin(origin) {
   if (/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
   if (/^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(clean)) return true;
   if (/^https:\/\/.*\.github\.io$/.test(clean)) return true;
-  if (/^https:\/\/.*\.onrender\.com$/.test(clean)) return true;
   if (/^https:\/\/.*\.pages\.dev$/.test(clean)) return true;
   if (/^https:\/\/.*\.railway\.app$/.test(clean)) return true;
   return false;
@@ -675,297 +674,8 @@ async function ensureAllCoreTables() {
 
 // ── Seed Past Batches (Disabled for Clean Production Setup) ─────────────────
 async function seedPastBatches() {
-  return;
-  try {
-    // Purge legacy non-semester batch entries so the archives remain clean and consecutive
-    try {
-      await pool.execute("DELETE FROM archived_years WHERE year NOT LIKE '%Semester%' OR year = '2020' OR year = '2021' OR year = '2022' OR year = '2023' OR year = '2024' OR year = '2025' OR year = '2026' OR year = '2023-2024' OR year = '2024-2025' OR year = '2025-2026'");
-    } catch (_) {}
-
-    const rawStudents2023 = [
-      { firstName: 'Joshua', lastName: 'Bautista', middleName: 'Cruz', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Princess', lastName: 'Ramos', middleName: 'Santos', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Angelo', lastName: 'Mendoza', middleName: 'Garcia', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Jasmine', lastName: 'Castillo', middleName: 'Lopez', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Christian', lastName: 'Aquino', middleName: 'Torres', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Rhea', lastName: 'Tolentino', middleName: 'Flores', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Mark', lastName: 'Villanueva', middleName: 'Rivera', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Alyssa', lastName: 'De Guzman', middleName: 'Diaz', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-      
-      { firstName: 'Gabriel', lastName: 'Alcantara', middleName: 'Reyes', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Nicole', lastName: 'Mercado', middleName: 'Navarro', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Daniel', lastName: 'Castro', middleName: 'Morales', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Trisha', lastName: 'Salazar', middleName: 'Valdez', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Justin', lastName: 'Ferrer', middleName: 'Pascual', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Bea', lastName: 'Delos Santos', middleName: 'Velasco', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Jerome', lastName: 'Cortez', middleName: 'Dela Cruz', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
-      { firstName: 'Camille', lastName: 'Bernardo', middleName: 'Soriano', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
-
-      { firstName: 'Kevin', lastName: 'Padilla', middleName: 'Enriquez', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Stephanie', lastName: 'Manalo', middleName: 'Aguilar', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Patrick', lastName: 'Rosales', middleName: 'David', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Kimberly', lastName: 'Estrella', middleName: 'Gutierrez', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Adrian', lastName: 'Guerrero', middleName: 'Pineda', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Hannah', lastName: 'Concepcion', middleName: 'Serrano', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Elijah', lastName: 'Miranda', middleName: 'Ponce', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Chloe', lastName: 'Corpuz', middleName: 'Ocampo', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-    ];
-
-    const rawStudents2024 = [
-      { firstName: 'Nathan', lastName: 'Domingo', middleName: 'Villarreal', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Samantha', lastName: 'Evangelista', middleName: 'Fabian', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Kyle', lastName: 'Santiago', middleName: 'Galang', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Patricia', lastName: 'Hilario', middleName: 'Ignacio', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Sean', lastName: 'Jacinto', middleName: 'Katigbak', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Andrea', lastName: 'Laurel', middleName: 'Macaraeg', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Matthew', lastName: 'Natividad', middleName: 'Ortega', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Angelica', lastName: 'Panganiban', middleName: 'Quirino', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-      { firstName: 'Carlo', lastName: 'Romulo', middleName: 'Silang', sex: 'Male', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-1', brgy: 'Bucana' },
-      { firstName: 'Janine', lastName: 'Tañada', middleName: 'Umali', sex: 'Female', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-2', brgy: 'Halang' },
-
-      { firstName: 'Brent', lastName: 'Valenzuela', middleName: 'Yulo', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Ella', lastName: 'Zamora', middleName: 'Abad', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Dominic', lastName: 'Belmonte', middleName: 'Cojuangco', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Kyla', lastName: 'Dimagiba', middleName: 'Espiritu', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Francis', lastName: 'Fajardo', middleName: 'Guevarra', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Cheska', lastName: 'Hermoso', middleName: 'Ilagan', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Julian', lastName: 'Javier', middleName: 'Lagman', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
-      { firstName: 'Mariel', lastName: 'Magno', middleName: 'Nobleza', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
-
-      { firstName: 'Bryan', lastName: 'Ople', middleName: 'Pascual', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Gillian', lastName: 'Quezon', middleName: 'Recto', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Louie', lastName: 'Sarmiento', middleName: 'Tan', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Danielle', lastName: 'Urbano', middleName: 'Villareal', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Kenneth', lastName: 'Wenceslao', middleName: 'Yanson', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Joy', lastName: 'Zulueta', middleName: 'Agoncillo', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Darren', lastName: 'Balagtas', middleName: 'Crisostomo', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Karen', lastName: 'Dagohoy', middleName: 'Escoda', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-    ];
-
-    const rawStudents2025 = [
-      { firstName: 'Cedric', lastName: 'Abrenica', middleName: 'Bautista', sex: 'Male', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Marjorie', lastName: 'Caballero', middleName: 'Dizon', sex: 'Female', dept: 'CWTS', prog: 'BSIT', nstpSec: 'CWTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Renz', lastName: 'Esguerra', middleName: 'Flores', sex: 'Male', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Kristine', lastName: 'Guevarra', middleName: 'Hernandez', sex: 'Female', dept: 'CWTS', prog: 'BSCS', nstpSec: 'CWTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Mark Lester', lastName: 'Ilagan', middleName: 'Javier', sex: 'Male', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Mary Ann', lastName: 'Katigbak', middleName: 'Lim', sex: 'Female', dept: 'CWTS', prog: 'BSHM', nstpSec: 'CWTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Jerick', lastName: 'Mendoza', middleName: 'Navarro', sex: 'Male', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Eunice', lastName: 'Ocampo', middleName: 'Perez', sex: 'Female', dept: 'CWTS', prog: 'BSBA', nstpSec: 'CWTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-      { firstName: 'Vincent', lastName: 'Quirino', middleName: 'Ramos', sex: 'Male', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-1', brgy: 'Bucana' },
-      { firstName: 'Bea Clarisse', lastName: 'Santos', middleName: 'Torres', sex: 'Female', dept: 'CWTS', prog: 'BSFAS', nstpSec: 'CWTS 3', schoolSec: '1-2', brgy: 'Halang' },
-
-      { firstName: 'Christian Paul', lastName: 'Tolentino', middleName: 'Umali', sex: 'Male', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Sherilyn', lastName: 'Valdez', middleName: 'Villanueva', sex: 'Female', dept: 'ROTC', prog: 'BSIT', nstpSec: 'ROTC 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'John Lloyd', lastName: 'Wong', middleName: 'Yabut', sex: 'Male', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Kaye Anne', lastName: 'Zambrano', middleName: 'Aquino', sex: 'Female', dept: 'ROTC', prog: 'BSCS', nstpSec: 'ROTC 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Dave', lastName: 'Bernardo', middleName: 'Castillo', sex: 'Male', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Rhea Mae', lastName: 'Delos Reyes', middleName: 'Estrada', sex: 'Female', dept: 'ROTC', prog: 'BSHM', nstpSec: 'ROTC 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Patrick John', lastName: 'Ferrer', middleName: 'Garcia', sex: 'Male', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 1', schoolSec: '1-1', brgy: 'Bucana' },
-      { firstName: 'Aileen', lastName: 'Gutierrez', middleName: 'Hilario', sex: 'Female', dept: 'ROTC', prog: 'BSFAS', nstpSec: 'ROTC 2', schoolSec: '1-2', brgy: 'Halang' },
-
-      { firstName: 'Ralph', lastName: 'Ignacio', middleName: 'Jimenez', sex: 'Male', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Bucana' },
-      { firstName: 'Camille Joy', lastName: 'Laurel', middleName: 'Magno', sex: 'Female', dept: 'LTS', prog: 'BSED', nstpSec: 'LTS 1', schoolSec: '1-A', brgy: 'Halang' },
-      { firstName: 'Gerald', lastName: 'Natividad', middleName: 'Ople', sex: 'Male', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Ibayo' },
-      { firstName: 'Princess Sarah', lastName: 'Pascual', middleName: 'Quezon', sex: 'Female', dept: 'LTS', prog: 'BEED Science', nstpSec: 'LTS 2', schoolSec: '1-B', brgy: 'Kanluran' },
-      { firstName: 'Joshua Ian', lastName: 'Rosales', middleName: 'Salazar', sex: 'Male', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'Mabolo' },
-      { firstName: 'Janelle', lastName: 'Tan', middleName: 'Urbano', sex: 'Female', dept: 'LTS', prog: 'BSIT', nstpSec: 'LTS 3', schoolSec: '1-C', brgy: 'San Roque' },
-      { firstName: 'Marco', lastName: 'Valenzuela', middleName: 'Wenceslao', sex: 'Male', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 1', schoolSec: '1-1', brgy: 'Malainen' },
-      { firstName: 'Diana Rose', lastName: 'Yulo', middleName: 'Zulueta', sex: 'Female', dept: 'LTS', prog: 'BSBA', nstpSec: 'LTS 2', schoolSec: '1-2', brgy: 'Bagong Karsada' },
-    ];
-
-    const gradePool = [
-      { g1: '1.25', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.50', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem (5.00)
-      { g1: '1.00', g2: '1.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '5.00', g2: '',     r1: 'Failed', r2: '',       enrolledSem2: false },    // Bagsak sa 1st sem (5.00)
-      { g1: '2.00', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem (INC)
-      { g1: '2.25', g2: '2.00', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: '',     r1: 'Passed', r2: '',       enrolledSem2: false },    // 1st sem lang nag-enroll
-      { g1: '2.50', g2: '2.25', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: 'INC',  g2: '',     r1: 'Incomplete', r2: '',   enrolledSem2: false },    // Incomplete sa 1st sem (INC)
-      { g1: '2.75', g2: 'DRP',  r1: 'Passed', r2: 'Dropped', enrolledSem2: true },    // Dropped sa 2nd sem (DRP)
-      { g1: '3.00', g2: '2.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.00', g2: '5.00', r1: 'Passed', r2: 'Failed', enrolledSem2: true },     // Bagsak sa 2nd sem (5.00)
-      { g1: '5.00', g2: '5.00', r1: 'Failed', r2: 'Failed', enrolledSem2: true },     // Bagsak parehong semestre (5.00)
-      { g1: '1.50', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '2.25', g2: '2.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '1.75', g2: '1.75', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-      { g1: '5.00', g2: '',     r1: 'Failed', r2: '',       enrolledSem2: false },    // Bagsak sa 1st sem (5.00)
-      { g1: '2.50', g2: 'INC',  r1: 'Passed', r2: 'Incomplete', enrolledSem2: true }, // Incomplete sa 2nd sem (INC)
-      { g1: '1.25', g2: '1.50', r1: 'Passed', r2: 'Passed', enrolledSem2: true },
-    ];
-
-    const batches = [
-      { year: '2023-2024 1st Semester', sy: '2023-2024', sem: '1st Semester', prefix: '20231', list: rawStudents2023, startMonth: '2023-08', endMonth: '2023-12' },
-      { year: '2023-2024 2nd Semester', sy: '2023-2024', sem: '2nd Semester', prefix: '20232', list: rawStudents2023.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2024-01', endMonth: '2024-05' },
-      { year: '2024-2025 1st Semester', sy: '2024-2025', sem: '1st Semester', prefix: '20241', list: rawStudents2024, startMonth: '2024-08', endMonth: '2024-12' },
-      { year: '2024-2025 2nd Semester', sy: '2024-2025', sem: '2nd Semester', prefix: '20242', list: rawStudents2024.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2025-01', endMonth: '2025-05' },
-      { year: '2025-2026 1st Semester', sy: '2025-2026', sem: '1st Semester', prefix: '20251', list: rawStudents2025, startMonth: '2025-08', endMonth: '2025-12' },
-      { year: '2025-2026 2nd Semester', sy: '2025-2026', sem: '2nd Semester', prefix: '20252', list: rawStudents2025.filter((_, i) => gradePool[i % gradePool.length].enrolledSem2), startMonth: '2026-01', endMonth: '2026-05' },
-    ];
-
-    for (const b of batches) {
-      const studentData = b.list.map((s, idx) => {
-        const sid = `${b.prefix}${String(idx + 1).padStart(4, '0')}`;
-        const gInfo = gradePool[idx % gradePool.length];
-        const isEnrolled2 = (b.sem === '2nd Semester' || b.sem === 'Whole Academic Year') ? true : gInfo.enrolledSem2;
-        const sem2Grade = (b.sem === '2nd Semester' && (!gInfo.g2 || gInfo.g2 === '-')) ? gInfo.g1 : gInfo.g2;
-        const sem2Remark = (b.sem === '2nd Semester' && (!gInfo.r2 || gInfo.r2 === '-')) ? gInfo.r1 : gInfo.r2;
-
-        const isPassedBoth = isEnrolled2 && (
-          b.sem === '2nd Semester'
-            ? (sem2Remark === 'Passed' && sem2Grade && parseFloat(sem2Grade) <= 3.0)
-            : (gInfo.r1 === 'Passed' && gInfo.r2 === 'Passed')
-        );
-        const is2ndSemOrYear = b.sem === '2nd Semester' || b.sem === 'Whole Academic Year';
-
-        const calcStatus = (!isEnrolled2 && gInfo.r1 === 'Failed') ? 'failed' :
-                           (!isEnrolled2 && gInfo.r1 === 'Incomplete') ? 'incomplete' :
-                           (!isEnrolled2) ? 'active' :
-                           (sem2Remark === 'Dropped' || gInfo.r2 === 'Dropped') ? 'dropped' :
-                           (sem2Remark === 'Failed' || sem2Grade === '5.00' || gInfo.r2 === 'Failed') ? 'failed' :
-                           (sem2Remark === 'Incomplete' || sem2Grade === 'INC' || gInfo.r2 === 'Incomplete') ? 'incomplete' :
-                           isPassedBoth ? 'graduated' : 'active';
-
-        return {
-          id: parseInt(`${b.prefix}${idx + 1}`),
-          studentId: sid,
-          firstName: s.firstName,
-          lastName: s.lastName,
-          middleName: s.middleName,
-          suffix: '',
-          name: `${s.lastName}, ${s.firstName} ${s.middleName}`,
-          email: `${s.firstName.toLowerCase().replace(/\s+/g, '')}.${s.lastName.toLowerCase().replace(/\s+/g, '')}@cvsu.edu.ph`,
-          contactNumber: `0917${String(1000000 + idx * 37).slice(0, 7)}`,
-          facebookAccount: `facebook.com/${s.firstName.toLowerCase().replace(/\s+/g, '')}.${s.lastName.toLowerCase().replace(/\s+/g, '')}`,
-          department: s.dept,
-          program: s.prog,
-          yearLevel: '1st Year',
-          year: '1st Year',
-          section: s.schoolSec,
-          nstp_section: s.nstpSec,
-          sex: s.sex,
-          gender: s.sex,
-          birthMonth: '08',
-          birthDay: String((idx % 28) + 1).padStart(2, '0'),
-          birthYear: b.sy.startsWith('2023') ? '2004' : b.sy.startsWith('2024') ? '2005' : '2006',
-          age: '19',
-          civilStatus: 'Single',
-          registeredVoter: idx % 3 === 0 ? 'Yes' : 'No',
-          bloodType: ['O+', 'A+', 'B+', 'AB+'][idx % 4],
-          height: `${160 + (idx % 20)}`,
-          weight: `${52 + (idx % 25)}`,
-          street: `Brgy. ${s.brgy}`,
-          municipality: 'Naic',
-          province: 'Cavite',
-          address: `Brgy. ${s.brgy}, Naic, Cavite`,
-          emergencyContact: `Maria ${s.lastName}`,
-          emergencyNumber: `0918${String(2000000 + idx * 29).slice(0, 7)}`,
-          semester: b.sem,
-          schoolYear: b.sy,
-          has_2nd_sem: isEnrolled2,
-          status: calcStatus,
-          final_grade_1: gInfo.g1,
-          final_grade_2: isEnrolled2 ? sem2Grade : '',
-          grade_sem1: gInfo.g1,
-          grade_sem2: isEnrolled2 ? sem2Grade : '',
-          midterm_grade: gInfo.g1,
-          final_grade: is2ndSemOrYear ? (isEnrolled2 ? sem2Grade : gInfo.g1) : gInfo.g1,
-          remarks: is2ndSemOrYear ? (isEnrolled2 ? sem2Remark : gInfo.r1) : gInfo.r1,
-          id_photo_2x2: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${(s.firstName?.[0] || 'S') + (s.lastName?.[0] || 'T')}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`,
-          photo: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' width='100' height='120'><rect width='100' height='120' fill='%23ffffff'/><rect x='3' y='3' width='94' height='114' fill='%23f8fafc' stroke='%23cbd5e1' stroke-width='1.5'/><circle cx='50' cy='44' r='24' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><ellipse cx='50' cy='96' rx='38' ry='26' fill='${s.dept === 'ROTC' ? '%23991b1b' : s.dept === 'LTS' ? '%236b21a8' : '%23065f46'}'/><text x='50' y='51' font-family='Arial,sans-serif' font-size='16' font-weight='900' fill='%23ffffff' text-anchor='middle'>${(s.firstName?.[0] || 'S') + (s.lastName?.[0] || 'T')}</text><rect x='8' y='98' width='84' height='14' rx='3' fill='%230f172a'/><text x='50' y='108' font-family='Arial,sans-serif' font-size='7' font-weight='900' fill='%2338bdf8' text-anchor='middle'>2x2 OFFICIAL ID</text></svg>`,
-          registrationPhoto: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sid}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.lastName}, ${s.firstName} ${s.middleName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.prog}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${b.sy} (${b.sem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${s.dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${s.dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`,
-          registration_photo: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sid}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.lastName}, ${s.firstName} ${s.middleName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.prog}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${b.sy} (${b.sem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${s.dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${s.dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`,
-          cor: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sid}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.lastName}, ${s.firstName} ${s.middleName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.prog}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${b.sy} (${b.sem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${s.dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${s.dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`,
-          reg_form: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sid}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.lastName}, ${s.firstName} ${s.middleName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${s.prog}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${b.sy} (${b.sem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${s.dept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${s.dept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`,
-          remarks: is2ndSemOrYear ? (isEnrolled2 ? gInfo.r2 : gInfo.r1) : gInfo.r1
-        };
-      });
-
-      const cwtsCount = studentData.filter(s => s.department === 'CWTS').length;
-      const ltsCount = studentData.filter(s => s.department === 'LTS').length;
-      const rotcCount = studentData.filter(s => s.department === 'ROTC').length;
-
-      const reportData = [
-        { 
-          id: 1, 
-          title: `NSTP ${b.sem === '1st Semester' ? '1 Community Orientation & Needs Assessment' : '2 Culminating Community Engagement Report'} (${b.year})`, 
-          department: 'CWTS', 
-          description: `Official comprehensive documentation and field accomplishment report for NSTP CWTS activities during ${b.year}.`,
-          status: 'Approved', 
-          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15` : `${b.sy.split('-')[1]}-04-15`,
-          instructor: 'CWTS Facilitator',
-          instructor_name: 'CWTS Facilitator',
-          submissions: [
-            { id: 1, instructor: 'CWTS Facilitator', instructor_name: 'CWTS Facilitator', department: 'CWTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-15T09:00:00Z` : `${b.sy.split('-')[1]}-04-15T15:00:00Z`, notes: 'Complete project documentation verified.', attachment_name: `CWTS_Report_${b.sy.replace('-', '_')}.pdf` }
-          ]
-        },
-        { 
-          id: 2, 
-          title: `Literacy Tutorial & Reading Outreach Milestone Report (${b.year})`, 
-          department: 'LTS', 
-          description: `Diagnostic assessments, remedial reading tutorials, and learning kit distribution report for ${b.year}.`,
-          status: 'Approved', 
-          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16` : `${b.sy.split('-')[1]}-04-16`,
-          instructor: 'LTS Facilitator',
-          instructor_name: 'LTS Facilitator',
-          submissions: [
-            { id: 2, instructor: 'LTS Facilitator', instructor_name: 'LTS Facilitator', department: 'LTS', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-16T11:00:00Z` : `${b.sy.split('-')[1]}-04-16T14:00:00Z`, notes: 'Pupil reading progress documentation approved.', attachment_name: `LTS_Report_${b.sy.replace('-', '_')}.pdf` }
-          ]
-        },
-        { 
-          id: 3, 
-          title: `Annual ROTC Tactical Briefing, Review & Muster (${b.year})`, 
-          department: 'ROTC', 
-          description: `Troop formation muster, military tactics evaluation, and pass-in-review accomplishment for ${b.year}.`,
-          status: 'Approved', 
-          submittedAt: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17` : `${b.sy.split('-')[1]}-04-17`,
-          instructor: 'ROTC Training Staff',
-          instructor_name: 'ROTC Training Staff',
-          submissions: [
-            { id: 3, instructor: 'ROTC Training Staff', instructor_name: 'ROTC Training Staff', department: 'ROTC', status: 'Approved', submitted_at: b.sem === '1st Semester' ? `${b.sy.split('-')[0]}-11-17T13:00:00Z` : `${b.sy.split('-')[1]}-04-17T16:00:00Z`, notes: 'Cadet tactical evaluation and attendance verified.', attachment_name: `ROTC_Report_${b.sy.replace('-', '_')}.pdf` }
-          ]
-        }
-      ];
-
-      const letterData = [
-        { id: 'letter-1', title: 'Barangay Immersion & Community Service Request Letter', department: 'CWTS', description: 'Official formal institutional endorsement for CWTS community immersion projects.' },
-        { id: 'letter-2', title: 'LTS Literacy Outreach & Reading Clinic Permission Endorsement', department: 'LTS', description: 'Formal request for student-led reading tutorials and literacy clinic sessions.' },
-        { id: 'letter-3', title: 'ROTC Field Training Exercise & Range Facility Request', department: 'ROTC', description: 'Endorsement to Armed Forces training command for tactical exercises.' },
-        { id: 'letter-4', title: 'Parent/Guardian NSTP Activity Consent & Medical Waiver Form', department: 'All', description: 'Institutional waiver required for all off-campus community and training engagements.' },
-        { id: 'letter-5', title: 'Official HEI NSTP Serial Number & Completion Certificate Endorsement', department: 'All', description: 'CHED submission document certifying graduates and requesting assigned national serial numbers.' }
-      ];
-
-      const archivePayload = JSON.stringify({ 
-        studentData, 
-        reportData, 
-        letterData, 
-        students: studentData.length, 
-        reports: reportData.length,
-        cwts: cwtsCount,
-        lts: ltsCount,
-        rotc: rotcCount,
-        start_month: b.startMonth,
-        end_month: b.endMonth,
-        startMonth: b.startMonth,
-        endMonth: b.endMonth
-      });
-
-      await pool.execute(
-        'INSERT INTO archived_years (year, students, reports, data) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE students = VALUES(students), reports = VALUES(reports), data = VALUES(data)',
-        [b.year, studentData.length, reportData.length, archivePayload]
-      );
-      console.log(`Seeded past batch ${b.year} with ${studentData.length} students into archived_years.`);
-    }
-  } catch (err) {
-    console.warn('Past batches seed notice:', err.message);
-  }
+  // Production clean: no dummy past batches
 }
-
-
-
-
 
 // ── Audit log (Immutable Activity & Security Trail) ─────────────────────────
 async function ensureAuditLogs() {
@@ -1113,45 +823,10 @@ async function ensureNstpIdAndAttendanceTables() {
     try {
       const [cbRows] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
       if (!cbRows || cbRows.length === 0) {
-        await pool.execute("INSERT INTO current_batch (id, year, semester) VALUES (1, '2026-2027 1st Semester', '1st Semester')");
-      } else {
-        await pool.execute("UPDATE current_batch SET year = '2026-2027 1st Semester', semester = '1st Semester' WHERE id = 1");
+        await pool.execute("INSERT INTO current_batch (id, year, semester, start_month, end_month, start_date, end_date) VALUES (1, '2024-2025 1st Semester', '1st Semester', '2024-08', '2024-12', '2024-08-15', '2024-12-20')");
       }
     } catch (_) {}
     try { await pool.execute("ALTER TABLE reports MODIFY COLUMN batch_year VARCHAR(100) NULL"); } catch (_) {}
-
-    // Fix Gonzaga to LTS department as required
-    try {
-      await pool.execute("UPDATE students SET department = 'LTS' WHERE lastName LIKE '%Gonzaga%' OR name LIKE '%Gonzaga%'");
-      await pool.execute("UPDATE enrollments SET department = 'LTS' WHERE lastName LIKE '%Gonzaga%' OR fullName LIKE '%Gonzaga%'");
-    } catch (_) {}
-
-    // Backfill all active students with clean per-track matriculation numbers (starting at 00001)
-    const [rows] = await pool.execute(
-      "SELECT * FROM students ORDER BY department ASC, id ASC LIMIT 2000"
-    ).catch(() => [[]]);
-    
-    // Per-track counters: CWTS, ROTC, LTS each start independently from 00001
-    const trackCounters = { CWTS: 0, ROTC: 0, LTS: 0 };
-    for (const st of (rows || [])) {
-      const year = new Date(st.created_at || st.createdAt || Date.now()).getFullYear();
-      let dept = (st.department || 'CWTS').toUpperCase();
-      const nameCheck = (st.lastName || st.name || '').toLowerCase();
-      if (nameCheck.includes('gonzaga')) {
-        dept = 'LTS';
-      }
-      trackCounters[dept] = (trackCounters[dept] || 0) + 1;
-      const countPadded = String(trackCounters[dept]).padStart(5, '0');
-      const matriculationNumber = `NSTP-${dept}-${year}-${countPadded}`;
-      const token = `NSTP-${st.studentId || st.id}-${matriculationNumber}`;
-
-      try {
-        await pool.execute(
-          "UPDATE students SET department = ?, nstp_serial_id = ?, qr_token = ? WHERE id = ?",
-          [dept, matriculationNumber, token, st.id]
-        );
-      } catch (_) {}
-    }
   } catch (err) {
     console.warn('ensureNstpIdAndAttendanceTables notice:', err.message);
   }
@@ -2827,12 +2502,12 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   }
   const section = nstpSection.replace('-', ' ').trim();
 
-  const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
+  const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2024-00001`;
   const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
   const qrUrl = studentData.qr_code || studentData.qrCode || `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
   
   let rawSy = studentData.schoolYear || studentData.academicYear || studentData.batch || '';
-  let schoolYear = '2026-2027';
+  let schoolYear = '2024-2025';
   if (rawSy && !String(rawSy).toLowerCase().includes('year') && !String(rawSy).toLowerCase().includes('yr')) {
     schoolYear = String(rawSy).trim();
   }
@@ -3229,12 +2904,12 @@ const handleDownloadIdPdf = async (req, res) => {
 
     if (!studentData) {
       studentData = {
-        studentId: studentId || '202610001',
+        studentId: studentId || '202410001',
         name: req.query.name || 'STUDENT',
         department: req.query.dept || 'CWTS',
         section: req.query.sec || 'CWTS 1',
-        nstp_serial_id: req.query.serial || 'NSTP-CWTS-2026-00001',
-        schoolYear: req.query.sy || '2026-2027',
+        nstp_serial_id: req.query.serial || 'NSTP-CWTS-2024-00001',
+        schoolYear: req.query.sy || '2024-2025',
         emergencyContact: req.query.contact || 'Emergency Contact',
         emergencyNumber: req.query.phone || '09000000000',
         id_photo_2x2: req.query.photo || null
@@ -6515,10 +6190,10 @@ app.get('/api/current-batch', authenticateToken, async (req, res) => {
   try {
     await ensureCurrentBatchColumns().catch(() => {});
     const [batches] = await pool.execute('SELECT * FROM current_batch WHERE id = 1');
-    res.json(batches[0] || { year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
+    res.json(batches[0] || { year: '2024-2025 1st Semester', semester: '1st Semester', start_month: '2024-08', end_month: '2024-12' });
   } catch (error) {
     console.error('Get current batch error:', error);
-    res.json({ year: '2026-2027 1st Semester', semester: '1st Semester', start_month: '2026-08', end_month: '2026-12' });
+    res.json({ year: '2024-2025 1st Semester', semester: '1st Semester', start_month: '2024-08', end_month: '2024-12' });
   }
 });
 
@@ -6886,7 +6561,7 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
     }
     if (error.code === 'ENOTFOUND' || (error.message && error.message.includes('ENOTFOUND'))) {
       return res.status(503).json({
-        message: 'Cloud Database Connection Error (ENOTFOUND): Unable to reach Aiven Cloud MySQL database. Please log into console.aiven.io to verify your MySQL service is POWERED ON, or set DB_HOST=127.0.0.1 in backend/.env to use local database.'
+        message: 'Database Connection Error (ENOTFOUND): Unable to reach the database host. Please check your DB_HOST setting or network connection.'
       });
     }
     if (error.code === 'ECONNREFUSED' || (error.message && error.message.includes('ECONNREFUSED'))) {
@@ -7114,7 +6789,7 @@ app.get('/api/settings/enrollment', async (req, res) => {
         mode: 'AUTO',
         openAt: '',
         closeAt: '',
-        customNotice: 'Online Enrollment for Academic Year 2026-2027 is now open.'
+        customNotice: 'Online Enrollment for Academic Year 2024-2025 is now open.'
       }
     });
   } catch (error) {
@@ -7125,7 +6800,7 @@ app.get('/api/settings/enrollment', async (req, res) => {
         mode: 'AUTO',
         openAt: '',
         closeAt: '',
-        customNotice: 'Online Enrollment for Academic Year 2026-2027 is now open.'
+        customNotice: 'Online Enrollment for Academic Year 2024-2025 is now open.'
       }
     });
   }
@@ -8304,7 +7979,7 @@ app.get('/api/telemetry/stats', async function(req, res) {
       }
     }
 
-    // Use in-memory cache to prevent pounding Aiven MySQL on high-frequency telemetry polling
+    // Use in-memory cache to prevent pounding MySQL on high-frequency telemetry polling
     var cachedCounts = memoryCache.get('telemetry_db_counts');
     var dbStudents = 0, dbEnrollments = 0, dbUsers = 0, dbUniqueVisitors = 0;
 
@@ -8457,7 +8132,7 @@ app.use(function(err, req, res, next) {
   });
 });
 
-// ── Health Check Endpoints for Render Deployment ──────────────────────────────
+// ── Health Check Endpoints ────────────────────────────────────────────────────
 app.get('/api/ping', function(req, res) {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -8589,7 +8264,7 @@ async function startServer() {
         await runDatabaseInitialization();
       } catch (_) {
         if (retries >= maxRetries) {
-          console.error(`[DB Auto-Recovery] Exhausted ${maxRetries} connection retries. Please check Aiven service status.`);
+          console.error(`[DB Auto-Recovery] Exhausted ${maxRetries} connection retries. Please check database service status.`);
           clearInterval(retryInterval);
         }
       }

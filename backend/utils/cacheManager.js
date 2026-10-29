@@ -1,6 +1,6 @@
 /**
  * In-Memory High Performance Cache Manager
- * Reduces Aiven Cloud MySQL read operations during peak traffic and polling
+ * Reduces MySQL database read operations during peak traffic and polling
  */
 
 class CacheManager {

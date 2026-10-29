@@ -26,7 +26,7 @@ function InstructorDashboard() {
     setNotifications,
     deleteNotifications,
     markAllNotificationsRead,
-    currentBatch = '2026-2027 1st Semester',
+    currentBatch = '2024-2025 1st Semester',
     viewingArchive = false,
     setViewingArchive = () => {},
     archiveViewData = null,
@@ -1543,44 +1543,12 @@ function InstructorDashboard() {
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {(() => {
-                      const yr = String(archiveViewData?.year || '');
-                      const events = yr.includes('2023-2024')
-                        ? (yr.includes('1st Semester')
-                            ? [
-                                { date: '2023-09-02', title: 'NSTP 1 General Orientation & Plenary', desc: 'Institutional NSTP orientation at CvSU Naic Gymnasium.', dept: 'All' },
-                                { date: '2023-10-07', title: 'CWTS Community Needs Assessment Field Visit', desc: 'Participatory community profiling in Brgy. Bucana & Halang.', dept: 'CWTS' },
-                                { date: '2023-10-14', title: 'LTS Diagnostic Reading Assessment', desc: 'Diagnostic literacy pre-assessment for elementary schools.', dept: 'LTS' },
-                                { date: '2023-10-21', title: 'ROTC Midterm Drill & Muster', desc: 'Inspection and formation testing by AFP Reservist Command.', dept: 'ROTC' },
-                                { date: '2023-11-11', title: 'NSTP 1 Midterm Evaluation & Submission', desc: 'Documentation milestone progress audit.', dept: 'All' },
-                                { date: '2023-12-09', title: '1st Semester Culminating Project Defense', desc: 'Departmental presentation of community project outputs.', dept: 'All' },
-                              ]
-                            : [
-                                { date: '2024-02-10', title: 'NSTP 2 Resumption & Project Briefing', desc: 'Community engagement and project mobilization.', dept: 'All' },
-                                { date: '2024-03-02', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', desc: '500 mangrove seedlings planted along Bucana shoreline.', dept: 'CWTS' },
-                                { date: '2024-03-16', title: 'LTS Reading Clinic & Storybook Distribution', desc: 'Remedial reading tutorials and learning kit handover.', dept: 'LTS' },
-                                { date: '2024-03-23', title: 'ROTC Field Tactics & Land Navigation Exercise', desc: 'Field orienteering and compass movement simulation.', dept: 'ROTC' },
-                                { date: '2024-04-13', title: 'Final Project Culmination & Document Audit', desc: 'Verification of community portfolios and grade requirements.', dept: 'All' },
-                                { date: '2024-04-27', title: 'NSTP Passing-in-Review & Recognition Ceremony', desc: 'Formal graduation muster and certificate awarding ceremony.', dept: 'All' },
-                              ])
-                        : (yr.includes('1st Semester')
-                            ? [
-                                { date: '2024-09-07', title: 'NSTP 1 General Orientation & Briefing', desc: 'Academic orientation and program assignments.', dept: 'All' },
-                                { date: '2024-10-05', title: 'CWTS Barangay Profiling & Immersion Preparation', desc: 'Coordination meeting with Barangay officials of Bucana.', dept: 'CWTS' },
-                                { date: '2024-10-12', title: 'LTS Literacy Pre-Assessment in Partner School', desc: 'Diagnostic phonics and numeracy evaluation.', dept: 'LTS' },
-                                { date: '2024-10-19', title: 'ROTC Troop Muster & Ceremonial Formations', desc: 'Basic military customs, discipline, and troop movement drill.', dept: 'ROTC' },
-                                { date: '2024-11-09', title: 'NSTP 1 Midterm Evaluation & Defense', desc: 'Mid-term documentation audit and project status verification.', dept: 'All' },
-                                { date: '2024-11-23', title: 'Community Disaster Preparedness Clinic', desc: 'Emergency response simulations in partnership with MDRRMO.', dept: 'All' },
-                              ]
-                            : [
-                                { date: '2025-02-08', title: 'NSTP 2 Resumption & Community Deployment', desc: 'Deployment to designated partner barangays in Naic.', dept: 'All' },
-                                { date: '2025-03-01', title: 'CWTS Community Waste Management Drive', desc: 'Solid waste management and segregation training.', dept: 'CWTS' },
-                                { date: '2025-03-15', title: 'LTS Supplementary Literacy Tutorials', desc: 'Remedial reading and numeracy enhancement classes.', dept: 'LTS' },
-                                { date: '2025-03-22', title: 'ROTC Basic Marksmanship & Drill Practical', desc: 'Weapon assembly, safety inspection, and marksmanship fundamentals.', dept: 'ROTC' },
-                                { date: '2025-04-12', title: 'Community Immersion Final Showcase', desc: 'Portfolio evaluation and partner barangay sign-off.', dept: 'All' },
-                                { date: '2025-04-26', title: 'NSTP Graduation & Ceremonial Muster', desc: 'Formal graduation and awarding of serial certificates.', dept: 'All' },
-                              ]);
-
-                      const deptEvents = events.filter(e => e.dept === 'All' || e.dept === user?.department);
+                      const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
+                      const events = Array.isArray(customCalendar) ? customCalendar : [];
+                      const deptEvents = events.filter(e => (e.dept || e.track) === 'All' || (e.dept || e.track) === user?.department);
+                      if (deptEvents.length === 0) {
+                        return <p className="text-gray-500 text-xs col-span-2 text-center py-3 font-medium">No activity schedule recorded for this batch archive.</p>;
+                      }
 
                       return deptEvents.map((evt, idx) => (
                         <div key={idx} className="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex flex-col justify-between">

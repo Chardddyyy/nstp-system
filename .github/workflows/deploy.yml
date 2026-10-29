@@ -62,21 +62,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-  deploy-render:
-    name: Trigger Render Backend Deployment Hook
-    needs: validate-and-build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    steps:
-      - name: Trigger Render Deploy Hook (If Configured)
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
-          if [ -n "$RENDER_DEPLOY_HOOK" ]; then
-            echo "Triggering Render deployment webhook..."
-            curl -s -X POST "$RENDER_DEPLOY_HOOK" > /dev/null
-            echo "Render deployment hook triggered successfully."
-          else
-            echo "RENDER_DEPLOY_HOOK_URL secret not set. Skipping webhook trigger."
-          fi

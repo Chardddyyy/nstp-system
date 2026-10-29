@@ -18,7 +18,7 @@ export function NstpIdCard({ student }) {
   ).trim().toUpperCase() || 'STUDENT NAME';
 
   const dept = (student.department || 'CWTS').toUpperCase();
-  const matriculationNo = student.nstp_serial_id || `NSTP-${dept}-2026-00001`;
+  const matriculationNo = student.nstp_serial_id || `NSTP-${dept}-2024-00001`;
   const qrToken = student.qr_token || matriculationNo;
   const photoUrl = student.id_photo_2x2 || student.idPhoto2x2 || student.photo || student.profilePicture || student.registration_photo || student.registrationPhoto || null;
   const studentSection = student.section 
@@ -183,7 +183,7 @@ export function NstpIdCard({ student }) {
       {/* Card Footer Strip */}
       <div className="bg-emerald-950 text-amber-300 px-2 py-0.5 text-[5px] font-black flex items-center justify-between uppercase tracking-wider border-t border-amber-400 relative z-10 shrink-0">
         <span className="font-mono truncate">{currentTheme.label}</span>
-        <span className="text-[4.8px] text-amber-200 font-mono shrink-0 ml-1">AY 2026-2027</span>
+        <span className="text-[4.8px] text-amber-200 font-mono shrink-0 ml-1">AY {student.schoolYear || student.academicYear || '2024-2025'}</span>
       </div>
     </div>
   );

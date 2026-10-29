@@ -658,7 +658,7 @@ export function saveExcelBuffer(buffer, fileName) {
  * Trigger download of Form 2-B as Excel (.xlsx)
  */
 export async function downloadChedFormBExcel(batchOrYear, studentList = null, dept = 'All') {
-  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2026-2027') : (batchOrYear || '2026-2027');
+  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2024-2025') : (batchOrYear || '2024-2025');
   const students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
   const workbook = await generateChedFormBWorkbook(students, year, dept);
   const buffer = await workbook.xlsx.writeBuffer();
@@ -670,7 +670,7 @@ export async function downloadChedFormBExcel(batchOrYear, studentList = null, de
  * Trigger download of Form 2-A as Excel (.xlsx)
  */
 export async function downloadChedFormAExcel(batchOrYear, studentList = null, dept = 'All') {
-  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2026-2027') : (batchOrYear || '2026-2027');
+  let year = typeof batchOrYear === 'object' ? (batchOrYear.year || '2024-2025') : (batchOrYear || '2024-2025');
   let students = studentList || (typeof batchOrYear === 'object' ? (batchOrYear.data?.studentData || batchOrYear.studentData || []) : []);
 
   // Enrich with latest database grades if not already embedded
@@ -710,7 +710,7 @@ export async function downloadGradesSheetExcel({
   students = [],
   gradesMap = {},
   isAnnualView = false,
-  selectedSchoolYear = '2026-2027',
+  selectedSchoolYear = '2024-2025',
   selectedSemester = '1st Semester',
   selectedDepartment = 'CWTS',
   selectedSection = 'All',
@@ -818,7 +818,7 @@ export async function downloadAttendanceMatrixExcel({
   studentMatrixList = [],
   daysArray = [],
   selectedDept = 'CWTS',
-  _selectedSchoolYear = '2026-2027'
+  _selectedSchoolYear = '2024-2025'
 }) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'CvSU Naic NSTP System';

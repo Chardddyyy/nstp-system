@@ -89,14 +89,14 @@ function fitText(doc, text, maxWidth) {
  * ─────────────────────────────────────────────────────────────────────────────
  */
 export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept = 'All') {
-  let yearStr = '2026-2027';
+  let yearStr = '2024-2025';
   let students = [];
 
   if (typeof batchOrYear === 'string') {
     yearStr = batchOrYear;
     students = studentList || [];
   } else if (batchOrYear && typeof batchOrYear === 'object') {
-    yearStr = batchOrYear.year || '2026-2027';
+    yearStr = batchOrYear.year || '2024-2025';
     students = batchOrYear.data?.studentData || batchOrYear.studentData || studentList || [];
   }
 

@@ -90,7 +90,7 @@ async function notifyBackupFailure(activity, errorDetails) {
       from: `"CvSU NSTP System Alert" <${adminEmail}>`,
       to: adminEmail,
       subject: `🚨 [ALERT] Google Drive Backup Snapshot Failure - ${activity}`,
-      text: `Administrator Alert:\n\nAn automated Google Drive database snapshot failed.\nActivity: ${activity}\nTimestamp: ${new Date().toISOString()}\nDetails: ${errorDetails}\n\nPlease inspect the Aiven MySQL database and Google Drive webhook connection.`,
+      text: `Administrator Alert:\n\nAn automated Google Drive database snapshot failed.\nActivity: ${activity}\nTimestamp: ${new Date().toISOString()}\nDetails: ${errorDetails}\n\nPlease inspect the MySQL database and Google Drive webhook connection.`,
     });
     console.log('[GDRIVE ALERT SENT] Email failure notice dispatched to Administrator.');
   } catch (e) {

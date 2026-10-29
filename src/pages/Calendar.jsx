@@ -120,9 +120,9 @@ function Calendar() {
       }
 
       if (!startStr || !endStr) {
-        const yr = String(currentBatch || '2026-2027 1st Semester');
+        const yr = String(currentBatch || '2024-2025 1st Semester');
         const match = yr.match(/(\d{4})/);
-        const baseYear = match ? parseInt(match[1], 10) : 2026;
+        const baseYear = match ? parseInt(match[1], 10) : 2024;
         if (yr.includes('1st Sem')) {
           startStr = `${baseYear}-08`;
           endStr = `${baseYear}-12`;
@@ -205,7 +205,7 @@ function Calendar() {
     setRangeSaving(true);
     try {
       const payload = {
-        year: currentBatch || '2026-2027 1st Semester',
+        year: currentBatch || '2024-2025 1st Semester',
         start_month: editRangeStart,
         end_month: editRangeEnd,
         startMonth: editRangeStart,
@@ -338,85 +338,26 @@ function Calendar() {
     return dateStr < todayStr;
   };
 
-  // Archived events dataset
+  // Archived events dataset (dynamic from archive snapshot)
   const archiveEvents = useMemo(() => {
-    if (!viewingArchive || !archiveViewData?.year) return [];
-    const yr = String(archiveViewData.year);
-    if (yr.includes('2023-2024')) {
-      if (yr.includes('1st Semester')) {
-        return [
-          { id: 'arch-1', title: 'NSTP 1 General Orientation & Plenary', date: '2023-09-02', semester: '1st Semester', track: 'All Tracks', category: 'Orientation', description: 'Institutional NSTP orientation for all incoming 1st year students at CvSU Naic Gymnasium.', isArchived: true },
-          { id: 'arch-2', title: 'CWTS Community Needs Assessment Field Visit', date: '2023-10-07', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Participatory community profiling across Brgy. Bucana and Brgy. Halang.', isArchived: true },
-          { id: 'arch-3', title: 'LTS Diagnostic Reading Assessment', date: '2023-10-14', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Conduct of pre-literacy assessment for adopted public elementary schools.', isArchived: true },
-          { id: 'arch-4', title: 'ROTC Midterm Drill & Muster', date: '2023-10-21', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Inspection and formation testing by AFP Reservist Command.', isArchived: true },
-          { id: 'arch-5', title: 'NSTP 1 Midterm Evaluation & Submission', date: '2023-11-11', semester: '1st Semester', track: 'All Tracks', category: 'Evaluation', description: 'Submission of midterm project milestone progress reports.', isArchived: true },
-          { id: 'arch-6', title: 'Disaster Risk Reduction Training Session', date: '2023-11-25', semester: '1st Semester', track: 'All Tracks', category: 'Training', description: 'First aid and basic life support demonstration with Naic MDRRMO.', isArchived: true },
-          { id: 'arch-7', title: '1st Semester Culminating Project Defense', date: '2023-12-09', semester: '1st Semester', track: 'All Tracks', category: 'Culmination', description: 'Final departmental presentation of community outputs.', isArchived: true },
-        ];
-      } else {
-        return [
-          { id: 'arch-8', title: 'NSTP 2 Resumption & Project Implementation Briefing', date: '2024-02-10', semester: '2nd Semester', track: 'All Tracks', category: 'Orientation', description: 'Planning session for 2nd semester community engagement and culminating projects.', isArchived: true },
-          { id: 'arch-9', title: 'CWTS Mangrove Planting & Coastal Rehabilitation', date: '2024-03-02', semester: '2nd Semester', track: 'CWTS', category: 'Immersion', description: 'Coastal cleanup and 500 mangrove seedling planting along Bucana shoreline.', isArchived: true },
-          { id: 'arch-10', title: 'LTS Reading Clinic & Storybook Distribution', date: '2024-03-16', semester: '2nd Semester', track: 'LTS', category: 'Immersion', description: 'Elementary tutorial sessions and distribution of learning kits.', isArchived: true },
-          { id: 'arch-11', title: 'ROTC Field Tactics & Land Navigation Exercise', date: '2024-03-23', semester: '2nd Semester', track: 'ROTC', category: 'Training', description: 'Field orienteering and compass movement simulation.', isArchived: true },
-          { id: 'arch-12', title: 'Final Project Culmination & Document Audit', date: '2024-04-13', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Verification of community portfolios and grade requirements.', isArchived: true },
-          { id: 'arch-13', title: 'NSTP Passing-in-Review & Recognition Ceremony', date: '2024-04-27', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Culminating graduation muster and issuance of NSTP certificates.', isArchived: true },
-        ];
-      }
-    } else if (yr.includes('2024-2025')) {
-      if (yr.includes('1st Semester')) {
-        return [
-          { id: 'arch-14', title: 'NSTP 1 General Orientation & Briefing', date: '2024-09-07', semester: '1st Semester', track: 'All Tracks', category: 'Orientation', description: 'Academic orientation and program assignments for Batch 2024-2025.', isArchived: true },
-          { id: 'arch-15', title: 'CWTS Barangay Profiling & Immersion Preparation', date: '2024-10-05', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Coordination meeting with Barangay officials of Bucana Malaki.', isArchived: true },
-          { id: 'arch-16', title: 'LTS Literacy Pre-Assessment in Partner School', date: '2024-10-12', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Diagnostic phonics and numeracy evaluation for elementary students.', isArchived: true },
-          { id: 'arch-17', title: 'ROTC Troop Muster & Ceremonial Formations', date: '2024-10-19', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Basic military customs, discipline, and troop movement drill.', isArchived: true },
-          { id: 'arch-18', title: 'NSTP 1 Midterm Evaluation & Defense', date: '2024-11-09', semester: '1st Semester', track: 'All Tracks', category: 'Evaluation', description: 'Mid-term documentation audit and project status verification.', isArchived: true },
-          { id: 'arch-19', title: 'Community Disaster Preparedness & First Aid Clinic', date: '2024-11-23', semester: '1st Semester', track: 'All Tracks', category: 'Training', description: 'Emergency response simulations in partnership with MDRRMO.', isArchived: true },
-        ];
-      } else {
-        return [
-          { id: 'arch-20', title: 'NSTP 2 Project Launch & Field Immersion', date: '2025-02-08', semester: '2nd Semester', track: 'All Tracks', category: 'Orientation', description: 'Mobilization of students for second semester projects in Naic.', isArchived: true },
-          { id: 'arch-21', title: 'CWTS Livelihood Eco-Crafting & Recycling Initiative', date: '2025-03-08', semester: '2nd Semester', track: 'CWTS', category: 'Immersion', description: 'Workshop on community organic composting and eco-crafts.', isArchived: true },
-          { id: 'arch-22', title: 'LTS Mini-Library Handover & Literacy Graduation', date: '2025-03-22', semester: '2nd Semester', track: 'LTS', category: 'Culmination', description: 'Turnover of 300 children storybooks and graduation of young readers.', isArchived: true },
-          { id: 'arch-23', title: 'ROTC Annual Tactical Inspection & Drill Review', date: '2025-04-05', semester: '2nd Semester', track: 'ROTC', category: 'Evaluation', description: 'Annual tactical evaluation conducted by Naval Reserve Command.', isArchived: true },
-          { id: 'arch-24', title: 'NSTP Final Culminating Defense & Document Audit', date: '2025-04-12', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Final requirements audit and endorsement for CHED serial numbers.', isArchived: true },
-          { id: 'arch-25', title: 'NSTP Graduation & Ceremonial Pass-in-Review', date: '2025-04-26', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Formal graduation pass-in-review and certificate awarding ceremony.', isArchived: true },
-        ];
-      }
+    if (!viewingArchive || !archiveViewData) return [];
+    const customCalendar = archiveViewData?.calendarData || archiveViewData?.data?.calendarData;
+    if (Array.isArray(customCalendar) && customCalendar.length > 0) {
+      return customCalendar.map((ev, idx) => ({
+        id: ev.id || `arch-${idx + 1}`,
+        title: ev.title || 'Archived Activity',
+        date: ev.date || '',
+        semester: ev.semester || archiveViewData.semester || '1st Semester',
+        track: ev.dept || ev.track || 'All Tracks',
+        category: ev.category || 'General',
+        description: ev.desc || ev.description || '',
+        isArchived: true
+      }));
     }
     return [];
   }, [viewingArchive, archiveViewData]);
 
-  // Official Institutional Annual Events (AY 2026-2027)
-  const defaultAnnualEvents2026 = useMemo(() => [
-    // 1st Semester (Aug - Dec 2026)
-    { id: 'ann-1', title: 'NSTP 1 General Orientation & Institutional Plenary', date: '2026-08-29', semester: '1st Semester', track: 'All Tracks', category: 'Orientation', description: 'Opening convocation and academic orientation for all incoming 1st year students at CvSU Naic Gymnasium.' },
-    { id: 'ann-2', title: 'Departmental Track Briefing & Section Assignment', date: '2026-09-05', semester: '1st Semester', track: 'All Tracks', category: 'Orientation', description: 'Grouping into CWTS, ROTC, and LTS components and issuance of official syllabus and manuals.' },
-    { id: 'ann-3', title: 'ROTC Initial Muster & Basic Military Customs', date: '2026-09-12', semester: '1st Semester', track: 'ROTC', category: 'Training', description: 'Drill orientation, uniform inspections, and basic marching command formations.' },
-    { id: 'ann-4', title: 'CWTS Community Profiling & Immersion Briefing', date: '2026-09-19', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Initial site coordination and partnership meetings with Barangay Bucana Malaki and Halang councils.' },
-    { id: 'ann-5', title: 'LTS Diagnostic Literacy Assessment Workshop', date: '2026-09-26', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Training on reading comprehension screening tools for partner adopted public elementary schools.' },
-    { id: 'ann-6', title: 'MDRRMO Disaster Preparedness & Basic First Aid', date: '2026-10-10', semester: '1st Semester', track: 'All Tracks', category: 'Training', description: 'Hands-on emergency response, CPR demonstration, and disaster triage management.' },
-    { id: 'ann-7', title: 'CWTS Environmental Coastal Cleanup Drive', date: '2026-10-17', semester: '1st Semester', track: 'CWTS', category: 'Immersion', description: 'Coastal cleanup, waste segregation audit, and plastic retrieval along Bucana shoreline.' },
-    { id: 'ann-8', title: 'ROTC Midterm Tactical Formations & Inspection', date: '2026-10-24', semester: '1st Semester', track: 'ROTC', category: 'Evaluation', description: 'Formal battalion muster and inspection by Naval Reserve Command representatives.' },
-    { id: 'ann-9', title: 'NSTP 1 Midterm Evaluation & Progress Defense', date: '2026-11-07', semester: '1st Semester', track: 'All Tracks', category: 'Evaluation', description: 'Midterm documentation audit, project portfolio reviews, and encoding of initial marks.' },
-    { id: 'ann-10', title: 'LTS Community Storytelling & Literacy Day', date: '2026-11-21', semester: '1st Semester', track: 'LTS', category: 'Immersion', description: 'Conduct of interactive phonics clinic and storybook sharing with adopted public elementary pupils.' },
-    { id: 'ann-11', title: '1st Semester Culminating Project Defense & Exhibit', date: '2026-12-05', semester: '1st Semester', track: 'All Tracks', category: 'Culmination', description: 'Departmental project defense and submission of final first-semester community binders.' },
-    { id: 'ann-12', title: 'Submission of 1st Semester Final Grade Sheets', date: '2026-12-12', semester: '1st Semester', track: 'All Tracks', category: 'Deadline', description: 'Final encoding and submission of Form A & Form B completion lists to the Registrar.' },
-
-    // 2nd Semester (Jan - May 2027)
-    { id: 'ann-13', title: 'NSTP 2 Resumption & Community Project Launch', date: '2027-01-23', semester: '2nd Semester', track: 'All Tracks', category: 'Orientation', description: 'Mobilization of students for second semester applied community action and livelihood initiatives.' },
-    { id: 'ann-14', title: 'CWTS Mangrove Reforestation & Coastal Planting', date: '2027-02-13', semester: '2nd Semester', track: 'CWTS', category: 'Immersion', description: 'Planting of 600 mangrove propagules in Naic coastal protected areas.' },
-    { id: 'ann-15', title: 'LTS Remedial Reading & Numeracy Tutorial Camp', date: '2027-02-27', semester: '2nd Semester', track: 'LTS', category: 'Immersion', description: 'One-on-one reading assistance and donation of instructional learning kits.' },
-    { id: 'ann-16', title: 'ROTC Field Tactics & Compass Orienteering Drill', date: '2027-03-06', semester: '2nd Semester', track: 'ROTC', category: 'Training', description: 'Practical field maneuvering, map reading, and civil defense simulations.' },
-    { id: 'ann-17', title: 'Community Livelihood & Organic Upcycling Workshop', date: '2027-03-20', semester: '2nd Semester', track: 'CWTS', category: 'Immersion', description: 'Livelihood skills transfer for local women and youth organizations.' },
-    { id: 'ann-18', title: 'NSTP 2 Midterm Evaluation & Progress Milestone', date: '2027-04-03', semester: '2nd Semester', track: 'All Tracks', category: 'Evaluation', description: 'Mid-term requirements audit and endorsement for CHED masterlisting.' },
-    { id: 'ann-19', title: 'LTS Book Donation & Young Readers Recognition', date: '2027-04-17', semester: '2nd Semester', track: 'LTS', category: 'Culmination', description: 'Turnover of mini-library materials and graduation of tutoring beneficiaries.' },
-    { id: 'ann-20', title: 'ROTC Annual Tactical Inspection (ATI)', date: '2027-04-24', semester: '2nd Semester', track: 'ROTC', category: 'Evaluation', description: 'Final ceremonial tactical inspection by AFP Reserve Command inspection team.' },
-    { id: 'ann-21', title: 'NSTP Final Project Defense & Document Audit', date: '2027-05-08', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Final project defense, narrative binder audit, and clearance signing.' },
-    { id: 'ann-22', title: 'NSTP Annual Pass-in-Review & Recognition Ceremony', date: '2027-05-22', semester: '2nd Semester', track: 'All Tracks', category: 'Culmination', description: 'Ceremonial graduation muster, issuance of NSTP Serial Numbers & Certificates.' }
-  ], []);
-
-  // Combine all events for the year strictly filtered to the active period
+  // Combine all events strictly filtered to the active period
   const allAnnualEvents = useMemo(() => {
     if (viewingArchive && batchRange) {
       const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
@@ -428,14 +369,19 @@ function Calendar() {
       const combined = [...archiveEvents, ...batchHolidays];
       return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
-    // Current Academic Year (AY 2026-2027: Aug 2026 to May 2027)
-    const currentYearHolidays = PHILIPPINE_HOLIDAYS.filter(h => {
-      const d = new Date(h.date);
-      return d >= new Date(2026, 7, 1) && d <= new Date(2027, 4, 31);
-    });
-    const combined = [...defaultAnnualEvents2026, ...events, ...currentYearHolidays];
-    return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [viewingArchive, batchRange, archiveEvents, defaultAnnualEvents2026, events]);
+    // Active Academic Batch (e.g. 2024-2025 1st Semester: Aug 2024 to Dec 2024)
+    if (batchRange) {
+      const minMonthDate = new Date(batchRange.minDate.getFullYear(), batchRange.minDate.getMonth(), 1);
+      const maxMonthDate = new Date(batchRange.maxDate.getFullYear(), batchRange.maxDate.getMonth() + 1, 0);
+      const batchHolidays = PHILIPPINE_HOLIDAYS.filter(h => {
+        const d = new Date(h.date);
+        return d >= minMonthDate && d <= maxMonthDate;
+      });
+      const combined = [...events, ...batchHolidays];
+      return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
+    return [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [viewingArchive, batchRange, archiveEvents, events]);
 
   // Filtered list for the Annual Summary View
   const filteredSummaryEvents = useMemo(() => {
@@ -474,12 +420,10 @@ function Calendar() {
   // Summary Metrics
   const summaryMetrics = useMemo(() => {
     const total = filteredSummaryEvents.length;
-    const immersions = filteredSummaryEvents.filter(e => e.category === 'Immersion').length;
-    const trainings = filteredSummaryEvents.filter(e => e.category === 'Training').length;
-    const evaluations = filteredSummaryEvents.filter(e => e.category === 'Evaluation' || e.category === 'Culmination').length;
     const holidays = filteredSummaryEvents.filter(e => e.type === 'holiday' || e.category === 'Holiday').length;
+    const custom = total - holidays;
 
-    return { total, immersions, trainings, evaluations, holidays };
+    return { total, holidays, custom };
   }, [filteredSummaryEvents]);
 
   const getEventsForDate = (date) => {
@@ -491,10 +435,9 @@ function Calendar() {
       return [...holidays, ...archEvents];
     }
 
-    const defaultInst = defaultAnnualEvents2026.filter(e => e.date === dateStr);
     const customEvents = events.filter(e => e.date === dateStr);
     
-    return [...holidays, ...defaultInst, ...customEvents];
+    return [...holidays, ...customEvents];
   };
 
   const handleSaveEvent = async () => {
@@ -796,7 +739,7 @@ function Calendar() {
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <p className="text-[10px] sm:text-xs text-emerald-300 font-medium truncate">
-                    {viewingArchive ? 'Historical batch activity records' : `${currentBatch || 'A.Y. 2026-2027'} • Official Schedule`}
+                    {viewingArchive ? 'Historical batch activity records' : `${currentBatch || 'A.Y. 2024-2025'} • Official Schedule`}
                   </p>
                 </div>
               </div>
@@ -997,41 +940,35 @@ function Calendar() {
                     <h2 className="text-sm sm:text-lg font-black text-slate-900 leading-tight">
                       {viewingArchive && archiveViewData?.year
                         ? `Archived Schedule — Batch ${archiveViewData.year}`
-                        : `Academic Schedule — ${currentBatch || 'A.Y. 2026-2027 1st Semester'}`}
+                        : `Academic Schedule — ${currentBatch || 'A.Y. 2024-2025 1st Semester'}`}
                     </h2>
                   </div>
                   <span className="self-start sm:self-auto text-[10px] sm:text-xs bg-emerald-100 text-emerald-900 font-black px-2.5 py-0.5 rounded-full border border-emerald-300 whitespace-nowrap ml-7 sm:ml-0">
-                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : (currentBatch || 'A.Y. 2026-2027 1st Sem')}
+                    {viewingArchive && archiveViewData?.year ? `Batch ${archiveViewData.year}` : (currentBatch || 'A.Y. 2024-2025 1st Sem')}
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-1 ml-7 sm:ml-0">
-                  Complete chronological matrix of all orientations, community immersions, military drills, evaluations, and holidays.
+                  Chronological schedule matrix of Philippine official holidays and academic calendar events.
                 </p>
               </div>
             </div>
 
             {/* KPI Metrics Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 my-3 shrink-0">
+            <div className={`grid ${summaryMetrics.custom > 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 my-3 shrink-0`}>
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-center">
                 <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Scheduled</span>
                 <span className="text-base sm:text-lg font-black text-slate-900">{summaryMetrics.total}</span>
               </div>
-              <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 text-center">
-                <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Field Immersion</span>
-                <span className="text-base sm:text-lg font-black text-emerald-900">{summaryMetrics.immersions}</span>
-              </div>
-              <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200 text-center">
-                <span className="block text-[10px] font-bold text-amber-700 uppercase tracking-wider">Training &amp; Drills</span>
-                <span className="text-base sm:text-lg font-black text-amber-900">{summaryMetrics.trainings}</span>
-              </div>
-              <div className="bg-purple-50/70 p-2.5 rounded-xl border border-purple-200 text-center">
-                <span className="block text-[10px] font-bold text-purple-700 uppercase tracking-wider">Defense &amp; Exams</span>
-                <span className="text-base sm:text-lg font-black text-purple-900">{summaryMetrics.evaluations}</span>
-              </div>
-              <div className="bg-red-50/70 p-2.5 rounded-xl border border-red-200 text-center col-span-2 sm:col-span-1">
-                <span className="block text-[10px] font-bold text-red-700 uppercase tracking-wider">Holidays</span>
+              <div className="bg-red-50/70 p-2.5 rounded-xl border border-red-200 text-center">
+                <span className="block text-[10px] font-bold text-red-700 uppercase tracking-wider">Philippine Holidays</span>
                 <span className="text-base sm:text-lg font-black text-red-900">{summaryMetrics.holidays}</span>
               </div>
+              {summaryMetrics.custom > 0 && (
+                <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-200 text-center">
+                  <span className="block text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Custom Events</span>
+                  <span className="text-base sm:text-lg font-black text-emerald-900">{summaryMetrics.custom}</span>
+                </div>
+              )}
             </div>
 
             {/* Filter Controls Bar */}

@@ -586,9 +586,9 @@ function Login() {
         } catch (_) {}
       }
       if (errMsg.includes('timeout') || errMsg.includes('waking up') || errMsg.includes('aborted') || errMsg.includes('Network connection failed') || errMsg.includes('Failed to fetch')) {
-        setError('Cloud server connection timed out. The backend on Render is currently sleeping or experiencing network timeout. Click "Server Settings" below to test connection or connect to Local Server.');
+        setError('Server connection timed out or is temporarily unreachable. Click "Server Settings" below to verify connection.');
       } else if (errMsg.includes('suspended') || errMsg.includes('503')) {
-        setError('Cloud backend is currently sleeping or suspended on Render. Please resume or restart the service in your Render dashboard (dashboard.render.com), or switch to Local Server below.');
+        setError('Backend service is temporarily unavailable (503). Please verify your server status or check "Server Settings" below.');
       } else {
         setError(errMsg || 'Server connection failed. Please try again.');
       }
