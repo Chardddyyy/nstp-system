@@ -1499,10 +1499,14 @@ function Landing() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-emerald-900 py-3.5 sm:py-4 px-4 sm:px-8 lg:px-12 w-full">
-          <div className="w-full flex justify-between items-center text-[10px] sm:text-xs text-emerald-400 font-medium">
-            <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
-            <p className="text-emerald-300/70 hidden sm:block">National Service Training Program</p>
+        <div className="border-t border-emerald-900/80 py-4 px-4 sm:px-8 lg:px-12 w-full bg-emerald-950/90 text-center">
+          <div className="w-full flex flex-col items-center justify-center gap-1 text-[11px] sm:text-xs text-emerald-400 font-medium text-center">
+            <p className="tracking-wide">
+              © {new Date().getFullYear()} Cavite State University - Naic Campus • NSTP System
+            </p>
+            <p className="text-[10px] sm:text-[11px] text-emerald-300/70">
+              National Service Training Program • All Rights Reserved
+            </p>
           </div>
         </div>
       </footer>

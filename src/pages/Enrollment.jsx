@@ -1202,7 +1202,8 @@ function Enrollment() {
         </main>
 
         <footer className="bg-emerald-950 text-white py-4 px-4 text-center text-xs shrink-0 w-full mt-auto border-t border-emerald-900/60">
-          <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
+          <p className="font-medium text-emerald-300">© {new Date().getFullYear()} Cavite State University - Naic Campus • NSTP System</p>
+          <p className="text-[10.5px] text-emerald-400/70 mt-0.5">National Service Training Program • All Rights Reserved</p>
         </footer>
       </div>
     );
@@ -3237,10 +3238,10 @@ function Enrollment() {
       )}
 
       {/* Footer Bar matching Landing Page footer */}
-      <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 sm:px-8 lg:px-12 shrink-0 mt-12 w-full">
-        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-400 font-medium">
-          <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
-          <p className="text-emerald-300/70">Official National Service Training Program Portal</p>
+      <footer className="bg-emerald-950 text-white border-t border-emerald-900 py-6 px-4 sm:px-8 lg:px-12 shrink-0 mt-12 w-full text-center">
+        <div className="w-full flex flex-col items-center justify-center gap-1 text-xs text-emerald-400 font-medium text-center">
+          <p className="tracking-wide">© {new Date().getFullYear()} Cavite State University - Naic Campus • NSTP System</p>
+          <p className="text-[11px] text-emerald-300/70">Official National Service Training Program Portal • All Rights Reserved</p>
         </div>
       </footer>
     </div>

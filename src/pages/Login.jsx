@@ -1591,10 +1591,10 @@ function Login() {
           </div>
         </div>
       )}
-      <footer className="bg-emerald-950/95 border-t border-emerald-900 py-2 sm:py-2.5 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full mt-auto">
-        <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-0.5 sm:gap-1 text-[9.5px] sm:text-[10.5px] text-emerald-400 font-medium">
-          <p>© {new Date().getFullYear()} Cavite State University Naic Campus • NSTP System</p>
-          <p className="text-emerald-300/70">Authorized Faculty &amp; Admin Personnel Access Only</p>
+      <footer className="bg-emerald-950/95 border-t border-emerald-900 py-3 px-4 sm:px-8 lg:px-12 text-center shrink-0 z-10 w-full mt-auto">
+        <div className="w-full flex flex-col items-center justify-center gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-medium text-center">
+          <p className="tracking-wide">© {new Date().getFullYear()} Cavite State University - Naic Campus • NSTP System</p>
+          <p className="text-[9.5px] sm:text-[10px] text-emerald-300/70">Authorized Faculty &amp; Admin Personnel Access Only • All Rights Reserved</p>
         </div>
       </footer>
     </div>
