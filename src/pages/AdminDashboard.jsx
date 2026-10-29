@@ -3542,7 +3542,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 mt-2.5 sm:mt-3">
                           <div className="min-w-0 col-span-2 sm:col-span-1">
                             <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">Birthdate</label>
-                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs truncate">
+                            <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-[13px] bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs whitespace-normal break-words leading-tight flex items-center min-h-[38px] sm:min-h-[42px]" title={birthDateStr}>
                               {birthDateStr}
                             </div>
                           </div>
