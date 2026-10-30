@@ -2620,15 +2620,17 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
       </td>
     </tr>
 
-    <!-- Top Action Button: Instant Direct PDF Download -->
+    <!-- Direct Attached File Notice Banner -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <a href="${primaryButtonUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; padding: 13px 32px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
-          Download Official ID Card (PDF)
-        </a>
-        <div style="margin-top: 8px; font-size: 11px; color: #64748b; font-weight: 600;">
-          &#128206; Attached File: Official ID PDF is also attached directly to this email.
-        </div>
+        <table role="presentation" cellspacing="0" cellpadding="0" style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 14px; padding: 12px 24px; max-width: 380px;">
+          <tr>
+            <td align="center" style="font-size: 13px; font-weight: 700; color: #064e3b; line-height: 1.5;">
+              &#128206; <strong>Official Printable ID Card (PDF):</strong><br/>
+              <span style="font-size: 11.5px; font-weight: 500; color: #047857;">Naka-attach na ang inyong official PDF file sa ibaba ng email na ito. I-tap o i-download direkta ang attachment upang mai-save at mai-print.</span>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>
 
