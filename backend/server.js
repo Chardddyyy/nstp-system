@@ -2546,6 +2546,8 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   const baseUrl = process.env.APP_URL || `http://localhost:${PORT || 3001}`;
   const directPdfDownloadUrl = `${baseUrl}/api/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
   const directIdViewerUrl = `https://chardddyyy.github.io/nstp-system/#/digital-id?id=${encodeURIComponent(studentId)}&name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}&contact=${encodeURIComponent(emergencyContact)}&phone=${encodeURIComponent(emergencyNumber)}&photo=${encodeURIComponent(photoSrc || '')}&qr=${encodeURIComponent(qrToken)}&download=pdf&print=1`;
+  const isLocalHost = !process.env.APP_URL || baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+  const primaryButtonUrl = isLocalHost ? directIdViewerUrl : directPdfDownloadUrl;
 
   // Generate official PDF file buffer for attachment
   let pdfBuffer = null;
@@ -2621,9 +2623,12 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     <!-- Top Action Button: Instant Direct PDF Download -->
     <tr class="no-print">
       <td align="center" style="padding-bottom: 20px;">
-        <a href="${directPdfDownloadUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; padding: 13px 32px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
+        <a href="${primaryButtonUrl}" target="_blank" style="display: inline-block; background: #064e3b; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 800; padding: 13px 32px; border-radius: 25px; box-shadow: 0 4px 14px rgba(6,78,59,0.3); letter-spacing: 0.3px; border: 1.5px solid #059669;">
           Download Official ID Card (PDF)
         </a>
+        <div style="margin-top: 8px; font-size: 11px; color: #64748b; font-weight: 600;">
+          &#128206; Attached File: Official ID PDF is also attached directly to this email.
+        </div>
       </td>
     </tr>
 
@@ -4143,6 +4148,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
         registeredBy: req.user?.name || req.user?.email || 'Admin'
       }),
       req.ip || 'unknown'
+    );
     res.status(201).json(students[0]);
   } catch (error) {
     console.error('Add student error:', error);
@@ -4281,6 +4287,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         role: req.user.role
       }),
       req.ip || 'unknown'
+    );
     res.json(updatedRows[0] || { success: true, ...req.body });
   } catch (error) {
     console.error('Update student error:', error);
@@ -4362,6 +4369,9 @@ const handleBatchAssignSection = async (req, res) => {
         `UPDATE enrollments e JOIN students s ON (e.studentId = s.studentId OR (e.student_name = s.name AND e.department = s.department)) SET e.nstp_section = ? WHERE s.id IN (${placeholders}) OR s.studentId IN (${placeholders})`,
         [cleanSection, ...studentIds, ...studentIds.map(String)]
       );
+    } catch (enrollErr) {
+      console.warn('[BATCH SECTION] Error syncing enrollments table:', enrollErr.message);
+    }
     res.json({ success: true, count: result.affectedRows, nstp_section: cleanSection });
   } catch (error) {
     console.error('Batch assign NSTP section error:', error);
@@ -4529,6 +4539,7 @@ const handleBatchSaveGrades = async (req, res) => {
         }),
         req.ip || 'unknown'
       );
+    }
     res.json({ success: true, savedCount, message: `Successfully saved ${savedCount} grades.` });
   } catch (error) {
     console.error('Save batch grades error:', error);
