@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Printer, Download, ArrowLeft, Shield, FileText, Loader2, CheckCircle } from 'lucide-react';
+import { Printer, Download, ArrowLeft, Shield, FileText, Loader2, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DEMO_COORDINATOR_SIGNATURE_SVG, COORDINATOR_NAME, COORDINATOR_TITLE, COORDINATOR_INSTITUTION } from '../utils/signatureAssets';
@@ -9,7 +9,9 @@ function DigitalIdViewer() {
   const [searchParams] = useSearchParams();
   const cardRef = useRef(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isSavingImage, setIsSavingImage] = useState(false);
   const [pdfSuccess, setPdfSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Extract student details from URL parameters
   const studentId = searchParams.get('id') || searchParams.get('studentId') || '202610001';
@@ -103,8 +105,9 @@ function DigitalIdViewer() {
 
       const fileName = `NSTP_ID_Card_${studentId}_${fullName.replace(/\s+/g, '_')}.pdf`;
       pdf.save(fileName);
+      setSuccessMessage('Official PDF downloaded successfully!');
       setPdfSuccess(true);
-      setTimeout(() => setPdfSuccess(false), 4000);
+      setTimeout(() => setPdfSuccess(false), 4500);
     } catch (err) {
       console.error('PDF generation error:', err);
       window.print();
@@ -112,6 +115,40 @@ function DigitalIdViewer() {
       setIsGeneratingPdf(false);
     }
   }, [isGeneratingPdf, fullName, studentId, schoolYear]);
+
+  // Direct PNG Image Generation & Download (Ideal for mobile photos & gallery)
+  const handleDownloadImage = useCallback(async () => {
+    if (!cardRef.current || isSavingImage) return;
+
+    setIsSavingImage(true);
+    setPdfSuccess(false);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3, // Ultra-sharp 300dpi output
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `NSTP_Digital_ID_${studentId}_${fullName.replace(/\s+/g, '_')}.png`;
+      link.href = imgData;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccessMessage('ID Card image (PNG) saved to your device!');
+      setPdfSuccess(true);
+      setTimeout(() => setPdfSuccess(false), 4500);
+    } catch (err) {
+      console.error('Image save error:', err);
+    } finally {
+      setIsSavingImage(false);
+    }
+  }, [isSavingImage, fullName, studentId]);
 
   const handlePrint = () => {
     window.print();
@@ -157,18 +194,18 @@ function DigitalIdViewer() {
           </span>
         </div>
 
-        {/* Primary Download & Print Buttons */}
-        <div className="grid grid-cols-2 gap-2 w-full">
+        {/* Primary Download & Print Buttons (Mobile-friendly grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
           <button
             type="button"
             onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-            className="px-4 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
+            disabled={isGeneratingPdf || isSavingImage}
+            className="px-3 py-2.5 bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
           >
             {isGeneratingPdf ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving PDF...</span>
+                <span>PDF...</span>
               </>
             ) : (
               <>
@@ -180,18 +217,37 @@ function DigitalIdViewer() {
 
           <button
             type="button"
+            onClick={handleDownloadImage}
+            disabled={isGeneratingPdf || isSavingImage}
+            className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-60"
+          >
+            {isSavingImage ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Photo...</span>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-4 h-4 text-amber-300" />
+                <span>Save Photo (PNG)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={handlePrint}
-            className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            className="px-3 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Printer className="w-4 h-4 text-emerald-400" />
-            <span>Print ID Card</span>
+            <span>Print ID</span>
           </button>
         </div>
 
         {pdfSuccess && (
-          <div className="w-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-bold py-1 px-3 rounded-lg flex items-center justify-center gap-1 animate-fade-in">
-            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>PDF downloaded to your device!</span>
+          <div className="w-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-bold py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 animate-fade-in text-center">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMessage || 'Successfully saved to your device!'}</span>
           </div>
         )}
 
