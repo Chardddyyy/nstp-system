@@ -40,8 +40,10 @@ jobs:
           cd backend
           npm ci
           node --check server.js
-          node --check routes/index.js
-          node --check middleware/errorHandler.js
+          node --check cluster.js
+          node --check utils/cronScheduler.js
+          node --check utils/gdriveAutoSave.js
+          node --check utils/pdfIdGenerator.js
 
       - name: Build Frontend Application
         run: npm run build
