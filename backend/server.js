@@ -6803,7 +6803,12 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
         try {
           const studentIdVal = enrollment.studentId || enrollment.student_id;
           if (studentIdVal) {
-            const finalSection = designatedSection || enrollment.section || 'A';
+            let finalSection = designatedSection || enrollment.section || 'A';
+            const yr = enrollment.year || enrollment.year_level || enrollment.yearLevel || '1st Year';
+            const yrMatch = String(yr).match(/\d+/);
+            if (finalSection && /^[A-Za-z]$/.test(String(finalSection).trim()) && yrMatch) {
+              finalSection = `${yrMatch[0]}-${String(finalSection).trim().toUpperCase()}`;
+            }
 
             // Check if student with this ID already exists
             const [existingStudents] = await pool.execute(

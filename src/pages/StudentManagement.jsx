@@ -1813,7 +1813,14 @@ function StudentManagement() {
                       </td>
                       {/* Original School Section */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700 font-mono font-medium">
-                        {student.section || '-'}
+                        {(() => {
+                          const sec = (student.section || '-').trim();
+                          if (/^[A-Za-z]$/.test(sec) && student.year) {
+                            const yrMatch = String(student.year).match(/\d+/);
+                            return yrMatch ? `${yrMatch[0]}-${sec.toUpperCase()}` : sec;
+                          }
+                          return sec;
+                        })()}
                       </td>
                       {/* Assigned NSTP Section */}
                       <td className="px-4 py-4 whitespace-nowrap text-sm">
@@ -3095,7 +3102,14 @@ function StudentManagement() {
                     <div>
                       <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1">School Section</label>
                       <div className="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs font-mono">
-                        {currentViewStudent.section || '-'}
+                        {(() => {
+                          const sec = (currentViewStudent.section || '-').trim();
+                          if (/^[A-Za-z]$/.test(sec) && currentViewStudent.year) {
+                            const yrMatch = String(currentViewStudent.year).match(/\d+/);
+                            return yrMatch ? `${yrMatch[0]}-${sec.toUpperCase()}` : sec;
+                          }
+                          return sec;
+                        })()}
                       </div>
                     </div>
                     <div>
