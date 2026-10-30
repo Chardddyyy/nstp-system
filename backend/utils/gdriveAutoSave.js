@@ -5,7 +5,7 @@ const pool = require('../config/database');
  * @param {string} activity - Name of activity (e.g. "Student Added", "Student Edited", "Enrollment Approved")
  * @param {boolean} cleanOld - Whether to clean up old test files first
  */
-async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) {
+async function autoSaveToGDrive(activity = 'Scheduled Midnight Daily Backup', cleanOld = true) {
   const webhookUrl = process.env.GDRIVE_WEBHOOK_URL;
   if (!webhookUrl || webhookUrl.trim() === '' || webhookUrl.includes('YOUR_DEPLOYMENT_URL')) {
     return;
@@ -32,11 +32,11 @@ async function autoSaveToGDrive(activity = 'System Activity', cleanOld = false) 
     }
 
     const timestamp = new Date().toISOString();
-    const cleanActivity = activity.replace(/[^a-zA-Z0-9_-]/g, '_');
 
+    // Unified single clean backup name: "CvSU_NSTP_Latest_Database_Backup.json"
     const backupPayload = {
-      fileName: `CvSU_NSTP_Complete_Database_Dump_${cleanActivity}_${timestamp.slice(0, 10)}`,
-      folderId: process.env.GDRIVE_FOLDER_ID || '1MDK7wfYmKICAzEgFMNlI8iHR2zMwibZI',
+      fileName: 'CvSU_NSTP_Latest_Database_Backup.json',
+      folderId: process.env.GDRIVE_FOLDER_ID || '1lWSgMdKMBD8148A_wFb6UufFgmloD4e3',
       cleanOld: cleanOld,
       backupData: {
         system: 'Cavite State University Naic - NSTP Record & Report Management System',

@@ -4143,8 +4143,6 @@ app.post('/api/students', authenticateToken, async (req, res) => {
         registeredBy: req.user?.name || req.user?.email || 'Admin'
       }),
       req.ip || 'unknown'
-    );
-    autoSaveToGDrive('Add_Student_' + studentId);
     res.status(201).json(students[0]);
   } catch (error) {
     console.error('Add student error:', error);
@@ -4283,14 +4281,6 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         role: req.user.role
       }),
       req.ip || 'unknown'
-    );
-
-    try {
-      autoSaveToGDrive('Edit_Student_' + (finalStudentId || id));
-    } catch (e) {
-      console.warn('GDrive auto-save warning:', e.message);
-    }
-    
     res.json(updatedRows[0] || { success: true, ...req.body });
   } catch (error) {
     console.error('Update student error:', error);
@@ -4372,9 +4362,6 @@ const handleBatchAssignSection = async (req, res) => {
         `UPDATE enrollments e JOIN students s ON (e.studentId = s.studentId OR (e.student_name = s.name AND e.department = s.department)) SET e.nstp_section = ? WHERE s.id IN (${placeholders}) OR s.studentId IN (${placeholders})`,
         [cleanSection, ...studentIds, ...studentIds.map(String)]
       );
-    } catch (_) {}
-
-    autoSaveToGDrive(`Batch_Assign_Section_${cleanSection}`);
     res.json({ success: true, count: result.affectedRows, nstp_section: cleanSection });
   } catch (error) {
     console.error('Batch assign NSTP section error:', error);
@@ -4542,9 +4529,6 @@ const handleBatchSaveGrades = async (req, res) => {
         }),
         req.ip || 'unknown'
       );
-    }
-
-    autoSaveToGDrive('Save_Batch_Grades_' + (grades[0]?.semester || 'Sem') + '_' + savedCount);
     res.json({ success: true, savedCount, message: `Successfully saved ${savedCount} grades.` });
   } catch (error) {
     console.error('Save batch grades error:', error);

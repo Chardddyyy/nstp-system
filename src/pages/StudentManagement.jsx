@@ -420,7 +420,7 @@ function StudentManagement() {
     return str
       .trim()
       .toLowerCase()
-      .replace(/(?:^|[\s,.\-\/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
+      .replace(/(?:^|[\s,.\-/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
       .replace(/\b(ii|iii|iv|vi|vii|viii|ix|x)\b/gi, (roman) => roman.toUpperCase())
       .replace(/\b(jr|sr)\b/gi, (sfx) => sfx.charAt(0).toUpperCase() + sfx.slice(1).toLowerCase());
   };

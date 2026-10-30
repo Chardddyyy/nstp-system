@@ -26,10 +26,13 @@ export default function LetterFormats() {
     try {
       const saved = localStorage.getItem('nstp_letter_templates');
       if (saved !== null) {
-        let parsed = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Keep only user-created letter templates with uploaded file attachments
           const valid = parsed.filter(item => !String(item.id || '').startsWith('tpl-') && item.file && item.file.data);
+          if (valid.length !== parsed.length) {
+            localStorage.setItem('nstp_letter_templates', JSON.stringify(valid));
+          }
           return valid;
         }
       }
@@ -38,23 +41,6 @@ export default function LetterFormats() {
       return [];
     }
   });
-
-  // Purge any residual mock templates from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('nstp_letter_templates');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const valid = parsed.filter(item => !String(item.id || '').startsWith('tpl-') && item.file && item.file.data);
-          if (valid.length !== parsed.length) {
-            localStorage.setItem('nstp_letter_templates', JSON.stringify(valid));
-            setTemplates(valid);
-          }
-        }
-      }
-    } catch {}
-  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);

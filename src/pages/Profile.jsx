@@ -478,7 +478,6 @@ function Profile() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditSearch, setAuditSearch] = useState('');
-  const [auditFilterType, setAuditFilterType] = useState('all');
   const [auditFilterUser, setAuditFilterUser] = useState('all');
   const [auditPage, setAuditPage] = useState(1);
   const [auditPageSize, setAuditPageSize] = useState(15);
@@ -597,20 +596,6 @@ function Profile() {
     link.click();
     document.body.removeChild(link);
     showToast(`Exported ${filteredAuditLogs.length} audit records to CSV successfully.`, 'success');
-  };
-
-  const formatAuditTimestamp = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
   };
 
   const formatAuditParts = (dateStr) => {
@@ -1224,6 +1209,16 @@ function Profile() {
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${auditLoading ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">{auditLoading ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportAuditLogs}
+                  disabled={auditLoading || filteredAuditLogs.length === 0}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  title="Export audit trail to CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Export CSV</span>
                 </button>
                 <button
                   type="button"
