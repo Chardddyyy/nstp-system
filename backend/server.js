@@ -842,6 +842,7 @@ async function ensureUserColumns() {
     'ALTER TABLE users ADD COLUMN bio TEXT',
     'ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL',
     'ALTER TABLE users MODIFY COLUMN last_active_at DATETIME NULL',
+    "ALTER TABLE users ADD COLUMN assigned_section VARCHAR(255) DEFAULT 'All'",
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -1713,7 +1714,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
     await pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
 
     var token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, department: user.department, sessionId: sessionId },
+      { id: user.id, email: user.email, role: user.role, department: user.department, assigned_section: user.assigned_section || 'All', sessionId: sessionId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -1726,6 +1727,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
         name: user.name,
         role: user.role,
         department: user.department,
+        assigned_section: user.assigned_section || 'All',
         avatar: user.avatar,
         profilePicture: user.profilePicture,
         phone: user.phone,
@@ -1837,7 +1839,7 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
     await pool.execute('UPDATE users SET last_active_at = NOW() WHERE id = ?', [user.id]).catch(function() {});
 
     var token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, department: user.department, sessionId: sessionId },
+      { id: user.id, email: user.email, role: user.role, department: user.department, assigned_section: user.assigned_section || 'All', sessionId: sessionId },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -1853,6 +1855,7 @@ app.post('/api/auth/verify-2fa', verifyOtpLimiter, async (req, res) => {
         name: user.name,
         role: user.role,
         department: user.department,
+        assigned_section: user.assigned_section || 'All',
         avatar: user.avatar,
         profilePicture: user.profilePicture,
         phone: user.phone,
@@ -3308,7 +3311,7 @@ app.post('/forgot-password', (req, res, next) => {
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, COALESCE(last_active_at, updated_at, created_at) as last_active_at FROM users'
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section, COALESCE(last_active_at, updated_at, created_at) as last_active_at FROM users'
     );
     res.json(users);
   } catch (error) {
@@ -3322,7 +3325,7 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   await ensureUserColumns().catch(() => {});
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio FROM users WHERE id = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section FROM users WHERE id = ?',
       [req.user.id]
     );
 
@@ -3343,9 +3346,10 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
-    const { name, email, password, department, role, avatar, phone } = req.body;
+    const { name, email, password, department, role, avatar, phone, assigned_section, assignedSection } = req.body;
     const assignedRole = role === 'admin' ? 'admin' : 'instructor';
     const cleanPhone = phone ? String(phone).replace(/\D/g, '').slice(0, 15) : null;
+    const targetAssignedSection = assignedRole === 'admin' ? 'All' : (assigned_section || assignedSection || 'All').trim();
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' });
@@ -3369,8 +3373,8 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     const defaultAvatar = assignedRole === 'admin' ? 'avatar-4' : (assignedDept === 'LTS' ? 'avatar-6' : (assignedDept === 'ROTC' ? 'avatar-8' : 'avatar-2'));
     const assignedAvatar = avatar ? sanitizeStr(avatar, 50) : defaultAvatar;
     const [result] = await pool.execute(
-      'INSERT INTO users (name, email, password, role, department, avatar, phone) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, email, hashed, assignedRole, assignedDept, assignedAvatar, cleanPhone]
+      'INSERT INTO users (name, email, password, role, department, avatar, phone, assigned_section) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, email, hashed, assignedRole, assignedDept, assignedAvatar, cleanPhone, targetAssignedSection]
     );
     const newUserId = result.insertId;
 
@@ -3390,7 +3394,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
       }
     } catch (_) { /* non-fatal */ }
 
-    res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept, phone: cleanPhone });
+    res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept, phone: cleanPhone, assigned_section: targetAssignedSection });
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -3470,7 +3474,7 @@ async function handleUpdateUser(req, res) {
       targetUserId = req.user.id;
     }
 
-    const { name, email, phone, bio, avatar, profilePicture, role, department, password } = req.body;
+    const { name, email, phone, bio, avatar, profilePicture, role, department, password, assigned_section, assignedSection } = req.body;
 
     // Validate email format
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
@@ -3507,8 +3511,9 @@ async function handleUpdateUser(req, res) {
     if (req.user.role === 'admin' && String(targetUserId) !== String(req.user.id)) {
       const targetRole = role !== undefined ? role : (existingUser.role || 'instructor');
       const targetDept = targetRole === 'admin' ? 'NSTP Office' : (department !== undefined ? department : (existingUser.department || 'CWTS'));
+      const targetAssignedSec = targetRole === 'admin' ? 'All' : (assigned_section !== undefined ? assigned_section : (assignedSection !== undefined ? assignedSection : (existingUser.assigned_section || 'All')));
 
-      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?';
+      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?, assigned_section = ?';
       const params = [
         targetName,
         targetEmail,
@@ -3517,7 +3522,8 @@ async function handleUpdateUser(req, res) {
         targetAvatar,
         targetProfilePicture,
         targetRole,
-        targetDept
+        targetDept,
+        targetAssignedSec
       ];
       if (password && String(password).trim().length >= 8) {
         const hashed = await bcrypt.hash(String(password).trim(), 12);
@@ -3548,7 +3554,7 @@ async function handleUpdateUser(req, res) {
     }
 
     const [updatedUsers] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio FROM users WHERE id = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section FROM users WHERE id = ?',
       [targetUserId]
     );
 
@@ -3675,10 +3681,21 @@ const handleGetStudents = async (req, res) => {
     if (req.user.role === 'admin') {
       [students] = await pool.execute('SELECT * FROM students ORDER BY created_at DESC');
     } else {
+      const [uRows] = await pool.execute('SELECT assigned_section FROM users WHERE id = ?', [req.user.id]).catch(() => [[]]);
+      const instructorSection = (uRows[0]?.assigned_section || req.user.assigned_section || 'All').trim();
+
       [students] = await pool.execute(
         'SELECT * FROM students WHERE department = ? ORDER BY created_at DESC',
         [req.user.department]
       );
+
+      if (instructorSection && instructorSection !== 'All') {
+        const assignedSections = instructorSection.split(',').map(s => s.trim().toUpperCase().replace(/[\s_]+/g, '-'));
+        students = (students || []).filter(st => {
+          const sec = String(st.nstp_section || st.section || '').trim().toUpperCase().replace(/[\s_]+/g, '-');
+          return assignedSections.some(a => a === 'ALL' || a === sec);
+        });
+      }
     }
 
     // Attach latest grades from student_grades
@@ -4462,8 +4479,22 @@ const handleGetGrades = async (req, res) => {
     const params = [];
 
     if (req.user.role !== 'admin') {
+      const [uRows] = await pool.execute('SELECT assigned_section FROM users WHERE id = ?', [req.user.id]).catch(() => [[]]);
+      const instructorSection = (uRows[0]?.assigned_section || req.user.assigned_section || 'All').trim();
+
       query += ' AND (UPPER(g.department) = UPPER(?) OR UPPER(COALESCE(s.department, g.department)) = UPPER(?))';
       params.push(req.user.department, req.user.department);
+
+      if (instructorSection && instructorSection !== 'All') {
+        const assignedSections = instructorSection.split(',').map(s => s.trim().toUpperCase());
+        query += ' AND (';
+        query += assignedSections.map(() => '(UPPER(REPLACE(REPLACE(COALESCE(g.nstp_section, ""), " ", "-"), "_", "-")) = ? OR UPPER(REPLACE(REPLACE(COALESCE(s.nstp_section, ""), " ", "-"), "_", "-")) = ?)').join(' OR ');
+        query += ')';
+        assignedSections.forEach(a => {
+          const normA = a.replace(/[\s_]+/g, '-');
+          params.push(normA, normA);
+        });
+      }
     } else if (department && department !== 'All') {
       query += ' AND (UPPER(g.department) = UPPER(?) OR UPPER(COALESCE(s.department, g.department)) = UPPER(?))';
       params.push(department, department);

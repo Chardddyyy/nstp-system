@@ -17,6 +17,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getAvatarSrc } from '../utils/avatars';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 import { getPhilippineHolidaysForBatch } from '../data/philippineHolidays';
+import { matchesAssignedSection } from '../utils/gradeSection';
 
 const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
 
@@ -158,13 +159,20 @@ function InstructorDashboard() {
     };
   }, [showNotifications, showMessages]);
   
-  // Get instructor's department students only (switches to archive batch when viewingArchive is true)
+  // Get instructor's department and assigned section students only (switches to archive batch when viewingArchive is true)
   const myStudents = useMemo(() => {
-    if (viewingArchive && archiveViewData?.studentData) {
-      return (archiveViewData.studentData || []).filter(s => s && s.department === user?.department);
-    }
-    return (students || []).filter(s => s && s.department === user?.department);
-  }, [viewingArchive, archiveViewData, students, user?.department]);
+    const list = (viewingArchive && archiveViewData?.studentData)
+      ? (archiveViewData.studentData || [])
+      : (students || []);
+
+    return list.filter(s => {
+      if (!s || s.department !== user?.department) return false;
+      if (user?.assigned_section && !matchesAssignedSection(s.nstp_section || s.section || '', user.assigned_section)) {
+        return false;
+      }
+      return true;
+    });
+  }, [viewingArchive, archiveViewData, students, user?.department, user?.assigned_section]);
 
   const myReports = useMemo(() => {
     let list = [];
@@ -667,8 +675,11 @@ function InstructorDashboard() {
                     </>
                   )}
                 </h2>
-                <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full">
-                  {viewingArchive ? `Archived Records • ${user?.department} Department` : `Welcome, ${user?.name || (user?.department === 'ROTC' ? 'Training Staff' : 'Facilitator')} 👋`}
+                <p className="text-emerald-200 text-[9.5px] xs:text-[10.5px] sm:text-xs lg:text-sm font-medium truncate mt-0.5 max-w-full flex items-center gap-1.5 flex-wrap">
+                  <span>{viewingArchive ? `Archived Records • ${user?.department} Department` : `Welcome, ${user?.name || (user?.department === 'ROTC' ? 'Training Staff' : 'Facilitator')} 👋`}</span>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-400 text-emerald-950 shadow-2xs">
+                    {!user?.assigned_section || user.assigned_section === 'All' ? 'All Sections' : `Sec: ${user.assigned_section}`}
+                  </span>
                 </p>
               </div>
             </div>
@@ -1877,7 +1888,7 @@ function InstructorDashboard() {
           onClose={() => setShowAttendanceScanner(false)}
           currentDepartment={user?.department || 'CWTS'}
           currentUser={user}
-          students={students}
+          students={myStudents}
         />
 
         {/* 15-Day Attendance Matrix Modal */}
@@ -1885,7 +1896,7 @@ function InstructorDashboard() {
           <StudentAttendanceMatrixModal
             isOpen={showAttendanceMatrix}
             onClose={() => setShowAttendanceMatrix(false)}
-            students={students}
+            students={myStudents}
             currentUser={user}
             currentDepartment={user?.department || 'CWTS'}
           />
@@ -1895,7 +1906,7 @@ function InstructorDashboard() {
         <StudentGradesModal
           isOpen={showGradesModal}
           onClose={() => setShowGradesModal(false)}
-          students={students}
+          students={myStudents}
           currentUser={user}
         />
 

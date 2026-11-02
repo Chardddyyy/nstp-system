@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
-import { formatGradeAndSection } from '../utils/gradeSection';
+import { formatGradeAndSection, matchesAssignedSection } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
@@ -244,6 +244,12 @@ export function StudentAttendanceMatrixModal({
         const dept = (s.department || s.component || s.nstp_program || s.program || '').toUpperCase().trim();
         return dept === filterDept || dept.includes(filterDept);
       });
+    }
+
+    if (currentUser?.role !== 'admin' && currentUser?.assigned_section) {
+      targetStudents = targetStudents.filter(s => 
+        matchesAssignedSection(s.nstp_section || s.section || '', currentUser.assigned_section)
+      );
     }
 
     const totalConducted = maxDayConducted;
@@ -575,7 +581,7 @@ export function StudentAttendanceMatrixModal({
             ) : (
               <div className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-emerald-50 rounded-lg sm:rounded-xl border border-emerald-200/80 font-black text-emerald-900 text-xs flex items-center gap-1.5 shadow-2xs shrink-0">
                 <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                <span>{selectedDept || currentUser?.department || 'My Track'}</span>
+                <span>{selectedDept || currentUser?.department || 'My Track'} • {!currentUser?.assigned_section || currentUser.assigned_section === 'All' ? 'All Sections' : `Sec: ${currentUser.assigned_section}`}</span>
               </div>
             )}
 

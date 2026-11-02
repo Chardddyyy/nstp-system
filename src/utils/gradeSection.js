@@ -44,3 +44,27 @@ export function formatGradeAndSection(student) {
 
   return `${prog} ${yr}-${sec.replace(/^[-_]+/, '')}`;
 }
+
+export const DEPARTMENT_SECTIONS = {
+  CWTS: ['CWTS 1', 'CWTS 2', 'CWTS 3'],
+  LTS: ['LTS 1', 'LTS 2', 'LTS 3'],
+  ROTC: ['ROTC 1', 'ROTC 2', 'ROTC 3']
+};
+
+export function matchesAssignedSection(studentSection, assignedSection) {
+  if (!assignedSection || assignedSection === 'All' || assignedSection === 'ALL') {
+    return true;
+  }
+  if (!studentSection) return false;
+
+  const assignedList = String(assignedSection)
+    .split(',')
+    .map(s => s.trim().toUpperCase().replace(/[\s_]+/g, '-'));
+
+  const normStudent = String(studentSection).trim().toUpperCase().replace(/[\s_]+/g, '-');
+
+  return assignedList.some(assigned => {
+    if (assigned === 'ALL') return true;
+    return assigned === normStudent;
+  });
+}

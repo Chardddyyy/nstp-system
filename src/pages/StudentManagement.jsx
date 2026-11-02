@@ -2,6 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { studentsAPI, gradesAPI } from '../services/api';
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { matchesAssignedSection, DEPARTMENT_SECTIONS } from '../utils/gradeSection';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
@@ -840,14 +841,18 @@ function StudentManagement() {
       // NSTP Section filter
       const matchesNstpSec = filterNstpSection === 'All' || (student.nstp_section && student.nstp_section.trim() === filterNstpSection);
 
-      // Instructors only see their department students
+      // Instructors only see their department students and their assigned section
       if (!isAdmin && user?.department) {
-        return matchesSearch && student.department === user.department && matchesCourse && matchesNstpSec;
+        const matchesSection = matchesAssignedSection(
+          student.nstp_section || student.section || '',
+          user?.assigned_section
+        );
+        return matchesSearch && student.department === user.department && matchesSection && matchesCourse && matchesNstpSec;
       }
 
       return matchesSearch && matchesDept && matchesCourse && matchesNstpSec;
     });
-  }, [sourceStudents, searchTerm, filterDept, filterCourse, filterNstpSection, isAdmin, user?.department]);
+  }, [sourceStudents, searchTerm, filterDept, filterCourse, filterNstpSection, isAdmin, user?.department, user?.assigned_section]);
 
   const sortedStudents = useMemo(() => {
     return [...filteredStudents].sort((a, b) => {
@@ -1281,7 +1286,14 @@ function StudentManagement() {
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Student Management</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xs sm:text-lg lg:text-xl font-black tracking-tight text-white truncate leading-tight">Student Management</h2>
+                  {!isAdmin && (
+                    <span className="text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-emerald-950 shadow-2xs shrink-0">
+                      {user?.department} • {!user?.assigned_section || user.assigned_section === 'All' ? 'All Sections' : `Sec: ${user.assigned_section}`}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full sm:w-auto">

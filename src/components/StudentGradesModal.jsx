@@ -7,6 +7,7 @@ import { gradesAPI } from '../services/api';
 import { downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
 import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
+import { matchesAssignedSection, DEPARTMENT_SECTIONS } from '../utils/gradeSection';
 import OSDSNSTPForm from './OSDSNSTPForm';
 import OSDSNSTPForm2B from './OSDSNSTPForm2B';
 
@@ -243,6 +244,13 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       if (selectedDept !== 'All' && st.department !== selectedDept) return false;
       if (!isAdmin && currentUser?.department && st.department !== currentUser.department) return false;
 
+      // Restrict instructor to their assigned section(s)
+      if (!isAdmin && currentUser?.assigned_section) {
+        if (!matchesAssignedSection(st.nstp_section || st.section || '', currentUser.assigned_section)) {
+          return false;
+        }
+      }
+
       if (selectedNstpSection !== 'All') {
         const sec = (st.nstp_section || '').trim().toUpperCase();
         const target = selectedNstpSection.trim().toUpperCase();
@@ -264,7 +272,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       const nameB = (b.lastName || b.name || '').toLowerCase();
       return nameA.localeCompare(nameB);
     });
-  }, [students, selectedDept, selectedNstpSection, searchQuery, isAdmin, currentUser?.department]);
+  }, [students, selectedDept, selectedNstpSection, searchQuery, isAdmin, currentUser?.department, currentUser?.assigned_section]);
 
   const handleSaveAll = async () => {
     if (!canEditGrades) {
@@ -622,8 +630,8 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
         </div>
 
         {/* Search Toolbar */}
-        <div className="p-3 sm:p-4 bg-gray-50 border-b border-gray-200/80 flex items-center justify-between gap-3">
-          <div className="relative w-full max-w-md">
+        <div className="p-3 sm:p-4 bg-gray-50 border-b border-gray-200/80 flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -632,6 +640,36 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-hidden font-medium shadow-2xs"
             />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {(!currentUser?.assigned_section || currentUser.assigned_section === 'All' || isAdmin) ? (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-gray-600 font-bold">Section Filter:</span>
+                <select
+                  value={selectedNstpSection}
+                  onChange={(e) => setSelectedNstpSection(e.target.value)}
+                  className="px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg font-bold text-gray-800 text-xs focus:ring-2 focus:ring-emerald-600 outline-none"
+                >
+                  <option value="All">All {currentUser?.department || ''} Sections</option>
+                  {(isAdmin 
+                    ? NSTP_SECTIONS 
+                    : (DEPARTMENT_SECTIONS[currentUser?.department] || ['CWTS 1', 'CWTS 2', 'CWTS 3'])
+                  ).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-900 border border-emerald-300 font-black text-xs shadow-2xs">
+                  Assigned Section: {currentUser.assigned_section}
+                </span>
+              </div>
+            )}
+            <span className="text-xs font-bold text-gray-500 bg-white px-2.5 py-1 rounded-lg border border-gray-200">
+              {filteredStudents.length} Students
+            </span>
           </div>
         </div>
 

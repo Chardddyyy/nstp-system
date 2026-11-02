@@ -15,6 +15,7 @@ const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
 
 import { AVATAR_OPTIONS, getAvatarSrc } from '../utils/avatars';
+import { DEPARTMENT_SECTIONS } from '../utils/gradeSection';
 
 const isStrictPassword = (pwd) => {
   if (!pwd || typeof pwd !== 'string') return false;
@@ -354,7 +355,7 @@ function Profile() {
   // Instructor management (admin only)
   const [instructors, setInstructors] = useState([]);
   const [showAddInstructor, setShowAddInstructor] = useState(false);
-  const [instructorForm, setInstructorForm] = useState({ name: '', email: '', role: 'instructor', department: 'CWTS', password: '', confirmPassword: '' });
+  const [instructorForm, setInstructorForm] = useState({ name: '', email: '', role: 'instructor', department: 'CWTS', assigned_section: 'All', password: '', confirmPassword: '' });
   const [showInstructorPassword, setShowInstructorPassword] = useState(false);
   const [isAddingInstructor, setIsAddingInstructor] = useState(false);
   const [deletingInstructorId, setDeletingInstructorId] = useState(null);
@@ -362,7 +363,7 @@ function Profile() {
   // View & Edit Instructor Modal State
   const [editingInstructor, setEditingInstructor] = useState(null);
   const [showEditInstructorModal, setShowEditInstructorModal] = useState(false);
-  const [editInstructorForm, setEditInstructorForm] = useState({ id: null, name: '', email: '', role: 'instructor', department: 'CWTS', newPassword: '' });
+  const [editInstructorForm, setEditInstructorForm] = useState({ id: null, name: '', email: '', role: 'instructor', department: 'CWTS', assigned_section: 'All', newPassword: '' });
   const [avatarModified, setAvatarModified] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [isSavingInstructor, setIsSavingInstructor] = useState(false);
@@ -409,6 +410,7 @@ function Profile() {
       email: inst.email || '',
       role: inst.role || 'instructor',
       department: inst.department || 'CWTS',
+      assigned_section: inst.assigned_section || 'All',
       avatar: inst.avatar || (inst.department === 'LTS' ? 'avatar-6' : (inst.department === 'ROTC' ? 'avatar-8' : 'avatar-2')),
       profilePicture: inst.profilePicture || null,
       newPassword: ''
@@ -436,6 +438,7 @@ function Profile() {
         email: editInstructorForm.email.trim(),
         role: editInstructorForm.role,
         department: editInstructorForm.role === 'admin' ? null : editInstructorForm.department,
+        assigned_section: editInstructorForm.role === 'admin' ? 'All' : (editInstructorForm.assigned_section || 'All'),
       };
 
       // CRITICAL: Only send avatar if the admin explicitly clicked/selected a new avatar!
@@ -637,12 +640,13 @@ function Profile() {
         password: instructorForm.password,
         role: instructorForm.role,
         department: instructorForm.role === 'instructor' ? instructorForm.department : undefined,
+        assigned_section: instructorForm.role === 'instructor' ? (instructorForm.assigned_section || 'All') : 'All',
         phone: instructorForm.phone ? instructorForm.phone.trim() : undefined
       });
       setInstructors(prev => [...prev, created]);
       // Ensure the All Instructors group exists — creates it if not yet, which also adds the new user
       getAllInstructorsGroup().catch(() => {});
-      setInstructorForm({ name: '', email: '', phone: '', department: 'CWTS', password: '', confirmPassword: '' });
+      setInstructorForm({ name: '', email: '', phone: '', department: 'CWTS', assigned_section: 'All', password: '', confirmPassword: '' });
       setShowAddInstructor(false);
       showToast('Faculty account created successfully!', 'success');
     } catch (error) {
@@ -1016,9 +1020,18 @@ function Profile() {
                                 {inst.role === 'admin' ? (
                                   <span className="text-xs px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700 shrink-0">Admin</span>
                                 ) : (
-                                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'} shrink-0`}>
-                                    Instructor
-                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${deptColors[inst.department] || 'bg-gray-100 text-gray-600'} shrink-0`}>
+                                      {inst.department || 'Instructor'}
+                                    </span>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border shrink-0 ${
+                                      !inst.assigned_section || inst.assigned_section === 'All'
+                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                        : 'bg-amber-50 text-amber-900 border-amber-300'
+                                    }`}>
+                                      {!inst.assigned_section || inst.assigned_section === 'All' ? 'All Sections' : `Sec: ${inst.assigned_section}`}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                               <p className="text-xs text-gray-400 truncate">{inst.email}</p>
@@ -1551,6 +1564,47 @@ function Profile() {
                   </div>
                 )}
 
+                {/* Assigned Section (instructor only) */}
+                {f.role === 'instructor' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      Assigned Section <span className="text-xs font-normal text-gray-500">(All or specific section)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setInstructorForm(prev => ({ ...prev, assigned_section: 'All' }))}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          (!f.assigned_section || f.assigned_section === 'All')
+                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        All {f.department || ''} Sections
+                      </button>
+                      {(DEPARTMENT_SECTIONS[f.department] || ['CWTS 1', 'CWTS 2', 'CWTS 3']).map(sec => (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => setInstructorForm(prev => ({ ...prev, assigned_section: sec }))}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                            f.assigned_section === sec
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {sec}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      {(!f.assigned_section || f.assigned_section === 'All')
+                        ? `This instructor can view, manage, and grade ALL students under ${f.department || 'their department'}.`
+                        : `This instructor will ONLY view, manage, and grade students enrolled in ${f.assigned_section}.`}
+                    </p>
+                  </div>
+                )}
+
                 {/* Password */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Password <span className="text-red-500">*</span></label>
@@ -1690,6 +1744,47 @@ function Profile() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Assigned Section */}
+              {editInstructorForm.role === 'instructor' && (
+                <div>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Assigned Section
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditInstructorForm(prev => ({ ...prev, assigned_section: 'All' }))}
+                      className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        (!editInstructorForm.assigned_section || editInstructorForm.assigned_section === 'All')
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                          : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                      }`}
+                    >
+                      All {editInstructorForm.department || ''} Sections
+                    </button>
+                    {(DEPARTMENT_SECTIONS[editInstructorForm.department] || ['CWTS 1', 'CWTS 2', 'CWTS 3']).map(sec => (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => setEditInstructorForm(prev => ({ ...prev, assigned_section: sec }))}
+                        className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          editInstructorForm.assigned_section === sec
+                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        {sec}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    {(!editInstructorForm.assigned_section || editInstructorForm.assigned_section === 'All')
+                      ? `Instructor has full access to all students in ${editInstructorForm.department || 'their department'}.`
+                      : `Instructor is restricted to managing and grading students in ${editInstructorForm.assigned_section} only.`}
+                  </p>
                 </div>
               )}
 
