@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { gradesAPI } from '../services/api';
+import { compareStudentsByLastName, getStudentLastName, getStudentFirstName } from './gradeSection';
 
 /**
  * Fetch and convert image into Base64 Data URL for jsPDF embedding
@@ -1163,7 +1164,9 @@ export async function downloadAttendanceMatrixPdf({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.2);
 
-  studentMatrixList.forEach((st, idx) => {
+  const sortedStudents = studentMatrixList.slice().sort(compareStudentsByLastName);
+
+  sortedStudents.forEach((st, idx) => {
     if (currentY + rowHeight > (pageHeight - bottomMargin)) {
       doc.addPage('a4', 'landscape');
       currentY = renderHeader();
@@ -1171,10 +1174,14 @@ export async function downloadAttendanceMatrixPdf({
       doc.setFontSize(6.2);
     }
 
+    const lName = getStudentLastName(st).toUpperCase();
+    const fName = getStudentFirstName(st).toUpperCase();
+    const displayName = lName ? (fName ? `${lName}, ${fName}` : lName) : String(st.name || '').toUpperCase();
+
     const rowData = {
       no: String(idx + 1),
       studentId: st.studentId || 'N/A',
-      name: (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase(),
+      name: displayName,
       dept: st.department || selectedDept,
       sec: st.gradeAndSection || st.section || '-',
       present: String(st.presentCount || 0),

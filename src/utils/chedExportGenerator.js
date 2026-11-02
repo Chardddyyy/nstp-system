@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
 import { gradesAPI } from '../services/api';
+import { compareStudentsByLastName, getStudentLastName, getStudentFirstName } from './gradeSection';
 
 /**
  * Fetch and convert local or URL image into Base64 for ExcelJS embedding
@@ -853,7 +854,9 @@ export async function downloadAttendanceMatrixExcel({
   headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
 
   let rowNum = 5;
-  studentMatrixList.forEach((st, idx) => {
+  const sortedStudents = studentMatrixList.slice().sort(compareStudentsByLastName);
+
+  sortedStudents.forEach((st, idx) => {
     const row = worksheet.getRow(rowNum);
     const dayChars = activeDays.map(d => {
       const s = st.dayStatuses?.[d];
@@ -865,10 +868,14 @@ export async function downloadAttendanceMatrixExcel({
       return '-';
     });
 
+    const lName = getStudentLastName(st).toUpperCase();
+    const fName = getStudentFirstName(st).toUpperCase();
+    const displayName = lName ? (fName ? `${lName}, ${fName}` : lName) : String(st.name || '').toUpperCase();
+
     row.values = [
       idx + 1,
       st.studentId || 'N/A',
-      (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase(),
+      displayName,
       st.department || selectedDept,
       st.gradeAndSection || st.section || '-',
       ...dayChars,

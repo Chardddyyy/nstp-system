@@ -68,3 +68,56 @@ export function matchesAssignedSection(studentSection, assignedSection) {
     return assigned === normStudent;
   });
 }
+
+export function getStudentLastName(student) {
+  if (!student) return '';
+  if (student.lastName && String(student.lastName).trim()) {
+    return String(student.lastName).trim();
+  }
+  if (student.last_name && String(student.last_name).trim()) {
+    return String(student.last_name).trim();
+  }
+  const name = String(student.name || '').trim();
+  if (name.includes(',')) {
+    return name.split(',')[0].trim();
+  }
+  const parts = name.split(/\s+/);
+  return parts.length > 0 ? parts[parts.length - 1].trim() : name;
+}
+
+export function getStudentFirstName(student) {
+  if (!student) return '';
+  if (student.firstName && String(student.firstName).trim()) {
+    return String(student.firstName).trim();
+  }
+  if (student.first_name && String(student.first_name).trim()) {
+    return String(student.first_name).trim();
+  }
+  const name = String(student.name || '').trim();
+  if (name.includes(',')) {
+    return name.split(',')[1]?.trim() || '';
+  }
+  const parts = name.split(/\s+/);
+  return parts.length > 1 ? parts.slice(0, -1).join(' ').trim() : name;
+}
+
+export function compareStudentsByLastName(a, b) {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+
+  const lastA = getStudentLastName(a).toLowerCase();
+  const lastB = getStudentLastName(b).toLowerCase();
+  const cmpLast = lastA.localeCompare(lastB, undefined, { sensitivity: 'base' });
+  if (cmpLast !== 0) return cmpLast;
+
+  const firstA = getStudentFirstName(a).toLowerCase();
+  const firstB = getStudentFirstName(b).toLowerCase();
+  const cmpFirst = firstA.localeCompare(firstB, undefined, { sensitivity: 'base' });
+  if (cmpFirst !== 0) return cmpFirst;
+
+  const idA = String(a.studentId || a.id || '').toLowerCase();
+  const idB = String(b.studentId || b.id || '').toLowerCase();
+  return idA.localeCompare(idB, undefined, { numeric: true });
+}
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
-import { formatGradeAndSection, matchesAssignedSection } from '../utils/gradeSection';
+import { formatGradeAndSection, matchesAssignedSection, compareStudentsByLastName, getStudentLastName, getStudentFirstName } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
@@ -254,8 +254,11 @@ export function StudentAttendanceMatrixModal({
 
     const totalConducted = maxDayConducted;
 
-    return targetStudents.map((st) => {
-      const stId = String(st.studentId || st.id || st.student_id || '').trim().toLowerCase();
+    return targetStudents
+      .slice()
+      .sort(compareStudentsByLastName)
+      .map((st) => {
+        const stId = String(st.studentId || st.id || st.student_id || '').trim().toLowerCase();
       const stDbId = String(st.id || '').trim().toLowerCase();
       const stName = (st.name || `${st.firstName || ''} ${st.lastName || ''}`).trim().toLowerCase();
       const normStName = normalizeName(stName);
@@ -348,9 +351,11 @@ export function StudentAttendanceMatrixModal({
       })
       .sort((a, b) => {
         if (viewFilter === 'at-risk') {
-          return b.absentCount - a.absentCount; // Sort by most absences first
+          const diff = b.absentCount - a.absentCount; // Sort by most absences first
+          if (diff !== 0) return diff;
+          return compareStudentsByLastName(a, b);
         }
-        return (a.name || '').localeCompare(b.name || '');
+        return compareStudentsByLastName(a, b);
       });
   }, [studentMatrixList, viewFilter, searchQuery]);
 
@@ -443,10 +448,13 @@ export function StudentAttendanceMatrixModal({
 
   // Export Master Attendance Matrix to PDF (.pdf)
   const handleExportMasterPdf = async () => {
-    if (studentMatrixList.length === 0) return;
+    const listToExport = (filteredMatrix.length > 0 ? filteredMatrix : studentMatrixList)
+      .slice()
+      .sort(compareStudentsByLastName);
+    if (listToExport.length === 0) return;
     try {
       await downloadAttendanceMatrixPdf({
-        studentMatrixList,
+        studentMatrixList: listToExport,
         selectedDept,
         daysArray: DAYS_ARRAY
       });
@@ -458,10 +466,13 @@ export function StudentAttendanceMatrixModal({
 
   // Export Master Attendance Matrix to Excel (.xlsx)
   const handleExportMasterExcel = async () => {
-    if (studentMatrixList.length === 0) return;
+    const listToExport = (filteredMatrix.length > 0 ? filteredMatrix : studentMatrixList)
+      .slice()
+      .sort(compareStudentsByLastName);
+    if (listToExport.length === 0) return;
     try {
       await downloadAttendanceMatrixExcel({
-        studentMatrixList,
+        studentMatrixList: listToExport,
         daysArray: DAYS_ARRAY,
         selectedDept
       });
@@ -743,7 +754,11 @@ export function StudentAttendanceMatrixModal({
                           isWarning ? 'bg-rose-50/95 group-hover:bg-rose-100/90' : 'bg-white group-hover:bg-slate-50'
                         } shadow-[2px_0_5px_-2px_rgba(0,0,0,0.12)] transition-colors`}>
                           <div className="font-black text-slate-900 leading-tight truncate max-w-[140px] sm:max-w-[200px]">
-                            {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
+                            {(() => {
+                              const lName = getStudentLastName(st);
+                              const fName = getStudentFirstName(st);
+                              return lName ? (fName ? `${lName}, ${fName}` : lName) : (st.name || '');
+                            })()}
                           </div>
                           <div className="text-[9.5px] sm:text-[10px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
                             <span>{st.studentId || 'N/A'}</span>

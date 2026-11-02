@@ -7,7 +7,7 @@ import { gradesAPI } from '../services/api';
 import { downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
 import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
-import { matchesAssignedSection, DEPARTMENT_SECTIONS } from '../utils/gradeSection';
+import { matchesAssignedSection, DEPARTMENT_SECTIONS, compareStudentsByLastName } from '../utils/gradeSection';
 import OSDSNSTPForm from './OSDSNSTPForm';
 import OSDSNSTPForm2B from './OSDSNSTPForm2B';
 
@@ -267,11 +267,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       }
 
       return true;
-    }).sort((a, b) => {
-      const nameA = (a.lastName || a.name || '').toLowerCase();
-      const nameB = (b.lastName || b.name || '').toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
+    }).sort(compareStudentsByLastName);
   }, [students, selectedDept, selectedNstpSection, searchQuery, isAdmin, currentUser?.department, currentUser?.assigned_section]);
 
   const handleSaveAll = async () => {
