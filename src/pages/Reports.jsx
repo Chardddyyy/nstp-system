@@ -86,7 +86,7 @@ function Reports() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
@@ -626,9 +626,9 @@ function Reports() {
                   }}
                   className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 outline-none cursor-pointer hover:bg-gray-100"
                 >
-                  <option value={6}>6</option>
-                  <option value={12}>12</option>
-                  <option value={24}>24</option>
+                  {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((num) => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
                 </select>
               </div>
             </div>

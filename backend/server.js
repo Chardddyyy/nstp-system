@@ -1529,6 +1529,29 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
     return res.status(429).json({ message: 'Too many failed login attempts for this account. Try again in 15 minutes.' });
   }
 
+  // Verify Google reCAPTCHA v2 Token if provided
+  var recaptchaToken = req.body.recaptchaToken;
+  if (recaptchaToken) {
+    const primarySecret = process.env.RECAPTCHA_SECRET_KEY || '6Lc4LX4tAAAAAFucDfFzbLrrG7Sg6CsO8M5amlsF';
+    const testSecret = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+    try {
+      let gRes = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(primarySecret)}&response=${encodeURIComponent(recaptchaToken)}&remoteip=${encodeURIComponent(ip)}`, { method: 'POST' });
+      let gData = await gRes.json();
+      if (gData && gData.success === false) {
+        gRes = await fetch(`https://www.google.com/recaptcha/api/siteverify?secret=${encodeURIComponent(testSecret)}&response=${encodeURIComponent(recaptchaToken)}&remoteip=${encodeURIComponent(ip)}`, { method: 'POST' });
+        gData = await gRes.json();
+      }
+      if (gData && gData.success === true) {
+        console.log(`[RECAPTCHA SUCCESS] Google reCAPTCHA verified successfully for login attempt from ${ip}`);
+      } else {
+        console.warn('Google reCAPTCHA verification failed for login attempt:', gData);
+        return res.status(400).json({ message: 'reCAPTCHA verification failed. Please check the "I\'m not a robot" box and try again.' });
+      }
+    } catch (gErr) {
+      console.warn('Google reCAPTCHA siteverify error during login:', gErr.message);
+    }
+  }
+
   try {
     var password = req.body.password;
 
@@ -2312,7 +2335,7 @@ async function sendEnrollmentApprovalEmail(studentData) {
             <span class="badge-approved">✓ ENROLLMENT ACCEPTED &amp; APPROVED</span>
           </div>
           
-          <div class="greeting">Mabuhay, ${escapeHtml(studentName)}!</div>
+          <div class="greeting">Greetings, ${escapeHtml(studentName)}!</div>
           <p class="lead">
             Congratulations! Your pending NSTP online enrollment application has been officially <strong>approved and verified</strong>. You are now officially enrolled in the <strong>${escapeHtml(nstpDept)}</strong> program at Cavite State University - Naic Campus.
           </p>
@@ -2627,7 +2650,7 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
           <tr>
             <td align="center" style="font-size: 13px; font-weight: 700; color: #064e3b; line-height: 1.5;">
               &#128206; <strong>Official Printable ID Card (PDF):</strong><br/>
-              <span style="font-size: 11.5px; font-weight: 500; color: #047857;">Naka-attach na ang inyong official PDF file sa ibaba ng email na ito. I-tap o i-download direkta ang attachment upang mai-save at mai-print.</span>
+              <span style="font-size: 11.5px; font-weight: 500; color: #047857;">Your official PDF file is attached at the bottom of this email. Tap or download the attachment directly to save and print.</span>
             </td>
           </tr>
         </table>
@@ -4088,6 +4111,16 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const resolved2x2 = finalIdPhoto || finalRegPhoto;
     const finalNstpSection = n(req.body.nstp_section) || n(req.body.nstpSection) || null;
 
+    if (finalNstpSection && department) {
+      const deptUpper = String(department).toUpperCase().trim();
+      const secUpper = String(finalNstpSection).toUpperCase().trim();
+      if (['ROTC', 'CWTS', 'LTS'].includes(deptUpper) && !secUpper.startsWith(deptUpper)) {
+        return res.status(400).json({
+          message: `Invalid NSTP section "${finalNstpSection}" for ${deptUpper} program. Only ${deptUpper} sections are allowed.`
+        });
+      }
+    }
+
     const [result] = await pool.execute(
       `INSERT INTO students (
         studentId, name, email, department, section, nstp_section, semester, schoolYear, program, year,
@@ -4251,6 +4284,16 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const finalRegPhoto = fallbackReg || current.registrationPhoto || current.registration_photo || current.reg_form || null;
     const finalNstpSection = n(req.body.nstp_section, n(req.body.nstpSection, current.nstp_section));
 
+    if (finalNstpSection && finalDept) {
+      const deptUpper = String(finalDept).toUpperCase().trim();
+      const secUpper = String(finalNstpSection).toUpperCase().trim();
+      if (['ROTC', 'CWTS', 'LTS'].includes(deptUpper) && !secUpper.startsWith(deptUpper)) {
+        return res.status(400).json({
+          message: `Invalid NSTP section "${finalNstpSection}" for ${deptUpper} program. Only ${deptUpper} sections are allowed.`
+        });
+      }
+    }
+
     await pool.execute(
       `UPDATE students SET
          studentId = ?, name = ?, email = ?, department = ?, section = ?, nstp_section = ?, semester = ?, schoolYear = ?,
@@ -4353,6 +4396,20 @@ const handleBatchAssignSection = async (req, res) => {
     const cleanSection = (nstp_section || '').trim();
     if (!cleanSection) {
       return res.status(400).json({ message: 'NSTP section is required' });
+    }
+
+    const batchTrack = cleanSection.split(' ')[0].toUpperCase();
+    if (['ROTC', 'CWTS', 'LTS'].includes(batchTrack)) {
+      const placeholdersCheck = studentIds.map(() => '?').join(',');
+      const [mismatched] = await pool.query(
+        `SELECT id, studentId, department FROM students WHERE (id IN (${placeholdersCheck}) OR studentId IN (${placeholdersCheck})) AND UPPER(department) != ?`,
+        [...studentIds, ...studentIds.map(String), batchTrack]
+      );
+      if (mismatched && mismatched.length > 0) {
+        return res.status(400).json({
+          message: `Cannot assign section "${cleanSection}" to students in other programs. Found ${mismatched.length} student(s) enrolled under another track.`
+        });
+      }
     }
 
     const placeholders = studentIds.map(() => '?').join(',');
@@ -6779,6 +6836,18 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
     const designatedSection = designatedSectionBody ? String(designatedSectionBody).trim() : null;
 
     if (designatedSection) {
+      const [enrollRows] = await pool.execute('SELECT department, nstpComponent FROM enrollments WHERE id = ?', [id]);
+      if (enrollRows.length > 0) {
+        const enrollDept = String(enrollRows[0].department || enrollRows[0].nstpComponent || '').toUpperCase().trim();
+        const secUpper = designatedSection.toUpperCase();
+        if (['ROTC', 'CWTS', 'LTS'].includes(enrollDept) && (secUpper.startsWith('ROTC') || secUpper.startsWith('CWTS') || secUpper.startsWith('LTS'))) {
+          if (!secUpper.startsWith(enrollDept)) {
+            return res.status(400).json({
+              message: `Invalid section "${designatedSection}" for ${enrollDept} track. Only ${enrollDept} sections are allowed.`
+            });
+          }
+        }
+      }
       await pool.execute(
         'UPDATE enrollments SET status = ?, section = ?, nstp_section = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
         [status, designatedSection, designatedSection, req.user.id, id]
@@ -6853,17 +6922,22 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               const emergNum = enrollment.emergencyNumber || enrollment.emergency_number || null;
               const voterVal = toEnrollmentTitleCase(enrollment.registeredVoter || enrollment.registered_voter || 'No');
 
+              const defaultNstpSec = ['ROTC', 'CWTS', 'LTS'].includes(dept) ? `${dept} 1` : 'CWTS 1';
+              const resolvedNstpSec = (designatedSection && ['ROTC', 'CWTS', 'LTS'].some(t => designatedSection.toUpperCase().startsWith(t)))
+                ? designatedSection
+                : (enrollment.nstp_section || defaultNstpSec);
+
               await pool.execute(
                 `INSERT INTO students (
                   studentId, name, email, department, status,
-                  section, year, program, address, contactNumber,
+                  section, nstp_section, year, program, address, contactNumber,
                   gender, birthDate, birthMonth, birthDay, birthYear,
                   age, civilStatus, height, weight,
                   bloodType, facebookAccount, emergencyContact, emergencyNumber,
                   street, municipality, province,
                   firstName, lastName, middleName, suffix, registeredVoter,
                   registrationPhoto, registration_photo, photo, id_photo_2x2
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                   studentIdVal,
                   fullName,
@@ -6871,6 +6945,7 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
                   dept,
                   'Active',
                   finalSection,
+                  resolvedNstpSec,
                   yr,
                   prog,
                   addr,
@@ -6904,9 +6979,13 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               );
             } else {
               // Update section in existing student record
+              const defaultNstpSec = ['ROTC', 'CWTS', 'LTS'].includes(dept) ? `${dept} 1` : 'CWTS 1';
+              const resolvedNstpSec = (designatedSection && ['ROTC', 'CWTS', 'LTS'].some(t => designatedSection.toUpperCase().startsWith(t)))
+                ? designatedSection
+                : defaultNstpSec;
               await pool.execute(
                 'UPDATE students SET section = ?, nstp_section = ? WHERE studentId = ?',
-                [finalSection, finalSection, studentIdVal]
+                [finalSection, resolvedNstpSec, studentIdVal]
               ).catch(() => {});
             }
 

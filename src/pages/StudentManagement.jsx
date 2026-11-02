@@ -72,6 +72,14 @@ function getArchivedCorDoc(s, batchYear) {
   return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sId}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sProg}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sYear} (${sSem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${sDept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${sDept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`;
 }
 
+export const getAvailableSectionsForDept = (dept) => {
+  const d = String(dept || '').trim().toUpperCase();
+  if (d === 'ROTC') return ['ROTC 1', 'ROTC 2', 'ROTC 3'];
+  if (d === 'CWTS') return ['CWTS 1', 'CWTS 2', 'CWTS 3'];
+  if (d === 'LTS') return ['LTS 1', 'LTS 2', 'LTS 3'];
+  return [];
+};
+
 function StudentManagement() {
   const { user, logout, students, setStudents, addStudent, updateStudent, deleteStudent, refreshData, viewingArchive, archiveViewData, setViewingArchive, setArchiveViewData, currentBatch, showToast } = useAuth();
   const navigate = useNavigate();
@@ -467,6 +475,7 @@ function StudentManagement() {
     const updated = {
       ...formData,
       [name]: newValue,
+      ...(name === 'department' && formData.nstp_section && !getAvailableSectionsForDept(newValue).includes(formData.nstp_section) ? { nstp_section: '' } : {}),
       ...(name === 'emergencyContact' ? { emergencyName: newValue } : {}),
       ...(name === 'emergencyName' ? { emergencyContact: newValue } : {}),
       ...(name === 'sex' ? { gender: newValue } : {}),
@@ -500,7 +509,7 @@ function StudentManagement() {
     setFormData({
       studentId: '', lastName: '', firstName: '', middleName: '', suffix: '', name: '',
       email: '', street: '', municipality: '', province: '', address: '',
-      department: '', year: '', yearLevel: '', program: '', section: '',
+      department: '', year: '', yearLevel: '', program: '', section: '', nstp_section: '',
       contactNumber: '09', birthMonth: '', birthDay: '', birthYear: '', age: '',
       civilStatus: '', sex: '', gender: '', registeredVoter: '', height: '', weight: '', bloodType: '',
       facebookAccount: '', emergencyContact: '', emergencyName: '', emergencyNumber: '09'
@@ -601,6 +610,15 @@ function StudentManagement() {
   const handleBatchAssignSection = async () => {
     if (selectedStudentIds.size === 0) return;
     const ids = Array.from(selectedStudentIds);
+    const batchTrack = String(batchNstpSection || '').split(' ')[0].toUpperCase();
+    const mismatched = ids
+      .map((id) => students.find((s) => (s.id || s.studentId) === id || s.id === id || s.studentId === id))
+      .filter((s) => s && s.department && s.department.toUpperCase() !== batchTrack);
+
+    if (mismatched.length > 0) {
+      showToast(`Cannot assign ${batchNstpSection} to students outside ${batchTrack} track. ${mismatched.length} student(s) selected belong to another track.`, 'warning');
+      return;
+    }
     try {
       setIsBatchAssigning(true);
       // Optimistically update students list in real-time immediately
@@ -674,6 +692,13 @@ function StudentManagement() {
       const val = formData[field];
       if (!val || val.toString().trim() === '') {
         showToast(`"${fieldLabels[field] || field}" is required. Please fill it in before saving.`, 'warning');
+        return;
+      }
+    }
+    if (formData.nstp_section && formData.department) {
+      const allowed = getAvailableSectionsForDept(formData.department);
+      if (!allowed.includes(formData.nstp_section)) {
+        showToast(`Invalid section "${formData.nstp_section}" for ${formData.department} program. Only ${formData.department} sections are allowed.`, 'warning');
         return;
       }
     }
@@ -877,7 +902,26 @@ function StudentManagement() {
     setCurrentPage(1);
   }, [searchTerm, filterDept, filterCourse, studentSortCol, studentSortDir]);
 
+  useEffect(() => {
+    if (filterDept !== 'All' && ['ROTC', 'CWTS', 'LTS'].includes(filterDept.toUpperCase())) {
+      const deptSecs = getAvailableSectionsForDept(filterDept);
+      if (!deptSecs.includes(batchNstpSection)) {
+        setBatchNstpSection(deptSecs[0]);
+      }
+      if (filterNstpSection !== 'All' && !deptSecs.includes(filterNstpSection)) {
+        setFilterNstpSection('All');
+      }
+    }
+  }, [filterDept]);
+
   const handleEditStudent = async () => {
+    if (formData.nstp_section && formData.department) {
+      const allowed = getAvailableSectionsForDept(formData.department);
+      if (!allowed.includes(formData.nstp_section)) {
+        showToast(`Invalid section "${formData.nstp_section}" for ${formData.department} program. Only ${formData.department} sections are allowed.`, 'warning');
+        return;
+      }
+    }
     setIsEditingStudent(true);
     try {
       const cleanLastName = toTitleCase((formData.lastName || '').trim());
@@ -1389,15 +1433,29 @@ function StudentManagement() {
                 className="w-full sm:w-auto sm:min-w-[145px] px-3 pr-8 py-2 text-xs border border-emerald-100/80 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold bg-white text-emerald-950 cursor-pointer shadow-2xs"
               >
                 <option value="All">All Sections</option>
-                <option value="CWTS 1">CWTS 1</option>
-                <option value="CWTS 2">CWTS 2</option>
-                <option value="CWTS 3">CWTS 3</option>
-                <option value="LTS 1">LTS 1</option>
-                <option value="LTS 2">LTS 2</option>
-                <option value="LTS 3">LTS 3</option>
-                <option value="ROTC 1">ROTC 1</option>
-                <option value="ROTC 2">ROTC 2</option>
-                <option value="ROTC 3">ROTC 3</option>
+                {filterDept !== 'All' && ['ROTC', 'CWTS', 'LTS'].includes(filterDept.toUpperCase()) ? (
+                  getAvailableSectionsForDept(filterDept).map((sec) => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))
+                ) : (
+                  <>
+                    <optgroup label="CWTS">
+                      <option value="CWTS 1">CWTS 1</option>
+                      <option value="CWTS 2">CWTS 2</option>
+                      <option value="CWTS 3">CWTS 3</option>
+                    </optgroup>
+                    <optgroup label="LTS">
+                      <option value="LTS 1">LTS 1</option>
+                      <option value="LTS 2">LTS 2</option>
+                      <option value="LTS 3">LTS 3</option>
+                    </optgroup>
+                    <optgroup label="ROTC">
+                      <option value="ROTC 1">ROTC 1</option>
+                      <option value="ROTC 2">ROTC 2</option>
+                      <option value="ROTC 3">ROTC 3</option>
+                    </optgroup>
+                  </>
+                )}
               </select>
               <select
                 id="filter-course"
@@ -1474,15 +1532,29 @@ function StudentManagement() {
                   onChange={(e) => setBatchNstpSection(e.target.value)}
                   className="px-3 py-1.5 text-xs font-black rounded-xl bg-white text-emerald-950 border border-emerald-300 outline-none cursor-pointer shadow-xs"
                 >
-                  <option value="CWTS 1">CWTS 1</option>
-                  <option value="CWTS 2">CWTS 2</option>
-                  <option value="CWTS 3">CWTS 3</option>
-                  <option value="LTS 1">LTS 1</option>
-                  <option value="LTS 2">LTS 2</option>
-                  <option value="LTS 3">LTS 3</option>
-                  <option value="ROTC 1">ROTC 1</option>
-                  <option value="ROTC 2">ROTC 2</option>
-                  <option value="ROTC 3">ROTC 3</option>
+                  {filterDept !== 'All' && ['ROTC', 'CWTS', 'LTS'].includes(filterDept.toUpperCase()) ? (
+                    getAvailableSectionsForDept(filterDept).map((sec) => (
+                      <option key={sec} value={sec}>{sec}</option>
+                    ))
+                  ) : (
+                    <>
+                      <optgroup label="CWTS">
+                        <option value="CWTS 1">CWTS 1</option>
+                        <option value="CWTS 2">CWTS 2</option>
+                        <option value="CWTS 3">CWTS 3</option>
+                      </optgroup>
+                      <optgroup label="LTS">
+                        <option value="LTS 1">LTS 1</option>
+                        <option value="LTS 2">LTS 2</option>
+                        <option value="LTS 3">LTS 3</option>
+                      </optgroup>
+                      <optgroup label="ROTC">
+                        <option value="ROTC 1">ROTC 1</option>
+                        <option value="ROTC 2">ROTC 2</option>
+                        <option value="ROTC 3">ROTC 3</option>
+                      </optgroup>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -2401,24 +2473,21 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
+                      <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
+                        NSTP Section {formData.department ? `(${formData.department})` : ''}
+                      </label>
                       <select
                         id="add-nstp-section"
                         name="nstp_section"
                         value={formData.nstp_section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
+                        disabled={!formData.department}
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <option value="">Unassigned</option>
-                        <option value="CWTS 1">CWTS 1</option>
-                        <option value="CWTS 2">CWTS 2</option>
-                        <option value="CWTS 3">CWTS 3</option>
-                        <option value="LTS 1">LTS 1</option>
-                        <option value="LTS 2">LTS 2</option>
-                        <option value="LTS 3">LTS 3</option>
-                        <option value="ROTC 1">ROTC 1</option>
-                        <option value="ROTC 2">ROTC 2</option>
-                        <option value="ROTC 3">ROTC 3</option>
+                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
+                        {getAvailableSectionsForDept(formData.department).map((sec) => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -3727,24 +3796,21 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">NSTP Section</label>
+                      <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
+                        NSTP Section {formData.department ? `(${formData.department})` : ''}
+                      </label>
                       <select
                         id="edit-nstp-section"
                         name="nstp_section"
                         value={formData.nstp_section || ''}
                         onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
+                        disabled={!formData.department}
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <option value="">Unassigned</option>
-                        <option value="CWTS 1">CWTS 1</option>
-                        <option value="CWTS 2">CWTS 2</option>
-                        <option value="CWTS 3">CWTS 3</option>
-                        <option value="LTS 1">LTS 1</option>
-                        <option value="LTS 2">LTS 2</option>
-                        <option value="LTS 3">LTS 3</option>
-                        <option value="ROTC 1">ROTC 1</option>
-                        <option value="ROTC 2">ROTC 2</option>
-                        <option value="ROTC 3">ROTC 3</option>
+                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
+                        {getAvailableSectionsForDept(formData.department).map((sec) => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
                       </select>
                     </div>
                     <div>

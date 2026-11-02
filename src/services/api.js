@@ -188,20 +188,20 @@ async function apiCall(endpoint, options) {
 }
 
 // Auth
-export async function loginUser(email, password, _forceLogin = true) {
+export async function loginUser(email, password, _forceLogin = true, recaptchaToken = null) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanPass = String(password || '').trim();
 
   try {
     let res = await apiCall('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email: cleanEmail, password: cleanPass, forceLogin: true })
+      body: JSON.stringify({ email: cleanEmail, password: cleanPass, forceLogin: true, recaptchaToken: recaptchaToken || undefined })
     });
     // If an older server instance returned warning / activeSession, automatically force login to complete authentication instantly
     if (res && res.warning && res.activeSession && !res.token) {
       res = await apiCall('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email: cleanEmail, password: cleanPass, forceLogin: true })
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass, forceLogin: true, recaptchaToken: recaptchaToken || undefined })
       });
     }
     if (res && res.token) {
@@ -1035,7 +1035,7 @@ export async function sendStudentDigitalId(studentOrId) {
           <tr>
             <td align="center" style="font-size: 13px; font-weight: 700; color: #064e3b; line-height: 1.5;">
               &#128206; <strong>Official Printable ID Card (PDF):</strong><br/>
-              <span style="font-size: 11.5px; font-weight: 500; color: #047857;">Naka-attach na ang inyong official PDF file sa ibaba ng email na ito. I-tap o i-download direkta ang attachment upang mai-save at mai-print.</span>
+              <span style="font-size: 11.5px; font-weight: 500; color: #047857;">Your official PDF file is attached at the bottom of this email. Tap or download the attachment directly to save and print.</span>
             </td>
           </tr>
         </table>

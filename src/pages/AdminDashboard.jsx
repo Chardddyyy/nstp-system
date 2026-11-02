@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { archivesAPI, auditLogsAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import Sidebar from '../components/layout/Sidebar';
+import ArchiveStudentsTable from '../components/ArchiveStudentsTable';
 import {
   Users, FileText, MessageSquare,
   User, Shield,
@@ -210,29 +211,37 @@ function RegistrationDocumentPreview({ documentUrl, onExpand, isFullscreen = fal
   );
 }
 
+const getAvailableSectionsForDept = (dept) => {
+  const d = String(dept || '').trim().toUpperCase();
+  if (d === 'ROTC') return ['ROTC 1', 'ROTC 2', 'ROTC 3'];
+  if (d === 'CWTS') return ['CWTS 1', 'CWTS 2', 'CWTS 3'];
+  if (d === 'LTS') return ['LTS 1', 'LTS 2', 'LTS 3'];
+  return [];
+};
+
 function AdminDashboard() {
-  const { 
-    user, 
-    logout, 
-    clearBatchData, 
-    students = [], 
-    reports = [], 
-    allUsers = [], 
-    pendingEnrollments = [], 
-    approveEnrollment, 
-    declineEnrollment, 
-    refreshData, 
-    archivedYears = [], 
-    currentBatch = '2026-2027 1st Semester', 
-    notifications = [], 
+  const {
+    user,
+    logout,
+    clearBatchData,
+    students = [],
+    reports = [],
+    allUsers = [],
+    pendingEnrollments = [],
+    approveEnrollment,
+    declineEnrollment,
+    refreshData,
+    archivedYears = [],
+    currentBatch = '2026-2027 1st Semester',
+    notifications = [],
     messages = {},
     conversations = [],
-    setNotifications, 
+    setNotifications,
     deleteNotifications,
     markAllNotificationsRead,
-    viewingArchive, 
-    archiveViewData, 
-    setViewingArchive, 
+    viewingArchive,
+    archiveViewData,
+    setViewingArchive,
     setArchiveViewData,
     showToast,
     updateActiveBatchRange
@@ -256,7 +265,7 @@ function AdminDashboard() {
 
     return valid.length > 0 ? valid : DEFAULT_PAST_BATCHES;
   }, [archivedYears]);
-  
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState([]);
@@ -318,7 +327,7 @@ function AdminDashboard() {
     if (typeof window !== 'undefined') {
       try {
         readMap = JSON.parse(localStorage.getItem(`nstp_read_conversations_${user.id}`) || '{}');
-      } catch {}
+      } catch { }
     }
 
     const userConvIdSet = new Set();
@@ -372,11 +381,11 @@ function AdminDashboard() {
             }
           });
         });
-      } catch {}
+      } catch { }
     }
     return Math.max(notifCount, storeCount);
   }, [messageNotifications, messages, conversations, user, readTick]);
-  
+
   // Real-time RegForm document validator audit hook
   const regformAudits = useRegformAuditor(pendingEnrollments);
 
@@ -451,7 +460,7 @@ function AdminDashboard() {
     const updatedStatus = await saveEnrollmentSchedule(next);
     setScheduleStatus(updatedStatus);
   };
-  
+
   // Close notification / message panels when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -469,7 +478,7 @@ function AdminDashboard() {
       document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showNotifications, showMessages]);
-  
+
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showArchiveDetails, setShowArchiveDetails] = useState(false);
   const [archiveExportModal, setArchiveExportModal] = useState(null); // { formType: 'Form A' | 'Form B', data: archiveViewData }
@@ -478,8 +487,8 @@ function AdminDashboard() {
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(true);
   const [barChartMode] = useState('vertical');
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
-  const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [assignNstpSection, setAssignNstpSection] = useState('');
   const [enrollmentDeptFilter, setEnrollmentDeptFilter] = useState('All');
   const [enrollmentPage, setEnrollmentPage] = useState(1);
   const [enrollmentReviewTab, setEnrollmentReviewTab] = useState('all'); // 'all' | 'docs' | 'academic'
@@ -542,6 +551,20 @@ function AdminDashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [archiveExportModal, photoViewer, confirmDialog, selectedEnrollment, scheduleModalOpen, showInstructorList, showArchiveModal, showArchiveDetails, showNewBatchConfirm, showNotifications]);
 
+  // Synchronize assigned NSTP section when an enrollment is opened for review
+  useEffect(() => {
+    if (selectedEnrollment) {
+      const track = String(selectedEnrollment.nstpComponent || selectedEnrollment.department || 'CWTS').toUpperCase().trim();
+      const allowed = getAvailableSectionsForDept(track);
+      const existing = selectedEnrollment.nstp_section || selectedEnrollment.section;
+      if (existing && allowed.includes(existing)) {
+        setAssignNstpSection(existing);
+      } else {
+        setAssignNstpSection(allowed[0] || `${track} 1`);
+      }
+    }
+  }, [selectedEnrollment]);
+
   // Online Enrollment Portal Status Switch (stored in localStorage)
   const [_enrollmentOpen, _setEnrollmentOpen] = useState(() => {
     const saved = localStorage.getItem('nstp_enrollment_open');
@@ -582,7 +605,7 @@ function AdminDashboard() {
   const showConfirm = (message, onConfirm) => {
     setConfirmDialog({ message, onConfirm });
   };
-  
+
   // All hooks must be called before any early return
   // Calculate statistics from actual data
   const stats = useMemo(() => ({
@@ -600,7 +623,7 @@ function AdminDashboard() {
     if (viewingArchive && archiveViewData) {
       const sd = archiveViewData.studentData || [];
       const cwts = archiveViewData.data?.cwts ?? (sd.filter(s => s.department === 'CWTS').length || 0);
-      const lts  = archiveViewData.data?.lts  ?? (sd.filter(s => s.department === 'LTS').length  || 0);
+      const lts = archiveViewData.data?.lts ?? (sd.filter(s => s.department === 'LTS').length || 0);
       const rotc = archiveViewData.data?.rotc ?? (sd.filter(s => s.department === 'ROTC').length || 0);
       return {
         totalStudents: archiveViewData.students || sd.length,
@@ -613,7 +636,7 @@ function AdminDashboard() {
 
   const programDeptStats = useMemo(() => {
     const source = viewingArchive && archiveViewData?.studentData ? archiveViewData.studentData : students;
-    
+
     // Group all students in source by normalized program
     const progMap = {};
     OFFICIAL_PROGRAMS.forEach(p => {
@@ -637,7 +660,7 @@ function AdminDashboard() {
     return mapped.sort((a, b) => {
       // Sort by active component so highest count is at the very top
       if (selectedComponentFilter === 'CWTS') return (b.cwts - a.cwts) || (b.total - a.total);
-      if (selectedComponentFilter === 'LTS')  return (b.lts - a.lts)   || (b.total - a.total);
+      if (selectedComponentFilter === 'LTS') return (b.lts - a.lts) || (b.total - a.total);
       if (selectedComponentFilter === 'ROTC') return (b.rotc - a.rotc) || (b.total - a.total);
       return b.total - a.total;
     });
@@ -673,45 +696,45 @@ function AdminDashboard() {
       </div>
     );
   }
-  
 
-  
+
+
   function notificationIdsMatch(a, b) {
     return String(a) === String(b);
   }
 
   function handleSelectNotification(id) {
-    setSelectedNotifications(function(prev) {
-      const has = prev.some(function(nId) { return notificationIdsMatch(nId, id); });
+    setSelectedNotifications(function (prev) {
+      const has = prev.some(function (nId) { return notificationIdsMatch(nId, id); });
       if (has) {
-        return prev.filter(function(nId) { return !notificationIdsMatch(nId, id); });
+        return prev.filter(function (nId) { return !notificationIdsMatch(nId, id); });
       }
       return prev.concat([id]);
     });
   }
 
   function handleSelectMessage(id) {
-    setSelectedMessages(function(prev) {
-      const has = prev.some(function(nId) { return notificationIdsMatch(nId, id); });
+    setSelectedMessages(function (prev) {
+      const has = prev.some(function (nId) { return notificationIdsMatch(nId, id); });
       if (has) {
-        return prev.filter(function(nId) { return !notificationIdsMatch(nId, id); });
+        return prev.filter(function (nId) { return !notificationIdsMatch(nId, id); });
       }
       return prev.concat([id]);
     });
   }
-  
+
   function handleSelectAll(e) {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     const list = activeBellNotifications;
-    setSelectedNotifications(function(prev) {
-      const allSelected = list.length > 0 && list.every(function(n) {
-        return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+    setSelectedNotifications(function (prev) {
+      const allSelected = list.length > 0 && list.every(function (n) {
+        return prev.some(function (sid) { return notificationIdsMatch(sid, n.id); });
       });
       if (allSelected) return [];
-      return list.map(function(n) { return n.id; });
+      return list.map(function (n) { return n.id; });
     });
   }
 
@@ -721,15 +744,15 @@ function AdminDashboard() {
       e.stopPropagation();
     }
     const list = messageNotifications;
-    setSelectedMessages(function(prev) {
-      const allSelected = list.length > 0 && list.every(function(n) {
-        return prev.some(function(sid) { return notificationIdsMatch(sid, n.id); });
+    setSelectedMessages(function (prev) {
+      const allSelected = list.length > 0 && list.every(function (n) {
+        return prev.some(function (sid) { return notificationIdsMatch(sid, n.id); });
       });
       if (allSelected) return [];
-      return list.map(function(n) { return n.id; });
+      return list.map(function (n) { return n.id; });
     });
   }
-  
+
   function handleDeleteSelected(e) {
     if (e) {
       e.preventDefault();
@@ -738,9 +761,9 @@ function AdminDashboard() {
     if (deleteNotifications) {
       deleteNotifications(selectedNotifications);
     } else {
-      const selectedSet = new Set(selectedNotifications.map(function(id) { return String(id); }));
-      setNotifications(function(prev) {
-        return (prev || []).filter(function(n) {
+      const selectedSet = new Set(selectedNotifications.map(function (id) { return String(id); }));
+      setNotifications(function (prev) {
+        return (prev || []).filter(function (n) {
           return !selectedSet.has(String(n.id));
         });
       });
@@ -756,9 +779,9 @@ function AdminDashboard() {
     if (deleteNotifications) {
       deleteNotifications(selectedMessages);
     } else {
-      const selectedSet = new Set(selectedMessages.map(function(id) { return String(id); }));
-      setNotifications(function(prev) {
-        return (prev || []).filter(function(n) {
+      const selectedSet = new Set(selectedMessages.map(function (id) { return String(id); }));
+      setNotifications(function (prev) {
+        return (prev || []).filter(function (n) {
           return !selectedSet.has(String(n.id));
         });
       });
@@ -774,17 +797,17 @@ function AdminDashboard() {
     if (deleteNotifications) {
       deleteNotifications([id]);
     } else {
-      setNotifications(function(prev) {
-        return (prev || []).filter(function(n) {
+      setNotifications(function (prev) {
+        return (prev || []).filter(function (n) {
           return !notificationIdsMatch(n.id, id);
         });
       });
     }
-    setSelectedNotifications(function(prev) {
-      return prev.filter(function(sid) { return !notificationIdsMatch(sid, id); });
+    setSelectedNotifications(function (prev) {
+      return prev.filter(function (sid) { return !notificationIdsMatch(sid, id); });
     });
-    setSelectedMessages(function(prev) {
-      return prev.filter(function(sid) { return !notificationIdsMatch(sid, id); });
+    setSelectedMessages(function (prev) {
+      return prev.filter(function (sid) { return !notificationIdsMatch(sid, id); });
     });
   }
 
@@ -795,8 +818,8 @@ function AdminDashboard() {
       markAllNotificationsRead(targets.length > 0 ? targets : null);
     } else {
       const targetSet = new Set(targets.map(id => String(id)));
-      setNotifications(function(prev) {
-        return (prev || []).map(function(n) {
+      setNotifications(function (prev) {
+        return (prev || []).map(function (n) {
           return targetSet.has(String(n.id)) ? { ...n, read: true } : n;
         });
       });
@@ -811,8 +834,8 @@ function AdminDashboard() {
       markAllNotificationsRead(targets.length > 0 ? targets : null);
     } else {
       const targetSet = new Set(targets.map(id => String(id)));
-      setNotifications(function(prev) {
-        return (prev || []).map(function(n) {
+      setNotifications(function (prev) {
+        return (prev || []).map(function (n) {
           return targetSet.has(String(n.id)) ? { ...n, read: true } : n;
         });
       });
@@ -828,8 +851,8 @@ function AdminDashboard() {
     if (markAllNotificationsRead) {
       markAllNotificationsRead([id]);
     } else {
-      setNotifications(function(prev) {
-        return (prev || []).map(function(n) {
+      setNotifications(function (prev) {
+        return (prev || []).map(function (n) {
           return notificationIdsMatch(n.id, id) ? { ...n, read: true } : n;
         });
       });
@@ -881,8 +904,8 @@ function AdminDashboard() {
 
     // 2. Report notification -> directly navigate to reports and pass reportId
     if (type === 'report' || title.includes('report') || msg.includes('report') || link.includes('reports')) {
-      const repQuery = notification.reportId 
-        ? `?reportId=${notification.reportId}` 
+      const repQuery = notification.reportId
+        ? `?reportId=${notification.reportId}`
         : (notification.reportTitle ? `?search=${encodeURIComponent(notification.reportTitle)}` : '');
       navigate(`/reports${repQuery}`);
       return;
@@ -913,57 +936,57 @@ function AdminDashboard() {
     navigate('/login');
   };
 
-  
-// Automatically compute consecutive academic year, semester, and batch label name
-function getConsecutiveBatchDetails(currentBatchStr) {
-  const str = String(currentBatchStr || '').trim();
-  
-  // Extract academic year numbers (e.g., 2026-2027)
-  const yearMatch = str.match(/(\d{4})\s*[-–—/]\s*(\d{4})/);
-  let startYear = 2026;
-  let endYear = 2027;
 
-  if (yearMatch) {
-    startYear = parseInt(yearMatch[1], 10);
-    endYear = parseInt(yearMatch[2], 10);
-  } else {
-    const singleYearMatch = str.match(/(\d{4})/);
-    if (singleYearMatch) {
-      startYear = parseInt(singleYearMatch[1], 10);
-      endYear = startYear + 1;
+  // Automatically compute consecutive academic year, semester, and batch label name
+  function getConsecutiveBatchDetails(currentBatchStr) {
+    const str = String(currentBatchStr || '').trim();
+
+    // Extract academic year numbers (e.g., 2026-2027)
+    const yearMatch = str.match(/(\d{4})\s*[-–—/]\s*(\d{4})/);
+    let startYear = 2026;
+    let endYear = 2027;
+
+    if (yearMatch) {
+      startYear = parseInt(yearMatch[1], 10);
+      endYear = parseInt(yearMatch[2], 10);
     } else {
-      const now = new Date();
-      startYear = now.getFullYear();
-      endYear = startYear + 1;
+      const singleYearMatch = str.match(/(\d{4})/);
+      if (singleYearMatch) {
+        startYear = parseInt(singleYearMatch[1], 10);
+        endYear = startYear + 1;
+      } else {
+        const now = new Date();
+        startYear = now.getFullYear();
+        endYear = startYear + 1;
+      }
     }
+
+    const isFirstSem = /1st|first/i.test(str);
+    const isSecondSem = /2nd|second/i.test(str);
+    const isSummer = /summer/i.test(str);
+
+    let nextYear = '';
+    let nextSemester = '1st Semester';
+
+    if (isFirstSem) {
+      // 1st Sem -> 2nd Sem of SAME academic year (e.g. 2026-2027 1st Sem -> 2026-2027 2nd Sem)
+      nextYear = `${startYear}-${endYear}`;
+      nextSemester = '2nd Semester';
+    } else if (isSecondSem || isSummer) {
+      // 2nd Sem or Summer -> 1st Sem of NEXT academic year (e.g. 2026-2027 2nd Sem -> 2027-2028 1st Sem)
+      nextYear = `${startYear + 1}-${endYear + 1}`;
+      nextSemester = '1st Semester';
+    } else {
+      nextYear = `${startYear}-${endYear}`;
+      nextSemester = '2nd Semester';
+    }
+
+    return {
+      academicYear: nextYear,
+      semester: nextSemester,
+      fullBatchName: `${nextYear} ${nextSemester}`
+    };
   }
-
-  const isFirstSem = /1st|first/i.test(str);
-  const isSecondSem = /2nd|second/i.test(str);
-  const isSummer = /summer/i.test(str);
-
-  let nextYear = '';
-  let nextSemester = '1st Semester';
-
-  if (isFirstSem) {
-    // 1st Sem -> 2nd Sem of SAME academic year (e.g. 2026-2027 1st Sem -> 2026-2027 2nd Sem)
-    nextYear = `${startYear}-${endYear}`;
-    nextSemester = '2nd Semester';
-  } else if (isSecondSem || isSummer) {
-    // 2nd Sem or Summer -> 1st Sem of NEXT academic year (e.g. 2026-2027 2nd Sem -> 2027-2028 1st Sem)
-    nextYear = `${startYear + 1}-${endYear + 1}`;
-    nextSemester = '1st Semester';
-  } else {
-    nextYear = `${startYear}-${endYear}`;
-    nextSemester = '2nd Semester';
-  }
-
-  return {
-    academicYear: nextYear,
-    semester: nextSemester,
-    fullBatchName: `${nextYear} ${nextSemester}`
-  };
-}
 
   const handleBatchStartMonthChange = (e) => {
     const val = e.target.value;
@@ -1011,7 +1034,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
       setNewBatchEndMonth(`${startYear}-12`);
     }
   };
-  
+
   const confirmNewBatch = async () => {
     if (!newBatchStartMonth || !newBatchEndMonth) {
       showNotif('error', 'Start Month and End Month must be selected for the batch coverage range.');
@@ -1076,7 +1099,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
       try {
         await archivesAPI.updateBatch(newBatchPayload);
-      } catch (_) {}
+      } catch (_) { }
 
       // Immediately sync with active system state and persistent storage
       if (updateActiveBatchRange) {
@@ -1132,7 +1155,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
           letterData: lData,
           calendarData: cData
         }));
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -1165,9 +1188,9 @@ function getConsecutiveBatchDetails(currentBatchStr) {
   // Get user avatar display
   const getUserAvatar = () => {
     return (
-      <img 
-        src={getAvatarSrc(user?.avatar, user?.profilePicture)} 
-        alt="Profile" 
+      <img
+        src={getAvatarSrc(user?.avatar, user?.profilePicture)}
+        alt="Profile"
         className="w-full h-full object-cover rounded-full shadow-xs"
       />
     );
@@ -1186,14 +1209,14 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             </div>
             <div className="flex justify-end gap-3">
               <button type="button"
-                
+
                 onClick={() => setConfirmDialog(null)}
                 className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm transition-colors"
               >
                 Cancel
               </button>
               <button type="button"
-                
+
                 onClick={() => { setConfirmDialog(null); confirmDialog.onConfirm(); }}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors"
               >
@@ -1260,7 +1283,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              
+
               <div className="w-8 h-8 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
                 <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain filter drop-shadow-md" />
               </div>
@@ -1273,7 +1296,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
 
               {/* System Notification Bell & Interactive Dropdown Panel */}
@@ -1372,9 +1395,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           return (
                             <div
                               key={n.id}
-                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
-                                !n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
-                              }`}
+                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${!n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
+                                }`}
                             >
                               <button type="button"
                                 onClick={(e) => {
@@ -1519,9 +1541,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           return (
                             <div
                               key={n.id}
-                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
-                                !n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
-                              }`}
+                              className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${!n.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
+                                }`}
                             >
                               <button type="button"
                                 onClick={(e) => {
@@ -1671,37 +1692,35 @@ function getConsecutiveBatchDetails(currentBatchStr) {
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm mb-4 sm:mb-6 border border-gray-200 relative overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0">
-                <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center shrink-0 border ${
-                  scheduleStatus.isOpen 
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center shrink-0 border ${scheduleStatus.isOpen
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     : 'bg-rose-50 border-rose-200 text-rose-700'
-                }`}>
+                  }`}>
                   <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                
+
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-gray-500">
                       Enrollment Portal Status
                     </span>
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                      scheduleStatus.isOpen
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${scheduleStatus.isOpen
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         : 'bg-rose-50 text-rose-800 border-rose-200'
-                    }`}>
+                      }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-600 animate-ping' : 'bg-rose-600'}`}></span>
                       {scheduleStatus.isOpen ? 'Portal is Open' : 'Portal is Closed'}
                     </span>
                   </div>
-                  
+
                   <h3 className="text-sm sm:text-base font-bold text-gray-900 leading-snug">
                     {scheduleStatus.headline}
                   </h3>
-                  
+
                   <p className="text-gray-600 text-xs sm:text-sm font-medium mt-0.5">
                     {scheduleStatus.subtext || scheduleConfig.customNotice}
                   </p>
-                  
+
                   {(scheduleConfig.academicYear || scheduleConfig.semester || scheduleConfig.closeAt) && (
                     <div className="flex items-center gap-2 sm:gap-3 mt-2 text-[11px] text-gray-600 font-semibold flex-wrap">
                       <span>Academic Year {scheduleConfig.academicYear || '2024-2025'}</span>
@@ -1728,7 +1747,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <Clock className="w-4 h-4 text-emerald-200" />
                   <span>Configure Schedule</span>
                 </button>
-                
+
                 {scheduleStatus.isOpen ? (
                   <button
                     type="button"
@@ -1796,17 +1815,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         key={filter}
                         type="button"
                         onClick={() => setSelectedComponentFilter(filter)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                          selectedComponentFilter === filter
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${selectedComponentFilter === filter
                             ? filter === 'CWTS'
                               ? 'bg-emerald-600 text-white shadow-2xs'
                               : filter === 'LTS'
-                              ? 'bg-purple-600 text-white shadow-2xs'
-                              : filter === 'ROTC'
-                              ? 'bg-rose-600 text-white shadow-2xs'
-                              : 'bg-white text-emerald-900 shadow-2xs'
+                                ? 'bg-purple-600 text-white shadow-2xs'
+                                : filter === 'ROTC'
+                                  ? 'bg-rose-600 text-white shadow-2xs'
+                                  : 'bg-white text-emerald-900 shadow-2xs'
                             : 'text-gray-600 hover:text-gray-900'
-                        }`}
+                          }`}
                       >
                         {filter === 'ALL' ? 'All Tracks' : filter}
                       </button>
@@ -1823,11 +1841,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div
                   onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'CWTS' ? 'ALL' : 'CWTS')}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    selectedComponentFilter === 'CWTS'
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedComponentFilter === 'CWTS'
                       ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300 shadow-xs'
                       : 'bg-gray-50/80 hover:bg-emerald-50/40 border-gray-200/80'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
@@ -1850,11 +1867,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 <div
                   onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'LTS' ? 'ALL' : 'LTS')}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    selectedComponentFilter === 'LTS'
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedComponentFilter === 'LTS'
                       ? 'bg-purple-50 border-purple-400 ring-2 ring-purple-300 shadow-xs'
                       : 'bg-gray-50/80 hover:bg-purple-50/40 border-gray-200/80'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-purple-800 flex items-center gap-1.5">
@@ -1877,11 +1893,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
                 <div
                   onClick={() => setSelectedComponentFilter(selectedComponentFilter === 'ROTC' ? 'ALL' : 'ROTC')}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
-                    selectedComponentFilter === 'ROTC'
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${selectedComponentFilter === 'ROTC'
                       ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-300 shadow-xs'
                       : 'bg-gray-50/80 hover:bg-rose-50/40 border-gray-200/80'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-rose-800 flex items-center gap-1.5">
@@ -1944,10 +1959,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           selectedComponentFilter === 'CWTS'
                             ? p.cwts
                             : selectedComponentFilter === 'LTS'
-                            ? p.lts
-                            : selectedComponentFilter === 'ROTC'
-                            ? p.rotc
-                            : Math.max(p.cwts, p.lts, p.rotc, 1)
+                              ? p.lts
+                              : selectedComponentFilter === 'ROTC'
+                                ? p.rotc
+                                : Math.max(p.cwts, p.lts, p.rotc, 1)
                         ),
                         2
                       );
@@ -1975,10 +1990,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                       const totalForFilter = selectedComponentFilter === 'CWTS'
                                         ? item.cwts
                                         : selectedComponentFilter === 'LTS'
-                                        ? item.lts
-                                        : selectedComponentFilter === 'ROTC'
-                                        ? item.rotc
-                                        : item.total;
+                                          ? item.lts
+                                          : selectedComponentFilter === 'ROTC'
+                                            ? item.rotc
+                                            : item.total;
 
                                       const pct = displayStats.totalStudents > 0
                                         ? Math.round((totalForFilter / displayStats.totalStudents) * 100)
@@ -2006,9 +2021,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                 className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/cwts"
                                                 title={`Click to view ${item.program} - CWTS: ${item.cwts} student${item.cwts !== 1 ? 's' : ''} in Student Management`}
                                               >
-                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
-                                                  item.cwts > 0 ? 'text-emerald-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
-                                                }`}>
+                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${item.cwts > 0 ? 'text-emerald-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                                  }`}>
                                                   {item.cwts}
                                                 </span>
                                                 <div
@@ -2017,11 +2031,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                     navigate(`/students?course=${encodeURIComponent(item.program)}&dept=CWTS`);
                                                   }}
                                                   style={{ height: `${maxTrackVal > 0 ? Math.max(item.cwts > 0 ? 6 : 0, (item.cwts / maxTrackVal) * 100) : 0}%` }}
-                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
-                                                    item.cwts > 0
+                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${item.cwts > 0
                                                       ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover/cwts:from-emerald-500 group-hover/cwts:to-emerald-300 hover:ring-2 hover:ring-emerald-400'
                                                       : 'bg-gray-200/50 h-1'
-                                                  }`}
+                                                    }`}
                                                 />
                                               </div>
                                             )}
@@ -2036,9 +2049,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                 className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/lts"
                                                 title={`Click to view ${item.program} - LTS: ${item.lts} student${item.lts !== 1 ? 's' : ''} in Student Management`}
                                               >
-                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
-                                                  item.lts > 0 ? 'text-purple-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
-                                                }`}>
+                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${item.lts > 0 ? 'text-purple-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                                  }`}>
                                                   {item.lts}
                                                 </span>
                                                 <div
@@ -2047,11 +2059,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                     navigate(`/students?course=${encodeURIComponent(item.program)}&dept=LTS`);
                                                   }}
                                                   style={{ height: `${maxTrackVal > 0 ? Math.max(item.lts > 0 ? 6 : 0, (item.lts / maxTrackVal) * 100) : 0}%` }}
-                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
-                                                    item.lts > 0
+                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${item.lts > 0
                                                       ? 'bg-gradient-to-t from-purple-600 to-purple-400 group-hover/lts:from-purple-500 group-hover/lts:to-purple-300 hover:ring-2 hover:ring-purple-400'
                                                       : 'bg-gray-200/50 h-1'
-                                                  }`}
+                                                    }`}
                                                 />
                                               </div>
                                             )}
@@ -2066,9 +2077,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                 className="flex-1 flex flex-col items-center justify-end h-full min-w-[14px] cursor-pointer hover:opacity-95 active:scale-95 transition-transform group/rotc"
                                                 title={`Click to view ${item.program} - ROTC: ${item.rotc} student${item.rotc !== 1 ? 's' : ''} in Student Management`}
                                               >
-                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${
-                                                  item.rotc > 0 ? 'text-rose-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
-                                                }`}>
+                                                <span className={`text-[10px] sm:text-xs font-black mb-1 transition-all ${item.rotc > 0 ? 'text-rose-700 opacity-100 scale-100' : 'text-gray-300 opacity-0 group-hover:opacity-100'
+                                                  }`}>
                                                   {item.rotc}
                                                 </span>
                                                 <div
@@ -2077,11 +2087,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                                     navigate(`/students?course=${encodeURIComponent(item.program)}&dept=ROTC`);
                                                   }}
                                                   style={{ height: `${maxTrackVal > 0 ? Math.max(item.rotc > 0 ? 6 : 0, (item.rotc / maxTrackVal) * 100) : 0}%` }}
-                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${
-                                                    item.rotc > 0
+                                                  className={`w-full rounded-t-lg transition-all duration-500 shadow-2xs cursor-pointer ${item.rotc > 0
                                                       ? 'bg-gradient-to-t from-rose-600 to-rose-400 group-hover/rotc:from-rose-500 group-hover/rotc:to-rose-300 hover:ring-2 hover:ring-rose-400'
                                                       : 'bg-gray-200/50 h-1'
-                                                  }`}
+                                                    }`}
                                                 />
                                               </div>
                                             )}
@@ -2119,20 +2128,20 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       const displayedTotal = selectedComponentFilter === 'CWTS'
                         ? item.cwts
                         : selectedComponentFilter === 'LTS'
-                        ? item.lts
-                        : selectedComponentFilter === 'ROTC'
-                        ? item.rotc
-                        : item.total;
+                          ? item.lts
+                          : selectedComponentFilter === 'ROTC'
+                            ? item.rotc
+                            : item.total;
 
                       const maxProgramVal = Math.max(
                         ...programDeptStats.map(p =>
                           selectedComponentFilter === 'CWTS'
                             ? p.cwts
                             : selectedComponentFilter === 'LTS'
-                            ? p.lts
-                            : selectedComponentFilter === 'ROTC'
-                            ? p.rotc
-                            : p.total
+                              ? p.lts
+                              : selectedComponentFilter === 'ROTC'
+                                ? p.rotc
+                                : p.total
                         ),
                         1
                       );
@@ -2234,13 +2243,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                               <div className="flex-1 bg-gray-200/80 rounded-full h-5 overflow-hidden flex items-center">
                                 <div
                                   style={{ width: `${maxProgramVal > 0 ? (displayedTotal / maxProgramVal) * 100 : 0}%` }}
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    selectedComponentFilter === 'CWTS'
+                                  className={`h-full rounded-full transition-all duration-500 ${selectedComponentFilter === 'CWTS'
                                       ? 'bg-emerald-500'
                                       : selectedComponentFilter === 'LTS'
-                                      ? 'bg-purple-500'
-                                      : 'bg-rose-500'
-                                  }`}
+                                        ? 'bg-purple-500'
+                                        : 'bg-rose-500'
+                                    }`}
                                 />
                               </div>
                               <span className="text-xs font-black text-gray-900 w-8 text-right shrink-0">{displayedTotal}</span>
@@ -2269,16 +2277,16 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <span className="ml-2 text-xs sm:text-sm font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
                     {enrollmentSearch.trim() || enrollmentDeptFilter !== 'All'
                       ? `${pendingEnrollments.filter(e => {
-                          const matchesDept = enrollmentDeptFilter === 'All' || e.nstpComponent === enrollmentDeptFilter;
-                          if (!matchesDept) return false;
-                          if (!enrollmentSearch.trim()) return true;
-                          const q = enrollmentSearch.toLowerCase();
-                          return (e.fullName || '').toLowerCase().includes(q)
-                            || (e.studentId || '').toLowerCase().includes(q)
-                            || (e.email || '').toLowerCase().includes(q)
-                            || (e.nstpComponent || '').toLowerCase().includes(q)
-                            || (e.program || '').toLowerCase().includes(q);
-                        }).length} of ${pendingEnrollments.length}`
+                        const matchesDept = enrollmentDeptFilter === 'All' || e.nstpComponent === enrollmentDeptFilter;
+                        if (!matchesDept) return false;
+                        if (!enrollmentSearch.trim()) return true;
+                        const q = enrollmentSearch.toLowerCase();
+                        return (e.fullName || '').toLowerCase().includes(q)
+                          || (e.studentId || '').toLowerCase().includes(q)
+                          || (e.email || '').toLowerCase().includes(q)
+                          || (e.nstpComponent || '').toLowerCase().includes(q)
+                          || (e.program || '').toLowerCase().includes(q);
+                      }).length} of ${pendingEnrollments.length}`
                       : pendingEnrollments.length}
                   </span>
                 </h3>
@@ -2317,11 +2325,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     key={tab.id}
                     type="button"
                     onClick={() => { setEnrollmentDeptFilter(tab.id); setEnrollmentPage(1); }}
-                    className={`px-1.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${
-                      enrollmentDeptFilter === tab.id
+                    className={`px-1.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer active:scale-95 ${enrollmentDeptFilter === tab.id
                         ? 'bg-emerald-800 text-white shadow-xs font-black'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     <span>
                       <span className="sm:hidden">{tab.mobileLabel}</span>
@@ -2343,12 +2350,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
               const baseFiltered = q
                 ? deptFiltered.filter(e =>
-                    (e.fullName || '').toLowerCase().includes(q)
-                    || (e.studentId || '').toLowerCase().includes(q)
-                    || (e.email || '').toLowerCase().includes(q)
-                    || (e.nstpComponent || '').toLowerCase().includes(q)
-                    || (e.program || '').toLowerCase().includes(q)
-                  )
+                  (e.fullName || '').toLowerCase().includes(q)
+                  || (e.studentId || '').toLowerCase().includes(q)
+                  || (e.email || '').toLowerCase().includes(q)
+                  || (e.nstpComponent || '').toLowerCase().includes(q)
+                  || (e.program || '').toLowerCase().includes(q)
+                )
                 : deptFiltered;
 
               const filtered = !enrollmentSortCol ? baseFiltered : [...baseFiltered].sort((a, b) => {
@@ -2386,189 +2393,22 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <button type="button" onClick={() => { setEnrollmentSearch(''); setEnrollmentDeptFilter('All'); setEnrollmentPage(1); }} className="mt-2 text-xs text-yellow-600 hover:underline">Reset filters</button>
                 </div>
               ) : (
-              <>
-                {/* ── Mobile: card list ── */}
-                <div className="sm:hidden divide-y divide-gray-100">
-                  {paginatedList.map((enrollment) => {
-                    const deptColor =
-                      enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
-                      enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
-                      enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700';
-                    return (
-                      <div
-                        key={enrollment.id}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`View enrollment details for ${enrollment.fullName}`}
-                        className="p-3 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50/80 focus:ring-2 focus:ring-emerald-500 rounded-xl"
-                        onClick={() => setSelectedEnrollment(enrollment)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setSelectedEnrollment(enrollment);
-                          }
-                        }}
-                      >
-                        <div className="flex items-start gap-3 mb-2.5">
-                          <div className="w-12 h-14 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-2xs">
-                            <img 
-                              src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
-                              alt="2x2" 
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover" 
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-1 flex-wrap">
-                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{toTitleCase(enrollment.fullName)}</p>
-                                {(() => {
-                                  const audit = getRegformAuditStatus(enrollment, regformAudits);
-                                  if (audit.isSuspicious) {
-                                    return (
-                                      <span 
-                                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[9.5px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse" 
-                                        title={audit.reason}
-                                      >
-                                        <AlertTriangle className="w-3.5 h-3.5 text-amber-900 shrink-0" />
-                                        <span>{audit.badgeLabel || '⚠️ Not a RegForm'}</span>
-                                      </span>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                              <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${deptColor}`}>
-                                {enrollment.nstpComponent || '—'}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-gray-500 font-mono mt-0.5">{enrollment.studentId} · {enrollment.yearLevel} · Sec {enrollment.section || '-'}</p>
-                            <p className="text-[10.5px] text-gray-400 truncate">{enrollment.email}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button type="button"
-                            onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
-                            className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
-                          >
-                            <CheckCircle className="w-4 h-4" /> Approve
-                          </button>
-                          <button type="button"
-                            onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
-                            className="flex-1 min-h-[44px] bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
-                          >
-                            <X className="w-4 h-4" /> Decline
-                          </button>
-                          <button type="button"
-                            onClick={() => setSelectedEnrollment(enrollment)}
-                            className="px-4 min-h-[44px] bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl text-xs font-bold transition-colors active:scale-95 cursor-pointer"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* ── Desktop: table ── */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th 
-                          onClick={() => handleSortEnrollment('id')}
-                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                            enrollmentSortCol === 'id' 
-                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                          }`}
-                          title="Click to sort by Student ID"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Student ID</span>
-                            {enrollmentSortCol === 'id' && (
-                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          onClick={() => handleSortEnrollment('name')}
-                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                            enrollmentSortCol === 'name' 
-                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                          }`}
-                          title="Click to sort by Name"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Name / Email</span>
-                            {enrollmentSortCol === 'name' && (
-                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          onClick={() => handleSortEnrollment('section')}
-                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                            enrollmentSortCol === 'section' 
-                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                          }`}
-                          title="Click to sort by Section"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Section</span>
-                            {enrollmentSortCol === 'section' && (
-                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          onClick={() => handleSortEnrollment('year')}
-                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                            enrollmentSortCol === 'year' 
-                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                          }`}
-                          title="Click to sort by Year Level"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>Year</span>
-                            {enrollmentSortCol === 'year' && (
-                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
-                            )}
-                          </div>
-                        </th>
-                        <th 
-                          onClick={() => handleSortEnrollment('nstp')}
-                          className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${
-                            enrollmentSortCol === 'nstp' 
-                              ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600' 
-                              : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                          }`}
-                          title="Click to sort by NSTP Component"
-                        >
-                          <div className="flex items-center gap-1">
-                            <span>NSTP</span>
-                            {enrollmentSortCol === 'nstp' && (
-                              <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
-                            )}
-                          </div>
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedList.map((enrollment) => (
-                        <tr
+                <>
+                  {/* ── Mobile: card list ── */}
+                  <div className="sm:hidden divide-y divide-gray-100">
+                    {paginatedList.map((enrollment) => {
+                      const deptColor =
+                        enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
+                          enrollment.nstpComponent === 'LTS' ? 'bg-purple-100 text-purple-700' :
+                            enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700';
+                      return (
+                        <div
                           key={enrollment.id}
                           tabIndex={0}
                           role="button"
                           aria-label={`View enrollment details for ${enrollment.fullName}`}
-                          className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50 focus:ring-2 focus:ring-emerald-500"
+                          className="p-3 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50/80 focus:ring-2 focus:ring-emerald-500 rounded-xl"
                           onClick={() => setSelectedEnrollment(enrollment)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
@@ -2577,27 +2417,26 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             }
                           }}
                         >
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-12 bg-gray-100 rounded-xl overflow-hidden border border-emerald-300 shrink-0 shadow-2xs">
-                                <img 
-                                  src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`} 
-                                  alt="2x2" 
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-full h-full object-cover" 
-                                />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-black text-gray-900">{toTitleCase(enrollment.fullName)}</p>
+                          <div className="flex items-start gap-3 mb-2.5">
+                            <div className="w-12 h-14 bg-gray-100 rounded-xl overflow-hidden border-2 border-emerald-300 shrink-0 shadow-2xs">
+                              <img
+                                src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`}
+                                alt="2x2"
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-1 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                  <p className="text-xs sm:text-sm font-black text-gray-900 truncate">{toTitleCase(enrollment.fullName)}</p>
                                   {(() => {
                                     const audit = getRegformAuditStatus(enrollment, regformAudits);
                                     if (audit.isSuspicious) {
                                       return (
-                                        <span 
-                                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse" 
+                                        <span
+                                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[9.5px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse"
                                           title={audit.reason}
                                         >
                                           <AlertTriangle className="w-3.5 h-3.5 text-amber-900 shrink-0" />
@@ -2608,90 +2447,252 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     return null;
                                   })()}
                                 </div>
-                                <p className="text-xs text-gray-500">{enrollment.email}</p>
+                                <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black ${deptColor}`}>
+                                  {enrollment.nstpComponent || '—'}
+                                </span>
                               </div>
+                              <p className="text-[11px] text-gray-500 font-mono mt-0.5">{enrollment.studentId} · {enrollment.yearLevel} · Sec {enrollment.section || '-'}</p>
+                              <p className="text-[10.5px] text-gray-400 truncate">{enrollment.email}</p>
                             </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.section || '-'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.yearLevel}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
-                              enrollment.nstpComponent === 'LTS'  ? 'bg-purple-100 text-purple-700' :
-                              enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {enrollment.nstpComponent || '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
-                              <button type="button"
-                                
-                                onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch {} })}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" /> Approve
-                              </button>
-                              <button type="button"
-                                
-                                onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch {} })}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
-                              >
-                                <X className="w-3.5 h-3.5" /> Decline
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination Controls */}
-                {filtered.length > ENROLLMENT_PER_PAGE && (
-                  <div className="mt-3.5 sm:mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-gray-600">
-                    <p className="font-medium text-center sm:text-left">
-                      Showing <span className="font-bold text-gray-900">{(safePage - 1) * ENROLLMENT_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(safePage * ENROLLMENT_PER_PAGE, filtered.length)}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> applicants
-                    </p>
-                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                      <button
-                        type="button"
-                        disabled={safePage <= 1}
-                        onClick={() => setEnrollmentPage(p => Math.max(p - 1, 1))}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
-                      >
-                        ← Prev
-                      </button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                          <button
-                            key={pageNum}
-                            type="button"
-                            onClick={() => setEnrollmentPage(pageNum)}
-                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                              safePage === pageNum
-                                ? 'bg-emerald-800 text-white font-black shadow-xs'
-                                : 'hover:bg-gray-100 text-gray-700'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        disabled={safePage >= totalPages}
-                        onClick={() => setEnrollmentPage(p => Math.min(p + 1, totalPages))}
-                        className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
-                      >
-                        Next →
-                      </button>
-                    </div>
+                          </div>
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button type="button"
+                              onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
+                              className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle className="w-4 h-4" /> Approve
+                            </button>
+                            <button type="button"
+                              onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch { } })}
+                              className="flex-1 min-h-[44px] bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
+                            >
+                              <X className="w-4 h-4" /> Decline
+                            </button>
+                            <button type="button"
+                              onClick={() => setSelectedEnrollment(enrollment)}
+                              className="px-4 min-h-[44px] bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 rounded-xl text-xs font-bold transition-colors active:scale-95 cursor-pointer"
+                            >
+                              View
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </>
-            ); })() : (
+
+                  {/* ── Desktop: table ── */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th
+                            onClick={() => handleSortEnrollment('id')}
+                            className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${enrollmentSortCol === 'id'
+                                ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600'
+                                : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            title="Click to sort by Student ID"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Student ID</span>
+                              {enrollmentSortCol === 'id' && (
+                                <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSortEnrollment('name')}
+                            className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${enrollmentSortCol === 'name'
+                                ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600'
+                                : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            title="Click to sort by Name"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Name / Email</span>
+                              {enrollmentSortCol === 'name' && (
+                                <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSortEnrollment('section')}
+                            className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${enrollmentSortCol === 'section'
+                                ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600'
+                                : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            title="Click to sort by Section"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Section</span>
+                              {enrollmentSortCol === 'section' && (
+                                <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSortEnrollment('year')}
+                            className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${enrollmentSortCol === 'year'
+                                ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600'
+                                : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            title="Click to sort by Year Level"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Year</span>
+                              {enrollmentSortCol === 'year' && (
+                                <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th
+                            onClick={() => handleSortEnrollment('nstp')}
+                            className={`px-4 py-3 text-left text-xs uppercase tracking-wider cursor-pointer select-none transition-colors ${enrollmentSortCol === 'nstp'
+                                ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600'
+                                : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            title="Click to sort by NSTP Component"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>NSTP</span>
+                              {enrollmentSortCol === 'nstp' && (
+                                <span className="text-emerald-700 font-black">{enrollmentSortDir === 'asc' ? '▲' : '▼'}</span>
+                              )}
+                            </div>
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedList.map((enrollment) => (
+                          <tr
+                            key={enrollment.id}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View enrollment details for ${enrollment.fullName}`}
+                            className="border-b border-gray-100 hover:bg-green-50 cursor-pointer transition-colors focus:outline-none focus:bg-emerald-50 focus:ring-2 focus:ring-emerald-500"
+                            onClick={() => setSelectedEnrollment(enrollment)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedEnrollment(enrollment);
+                              }
+                            }}
+                          >
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{enrollment.studentId}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-12 bg-gray-100 rounded-xl overflow-hidden border border-emerald-300 shrink-0 shadow-2xs">
+                                  <img
+                                    src={enrollment.id_photo_2x2 || enrollment.photo || enrollment.idPhoto2x2 || enrollment.registration_photo || enrollment.registrationPhoto || `${import.meta.env.BASE_URL}cvsu.png`}
+                                    alt="2x2"
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-black text-gray-900">{toTitleCase(enrollment.fullName)}</p>
+                                    {(() => {
+                                      const audit = getRegformAuditStatus(enrollment, regformAudits);
+                                      if (audit.isSuspicious) {
+                                        return (
+                                          <span
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-amber-400 text-amber-950 border border-amber-500 shadow-xs shrink-0 animate-pulse"
+                                            title={audit.reason}
+                                          >
+                                            <AlertTriangle className="w-3.5 h-3.5 text-amber-900 shrink-0" />
+                                            <span>{audit.badgeLabel || '⚠️ Not a RegForm'}</span>
+                                          </span>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                  <p className="text-xs text-gray-500">{enrollment.email}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.section || '-'}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{enrollment.yearLevel}</td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${enrollment.nstpComponent === 'CWTS' ? 'bg-green-100 text-green-700' :
+                                  enrollment.nstpComponent === 'LTS' ? 'bg-purple-100 text-purple-700' :
+                                    enrollment.nstpComponent === 'ROTC' ? 'bg-red-100 text-red-700' :
+                                      'bg-gray-100 text-gray-700'
+                                }`}>
+                                {enrollment.nstpComponent || '—'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-2">
+                                <button type="button"
+
+                                  onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                </button>
+                                <button type="button"
+
+                                  onClick={() => showConfirm(`Decline enrollment for ${enrollment.fullName}?`, async () => { try { await declineEnrollment(enrollment.id); } catch { } })}
+                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Decline
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {filtered.length > ENROLLMENT_PER_PAGE && (
+                    <div className="mt-3.5 sm:mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-gray-600">
+                      <p className="font-medium text-center sm:text-left">
+                        Showing <span className="font-bold text-gray-900">{(safePage - 1) * ENROLLMENT_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(safePage * ENROLLMENT_PER_PAGE, filtered.length)}</span> of <span className="font-bold text-gray-900">{filtered.length}</span> applicants
+                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                        <button
+                          type="button"
+                          disabled={safePage <= 1}
+                          onClick={() => setEnrollmentPage(p => Math.max(p - 1, 1))}
+                          className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
+                        >
+                          ← Prev
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                            <button
+                              key={pageNum}
+                              type="button"
+                              onClick={() => setEnrollmentPage(pageNum)}
+                              className={`w-7 h-7 rounded-lg text-xs font-bold transition-colors cursor-pointer ${safePage === pageNum
+                                  ? 'bg-emerald-800 text-white font-black shadow-xs'
+                                  : 'hover:bg-gray-100 text-gray-700'
+                                }`}
+                            >
+                              {pageNum}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={safePage >= totalPages}
+                          onClick={() => setEnrollmentPage(p => Math.min(p + 1, totalPages))}
+                          className="px-3 py-1.5 rounded-lg border border-gray-200 font-bold hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors text-xs"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })() : (
               <div className="text-center py-8 text-gray-500">
                 <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p>No pending enrollment applications at this time.</p>
@@ -2732,7 +2733,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             const activeBatchItem = {
               year: currentBatch,
               cwts: activeStudents.filter(s => (s.department || s.dept) === 'CWTS').length,
-              lts:  activeStudents.filter(s => (s.department || s.dept) === 'LTS').length,
+              lts: activeStudents.filter(s => (s.department || s.dept) === 'LTS').length,
               rotc: activeStudents.filter(s => (s.department || s.dept) === 'ROTC').length,
               total: activeStudents.length,
               rawArchive: null,
@@ -2747,11 +2748,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   : (Array.isArray(y.studentData) ? y.studentData : []);
 
                 const cwtsFromList = sList.filter(s => (s.department || s.dept) === 'CWTS').length;
-                const ltsFromList  = sList.filter(s => (s.department || s.dept) === 'LTS').length;
+                const ltsFromList = sList.filter(s => (s.department || s.dept) === 'LTS').length;
                 const rotcFromList = sList.filter(s => (s.department || s.dept) === 'ROTC').length;
 
                 let cwts = Number(y.cwts ?? y.data?.cwts ?? (sList.length > 0 ? cwtsFromList : 0));
-                let lts  = Number(y.lts  ?? y.data?.lts  ?? (sList.length > 0 ? ltsFromList : 0));
+                let lts = Number(y.lts ?? y.data?.lts ?? (sList.length > 0 ? ltsFromList : 0));
                 let rotc = Number(y.rotc ?? y.data?.rotc ?? (sList.length > 0 ? rotcFromList : 0));
 
                 let total = Number(y.students || sList.length || (cwts + lts + rotc) || 0);
@@ -2794,8 +2795,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
 
             const colDefs = [
               { key: 'cwts', label: 'CWTS', from: 'from-emerald-400', to: 'to-teal-500', text: 'text-teal-700', dot: 'bg-emerald-500' },
-              { key: 'lts',  label: 'LTS',  from: 'from-violet-400', to: 'to-indigo-500', text: 'text-indigo-700', dot: 'bg-violet-500' },
-              { key: 'rotc', label: 'ROTC', from: 'from-rose-400',   to: 'to-red-500',    text: 'text-red-700',   dot: 'bg-rose-500' },
+              { key: 'lts', label: 'LTS', from: 'from-violet-400', to: 'to-indigo-500', text: 'text-indigo-700', dot: 'bg-violet-500' },
+              { key: 'rotc', label: 'ROTC', from: 'from-rose-400', to: 'to-red-500', text: 'text-red-700', dot: 'bg-rose-500' },
             ];
 
             return (
@@ -2856,11 +2857,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           >
                             {/* Hover tooltip */}
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-20 bg-gray-900 text-white rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap min-w-[140px]">
-                              <div className="text-[11px] font-black text-white mb-1">{batch.year.replace('Semester','Sem')}</div>
+                              <div className="text-[11px] font-black text-white mb-1">{batch.year.replace('Semester', 'Sem')}</div>
                               <div className="flex flex-col gap-0.5">
-                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/><span className="text-gray-300">CWTS</span><span className="ml-auto font-black text-white">{batch.cwts}</span></div>
-                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-violet-400 inline-block"/><span className="text-gray-300">LTS</span><span className="ml-auto font-black text-white">{batch.lts}</span></div>
-                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/><span className="text-gray-300">ROTC</span><span className="ml-auto font-black text-white">{batch.rotc}</span></div>
+                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /><span className="text-gray-300">CWTS</span><span className="ml-auto font-black text-white">{batch.cwts}</span></div>
+                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-violet-400 inline-block" /><span className="text-gray-300">LTS</span><span className="ml-auto font-black text-white">{batch.lts}</span></div>
+                                <div className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" /><span className="text-gray-300">ROTC</span><span className="ml-auto font-black text-white">{batch.rotc}</span></div>
                                 <div className="border-t border-gray-700 mt-1 pt-1 flex justify-between"><span className="text-gray-400">Total</span><span className="font-black text-amber-300">{batch.total}</span></div>
                               </div>
                               {batch.rawArchive ? (
@@ -2896,9 +2897,8 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                                     </span>
                                   )}
                                   <div
-                                    className={`w-full rounded-t-lg bg-gradient-to-b ${col.from} ${col.to} shadow-sm transition-all duration-700 flex flex-col items-center justify-start pt-1 overflow-hidden ${
-                                      batch.isActive ? 'opacity-100 shadow-md ring-1 ring-emerald-400/40' : 'opacity-70 group-hover:opacity-95'
-                                    }`}
+                                    className={`w-full rounded-t-lg bg-gradient-to-b ${col.from} ${col.to} shadow-sm transition-all duration-700 flex flex-col items-center justify-start pt-1 overflow-hidden ${batch.isActive ? 'opacity-100 shadow-md ring-1 ring-emerald-400/40' : 'opacity-70 group-hover:opacity-95'
+                                      }`}
                                     style={{ height: `${heightPx}px` }}
                                     title={`${batch.year} — ${col.label}: ${val} students`}
                                   >
@@ -3162,7 +3162,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div className="space-y-4 mb-5">
                 <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 text-xs">
                   <p className="text-amber-900 font-bold mb-1 flex items-center gap-1.5">
@@ -3173,7 +3173,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     Current active batch <strong>"{currentBatch}"</strong> ({students.length} students, {reports.length} reports) will be saved to the archive. Active student roster will be cleared for the incoming semester batch.
                   </p>
                 </div>
-                
+
                 {/* Calendar Range Configuration for the Batch being Archived */}
                 <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-xl p-3.5 space-y-3">
                   <div className="flex items-center justify-between">
@@ -3262,7 +3262,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   />
                 </div>
               </div>
-              
+
               <div className="flex space-x-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
@@ -3317,11 +3317,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       key={tab.id}
                       type="button"
                       onClick={() => setEnrollmentReviewTab(tab.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                        enrollmentReviewTab === tab.id
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${enrollmentReviewTab === tab.id
                           ? 'bg-emerald-800 text-white shadow-xs'
                           : 'text-gray-600 hover:text-emerald-950 hover:bg-gray-200/70'
-                      }`}
+                        }`}
                     >
                       <TabIcon className="w-3.5 h-3.5" />
                       <span>{tab.label}</span>
@@ -3355,17 +3354,17 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       </div>
 
                       <div className="flex items-center gap-3.5 bg-gray-50/80 p-3 rounded-2xl border border-gray-200/80">
-                        <div 
+                        <div
                           className="w-22 h-22 sm:w-24 sm:h-24 aspect-square bg-gray-200 rounded-xl overflow-hidden border-2 border-emerald-500 shrink-0 shadow-sm relative group cursor-pointer"
                           onClick={() => setPhotoViewer(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto)}
                           title="Click to expand 2x2 ID Photo"
                         >
                           {(selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto) ? (
                             <>
-                              <img 
-                                src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto} 
-                                alt="2x2 ID Photo" 
-                                className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform" 
+                              <img
+                                src={selectedEnrollment.id_photo_2x2 || selectedEnrollment.photo || selectedEnrollment.idPhoto2x2 || selectedEnrollment.registration_photo || selectedEnrollment.registrationPhoto}
+                                alt="2x2 ID Photo"
+                                className="w-full h-full object-contain p-0.5 bg-white group-hover:scale-105 transition-transform"
                               />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
                                 <Eye className="w-4 h-4 text-white" />
@@ -3472,13 +3471,13 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       try {
                         const d = new Date(b);
                         if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
-                      } catch (_) {}
+                      } catch (_) { }
                     }
                     if (selectedEnrollment.birthYear && selectedEnrollment.birthMonth && selectedEnrollment.birthDay) {
                       try {
                         const d = new Date(`${selectedEnrollment.birthYear}-${String(selectedEnrollment.birthMonth).padStart(2, '0')}-${String(selectedEnrollment.birthDay).padStart(2, '0')}`);
                         if (!isNaN(d.getTime())) return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(d);
-                      } catch (_) {}
+                      } catch (_) { }
                     }
                     return b || '—';
                   })();
@@ -3588,11 +3587,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <div className="min-w-0 col-span-2 sm:col-span-1">
                             <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">Registered Voter?</label>
                             <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
-                              <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full truncate ${
-                                isVoter
+                              <span className={`inline-block font-black text-xs px-2.5 py-0.5 rounded-full truncate ${isVoter
                                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                   : 'bg-amber-100 text-amber-900 border border-amber-300'
-                              }`}>
+                                }`}>
                                 {isVoter ? 'Yes' : (voterRaw ? 'No' : '—')}
                               </span>
                             </div>
@@ -3709,12 +3707,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <div className="min-w-0">
                             <label className="block text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1 truncate">NSTP Track</label>
                             <div className="w-full px-2.5 sm:px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl font-bold text-gray-900 shadow-2xs flex items-center">
-                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider truncate ${
-                                nstpTrack === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                nstpTrack === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
-                                nstpTrack === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-200'
-                              }`}>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider truncate ${nstpTrack === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                  nstpTrack === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+                                    nstpTrack === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                      'bg-gray-100 text-gray-800 border border-gray-200'
+                                }`}>
                                 {nstpTrack}
                               </span>
                             </div>
@@ -3753,6 +3750,40 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   );
                 })()}
 
+                {/* NSTP Track & Section Assignment */}
+                <div className="p-3.5 pt-0">
+                  {(() => {
+                    const track = String(selectedEnrollment.nstpComponent || selectedEnrollment.department || 'CWTS').toUpperCase().trim();
+                    const allowedSections = getAvailableSectionsForDept(track);
+                    return (
+                      <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 block">Enrolled Track</span>
+                          <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5 mt-0.5">
+                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-600"></span>
+                            {track} Program
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="modal-assign-nstp-section" className="text-xs font-bold text-emerald-900 whitespace-nowrap">
+                            Assign Section:
+                          </label>
+                          <select
+                            id="modal-assign-nstp-section"
+                            value={assignNstpSection}
+                            onChange={(e) => setAssignNstpSection(e.target.value)}
+                            className="px-3 py-1.5 bg-white border border-emerald-300 rounded-xl text-xs font-black text-emerald-950 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer shadow-xs"
+                          >
+                            {allowedSections.map((sec) => (
+                              <option key={sec} value={sec}>{sec}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {/* Submission Status & Timestamp Footer */}
                 <div className="p-3.5 pt-0">
                   <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/80 rounded-xl px-3.5 py-2.5 text-xs shadow-2xs">
@@ -3770,22 +3801,27 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* Sticky action buttons */}
               <div className="flex-shrink-0 border-t bg-white p-3 grid grid-cols-3 gap-2">
                 <button type="button"
-                  onClick={() => showConfirm(`Approve enrollment for ${selectedEnrollment.fullName}?`, async () => { 
-                    try { 
-                      await approveEnrollment(selectedEnrollment.id, selectedEnrollment.section || 'A'); 
-                      setSelectedEnrollment(null); 
-                    } catch {} 
-                  })}
+                  onClick={() => {
+                    const track = String(selectedEnrollment.nstpComponent || selectedEnrollment.department || 'CWTS').toUpperCase().trim();
+                    const allowedSections = getAvailableSectionsForDept(track);
+                    const finalSec = (assignNstpSection && allowedSections.includes(assignNstpSection)) ? assignNstpSection : (allowedSections[0] || `${track} 1`);
+                    showConfirm(`Approve enrollment for ${selectedEnrollment.fullName} and assign to ${finalSec}?`, async () => {
+                      try {
+                        await approveEnrollment(selectedEnrollment.id, finalSec);
+                        setSelectedEnrollment(null);
+                      } catch { }
+                    });
+                  }}
                   className="col-span-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <CheckCircle className="w-4 h-4" /> Approve
                 </button>
                 <button type="button"
-                  onClick={() => showConfirm(`Decline enrollment for ${selectedEnrollment.fullName}?`, async () => { 
-                    try { 
-                      await declineEnrollment(selectedEnrollment.id); 
-                      setSelectedEnrollment(null); 
-                    } catch {} 
+                  onClick={() => showConfirm(`Decline enrollment for ${selectedEnrollment.fullName}?`, async () => {
+                    try {
+                      await declineEnrollment(selectedEnrollment.id);
+                      setSelectedEnrollment(null);
+                    } catch { }
                   })}
                   className="col-span-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
@@ -3816,7 +3852,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     : 'Document & Photo Full View'}
                 </span>
               </span>
-              <button 
+              <button
                 type="button"
                 onClick={() => setPhotoViewer(null)}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
@@ -3905,7 +3941,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                   </button>
                 </div>
               </div>
-              
+
               <div className="p-3 sm:p-6 space-y-3 sm:space-y-5">
                 {/* Archive Summary */}
                 {(() => {
@@ -4027,7 +4063,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <div className="bg-white rounded-xl p-3 sm:p-4 border border-amber-100 shadow-2xs flex flex-col justify-between">
                             <div>
                               <p className="text-xl sm:text-2xl font-black text-rose-600">{totalFail}</p>
-                              <p className="text-xs font-bold text-gray-700">Failed (Bagsak)</p>
+                              <p className="text-xs font-bold text-gray-700">Failed</p>
                             </div>
                             <p className="text-[11px] text-rose-700 font-extrabold mt-1">
                               {totalFail > 0 ? `${totalFail} Failed Grade` : 'Zero Failures'}
@@ -4090,61 +4126,7 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                             {evaluated.length} Students Listed
                           </span>
                         </h4>
-                        {evaluated.length > 0 ? (
-                          <div className="overflow-x-auto rounded-xl border border-gray-200">
-                            <table className="w-full text-xs">
-                              <thead className="bg-emerald-950 text-white font-bold">
-                                <tr>
-                                  <th className="px-3 py-2.5 text-center w-10">#</th>
-                                  <th className="px-3 py-2.5 text-left">Student ID</th>
-                                  <th className="px-3 py-2.5 text-left">Name</th>
-                                  <th className="px-3 py-2.5 text-left">Program</th>
-                                  <th className="px-3 py-2.5 text-center">Track</th>
-                                  <th className="px-3 py-2.5 text-center">Final Grade</th>
-                                  <th className="px-3 py-2.5 text-center">Official Status</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-100">
-                                {evaluated.map((student, idx) => (
-                                  <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
-                                    <td className="px-3 py-2.5 text-center text-gray-400 font-mono text-[11px]">{idx + 1}</td>
-                                    <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
-                                    <td className="px-3 py-2.5 font-semibold text-gray-900">{toTitleCase(student.name)}</td>
-                                    <td className="px-3 py-2.5 text-gray-600 font-bold">{String(student.program || '').toUpperCase()}</td>
-                                    <td className="px-3 py-2.5 text-center">
-                                      <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
-                                        student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                        student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
-                                        student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                        'bg-gray-100 text-gray-700'
-                                      }`}>
-                                        {String(student.department || '').toUpperCase()}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-2.5 text-center">
-                                      <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${
-                                        student.ev.isFail ? 'text-rose-700 bg-rose-50 border border-rose-200' :
-                                        student.ev.isInc ? 'text-amber-700 bg-amber-50 border border-amber-200' :
-                                        student.ev.isDrp ? 'text-purple-700 bg-purple-50 border border-purple-200' :
-                                        student.ev.isPass ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' :
-                                        'text-gray-600'
-                                      }`}>
-                                        {student.ev.displayGrade}
-                                      </span>
-                                    </td>
-                                    <td className="px-3 py-2.5 text-center">
-                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black border ${student.ev.badgeColor}`}>
-                                        {student.ev.badgeText}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <p className="text-gray-500 text-center py-4">Student details not available in archive</p>
-                        )}
+                        <ArchiveStudentsTable evaluated={evaluated} emptyMessage="Student details not available in archive" />
                       </div>
                     </div>
                   );
@@ -4162,12 +4144,11 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                         <div key={idx} className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h5 className="font-medium text-gray-800">{report.title}</h5>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              report.department === 'CWTS' ? 'bg-green-100 text-green-700' :
-                              report.department === 'LTS' ? 'bg-purple-100 text-purple-700' :
-                              report.department === 'ROTC' ? 'bg-red-100 text-red-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
+                            <span className={`px-2 py-1 rounded text-xs ${report.department === 'CWTS' ? 'bg-green-100 text-green-700' :
+                                report.department === 'LTS' ? 'bg-purple-100 text-purple-700' :
+                                  report.department === 'ROTC' ? 'bg-red-100 text-red-700' :
+                                    'bg-blue-100 text-blue-700'
+                              }`}>
                               {report.department}
                             </span>
                           </div>
@@ -4236,13 +4217,12 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <span className="text-xs font-black text-emerald-950">{ev.title}</span>
-                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                ev.category === 'Holiday' || ev.type === 'holiday' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
-                                ev.dept === 'CWTS' ? 'bg-green-100 text-green-800' :
-                                ev.dept === 'LTS' ? 'bg-purple-100 text-purple-800' :
-                                ev.dept === 'ROTC' ? 'bg-red-100 text-red-800' :
-                                'bg-blue-100 text-blue-800'
-                              }`}>{ev.category === 'Holiday' || ev.type === 'holiday' ? 'PH Holiday' : (ev.dept || 'All')}</span>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${ev.category === 'Holiday' || ev.type === 'holiday' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                                  ev.dept === 'CWTS' ? 'bg-green-100 text-green-800' :
+                                    ev.dept === 'LTS' ? 'bg-purple-100 text-purple-800' :
+                                      ev.dept === 'ROTC' ? 'bg-red-100 text-red-800' :
+                                        'bg-blue-100 text-blue-800'
+                                }`}>{ev.category === 'Holiday' || ev.type === 'holiday' ? 'PH Holiday' : (ev.dept || 'All')}</span>
                             </div>
                             <p className="text-[11px] text-gray-600 mb-1.5">{ev.desc || ev.description}</p>
                           </div>
@@ -4502,55 +4482,55 @@ function getConsecutiveBatchDetails(currentBatchStr) {
             </div>
           </div>
         )}
-      {/* Instructor List Modal */}
-      {showInstructorList && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowInstructorList(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Users className="w-5 h-5 text-green-600" />
-                Facilitators, Training Staff &amp; Admin
-              </h3>
-              <button type="button" onClick={() => setShowInstructorList(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 p-4 space-y-3">
-              {allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No users found.</p>
-              ) : (
-                allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').map((u) => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-emerald-600/30 shadow-xs shrink-0">
-                        <img
-                          src={getAvatarSrc(u.avatar, u.profilePicture)}
-                          alt={u.name || 'User'}
-                          className="w-full h-full object-cover"
-                        />
+        {/* Instructor List Modal */}
+        {showInstructorList && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowInstructorList(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b">
+                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-green-600" />
+                  Facilitators, Training Staff &amp; Admin
+                </h3>
+                <button type="button" onClick={() => setShowInstructorList(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 p-4 space-y-3">
+                {allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No users found.</p>
+                ) : (
+                  allUsers.filter(u => u.role === 'instructor' || u.role === 'admin').map((u) => (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border border-emerald-600/30 shadow-xs shrink-0">
+                          <img
+                            src={getAvatarSrc(u.avatar, u.profilePicture)}
+                            alt={u.name || 'User'}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{u.name}</p>
+                          <p className="text-xs text-gray-500">{u.role === 'admin' ? 'Admin' : (u.department === 'ROTC' ? 'ROTC Training Staff' : `${u.department} Facilitator`)}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-800">{u.name}</p>
-                        <p className="text-xs text-gray-500">{u.role === 'admin' ? 'Admin' : (u.department === 'ROTC' ? 'ROTC Training Staff' : `${u.department} Facilitator`)}</p>
-                      </div>
+                      {u.role === 'instructor' && (
+                        <button
+                          type="button"
+                          onClick={() => { setShowInstructorList(false); navigate('/chat'); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          Message
+                        </button>
+                      )}
                     </div>
-                    {u.role === 'instructor' && (
-                      <button
-                        type="button"
-                        onClick={() => { setShowInstructorList(false); navigate('/chat'); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Message
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
         {/* Admin Enrollment Timed Schedule Modal */}
         {/* Enrollment Schedule Settings Modal */}
@@ -4581,11 +4561,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
               {/* Modal Body */}
               <div className="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
                 {/* Live Portal Status Banner */}
-                <div className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
-                  scheduleStatus.isOpen 
-                    ? 'bg-gradient-to-r from-emerald-50/90 via-emerald-50/50 to-teal-50/70 border-emerald-200/90 text-emerald-950' 
+                <div className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${scheduleStatus.isOpen
+                    ? 'bg-gradient-to-r from-emerald-50/90 via-emerald-50/50 to-teal-50/70 border-emerald-200/90 text-emerald-950'
                     : 'bg-gradient-to-r from-rose-50/90 via-rose-50/50 to-amber-50/70 border-rose-200/90 text-rose-950'
-                }`}>
+                  }`}>
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="relative flex items-center justify-center shrink-0">
                       <span className={`w-3.5 h-3.5 rounded-full ${scheduleStatus.isOpen ? 'bg-emerald-500 animate-ping absolute opacity-75' : 'hidden'}`}></span>
@@ -4594,11 +4573,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-xs sm:text-sm font-black tracking-wide uppercase">{scheduleStatus.headline}</p>
-                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
-                          scheduleStatus.isOpen 
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                        <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${scheduleStatus.isOpen
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                             : 'bg-rose-100 text-rose-800 border-rose-300'
-                        }`}>
+                          }`}>
                           {scheduleStatus.isOpen ? 'Portal Live & Open' : 'Portal Locked'}
                         </span>
                       </div>
@@ -4887,11 +4865,10 @@ function getConsecutiveBatchDetails(currentBatchStr) {
                       key={tab.id}
                       type="button"
                       onClick={() => setAuditFilter(tab.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                        auditFilter === tab.id
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${auditFilter === tab.id
                           ? 'bg-emerald-800 text-white shadow-2xs'
                           : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>

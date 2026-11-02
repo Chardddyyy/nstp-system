@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset, testBackendPing, getPrimaryApiUrl } from '../services/api';
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings, Clock } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Shield, ShieldCheck, CheckCircle, CheckCircle2, Award, AlertTriangle, AlertCircle, KeyRound, X, RefreshCw, Copy, Check, Server, Wifi, WifiOff, Settings, Clock } from 'lucide-react';
 
 
 // Universal Clipboard Copy Helper (Works on Android, iOS Safari, macOS, and Windows Desktop)
@@ -135,6 +135,148 @@ function Login() {
   const [twoFactorResendCooldown, setTwoFactorResendCooldown] = useState(() => readRemaining(STORAGE_KEY_2FA));
   // 10-Minute Lockout timer state
   const [twoFactorLockoutRemaining, setTwoFactorLockoutRemaining] = useState(() => readRemaining(STORAGE_KEY_2FA_LOCKOUT));
+
+  // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
+  const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
+  const [isCaptchaBlocked, setIsCaptchaBlocked] = useState(false);
+  const recaptchaContainerRef = useRef(null);
+  const recaptchaWidgetIdRef = useRef(null);
+
+  const resetRecaptcha = useCallback(() => {
+    setGoogleRecaptchaToken('');
+    if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
+      try {
+        window.grecaptcha.reset(recaptchaWidgetIdRef.current);
+      } catch (_) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    let timer = null;
+    let interval = null;
+    let fallbackTimer = null;
+
+    window.onGoogleRecaptchaSuccess = (token) => {
+      if (isMounted) {
+        setGoogleRecaptchaToken(token);
+        setError('');
+      }
+    };
+    window.onGoogleRecaptchaExpired = () => {
+      if (isMounted) setGoogleRecaptchaToken('');
+    };
+
+    // Google official public test key for reCAPTCHA v2 (guaranteed to work on localhost/LAN without domain restrictions):
+    const GOOGLE_TEST_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
+    const PROD_SITE_KEY = '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
+
+    const isLocalhost = typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '[::1]' ||
+      window.location.hostname.startsWith('192.168.') ||
+      window.location.hostname.startsWith('10.') ||
+      window.location.hostname.endsWith('.local')
+    );
+
+    const siteKey = isLocalhost ? GOOGLE_TEST_SITE_KEY : (import.meta.env.VITE_RECAPTCHA_SITE_KEY || PROD_SITE_KEY);
+
+    const renderWidget = () => {
+      if (!isMounted) return;
+      if (recaptchaWidgetIdRef.current !== null) return;
+      const container = recaptchaContainerRef.current;
+      if (!container) return;
+
+      if (container.querySelector('iframe')) return;
+
+      if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+        try {
+          container.innerHTML = '';
+          const target = document.createElement('div');
+          target.className = 'recaptcha-v2-target';
+          container.appendChild(target);
+
+          recaptchaWidgetIdRef.current = window.grecaptcha.render(target, {
+            sitekey: siteKey,
+            callback: (token) => {
+              if (isMounted) {
+                setGoogleRecaptchaToken(token);
+                setError('');
+              }
+            },
+            'expired-callback': () => {
+              if (isMounted) setGoogleRecaptchaToken('');
+            },
+            'error-callback': () => {
+              console.warn('Google reCAPTCHA network notice.');
+            }
+          });
+          if (isMounted) {
+            setIsCaptchaBlocked(false);
+          }
+        } catch (e) {
+          console.warn('reCAPTCHA render notice:', e);
+        }
+      }
+    };
+
+    if (window.grecaptcha && window.grecaptcha.render) {
+      if (window.grecaptcha.ready) {
+        window.grecaptcha.ready(renderWidget);
+      } else {
+        renderWidget();
+      }
+    } else {
+      window.onRecaptchaLoaded = () => {
+        if (window.grecaptcha && window.grecaptcha.ready) {
+          window.grecaptcha.ready(renderWidget);
+        } else {
+          renderWidget();
+        }
+      };
+
+      const scriptId = 'google-recaptcha-v2-script';
+      let script = document.getElementById(scriptId);
+      if (!script) {
+        script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+      }
+    }
+
+    let attempts = 0;
+    timer = setTimeout(renderWidget, 400);
+    interval = setInterval(() => {
+      attempts++;
+      if (recaptchaWidgetIdRef.current !== null || attempts >= 8) {
+        clearInterval(interval);
+        return;
+      }
+      renderWidget();
+    }, 700);
+
+    fallbackTimer = setTimeout(() => {
+      if (isMounted && recaptchaWidgetIdRef.current === null && !window.grecaptcha) {
+        setIsCaptchaBlocked(true);
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      clearTimeout(fallbackTimer);
+      clearInterval(interval);
+      if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
+        try {
+          window.grecaptcha.reset(recaptchaWidgetIdRef.current);
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Server connection diagnostics state
   const [showServerModal, setShowServerModal] = useState(false);
@@ -501,6 +643,22 @@ function Login() {
       return;
     }
 
+    // Google reCAPTCHA Verification Check
+    let effectiveCaptchaToken = googleRecaptchaToken;
+    if (!effectiveCaptchaToken && window.grecaptcha) {
+      try {
+        if (recaptchaWidgetIdRef.current !== null) {
+          effectiveCaptchaToken = window.grecaptcha.getResponse(recaptchaWidgetIdRef.current);
+        } else if (typeof window.grecaptcha.getResponse === 'function') {
+          effectiveCaptchaToken = window.grecaptcha.getResponse();
+        }
+      } catch (_) {}
+    }
+    if (!effectiveCaptchaToken && !isCaptchaBlocked && window.grecaptcha) {
+      setError('Please check the "I\'m not a robot" reCAPTCHA box to continue.');
+      return;
+    }
+
     setLoading(true);
     setLoadingText('Verifying credentials...');
 
@@ -513,7 +671,7 @@ function Login() {
     }, 14000);
 
     try {
-      const result = await login(cleanEmail, cleanPassword);
+      const result = await login(cleanEmail, cleanPassword, true, effectiveCaptchaToken);
       clearTimeout(timer1);
       clearTimeout(timer2);
 
@@ -531,8 +689,9 @@ function Login() {
           navigate('/instructor/dashboard');
         }
       } else {
+        resetRecaptcha();
         if (result.message && (result.message.includes('another device') || result.message.includes('currently active'))) {
-          const retryResult = await login(cleanEmail, cleanPassword, true);
+          const retryResult = await login(cleanEmail, cleanPassword, true, effectiveCaptchaToken);
           if (retryResult.require2FA) {
             activate2FASession(retryResult, cleanEmail);
             return;
@@ -554,6 +713,7 @@ function Login() {
     } catch (err) {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      resetRecaptcha();
       console.error('Login error:', err);
 
       if (err.isLocked || err.lockoutRemaining > 0 || (err.message && (err.message.includes('Naka-4 na attempts') || err.message.includes('Maximum verification attempts') || err.message.includes('Maximum incorrect attempts')))) {
@@ -568,7 +728,7 @@ function Login() {
       const errMsg = err?.message || '';
       if (errMsg.includes('another device') || errMsg.includes('currently active')) {
         try {
-          const retryResult = await login(cleanEmail, cleanPassword, true);
+          const retryResult = await login(cleanEmail, cleanPassword, true, effectiveCaptchaToken);
           if (retryResult.require2FA) {
             activate2FASession(retryResult, cleanEmail);
             return;
@@ -841,6 +1001,23 @@ function Login() {
                   <span>Forgot Password?</span>
                 </button>
               </div>
+            </div>
+
+            {/* Google reCAPTCHA v2 Protection */}
+            <div className="flex flex-col items-center justify-center my-2.5 w-full">
+              {!isCaptchaBlocked ? (
+                <div className="recaptcha-center-wrapper overflow-hidden rounded-xl border border-gray-200/90 bg-gray-50/70 p-1 shadow-2xs flex justify-center w-full">
+                  <div
+                    ref={recaptchaContainerRef}
+                    className="recaptcha-slot-container"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 p-2.5 bg-emerald-50/90 border border-emerald-200/90 text-emerald-800 rounded-xl text-xs font-semibold w-full">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] leading-tight">Shield Active: Protected via secure institutional rate-limiting.</span>
+                </div>
+              )}
             </div>
 
             <button

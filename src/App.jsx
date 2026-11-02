@@ -79,6 +79,8 @@ function ProtectedRoute({ children, allowedRoles }) {
 }
 
 const POLL_INTERVAL_MS = 8000;
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
+const INACTIVITY_STORAGE_KEY = 'nstp_last_activity_timestamp';
 
 function safeSetStorage(key, value) {
   try {
@@ -735,6 +737,8 @@ function App() {
   const seenLetterIds = useRef(new Set());
   const seenFacultyUserIds = useRef(new Set());
   const alertedMessageIds = useRef(new Set());
+  const lastActivityRef = useRef(Date.now());
+  const lastThrottleRef = useRef(0);
 
   // Global Realtime Telemetry Heartbeat Ping
   useEffect(() => {
@@ -2433,6 +2437,150 @@ function App() {
     return () => window.removeEventListener('nstp-session-expired', onSessionExpired);
   }, []);
 
+  // ── 30-Minute Inactivity Auto-Logout Tracker ─────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+
+    // Initialize or check stored last activity timestamp
+    const now = Date.now();
+    try {
+      const stored = localStorage.getItem(INACTIVITY_STORAGE_KEY);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          if (now - parsed >= INACTIVITY_TIMEOUT_MS) {
+            handleInactivityLogout();
+            return;
+          }
+          lastActivityRef.current = parsed;
+        } else {
+          lastActivityRef.current = now;
+          localStorage.setItem(INACTIVITY_STORAGE_KEY, String(now));
+        }
+      } else {
+        lastActivityRef.current = now;
+        localStorage.setItem(INACTIVITY_STORAGE_KEY, String(now));
+      }
+    } catch (_) {
+      lastActivityRef.current = now;
+    }
+
+    const recordActivity = () => {
+      const current = Date.now();
+      lastActivityRef.current = current;
+      // Throttle localStorage writes to once every 5 seconds for optimal performance
+      if (current - lastThrottleRef.current > 5000) {
+        lastThrottleRef.current = current;
+        try {
+          localStorage.setItem(INACTIVITY_STORAGE_KEY, String(current));
+        } catch (_) {}
+      }
+    };
+
+    async function handleInactivityLogout() {
+      console.warn('[INACTIVITY] 30 minutes of inactivity detected. Auto-logging out...');
+      try {
+        localStorage.removeItem(INACTIVITY_STORAGE_KEY);
+      } catch (_) {}
+
+      // Display warning banner at top of viewport
+      const existing = document.getElementById('inactivity-logout-banner');
+      if (!existing) {
+        const banner = document.createElement('div');
+        banner.id = 'inactivity-logout-banner';
+        banner.style.cssText = [
+          'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:99999',
+          'background:#d97706', 'color:#fff', 'text-align:center',
+          'padding:14px 16px', 'font-size:14px', 'font-weight:700',
+          'box-shadow:0 4px 14px rgba(0,0,0,.35)',
+        ].join(';');
+        banner.textContent = '⏳ You have been automatically logged out due to 30 minutes of inactivity.';
+        document.body.appendChild(banner);
+        setTimeout(() => {
+          document.getElementById('inactivity-logout-banner')?.remove();
+        }, 8000);
+      }
+
+      showToast('You have been automatically logged out due to 30 minutes of inactivity.', 'warning', 'Session Timeout');
+
+      try {
+        await logout();
+      } catch (_) {}
+
+      const loginUrl = (BASE_PATH || '').replace(/\/$/, '') + '/login';
+      if (!window.location.pathname.endsWith('/login')) {
+        window.location.href = loginUrl;
+      }
+    }
+
+    // User activity events: mouse movement, clicks, typing, scrolling, touches
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click', 'wheel'];
+    activityEvents.forEach(evt => window.addEventListener(evt, recordActivity, { passive: true }));
+
+    // Synchronize activity across multiple open tabs in the same browser
+    const onStorageChange = (e) => {
+      if (e.key === INACTIVITY_STORAGE_KEY && e.newValue) {
+        const parsed = parseInt(e.newValue, 10);
+        if (!isNaN(parsed) && parsed > lastActivityRef.current) {
+          lastActivityRef.current = parsed;
+        }
+      }
+    };
+    window.addEventListener('storage', onStorageChange);
+
+    // Periodically evaluate idle duration every 10 seconds
+    const intervalId = setInterval(() => {
+      let latestActive = lastActivityRef.current;
+      try {
+        const stored = localStorage.getItem(INACTIVITY_STORAGE_KEY);
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            latestActive = Math.max(latestActive, parsed);
+          }
+        }
+      } catch (_) {}
+
+      if (Date.now() - latestActive >= INACTIVITY_TIMEOUT_MS) {
+        handleInactivityLogout();
+      }
+    }, 10000);
+
+    // Check immediately on tab focus or visibility change (e.g. computer woke up or tab was brought to foreground)
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        let latestActive = lastActivityRef.current;
+        try {
+          const stored = localStorage.getItem(INACTIVITY_STORAGE_KEY);
+          if (stored) {
+            const parsed = parseInt(stored, 10);
+            if (!isNaN(parsed) && parsed > 0) {
+              latestActive = Math.max(latestActive, parsed);
+            }
+          }
+        } catch (_) {}
+
+        if (Date.now() - latestActive >= INACTIVITY_TIMEOUT_MS) {
+          handleInactivityLogout();
+        } else {
+          recordActivity();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityOrFocus);
+    window.addEventListener('focus', onVisibilityOrFocus);
+
+    return () => {
+      activityEvents.forEach(evt => window.removeEventListener(evt, recordActivity));
+      window.removeEventListener('storage', onStorageChange);
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus);
+      window.removeEventListener('focus', onVisibilityOrFocus);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // Restore session & data from stored cache on mount INSTANTLY (0ms)
   useEffect(() => {
     try {
@@ -2450,6 +2598,23 @@ function App() {
     const cachedMsgs = localStorage.getItem('nstp_cached_messages');
 
     if (token) {
+      try {
+        const storedActivity = localStorage.getItem(INACTIVITY_STORAGE_KEY);
+        if (storedActivity) {
+          const parsedTime = parseInt(storedActivity, 10);
+          if (!isNaN(parsedTime) && parsedTime > 0 && Date.now() - parsedTime >= INACTIVITY_TIMEOUT_MS) {
+            console.warn('[INACTIVITY] Stored session expired due to > 30 mins inactivity on startup.');
+            localStorage.removeItem('nstp_token');
+            localStorage.removeItem('nstp_cached_user');
+            localStorage.removeItem(INACTIVITY_STORAGE_KEY);
+            setUser(null);
+            setLoading(false);
+            showToast('You have been logged out due to 30 minutes of inactivity.', 'warning', 'Session Timeout');
+            return;
+          }
+        }
+        localStorage.setItem(INACTIVITY_STORAGE_KEY, String(Date.now()));
+      } catch (_) {}
       if (cachedUser) {
         try { setUser(JSON.parse(cachedUser)); } catch {}
       }
@@ -2606,11 +2771,11 @@ function App() {
     }
   }
 
-  async function login(email, password, _forceLogin = true) {
+  async function login(email, password, _forceLogin = true, recaptchaToken = null) {
     try {
-      let response = await authAPI.login(email, password, true);
+      let response = await authAPI.login(email, password, true, recaptchaToken);
       if (response && response.warning && response.activeSession && !response.token) {
-        response = await authAPI.login(email, password, true);
+        response = await authAPI.login(email, password, true, recaptchaToken);
       }
       if (response && response.require2FA) {
         return {
@@ -2657,6 +2822,8 @@ function App() {
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
       safeSetStorage('nstp_cached_user', response.user);
+      safeSetStorage(INACTIVITY_STORAGE_KEY, String(Date.now()));
+      lastActivityRef.current = Date.now();
       setUser(response.user);
 
       // Restore full cached state immediately for instant 0ms screen rendering
@@ -2705,6 +2872,8 @@ function App() {
       window.__nstp_session_expired__ = false;
       safeSetStorage('nstp_token', response.token);
       safeSetStorage('nstp_cached_user', response.user);
+      safeSetStorage(INACTIVITY_STORAGE_KEY, String(Date.now()));
+      lastActivityRef.current = Date.now();
       setUser(response.user);
 
       try {
@@ -2781,6 +2950,7 @@ function App() {
     localStorage.removeItem('nstp_cached_conversations');
     localStorage.removeItem('nstp_cached_messages');
     localStorage.removeItem('nstp_active_chat');
+    localStorage.removeItem(INACTIVITY_STORAGE_KEY);
 
     // Completely clear all pending 2FA sessions, cooldowns, and lockout timers so logout lands on clean Portal Login
     try {

@@ -3,6 +3,7 @@ import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import Sidebar from '../components/layout/Sidebar';
 import AttendanceScannerModal from '../components/AttendanceScannerModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
+import ArchiveStudentsTable from '../components/ArchiveStudentsTable';
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
@@ -1395,105 +1396,7 @@ function InstructorDashboard() {
                             {evaluated.length} Students Listed
                           </span>
                         </h4>
-                        {evaluated.length > 0 ? (
-                          <>
-                            {/* MOBILE VIEW: Compact zero-scroll card list */}
-                            <div className="sm:hidden space-y-2">
-                              {evaluated.map((student, idx) => (
-                                <div key={idx} className="bg-white border border-gray-200/90 rounded-xl p-2.5 shadow-2xs flex items-center justify-between gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="text-[10px] font-mono text-gray-400">#{idx + 1}</span>
-                                      <span className="text-xs font-bold text-gray-900 truncate max-w-[140px]">{student.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500 flex-wrap">
-                                      <span className="font-mono text-gray-600">{student.studentId}</span>
-                                      <span>•</span>
-                                      <span className="font-semibold text-gray-700">{student.program}</span>
-                                      <span>•</span>
-                                      <span className={`px-1.5 py-0.2 rounded font-extrabold ${
-                                        student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800' :
-                                        student.department === 'LTS' ? 'bg-purple-100 text-purple-800' :
-                                        'bg-rose-100 text-rose-800'
-                                      }`}>
-                                        {student.department}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                    <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${
-                                      student.ev.isFail ? 'text-rose-700 bg-rose-50 border border-rose-200' :
-                                      student.ev.isInc ? 'text-amber-700 bg-amber-50 border border-amber-200' :
-                                      student.ev.isDrp ? 'text-purple-700 bg-purple-50 border border-purple-200' :
-                                      student.ev.isPass ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' :
-                                      'text-gray-600'
-                                    }`}>
-                                      {student.ev.displayGrade}
-                                    </span>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-black border ${student.ev.badgeColor}`}>
-                                      {student.ev.badgeText}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            {/* DESKTOP VIEW: Full multi-column data table */}
-                            <div className="hidden sm:block overflow-x-auto rounded-xl border border-gray-200">
-                              <table className="w-full text-xs">
-                                <thead className="bg-emerald-950 text-white font-bold">
-                                  <tr>
-                                    <th className="px-3 py-2.5 text-center w-10">#</th>
-                                    <th className="px-3 py-2.5 text-left">Student ID</th>
-                                    <th className="px-3 py-2.5 text-left">Name</th>
-                                    <th className="px-3 py-2.5 text-left">Program</th>
-                                    <th className="px-3 py-2.5 text-center">Track</th>
-                                    <th className="px-3 py-2.5 text-center">Final Grade</th>
-                                    <th className="px-3 py-2.5 text-center">Official Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                  {evaluated.map((student, idx) => (
-                                    <tr key={idx} className="hover:bg-emerald-50/40 transition-colors">
-                                      <td className="px-3 py-2.5 text-center text-gray-400 font-mono text-[11px]">{idx + 1}</td>
-                                      <td className="px-3 py-2.5 font-mono font-bold text-gray-700">{student.studentId}</td>
-                                      <td className="px-3 py-2.5 font-semibold text-gray-900">{student.name}</td>
-                                      <td className="px-3 py-2.5 text-gray-600">{student.program}</td>
-                                      <td className="px-3 py-2.5 text-center">
-                                        <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
-                                          student.department === 'CWTS' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                          student.department === 'LTS' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
-                                          student.department === 'ROTC' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                          'bg-gray-100 text-gray-700'
-                                        }`}>
-                                          {student.department}
-                                        </span>
-                                      </td>
-                                      <td className="px-3 py-2.5 text-center">
-                                        <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${
-                                          student.ev.isFail ? 'text-rose-700 bg-rose-50 border border-rose-200' :
-                                          student.ev.isInc ? 'text-amber-700 bg-amber-50 border border-amber-200' :
-                                          student.ev.isDrp ? 'text-purple-700 bg-purple-50 border border-purple-200' :
-                                          student.ev.isPass ? 'text-emerald-800 bg-emerald-50 border border-emerald-200' :
-                                          'text-gray-600'
-                                        }`}>
-                                          {student.ev.displayGrade}
-                                        </span>
-                                      </td>
-                                      <td className="px-3 py-2.5 text-center">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10.5px] font-black border ${student.ev.badgeColor}`}>
-                                          {student.ev.badgeText}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </>
-                        ) : (
-                          <p className="text-gray-500 text-center py-4 text-xs">No {user?.department} students recorded in this batch</p>
-                        )}
+                        <ArchiveStudentsTable evaluated={evaluated} emptyMessage={`No ${user?.department || ''} students recorded in this batch`} />
                       </div>
                     </div>
                   );
