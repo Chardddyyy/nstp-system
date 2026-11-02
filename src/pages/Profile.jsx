@@ -457,7 +457,12 @@ function Profile() {
       }
 
       const updated = await usersAPI.update(editInstructorForm.id, updatePayload);
-      setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
+      const allUsers = await usersAPI.getAll().catch(() => null);
+      if (Array.isArray(allUsers) && allUsers.length > 0) {
+        setInstructors(allUsers.filter(u => u.id !== user?.id));
+      } else {
+        setInstructors(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i));
+      }
       setShowEditInstructorModal(false);
       setEditingInstructor(null);
       setAvatarModified(false);
