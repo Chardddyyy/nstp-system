@@ -3,11 +3,13 @@ import { archivesAPI, DEFAULT_PAST_BATCHES } from '../services/api';
 import Sidebar from '../components/layout/Sidebar';
 import AttendanceScannerModal from '../components/AttendanceScannerModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
+import StudentGradesModal from '../components/StudentGradesModal';
 import ArchiveStudentsTable from '../components/ArchiveStudentsTable';
 import {
   Users, FileText, MessageSquare,
   User, Calendar, Menu, Bell, CheckCircle, AlertCircle, Trash2, X, CheckSquare, Square, TrendingUp, MailOpen,
-  Archive, History, FileCheck, RotateCcw, Camera, Shield, ClipboardList, QrCode
+  Archive, History, FileCheck, RotateCcw, Camera, Shield, ClipboardList, QrCode,
+  BarChart3, GraduationCap, Layers, Award
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
@@ -15,6 +17,23 @@ import { useState, useEffect, useMemo } from 'react';
 import { getAvatarSrc } from '../utils/avatars';
 import { isNotificationAllowedForRole } from '../utils/notificationFilter';
 import { getPhilippineHolidaysForBatch } from '../data/philippineHolidays';
+
+const OFFICIAL_PROGRAMS = ['BSIT', 'BSCS', 'BSFAS', 'BSHM', 'BSBA', 'BEED Science', 'BSED'];
+
+function getStudentProgram(s) {
+  const raw = String(s?.program || s?.course || s?.degreeProgram || s?.degree_program || '').trim();
+  if (!raw) return 'BSIT';
+  const upper = raw.toUpperCase();
+  if (upper === 'BSIT' || upper.includes('INFORMATION TECH') || upper.includes('INFO TECH') || (upper.includes('IT') && !upper.includes('HOSP') && !upper.includes('ADMIN') && !upper.includes('SECUR'))) return 'BSIT';
+  if (upper === 'BSCS' || upper.includes('COMPUTER SCI')) return 'BSCS';
+  if (upper === 'BSFAS' || upper.includes('FISHER') || upper.includes('AQUATIC')) return 'BSFAS';
+  if (upper === 'BSHM' || upper.includes('HOSPITALITY') || upper.includes('HOTEL')) return 'BSHM';
+  if (upper === 'BSBA' || upper.includes('BUSINESS') || upper.includes('ADMINISTRATION') || upper.includes('ENTREP')) return 'BSBA';
+  if (upper === 'BEED' || upper === 'BEED SCIENCE' || upper.includes('ELEMENTARY')) return 'BEED Science';
+  if (upper === 'BSED' || upper.includes('SECONDARY') || upper.includes('EDUCATION')) return 'BSED';
+  if (upper.includes('CRIM')) return 'BS Crim';
+  return raw;
+}
 
 function InstructorDashboard() {
   const { 
@@ -43,6 +62,7 @@ function InstructorDashboard() {
   const [selectedMessages, setSelectedMessages] = useState([]);
   const [showAttendanceScanner, setShowAttendanceScanner] = useState(false);
   const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
+  const [showGradesModal, setShowGradesModal] = useState(false);
 
   // Archives state for instructor
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -57,6 +77,13 @@ function InstructorDashboard() {
       setArchivedYears(DEFAULT_PAST_BATCHES);
     }
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'grades' || params.get('grades') === 'true' || params.get('action') === 'grades') {
+      setShowGradesModal(true);
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -527,6 +554,41 @@ function InstructorDashboard() {
   const recentStudents = myStudents.slice(0, 5);
   const recentReports = myReports.slice(0, 5);
 
+  // Instructor-specific Program Distribution Analytics
+  const [barChartMode, setBarChartMode] = useState('vertical'); // 'vertical' | 'horizontal'
+  const instructorDept = (user?.department || 'CWTS').toUpperCase();
+
+  const instructorProgramStats = useMemo(() => {
+    const progMap = {};
+    OFFICIAL_PROGRAMS.forEach(p => {
+      progMap[p] = { program: p, count: 0, male: 0, female: 0, sections: new Set() };
+    });
+
+    (myStudents || []).forEach(s => {
+      const prog = getStudentProgram(s);
+      if (!progMap[prog]) {
+        progMap[prog] = { program: prog, count: 0, male: 0, female: 0, sections: new Set() };
+      }
+      progMap[prog].count += 1;
+      const g = String(s.gender || s.sex || '').toUpperCase();
+      if (g.startsWith('M')) progMap[prog].male += 1;
+      else if (g.startsWith('F')) progMap[prog].female += 1;
+      if (s.section) progMap[prog].sections.add(s.section);
+    });
+
+    return Object.values(progMap)
+      .map(p => ({ ...p, sectionCount: p.sections.size }))
+      .filter(p => p.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [myStudents]);
+
+  const maxInstructorProgramCount = useMemo(() => {
+    if (instructorProgramStats.length === 0) return 1;
+    return Math.max(...instructorProgramStats.map(p => p.count), 1);
+  }, [instructorProgramStats]);
+
+  const topInstructorProgram = instructorProgramStats[0] || null;
+
   return (
     <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">
       <Sidebar
@@ -949,12 +1011,12 @@ function InstructorDashboard() {
                 <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance Tools</h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Quick QR token scanner &amp; attendance matrix</p>
+                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">Field Attendance &amp; Grading Tools</h3>
+                <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">Quick QR token scanner, attendance matrix, &amp; student semester grades encoding</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto shrink-0">
+            <div className="grid grid-cols-3 gap-1.5 sm:flex sm:items-center sm:gap-2 w-full sm:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAttendanceScanner(true)}
@@ -970,7 +1032,16 @@ function InstructorDashboard() {
                 className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-blue-600/50 whitespace-nowrap"
               >
                 <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-200" />
-                <span>Attendance &amp; Absences</span>
+                <span>Attendance Matrix</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowGradesModal(true)}
+                className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-700 hover:from-amber-700 hover:to-yellow-800 text-white font-bold text-[10.5px] sm:text-xs rounded-lg sm:rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer border border-amber-500/50 whitespace-nowrap"
+              >
+                <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200" />
+                <span>Input Grades</span>
               </button>
             </div>
           </div>
@@ -1031,6 +1102,295 @@ function InstructorDashboard() {
               <span className="hidden xs:inline-block text-[7px] sm:text-xs bg-white/20 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full group-hover:bg-white group-hover:text-amber-800 font-semibold transition-all shrink-0">Review &rarr;</span>
             </div>
           </div>
+        </div>
+
+        {/* ── DEPARTMENT PROGRAM ANALYTICS & BAR GRAPH (Instructor-Specific) ── */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-md border border-emerald-100/80 p-3.5 sm:p-6 mb-3 sm:mb-6 space-y-4">
+          {/* Header & Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center text-white shadow-xs shrink-0 ${
+                instructorDept === 'ROTC' 
+                  ? 'bg-gradient-to-br from-rose-600 to-red-800' 
+                  : instructorDept === 'LTS' 
+                    ? 'bg-gradient-to-br from-purple-600 to-indigo-800' 
+                    : 'bg-gradient-to-br from-emerald-600 to-teal-800'
+              }`}>
+                <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">
+                    {instructorDept} Program Distribution &amp; Analytics
+                  </h3>
+                  <span className={`text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-full border shadow-2xs ${
+                    instructorDept === 'ROTC' 
+                      ? 'bg-rose-100 text-rose-900 border-rose-300' 
+                      : instructorDept === 'LTS' 
+                        ? 'bg-purple-100 text-purple-900 border-purple-300' 
+                        : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  }`}>
+                    {instructorDept} Component Only
+                  </span>
+                </div>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate mt-0.5">
+                  Academic degree programs representation for your {instructorDept} students ({myStudents.length} total)
+                </p>
+              </div>
+            </div>
+
+            {/* View Mode Toggle: Vertical Bar vs Horizontal Cards */}
+            <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+              <button
+                type="button"
+                onClick={() => setBarChartMode('vertical')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  barChartMode === 'vertical'
+                    ? (instructorDept === 'ROTC' ? 'bg-rose-700 text-white shadow-xs' : instructorDept === 'LTS' ? 'bg-purple-700 text-white shadow-xs' : 'bg-emerald-700 text-white shadow-xs')
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+                title="Column Bar Chart View"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Vertical Graph</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBarChartMode('horizontal')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  barChartMode === 'horizontal'
+                    ? (instructorDept === 'ROTC' ? 'bg-rose-700 text-white shadow-xs' : instructorDept === 'LTS' ? 'bg-purple-700 text-white shadow-xs' : 'bg-emerald-700 text-white shadow-xs')
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+                title="Horizontal Breakdown View"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Program Cards</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Metric Highlights Pill Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 sm:p-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Assigned Component</span>
+              <span className="text-xs sm:text-base font-black text-slate-900 mt-0.5 block flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${instructorDept === 'ROTC' ? 'bg-rose-500' : instructorDept === 'LTS' ? 'bg-purple-500' : 'bg-emerald-500'}`} />
+                {instructorDept}
+              </span>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 sm:p-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Enrolled</span>
+              <span className="text-xs sm:text-base font-black text-slate-900 mt-0.5 block">
+                {myStudents.length} <span className="text-[10px] text-slate-500 font-semibold">Students</span>
+              </span>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 sm:p-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Top Program</span>
+              <span className="text-xs sm:text-base font-black text-slate-900 mt-0.5 block truncate">
+                {topInstructorProgram ? `${topInstructorProgram.program} (${topInstructorProgram.count})` : 'None'}
+              </span>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 sm:p-3">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Programs Handled</span>
+              <span className="text-xs sm:text-base font-black text-slate-900 mt-0.5 block">
+                {instructorProgramStats.length} <span className="text-[10px] text-slate-500 font-semibold">Courses</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Quick-Filter Program Pills */}
+          {instructorProgramStats.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-[11px] font-bold text-slate-500 mr-1 flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
+                <span>Programs:</span>
+              </span>
+              {instructorProgramStats.map(item => (
+                <button
+                  key={item.program}
+                  type="button"
+                  onClick={() => navigate(`/students?course=${encodeURIComponent(item.program)}`)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer border active:scale-95 shadow-2xs ${
+                    instructorDept === 'ROTC'
+                      ? 'bg-rose-50/80 hover:bg-rose-100 text-rose-950 border-rose-200/80 hover:border-rose-300'
+                      : instructorDept === 'LTS'
+                        ? 'bg-purple-50/80 hover:bg-purple-100 text-purple-950 border-purple-200/80 hover:border-purple-300'
+                        : 'bg-emerald-50/80 hover:bg-emerald-100 text-emerald-950 border-emerald-200/80 hover:border-emerald-300'
+                  }`}
+                  title={`View ${item.program} students in Student Management (${item.count} total)`}
+                >
+                  <span>{item.program}</span>
+                  <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold ${
+                    instructorDept === 'ROTC' 
+                      ? 'bg-rose-200/80 text-rose-900' 
+                      : instructorDept === 'LTS' 
+                        ? 'bg-purple-200/80 text-purple-900' 
+                        : 'bg-emerald-200/80 text-emerald-900'
+                  }`}>
+                    {item.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── BAR GRAPH VISUALIZATION ── */}
+          {instructorProgramStats.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 bg-slate-50/80 rounded-2xl border border-slate-200/80">
+              <GraduationCap className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+              <p className="font-bold text-sm text-slate-600">No students currently enrolled in {instructorDept}</p>
+              <p className="text-xs text-slate-400 mt-0.5">Program distribution analytics will automatically appear once students enroll or are assigned.</p>
+            </div>
+          ) : barChartMode === 'vertical' ? (
+            /* Vertical Column Graph with Gridlines */
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-2xs">
+              {(() => {
+                const maxVal = maxInstructorProgramCount;
+                const minWidth = Math.max(500, instructorProgramStats.length * 96);
+                return (
+                  <div className="w-full">
+                    <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
+                      <div style={{ minWidth: `${minWidth}px` }}>
+                        <div className="relative h-60 sm:h-64 w-full flex">
+                          {/* Y-Axis Reference Scale */}
+                          <div className="w-8 sm:w-10 flex flex-col justify-between text-right pr-2 text-[10px] font-mono font-bold text-slate-400 pb-7 select-none">
+                            <span>{maxVal}</span>
+                            <span>{Math.round(maxVal * 0.75)}</span>
+                            <span>{Math.round(maxVal * 0.5)}</span>
+                            <span>{Math.round(maxVal * 0.25)}</span>
+                            <span>0</span>
+                          </div>
+
+                          {/* Main Bar Plot Area */}
+                          <div className="relative flex-1 flex flex-col justify-between pb-7">
+                            {/* Gridlines */}
+                            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7 opacity-50">
+                              <div className="border-b border-dashed border-slate-200 w-full" />
+                              <div className="border-b border-dashed border-slate-200 w-full" />
+                              <div className="border-b border-dashed border-slate-200 w-full" />
+                              <div className="border-b border-dashed border-slate-200 w-full" />
+                              <div className="border-b border-slate-300 w-full" />
+                            </div>
+
+                            {/* Columns Container */}
+                            <div className="relative h-full flex items-end justify-around px-2 z-10 gap-2 sm:gap-4">
+                              {instructorProgramStats.map(item => {
+                                const heightPercent = maxVal > 0 ? Math.max(12, Math.round((item.count / maxVal) * 100)) : 12;
+                                const sharePercent = myStudents.length > 0 ? Math.round((item.count / myStudents.length) * 100) : 0;
+                                return (
+                                  <div
+                                    key={item.program}
+                                    onClick={() => navigate(`/students?course=${encodeURIComponent(item.program)}`)}
+                                    className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer max-w-[80px]"
+                                    title={`Click to view ${item.program}: ${item.count} students (${sharePercent}% of ${instructorDept})`}
+                                  >
+                                    {/* Count Badge on Top */}
+                                    <span className="text-[11px] font-black font-mono text-slate-800 mb-1 group-hover:scale-110 group-hover:text-emerald-800 transition-all">
+                                      {item.count}
+                                    </span>
+
+                                    {/* Pillar Bar with Gradient */}
+                                    <div className="w-full bg-slate-200/60 rounded-t-xl overflow-hidden flex items-end h-full">
+                                      <div
+                                        style={{ height: `${heightPercent}%` }}
+                                        className={`w-full rounded-t-xl transition-all duration-500 shadow-sm group-hover:brightness-110 ${
+                                          instructorDept === 'ROTC'
+                                            ? 'bg-gradient-to-t from-red-700 via-rose-600 to-rose-400'
+                                            : instructorDept === 'LTS'
+                                              ? 'bg-gradient-to-t from-indigo-800 via-purple-600 to-purple-400'
+                                              : 'bg-gradient-to-t from-emerald-800 via-emerald-600 to-teal-400'
+                                        }`}
+                                      />
+                                    </div>
+
+                                    {/* Bottom Program Label */}
+                                    <div className="mt-2 text-center select-none">
+                                      <p className="text-[11px] font-black text-slate-800 group-hover:underline leading-tight">
+                                        {item.program}
+                                      </p>
+                                      <p className="text-[9px] font-bold text-slate-400">
+                                        {sharePercent}%
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            /* Horizontal Program Progress Cards */
+            <div className="space-y-2.5">
+              {instructorProgramStats.map(item => {
+                const maxVal = maxInstructorProgramCount;
+                const barWidth = maxVal > 0 ? Math.max(8, Math.round((item.count / maxVal) * 100)) : 8;
+                const sharePercent = myStudents.length > 0 ? Math.round((item.count / myStudents.length) * 100) : 0;
+                return (
+                  <div
+                    key={item.program}
+                    className="p-3 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs sm:text-sm font-black text-slate-900">{item.program}</span>
+                        <span className="text-[10px] font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                          {sharePercent}% of {instructorDept}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs font-mono">
+                          {item.count} {item.count === 1 ? 'student' : 'students'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/students?course=${encodeURIComponent(item.program)}`)}
+                          className={`text-[11px] font-extrabold px-3 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                            instructorDept === 'ROTC'
+                              ? 'bg-rose-100 hover:bg-rose-200 text-rose-900'
+                              : instructorDept === 'LTS'
+                                ? 'bg-purple-100 hover:bg-purple-200 text-purple-900'
+                                : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900'
+                          }`}
+                        >
+                          View Students &rarr;
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-200/70 rounded-full h-3 overflow-hidden flex items-center">
+                      <div
+                        style={{ width: `${barWidth}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          instructorDept === 'ROTC'
+                            ? 'bg-rose-600'
+                            : instructorDept === 'LTS'
+                              ? 'bg-purple-600'
+                              : 'bg-emerald-600'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Sub-metrics: Section breakdown */}
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                      <span>{item.sectionCount > 0 ? `${item.sectionCount} Section${item.sectionCount > 1 ? 's' : ''}` : 'All Sections'}</span>
+                      <span>{item.male > 0 ? `${item.male} Male` : ''} {item.male > 0 && item.female > 0 ? '•' : ''} {item.female > 0 ? `${item.female} Female` : ''}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Content Section Cards Grid */}
@@ -1530,6 +1890,14 @@ function InstructorDashboard() {
             currentDepartment={user?.department || 'CWTS'}
           />
         )}
+
+        {/* Student Semester Grades Encoding & Grading Sheet Modal */}
+        <StudentGradesModal
+          isOpen={showGradesModal}
+          onClose={() => setShowGradesModal(false)}
+          students={students}
+          currentUser={user}
+        />
 
 
       </main>

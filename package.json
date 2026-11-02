@@ -6,7 +6,7 @@
   "homepage": "https://Chardddyyy.github.io/nstp-system",
   "scripts": {
     "dev": "vite",
-    "dev:all": "concurrently \"npm run dev\" \"cd backend && node server.js\"",
+    "dev:all": "concurrently \"npm run dev\" \"cd backend && node server.js\" \"npm run pma\"",
     "pma": "/Applications/XAMPP/xamppfiles/bin/php -S localhost:8080 -t /Applications/XAMPP/xamppfiles/phpmyadmin",
     "prebuild": "node scripts/generate-version.js",
     "build": "vite build",

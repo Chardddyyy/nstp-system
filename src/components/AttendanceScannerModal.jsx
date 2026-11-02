@@ -3,7 +3,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
-  UserCheck, ShieldAlert, Lock, RotateCcw
+  UserCheck, ShieldAlert, Lock, RotateCcw, Trash2
 } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -255,6 +255,10 @@ export function AttendanceScannerModal({
   const [selectedStudentToExcuse, setSelectedStudentToExcuse] = useState(null);
   const [excuseReason, setExcuseReason] = useState('Medical reason / illness with excuse letter');
   const [isSubmittingExcuse, setIsSubmittingExcuse] = useState(false);
+
+  // Remove / Void Student Attendance State (Accidental scan / wrong ID input)
+  const [studentToRemove, setStudentToRemove] = useState(null);
+  const [isRemovingLog, setIsRemovingLog] = useState(false);
 
   const scannerRef = useRef(null);
   const isProcessingRef = useRef(false);
@@ -754,6 +758,66 @@ export function AttendanceScannerModal({
       showToast(err.message || 'Error recording excuse status.', 'error');
     } finally {
       setIsSubmittingExcuse(false);
+    }
+  };
+
+  // Remove / Void Student Attendance Record (handles accidental login or wrong Student ID)
+  const handleConfirmRemoveLog = async () => {
+    if (!studentToRemove) return;
+    setIsRemovingLog(true);
+    try {
+      const targetSid = String(studentToRemove.student_id || studentToRemove.student?.studentId || '').trim();
+      const targetRecordId = studentToRemove.id;
+      const deptUpper = (currentDepartment && currentDepartment !== 'All' ? currentDepartment : (currentUser?.department || 'CWTS')).toUpperCase();
+
+      // 1. Delete from backend database
+      await attendanceAPI.removeSessionStudent({
+        student_id: targetSid,
+        record_id: targetRecordId,
+        day: selectedDay,
+        activity_name: fullActivityTitle
+      }).catch(err => console.warn('Backend remove session student notice:', err));
+
+      // 2. Remove from active sessionLogs state
+      setSessionLogs(prev => prev.filter(p => !isStudentMatch(p, studentToRemove.student, targetSid)));
+
+      // 3. Remove from localStorage draft session logs
+      const draftKey = `nstp_draft_session_logs_${deptUpper}_${selectedDay}`;
+      try {
+        const currentDraft = JSON.parse(localStorage.getItem(draftKey) || '[]');
+        const filteredDraft = currentDraft.filter(p => !isStudentMatch(p, studentToRemove.student, targetSid));
+        if (filteredDraft.length > 0) {
+          localStorage.setItem(draftKey, JSON.stringify(filteredDraft));
+        } else {
+          localStorage.removeItem(draftKey);
+        }
+      } catch (_) {}
+
+      // 4. Remove from cached attendance records
+      try {
+        const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+        const filteredCache = cached.filter(r => {
+          const matchSid = String(r.student_id || r.studentId || '').trim() === targetSid;
+          const matchDay = (r.activity_name || '').startsWith(selectedDay);
+          return !(matchSid && matchDay);
+        });
+        localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(filteredCache));
+      } catch (_) {}
+
+      // 5. Reset lastScannedStudent card if it matches the removed student
+      if (lastScannedStudent && (String(lastScannedStudent.studentId || lastScannedStudent.id || '').trim() === targetSid)) {
+        setLastScannedStudent(null);
+        setScanStatus(null);
+      }
+
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      showToast?.(`Successfully removed attendance record for ${studentToRemove.student_name || targetSid}.`, 'success');
+      setStudentToRemove(null);
+    } catch (err) {
+      console.error('Failed to remove attendance log:', err);
+      showToast?.(err.message || 'Error while removing attendance record.', 'error');
+    } finally {
+      setIsRemovingLog(false);
     }
   };
 
@@ -1542,6 +1606,14 @@ export function AttendanceScannerModal({
                                 <span className="text-slate-400">{log.time}</span>
                               )}
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => setStudentToRemove(log)}
+                              title="Remove attendance record (in case of accidental scan or typo)"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-100/70 rounded-lg transition-colors cursor-pointer shrink-0 ml-0.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                       ))
@@ -1712,6 +1784,65 @@ export function AttendanceScannerModal({
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* Remove Attendance Confirmation Modal (Accidental scan / wrong ID input) */}
+        {studentToRemove && (
+          <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-rose-100 space-y-4 animate-scale-up">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200/80 shadow-2xs">
+                <Trash2 className="w-6 h-6" />
+              </div>
+
+              <div className="text-center space-y-1">
+                <h3 className="text-base font-black text-slate-900">Remove Attendance Record?</h3>
+                <p className="text-xs text-slate-500">
+                  Was this scanned by accident or with an incorrect Student ID?
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                <div>
+                  <p className="font-black text-slate-900">{studentToRemove.student_name || studentToRemove.student_id}</p>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    ID: {studentToRemove.student_id} • {studentToRemove.department} {studentToRemove.section ? `(${studentToRemove.section})` : ''}
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10.5px]">
+                  <span className="text-slate-500">Session: <strong className="text-slate-700">{selectedDay}</strong></span>
+                  <span className="px-2 py-0.5 rounded-md font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    {studentToRemove.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={isRemovingLog}
+                  onClick={() => setStudentToRemove(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isRemovingLog}
+                  onClick={handleConfirmRemoveLog}
+                  className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md shadow-rose-600/30 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {isRemovingLog ? (
+                    <span>Removing...</span>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Yes, Remove</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

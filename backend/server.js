@@ -7608,6 +7608,56 @@ app.delete('/api/attendance/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Remove student from session attendance (handles accidental scan / wrong ID input)
+app.post('/api/attendance/remove-session-student', authenticateToken, async (req, res) => {
+  try {
+    const { student_id, activity_name, day, record_id } = req.body;
+    if (!student_id && !record_id) {
+      return res.status(400).json({ message: 'student_id or record_id is required' });
+    }
+
+    let deletedRows = 0;
+
+    if (record_id && !isNaN(record_id)) {
+      let q = 'DELETE FROM attendance_records WHERE id = ?';
+      const p = [record_id];
+      if (req.user.role === 'instructor') {
+        q += ' AND department = ?';
+        p.push(req.user.department);
+      }
+      const [r1] = await pool.execute(q, p).catch(() => [{ affectedRows: 0 }]);
+      deletedRows += (r1 && r1.affectedRows) || 0;
+    }
+
+    if (student_id) {
+      let q2 = 'DELETE FROM attendance_records WHERE (student_id = ? OR student_id = ?)';
+      const p2 = [String(student_id).trim(), student_id];
+
+      if (day) {
+        q2 += ' AND (activity_name LIKE ? OR activity_name LIKE ?)';
+        p2.push(`${day} %`, `%${activity_name || ''}%`);
+      } else if (activity_name) {
+        q2 += ' AND activity_name LIKE ?';
+        p2.push(`%${activity_name}%`);
+      }
+
+      if (req.user.role === 'instructor') {
+        q2 += ' AND department = ?';
+        p2.push(req.user.department);
+      }
+
+      const [r2] = await pool.execute(q2, p2).catch(() => [{ affectedRows: 0 }]);
+      deletedRows += (r2 && r2.affectedRows) || 0;
+    }
+
+    auditLog('attendance_session_student_removed', req.user.id, `student: ${student_id}, day: ${day || ''}, deleted: ${deletedRows}`, req.ip || 'unknown');
+    res.json({ success: true, message: 'Attendance record removed successfully', affectedRows: deletedRows });
+  } catch (err) {
+    console.error('Error removing session student attendance:', err);
+    res.status(500).json({ message: 'Server error while removing attendance record' });
+  }
+});
+
 // POST override student attendance record (Edit/Delete status for any Day)
 app.post('/api/attendance/override', authenticateToken, async (req, res) => {
   try {

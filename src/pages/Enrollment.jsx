@@ -248,7 +248,7 @@ function Enrollment() {
       if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
         try {
           window.grecaptcha.reset(recaptchaWidgetIdRef.current);
-        } catch (_) {}
+        } catch (_) { }
       }
     };
   }, []);
@@ -2048,8 +2048,8 @@ function Enrollment() {
                         }
                       }}
                       className={`cursor-pointer rounded-2xl p-5 border-2 transition-all relative flex flex-col justify-between ${formData.nstpComponent === item.id
-                          ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
-                          : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'
+                        ? 'bg-emerald-50/90 border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
+                        : 'bg-white border-gray-200 hover:border-emerald-300 hover:shadow-sm'
                         }`}
                     >
                       <div>
@@ -2525,8 +2525,8 @@ function Enrollment() {
                 type="submit"
                 disabled={isSubmitting}
                 className={`w-full py-4 px-8 rounded-2xl text-base sm:text-lg font-black transition-all shadow-xl active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${isSubmitting
-                    ? 'bg-amber-400/60 text-emerald-950/70 cursor-wait'
-                    : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20 hover:shadow-2xl hover:-translate-y-0.5'
+                  ? 'bg-amber-400/60 text-emerald-950/70 cursor-wait'
+                  : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 shadow-amber-950/20 hover:shadow-2xl hover:-translate-y-0.5'
                   }`}
               >
                 {isSubmitting ? (

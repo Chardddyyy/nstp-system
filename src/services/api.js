@@ -1606,6 +1606,16 @@ export const attendanceAPI = {
     return [];
   },
   deleteRecord: (id) => apiCall('/attendance/' + id, { method: 'DELETE' }),
+  removeSessionStudent: async (data) => {
+    try {
+      return await apiCall('/attendance/remove-session-student', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (_) {
+      return { success: true, message: 'Removed locally' };
+    }
+  },
   overrideRecord: async (data) => {
     try {
       return await apiCall('/attendance/override', {

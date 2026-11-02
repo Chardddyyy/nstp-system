@@ -4,6 +4,7 @@ import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGene
 import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
+import StudentGradesModal from '../components/StudentGradesModal';
 import OSDSNSTPForm from '../components/OSDSNSTPForm';
 import OSDSNSTPForm2B from '../components/OSDSNSTPForm2B';
 import {
@@ -105,8 +106,10 @@ function StudentManagement() {
     }
     if (paramCourse) setFilterCourse(paramCourse);
     if (paramSection) setFilterNstpSection(paramSection);
-    if (paramSearch) setSearchTerm(paramSearch);
-  }, [paramDept, paramCourse, paramSection, paramSearch]);
+    if (!isAdmin && (searchParams.get('tab') === 'grades' || searchParams.get('grades') === 'true' || searchParams.get('action') === 'grades')) {
+      setShowGradesModal(true);
+    }
+  }, [paramDept, paramCourse, paramSection, paramSearch, searchParams, isAdmin]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -115,6 +118,7 @@ function StudentManagement() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showBatchIdModal, setShowBatchIdModal] = useState(false);
   const [showAttendanceMatrix, setShowAttendanceMatrix] = useState(false);
+  const [showGradesModal, setShowGradesModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Form A & Form B Export and Preview Modals state
@@ -845,51 +849,18 @@ function StudentManagement() {
     });
   }, [sourceStudents, searchTerm, filterDept, filterCourse, filterNstpSection, isAdmin, user?.department]);
 
-  const [studentSortCol, setStudentSortCol] = useState(null);
-  const [studentSortDir, setStudentSortDir] = useState('asc');
-
-  const handleSortStudent = (col) => {
-    if (studentSortCol === col) {
-      if (studentSortDir === 'asc') {
-        setStudentSortDir('desc');
-      } else {
-        setStudentSortCol(null);
-        setStudentSortDir('asc');
-      }
-    } else {
-      setStudentSortCol(col);
-      setStudentSortDir('asc');
-    }
-  };
-
   const sortedStudents = useMemo(() => {
-    if (!studentSortCol) return filteredStudents;
     return [...filteredStudents].sort((a, b) => {
-      let valA = '';
-      let valB = '';
-      if (studentSortCol === 'id') {
-        valA = a.studentId || '';
-        valB = b.studentId || '';
-      } else if (studentSortCol === 'name') {
-        valA = a.name || '';
-        valB = b.name || '';
-      } else if (studentSortCol === 'section') {
-        valA = a.nstp_section || a.section || '';
-        valB = b.nstp_section || b.section || '';
-      } else if (studentSortCol === 'year') {
-        valA = a.year || '';
-        valB = b.year || '';
-      } else if (studentSortCol === 'program') {
-        valA = a.program || a.course || '';
-        valB = b.program || b.course || '';
-      } else if (studentSortCol === 'grade') {
-        valA = getStudentGradeInfo(a).finalGrade || '9.99';
-        valB = getStudentGradeInfo(b).finalGrade || '9.99';
-      }
-      const cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true });
-      return studentSortDir === 'asc' ? cmp : -cmp;
+      const lastA = (a.lastName || a.last_name || (a.name ? a.name.split(',')[0] : '') || '').trim().toLowerCase();
+      const lastB = (b.lastName || b.last_name || (b.name ? b.name.split(',')[0] : '') || '').trim().toLowerCase();
+      const cmpLast = lastA.localeCompare(lastB, undefined, { sensitivity: 'base' });
+      if (cmpLast !== 0) return cmpLast;
+
+      const firstA = (a.firstName || a.first_name || (a.name && a.name.includes(',') ? a.name.split(',')[1] : '') || '').trim().toLowerCase();
+      const firstB = (b.firstName || b.first_name || (b.name && b.name.includes(',') ? b.name.split(',')[1] : '') || '').trim().toLowerCase();
+      return firstA.localeCompare(firstB, undefined, { sensitivity: 'base' });
     });
-  }, [filteredStudents, studentSortCol, studentSortDir, getStudentGradeInfo]);
+  }, [filteredStudents]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
@@ -897,10 +868,10 @@ function StudentManagement() {
   const indexOfFirstStudent = indexOfLastStudent - itemsPerPage;
   const currentStudents = sortedStudents.slice(indexOfFirstStudent, indexOfLastStudent);
 
-  // Reset to page 1 when filters or sort change
+  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDept, filterCourse, studentSortCol, studentSortDir]);
+  }, [searchTerm, filterDept, filterCourse, filterNstpSection]);
 
   useEffect(() => {
     if (filterDept !== 'All' && ['ROTC', 'CWTS', 'LTS'].includes(filterDept.toUpperCase())) {
@@ -1378,6 +1349,19 @@ function StudentManagement() {
                 </button>
               )}
 
+              {/* Semester Grades Encoding & Grading Sheet Button (Instructors Only) */}
+              {!isAdmin && !viewingArchive && (
+                <button type="button"
+                  onClick={() => setShowGradesModal(true)}
+                  title="Encode and submit student semester grades and download official grade sheet"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-2xl transition-all duration-200 justify-center text-white bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-700 hover:from-amber-700 hover:to-yellow-800 font-bold shadow-xs hover:shadow-md active:scale-95 text-[10.5px] sm:text-xs cursor-pointer border border-amber-500/50 whitespace-nowrap"
+                >
+                  <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200 shrink-0" />
+                  <span className="hidden sm:inline">Input / Encode Grades</span>
+                  <span className="sm:hidden">Grades</span>
+                </button>
+              )}
+
 
               {isAdmin && !viewingArchive && (
                 <button type="button"
@@ -1726,120 +1710,39 @@ function StudentManagement() {
                       </div>
                     </th>
                   )}
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('id')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'id'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Student ID'}
-                  >
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wider select-none font-semibold text-gray-500">
                     <div className="flex items-center gap-1.5">
                       <span>Student ID</span>
-                      {!isSectioningMode && studentSortCol === 'id' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('name')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'name'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Name'}
-                  >
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wider select-none font-semibold text-gray-500">
                     <div className="flex items-center gap-1.5">
                       <span>Name with Email</span>
-                      {!isSectioningMode && studentSortCol === 'name' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('section')}
-                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'section'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Original School / Class Section from Enrollment'}
-                  >
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider select-none font-semibold text-gray-500" title="Original School / Class Section from Enrollment">
                     <div className="flex items-center gap-1.5">
                       <span>School Sec</span>
-                      {!isSectioningMode && studentSortCol === 'section' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
-                  <th 
-                    className="px-4 py-3 text-left text-xs uppercase tracking-wider font-extrabold text-emerald-800 bg-emerald-50/50"
-                    title="NSTP Section Assigned by Admin"
-                  >
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider font-extrabold text-emerald-800 bg-emerald-50/50" title="NSTP Section Assigned by Admin">
                     <div className="flex items-center gap-1.5">
                       <span>NSTP Sec</span>
                     </div>
                   </th>
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('year')}
-                    className={`px-4 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'year'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Year Level'}
-                  >
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider select-none font-semibold text-gray-500">
                     <div className="flex items-center gap-1.5">
                       <span>Year</span>
-                      {!isSectioningMode && studentSortCol === 'year' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('program')}
-                    className={`px-6 py-3 text-left text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'program'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by Program / Component'}
-                  >
+                  <th className="px-6 py-3 text-left text-xs uppercase tracking-wider select-none font-semibold text-gray-500">
                     <div className="flex items-center gap-1.5">
                       <span>Program</span>
-                      {!isSectioningMode && studentSortCol === 'program' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
-                  <th 
-                    onClick={() => !isSectioningMode && handleSortStudent('grade')}
-                    className={`px-4 py-3 text-center text-xs uppercase tracking-wider select-none transition-colors ${
-                      isSectioningMode
-                        ? 'cursor-default text-gray-500 font-semibold'
-                        : studentSortCol === 'grade'
-                        ? 'bg-emerald-100/90 text-emerald-950 font-black border-b-2 border-emerald-600 cursor-pointer'
-                        : 'font-semibold text-emerald-900 bg-emerald-50/70 hover:text-gray-900 hover:bg-emerald-100/60 cursor-pointer'
-                    }`}
-                    title={isSectioningMode ? 'Sorting disabled during section separation' : 'Click to sort by NSTP Final Grade'}
-                  >
+                  <th className="px-4 py-3 text-center text-xs uppercase tracking-wider select-none font-semibold text-gray-500">
                     <div className="flex items-center justify-center gap-1.5">
                       <span>NSTP Grade</span>
-                      {!isSectioningMode && studentSortCol === 'grade' && (
-                        <span className="text-emerald-700 font-black">{studentSortDir === 'asc' ? '▲' : '▼'}</span>
-                      )}
                     </div>
                   </th>
                   {isAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>}
@@ -4742,6 +4645,15 @@ function StudentManagement() {
             </div>
           </div>
         )}
+
+        {/* Student Semester Grades Encoding & Grading Sheet Modal */}
+        <StudentGradesModal
+          isOpen={showGradesModal}
+          onClose={() => setShowGradesModal(false)}
+          students={students}
+          currentUser={user}
+          onSaved={loadGradesData}
+        />
 
       </main>
     </div>

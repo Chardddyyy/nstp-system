@@ -3583,7 +3583,7 @@ function App() {
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to="/profile" replace /></ProtectedRoute>} />
             <Route path="/archives" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
-            <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/students' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
+            <Route path="/grades" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to="/students?tab=grades" replace /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Navigate to={user?.role === 'admin' ? '/admin/dashboard' : '/instructor/dashboard'} replace /></ProtectedRoute>} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/instructor" element={<Navigate to="/instructor/dashboard" replace />} />
