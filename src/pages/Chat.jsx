@@ -89,6 +89,7 @@ function getReadConversationsStorageKey(currentUser) {
 
 function Chat() {
   const { user, logout, allUsers, students, conversations, messages, sendMessage, getUserConversations,
+    startConversation,
     editMessage, deleteMessage, addReaction, clearMessages,
     _incomingCall, outgoingCallStatus, registerOutgoingCall, clearOutgoingCall,
     setMessages,
@@ -108,15 +109,47 @@ function Chat() {
     }
   });
 
-  // Deep-link from notification
+  // Deep-link from notification or direct user link
   useEffect(() => {
     const convId = searchParams.get('convId') || searchParams.get('conv');
     if (convId) {
       setActiveConversationId(convId);
       setShowConversations(false);
-      try { localStorage.setItem('nstp_active_chat', convId); } catch (_) {}
+      try { localStorage.setItem('nstp_active_chat', String(convId)); } catch (_) {}
+      return;
     }
-  }, [searchParams]);
+
+    const targetUserId = searchParams.get('user') || searchParams.get('userId');
+    const targetUserName = searchParams.get('name');
+    if (targetUserId) {
+      const numId = Number(targetUserId);
+      const existing = (conversations || []).find(c =>
+        !c.isGroup && !c.is_group && (
+          Number(c.participant_1_id) === numId ||
+          Number(c.participant_2_id) === numId ||
+          (Array.isArray(c.participants) && c.participants.map(Number).includes(numId)) ||
+          (targetUserName && c.with === targetUserName)
+        )
+      );
+
+      if (existing && existing.id) {
+        setActiveConversationId(existing.id);
+        setShowConversations(false);
+        try { localStorage.setItem('nstp_active_chat', String(existing.id)); } catch (_) {}
+      } else if (typeof startConversation === 'function') {
+        const targetObj = (allUsers || []).find(u => Number(u.id) === numId) || { id: numId, name: targetUserName || 'User' };
+        startConversation(targetObj).then(newConv => {
+          if (newConv && newConv.id) {
+            setActiveConversationId(newConv.id);
+            setShowConversations(false);
+            try { localStorage.setItem('nstp_active_chat', String(newConv.id)); } catch (_) {}
+          }
+        }).catch(err => {
+          console.warn('[Chat] Auto-start conversation error:', err);
+        });
+      }
+    }
+  }, [searchParams, conversations, allUsers, startConversation]);
 
   // Join socket room & keep active conversation messages updated in real-time without page reload
   useEffect(() => {
@@ -518,9 +551,13 @@ function Chat() {
 
   const handleSetActiveConversation = async (id) => {
     setActiveConversationId(id);
+    setIsNearBottom(true);
     setShowConversations(false); // Hide conversation list on mobile when chat opens
     setSidebarOpen(false); // Close main navigation sidebar
     try { localStorage.setItem('nstp_active_chat', id); } catch (_) {}
+
+    scrollToBottom('auto');
+    setTimeout(() => scrollToBottom('auto'), 40);
 
     // Mark conversation as read
     setReadConversations(prev => {
@@ -545,6 +582,9 @@ function Chat() {
       const msgs = await conversationsAPI.getMessages(id);
       if (msgs && Array.isArray(msgs)) {
         setMessages(prev => ({ ...prev, [id]: msgs }));
+        setIsNearBottom(true);
+        setTimeout(() => scrollToBottom('auto'), 40);
+        setTimeout(() => scrollToBottom('auto'), 150);
       }
     } catch (_) { }
   };
@@ -1991,13 +2031,45 @@ function Chat() {
     scrollToMessageId(matchedMessageIds[nextIdx]);
   };
 
-  // Scroll to bottom on initial load and when sending messages
+  const scrollToBottom = useCallback((behavior = 'auto') => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+    if (messagesEndRef.current) {
+      try {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      } catch (_) {}
+    }
+  }, []);
+
+  // Force scroll to bottom whenever opening or changing a conversation
+  useEffect(() => {
+    if (!activeConversationId) return;
+    setIsNearBottom(true);
+    scrollToBottom('auto');
+
+    const t1 = setTimeout(() => scrollToBottom('auto'), 40);
+    const t2 = setTimeout(() => scrollToBottom('auto'), 120);
+    const t3 = setTimeout(() => scrollToBottom('auto'), 250);
+    const t4 = setTimeout(() => scrollToBottom('auto'), 500);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [activeConversationId, scrollToBottom]);
+
+  // Keep scrolled to bottom on new messages
   useEffect(() => {
     if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      scrollToBottom('auto');
+      const t = setTimeout(() => scrollToBottom('auto'), 50);
+      return () => clearTimeout(t);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMessages.length]);
+  }, [currentMessages.length, isNearBottom, scrollToBottom]);
 
   // Get user's own conversations only (private)
   const rawUserConvs = (typeof getUserConversations === 'function' ? getUserConversations() : []) || [];
@@ -2639,9 +2711,9 @@ function Chat() {
               <div
                 ref={messagesContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full flex flex-col"
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 overscroll-contain w-full max-w-full"
               >
-                <div className="space-y-3 w-full max-w-full mt-auto">
+                <div className="space-y-3 w-full max-w-full min-h-full flex flex-col justify-end">
                   {currentMessages.map((message, msgIdx) => {
                     const isOwn = Boolean(
                       message.sender === 'me' ||
@@ -2784,6 +2856,7 @@ function Chat() {
                                     src={message.imageUrl || message.image_url || message.file_url}
                                     alt="Shared"
                                     className="max-w-full max-h-56 sm:max-h-64 rounded-xl block cursor-pointer hover:opacity-90 object-cover"
+                                    onLoad={() => { if (isNearBottom) scrollToBottom('auto'); }}
                                     onClick={() => handleImageClick(message.imageUrl || message.image_url || message.file_url)}
                                   />
                                 ) : (message.type === 'file' || message.message_type === 'file') && (message.fileName || message.file_name) ? (

@@ -236,6 +236,7 @@ function AdminDashboard() {
     notifications = [],
     messages = {},
     conversations = [],
+    startConversation,
     setNotifications,
     deleteNotifications,
     markAllNotificationsRead,
@@ -500,6 +501,45 @@ function AdminDashboard() {
   const [photoViewer, setPhotoViewer] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [showInstructorList, setShowInstructorList] = useState(false);
+
+  const handleOpenUserChat = async (targetUser) => {
+    setShowInstructorList(false);
+    if (!targetUser) return;
+    const targetUserId = Number(targetUser.id);
+
+    // 1. Check if conversation already exists in active conversation list
+    const existing = (conversations || []).find(c =>
+      !c.isGroup && !c.is_group && (
+        Number(c.participant_1_id) === targetUserId ||
+        Number(c.participant_2_id) === targetUserId ||
+        (Array.isArray(c.participants) && c.participants.map(Number).includes(targetUserId)) ||
+        c.with === targetUser.name
+      )
+    );
+
+    if (existing && existing.id) {
+      try { localStorage.setItem('nstp_active_chat', String(existing.id)); } catch (_) {}
+      navigate(`/chat?convId=${existing.id}`);
+      return;
+    }
+
+    // 2. Start conversation via AuthContext if available
+    if (typeof startConversation === 'function') {
+      try {
+        const created = await startConversation(targetUser);
+        if (created && created.id) {
+          try { localStorage.setItem('nstp_active_chat', String(created.id)); } catch (_) {}
+          navigate(`/chat?convId=${created.id}`);
+          return;
+        }
+      } catch (err) {
+        console.warn('[AdminDashboard] startConversation error:', err);
+      }
+    }
+
+    // 3. Fallback: navigate with user id query param so Chat page auto-initiates/selects
+    navigate(`/chat?user=${targetUser.id}&name=${encodeURIComponent(targetUser.name || '')}`);
+  };
 
   // Handle Escape key to close open overlays/modals in AdminDashboard
   useEffect(() => {
@@ -4560,11 +4600,11 @@ function AdminDashboard() {
                           <p className="text-xs text-gray-500">{u.role === 'admin' ? 'Admin' : (u.department === 'ROTC' ? 'ROTC Training Staff' : `${u.department} Facilitator`)}</p>
                         </div>
                       </div>
-                      {u.role === 'instructor' && (
+                      {u.id !== user?.id && (
                         <button
                           type="button"
-                          onClick={() => { setShowInstructorList(false); navigate('/chat'); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors"
+                          onClick={() => handleOpenUserChat(u)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white rounded-lg text-xs font-medium transition-all shadow-xs cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           Message
