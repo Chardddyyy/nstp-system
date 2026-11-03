@@ -488,6 +488,7 @@ function AdminDashboard() {
   const [showProgramAnalytics, setShowProgramAnalytics] = useState(true);
   const [barChartMode] = useState('vertical');
   const [showNewBatchConfirm, setShowNewBatchConfirm] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [assignNstpSection, setAssignNstpSection] = useState('');
   const [enrollmentDeptFilter, setEnrollmentDeptFilter] = useState('All');
