@@ -47,7 +47,7 @@ export default function LetterFormats() {
   const [templateToDelete, setTemplateToDelete] = useState(null);
 
   const [title, setTitle] = useState('');
-  const [department, setDepartment] = useState('All');
+  const [department, setDepartment] = useState(() => (user?.role === 'instructor' && user?.department ? user.department : 'All'));
   const [description, setDescription] = useState('');
   const [attachedFile, setAttachedFile] = useState(null); // { name, type, size, data }
 
@@ -151,9 +151,13 @@ export default function LetterFormats() {
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
 
+    if (user?.role === 'instructor' && user?.department) {
+      setActiveTab(user.department);
+    }
+
     setTitle('');
     setDescription('');
-    setDepartment('All');
+    setDepartment(user?.role === 'instructor' && user?.department ? user.department : 'All');
     setAttachedFile(null);
     setEditingTemplate(null);
     setShowAddModal(false);
@@ -378,7 +382,7 @@ export default function LetterFormats() {
                 onClick={() => {
                   setTitle('');
                   setDescription('');
-                  setDepartment('All');
+                  setDepartment(user?.role === 'instructor' && user?.department ? user.department : 'All');
                   setAttachedFile(null);
                   setEditingTemplate(null);
                   setShowAddModal(true);
@@ -544,10 +548,21 @@ export default function LetterFormats() {
                   </div>
                 ) : (
                   <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category</label>
-                    <div className="flex items-center gap-2 p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950">
-                      <span className="px-2.5 py-1 bg-emerald-700 text-white rounded-lg text-xs font-black uppercase shadow-xs">{user?.department}</span>
-                      <span className="text-gray-600 text-[11px] font-medium">Locked to your assigned department</span>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Department Category *</label>
+                    <div className="p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 text-white rounded-lg text-xs font-black uppercase shadow-xs ${
+                          user?.department === 'ROTC' ? 'bg-red-600' :
+                          user?.department === 'CWTS' ? 'bg-emerald-700' :
+                          user?.department === 'LTS' ? 'bg-purple-700' : 'bg-emerald-800'
+                        }`}>
+                          {user?.department}
+                        </span>
+                        <span className="text-emerald-950 text-xs font-bold">Locked to {user?.department} Only</span>
+                      </div>
+                      <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
+                        Letter formats are strictly published to <strong>{user?.department}</strong>. Instructors are restricted from publishing formats to All Departments, {['ROTC', 'CWTS', 'LTS'].filter(d => d !== user?.department).join(' or ')}.
+                      </p>
                     </div>
                   </div>
                 )}

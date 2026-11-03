@@ -294,11 +294,11 @@ function Landing() {
 
   // Real-time Telemetry & Active Online Users state (accurate, steady)
   const [telemetry, setTelemetry] = useState(() => {
-    let cachedVisitors = 21;
+    let cachedVisitors = 25;
     let cachedUsers = 44;
     try {
       const stored = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
-      if (stored > 0 && stored < 1428) cachedVisitors = stored;
+      if (stored >= 25 && stored < 1428) cachedVisitors = stored;
       const storedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '0', 10);
       if (storedUsers > 0) cachedUsers = storedUsers;
     } catch (_) {}
@@ -324,7 +324,7 @@ function Landing() {
           setTelemetry(prev => {
             const rawIncomingVisitors = typeof stats.totalVisitors === 'number' ? stats.totalVisitors : 0;
             // Genuine total visitors from backend telemetry
-            const nextVisitors = rawIncomingVisitors > 0 ? rawIncomingVisitors : (prev.totalVisitors || 21);
+            const nextVisitors = rawIncomingVisitors > 0 ? rawIncomingVisitors : (prev.totalVisitors || 25);
             // Real active online count (at least 1 for the current session)
             const rawActive = typeof stats.activeUsers === 'number'
               ? stats.activeUsers
@@ -362,7 +362,7 @@ function Landing() {
     };
   }, []);
 
-  const totalVisitorsCount = telemetry.totalVisitors ?? 21;
+  const totalVisitorsCount = telemetry.totalVisitors ?? 25;
   const activeOnlineCount = Math.max(1, telemetry.activeOnlineCount ?? 1);
 
   const startTimer = useCallback(() => {

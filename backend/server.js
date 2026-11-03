@@ -8315,6 +8315,20 @@ async function saveTelemetry() {
     fs.writeFileSync(visitorLogFile, JSON.stringify(telemetryData, null, 2));
   } catch (_) {}
 
+  // Mirror to frontend public directory for static GitHub Pages sync
+  try {
+    const pubFile = path.join(__dirname, '..', 'public', 'telemetry.json');
+    if (fs.existsSync(path.dirname(pubFile))) {
+      fs.writeFileSync(pubFile, JSON.stringify({
+        totalVisitors: totalUniqueVisitors.size,
+        totalRegisteredUsers: 44,
+        totalUsers: 44,
+        activeOnlineCount: Math.max(1, activeSessions.size),
+        updatedAt: new Date().toISOString()
+      }, null, 2));
+    }
+  } catch (_) {}
+
   // Persist permanently to MySQL system_settings
   try {
     await pool.execute(

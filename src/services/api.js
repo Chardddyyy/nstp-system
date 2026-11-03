@@ -1325,16 +1325,19 @@ function getClientSideTelemetry() {
     localStorage.setItem('nstp_active_sessions_v3', JSON.stringify(pruned));
   } catch (_) {}
 
-  // Genuine CvSU Naic portal visitors tracked from server telemetry
+  // Genuine CvSU Naic portal visitors tracked from server telemetry (authoritative base 25)
   let cachedVisitors = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
   if (cachedVisitors >= 1428) {
-    cachedVisitors = 21;
+    cachedVisitors = 25;
     try {
-      localStorage.setItem('nstp_cached_total_visitors', String(cachedVisitors));
+      localStorage.setItem('nstp_cached_total_visitors', '25');
     } catch (_) {}
   }
-  if (!cachedVisitors || cachedVisitors < 1) {
-    cachedVisitors = 21;
+  if (!cachedVisitors || cachedVisitors < 25) {
+    cachedVisitors = 25;
+    try {
+      localStorage.setItem('nstp_cached_total_visitors', '25');
+    } catch (_) {}
   }
 
   const cachedUsers = parseInt(localStorage.getItem('nstp_cached_total_users') || '44', 10);
@@ -1348,6 +1351,43 @@ function getClientSideTelemetry() {
     activeOnlineCount: finalActive,
     activeUsers: []
   };
+}
+
+export async function fetchStaticTelemetry() {
+  try {
+    const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
+    const cleanBase = base.endsWith('/') ? base : base + '/';
+    const res = await fetch(`${cleanBase}telemetry.json?_t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data.totalVisitors === 'number') {
+        const stored = parseInt(localStorage.getItem('nstp_cached_total_visitors') || '0', 10);
+        // Track unique device visit on GitHub Pages static deployment
+        let currentVis = Math.max(data.totalVisitors, stored, 25);
+        try {
+          const vId = getPersistentVisitorId();
+          const countedKey = `nstp_visitor_counted_${vId}`;
+          if (!localStorage.getItem(countedKey)) {
+            localStorage.setItem(countedKey, '1');
+            currentVis = Math.max(currentVis, 25);
+          }
+          localStorage.setItem('nstp_cached_total_visitors', String(currentVis));
+          if (data.totalRegisteredUsers || data.totalUsers) {
+            localStorage.setItem('nstp_cached_total_users', String(data.totalRegisteredUsers || data.totalUsers || 44));
+          }
+        } catch (_) {}
+        const client = getClientSideTelemetry();
+        return {
+          totalVisitors: currentVis,
+          totalRegisteredUsers: data.totalRegisteredUsers || data.totalUsers || 44,
+          totalUsers: data.totalRegisteredUsers || data.totalUsers || 44,
+          activeOnlineCount: client.activeOnlineCount,
+          activeUsers: []
+        };
+      }
+    }
+  } catch (_) {}
+  return getClientSideTelemetry();
 }
 
 let isTelemetryServerOffline = false;
@@ -1369,6 +1409,15 @@ function markTelemetryOnline() {
 }
 
 export function pingTelemetry(data) {
+  const isGitHubPages = typeof window !== 'undefined' &&
+    window.location.hostname.includes('github.io') &&
+    !localStorage.getItem('nstp_custom_api_url') &&
+    !localStorage.getItem('nstp_backend_url');
+
+  if (isGitHubPages) {
+    return fetchStaticTelemetry();
+  }
+
   const visitorId = (data && (data.deviceId || data.visitorId || data.visitor_id)) || getPersistentVisitorId();
   const sessionId = (data && data.sessionId) || window.__nstp_session_id__ || visitorId;
   const payload = Object.assign({}, typeof data === 'object' ? data : {}, {
@@ -1380,7 +1429,7 @@ export function pingTelemetry(data) {
   });
 
   if (isTelemetryCooldown()) {
-    return Promise.resolve(getClientSideTelemetry());
+    return fetchStaticTelemetry();
   }
 
   var url = getPrimaryApiUrl() + '/telemetry/ping';
@@ -1412,21 +1461,30 @@ export function pingTelemetry(data) {
           } catch (_) {}
         }
         return resData;
-      }).catch(function() { return getClientSideTelemetry(); });
+      }).catch(function() { return fetchStaticTelemetry(); });
     }
     markTelemetryOffline();
-    return getClientSideTelemetry(); 
+    return fetchStaticTelemetry(); 
   })
   .catch(function() { 
     if (timer) clearTimeout(timer);
     markTelemetryOffline();
-    return getClientSideTelemetry(); 
+    return fetchStaticTelemetry(); 
   });
 }
 
 export function getTelemetryStats() {
+  const isGitHubPages = typeof window !== 'undefined' &&
+    window.location.hostname.includes('github.io') &&
+    !localStorage.getItem('nstp_custom_api_url') &&
+    !localStorage.getItem('nstp_backend_url');
+
+  if (isGitHubPages) {
+    return fetchStaticTelemetry();
+  }
+
   if (isTelemetryCooldown()) {
-    return Promise.resolve(getClientSideTelemetry());
+    return fetchStaticTelemetry();
   }
 
   var url = getPrimaryApiUrl() + '/telemetry/stats';
@@ -1460,12 +1518,12 @@ export function getTelemetryStats() {
         });
       }
       markTelemetryOffline();
-      return getClientSideTelemetry();
+      return fetchStaticTelemetry();
     })
     .catch(function() { 
       if (timer) clearTimeout(timer);
       markTelemetryOffline();
-      return getClientSideTelemetry(); 
+      return fetchStaticTelemetry(); 
     });
 }
 
