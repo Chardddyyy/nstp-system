@@ -222,27 +222,27 @@ export async function generateChedFormBWorkbook(students = [], batchYear = '2024
     }
   }
 
-  // 5. Populate Student Data (Row 13 onwards)
+  // 5. Populate Student Data (Row 13 onwards) - Strictly Sorted A-Z by Last Name
   const startRow = 13;
-  (students || []).forEach((st, idx) => {
+  const sortedStudents = (students || []).slice().sort(compareStudentsByLastName);
+  sortedStudents.forEach((st, idx) => {
     const currentRow = startRow + idx;
     const row = worksheet.getRow(currentRow);
     row.height = 20;
 
-    let surname = st.lastName || '';
-    let firstName = st.firstName || '';
-    let middleName = st.middleName || '';
+    const surname = getStudentLastName(st);
+    const firstName = getStudentFirstName(st);
+    let middleName = st.middleName || st.middle_name || '';
 
-    if (!surname && st.name && st.name.includes(',')) {
+    if (!middleName && st.name && st.name.includes(',')) {
       const parts = st.name.split(',');
-      surname = parts[0].trim();
       const firstParts = (parts[1] || '').trim().split(/\s+/);
-      firstName = firstParts[0] || '';
       middleName = firstParts.slice(1).join(' ') || '';
-    } else if (!surname && st.name) {
+    } else if (!middleName && st.name) {
       const nameTokens = st.name.trim().split(/\s+/);
-      surname = nameTokens[nameTokens.length - 1] || '';
-      firstName = nameTokens.slice(0, -1).join(' ') || '';
+      if (nameTokens.length > 2) {
+        middleName = nameTokens[nameTokens.length - 2];
+      }
     }
 
     let street = st.street || st.barangay || '';
@@ -623,6 +623,7 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
   }
 
   // 5. Signatories Footer (Row 15)
+  // 5. Signatories Footer (Row 15)
   const sigRow = 15;
   worksheet.getCell(`A${sigRow}`).value = 'Prepared by: NSTP Department Coordinator';
   worksheet.getCell(`A${sigRow}`).font = { name: 'Arial', size: 9, bold: true };
@@ -632,6 +633,128 @@ export async function generateChedFormAWorkbook(students = [], batchYear = '2024
 
   worksheet.getCell(`T${sigRow}`).value = 'Approved: Campus Administrator';
   worksheet.getCell(`T${sigRow}`).font = { name: 'Arial', size: 9, bold: true };
+
+  // 6. Sheet 2: Detailed Student Masterlist Roster (Strictly Alphabetical A - Z by Last Name)
+  const rosterSheet = workbook.addWorksheet('Enrollees & Graduates Roster', {
+    pageSetup: {
+      paperSize: 9, // A4
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0
+    }
+  });
+
+  if (cvsuLogoBase64) {
+    try {
+      const cvsuImgId2 = workbook.addImage({ base64: cvsuLogoBase64, extension: 'png' });
+      rosterSheet.addImage(cvsuImgId2, { tl: { col: 0.1, row: 0.1 }, ext: { width: 50, height: 50 } });
+    } catch (_) {}
+  }
+  if (chedLogoBase64) {
+    try {
+      const chedImgId2 = workbook.addImage({ base64: chedLogoBase64, extension: 'png' });
+      rosterSheet.addImage(chedImgId2, { tl: { col: 13.1, row: 0.1 }, ext: { width: 50, height: 50 } });
+    } catch (_) {}
+  }
+
+  rosterSheet.mergeCells('A1:O1');
+  rosterSheet.getCell('A1').value = 'CAVITE STATE UNIVERSITY - NAIC CAMPUS';
+  rosterSheet.getCell('A1').font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF064E3B' } };
+  rosterSheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  rosterSheet.mergeCells('A2:O2');
+  rosterSheet.getCell('A2').value = `OSDS-NSTP FORM 2-A: ENROLLEES & GRADUATES ROSTER (A.Y. ${batchYear})`;
+  rosterSheet.getCell('A2').font = { name: 'Arial', size: 10, bold: true };
+  rosterSheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  rosterSheet.mergeCells('A3:O3');
+  rosterSheet.getCell('A3').value = `Alphabetical Masterlist (Strictly A to Z by Surname) • Track: ${_deptFilter || 'All'} • Generated on ${new Date().toLocaleDateString()}`;
+  rosterSheet.getCell('A3').font = { name: 'Arial', size: 9, italic: true };
+  rosterSheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
+
+  const rosterHeaders = [
+    'No.', 'Student ID', 'Surname', 'First Name', 'Middle Name',
+    'Track', 'Degree Program', 'Sex', 'NSTP Section', 'Contact Number',
+    'Email Address', '1st Sem Grade', '2nd Sem Grade', 'Final Rating', 'Remarks / Status'
+  ];
+
+  const headerRow2 = rosterSheet.getRow(5);
+  headerRow2.values = rosterHeaders;
+  headerRow2.height = 24;
+  headerRow2.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow2.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF064E3B' }
+  };
+  headerRow2.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+
+  const sortedFormAStudents = (students || []).slice().sort(compareStudentsByLastName);
+  sortedFormAStudents.forEach((st, idx) => {
+    const rIdx = 6 + idx;
+    const r = rosterSheet.getRow(rIdx);
+    r.height = 20;
+
+    const surname = getStudentLastName(st);
+    const firstName = getStudentFirstName(st);
+    let middleName = st.middleName || st.middle_name || '';
+    if (!middleName && st.name && st.name.includes(',')) {
+      const parts = st.name.split(',');
+      const firstParts = (parts[1] || '').trim().split(/\s+/);
+      middleName = firstParts.slice(1).join(' ') || '';
+    }
+
+    const g1 = st.final_grade_1 || (st.semester === '1st Semester' ? st.final_grade : '') || '-';
+    const g2 = st.final_grade_2 || (st.semester === '2nd Semester' ? st.final_grade : '') || '-';
+    const statusVal = st.remarks || st.status || (g2 && g2 !== '-' ? 'Completed' : 'Enrolled');
+
+    r.values = [
+      idx + 1,
+      st.studentId || st.student_no || st.id || 'N/A',
+      surname,
+      firstName,
+      middleName,
+      st.department || 'CWTS',
+      st.program || st.course || 'BSIT',
+      (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
+      st.nstp_section || st.section || '1',
+      st.contactNumber || st.contact_no || '',
+      st.email || '',
+      g1,
+      g2,
+      st.final_grade || '-',
+      statusVal
+    ];
+
+    for (let c = 1; c <= 15; c++) {
+      const cell = r.getCell(c);
+      cell.border = thinBorder;
+      cell.font = { name: 'Arial', size: 8.5 };
+      cell.alignment = {
+        horizontal: [3, 4, 5, 11, 15].includes(c) ? 'left' : 'center',
+        vertical: 'middle'
+      };
+    }
+  });
+
+  rosterSheet.columns = [
+    { width: 6 },
+    { width: 14 },
+    { width: 16 },
+    { width: 16 },
+    { width: 14 },
+    { width: 10 },
+    { width: 12 },
+    { width: 6 },
+    { width: 14 },
+    { width: 14 },
+    { width: 24 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 20 }
+  ];
 
   return workbook;
 }
@@ -756,9 +879,13 @@ export async function downloadGradesSheetExcel({
   headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
 
   let rowNum = 6;
-  students.forEach((st, idx) => {
+  const sortedStudents = (students || []).slice().sort(compareStudentsByLastName);
+  sortedStudents.forEach((st, idx) => {
     const sid = st.studentId || st.id;
-    const name = (st.name || `${st.lastName || ''}, ${st.firstName || ''}`).toUpperCase();
+    const lName = getStudentLastName(st).toUpperCase();
+    const fName = getStudentFirstName(st).toUpperCase();
+    const mName = (st.middleName || st.middle_name || '').toUpperCase();
+    const name = lName ? `${lName}, ${fName}${mName ? ' ' + mName : ''}` : (st.name || '').toUpperCase();
     const row = worksheet.getRow(rowNum);
 
     if (isAnnualView && getAnnualStudentInfo) {
@@ -932,12 +1059,18 @@ export async function downloadDailyAttendanceExcel({
   headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
 
   let rowNum = 4;
-  records.forEach((r, idx) => {
+  const sortedRecords = (records || []).slice().sort(compareStudentsByLastName);
+  sortedRecords.forEach((r, idx) => {
     const row = worksheet.getRow(rowNum);
+    const lName = getStudentLastName(r).toUpperCase();
+    const fName = getStudentFirstName(r).toUpperCase();
+    const mName = (r.middleName || r.middle_name || '').toUpperCase();
+    const displayName = lName ? `${lName}, ${fName}${mName ? ' ' + mName : ''}` : (r.name || r.student_name || 'N/A').toUpperCase();
+
     row.values = [
       idx + 1,
       r.studentId || r.student_id || 'N/A',
-      (r.name || r.student_name || 'N/A').toUpperCase(),
+      displayName,
       r.department || r.nstp_dept || 'CWTS',
       r.section || r.grade_section || '-',
       r.timeIn || r.time_in || '-',

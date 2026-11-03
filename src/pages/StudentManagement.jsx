@@ -2,7 +2,7 @@ import { useAuth } from '../context/AuthContext';
 import { studentsAPI, gradesAPI } from '../services/api';
 import { downloadChedFormAPdf, downloadChedFormBPdf } from '../utils/chedPdfGenerator';
 import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
-import { matchesAssignedSection, DEPARTMENT_SECTIONS } from '../utils/gradeSection';
+import { matchesAssignedSection, DEPARTMENT_SECTIONS, compareStudentsByLastName } from '../utils/gradeSection';
 import BatchIdPrintModal from '../components/BatchIdPrintModal';
 import StudentAttendanceMatrixModal from '../components/StudentAttendanceMatrixModal';
 import StudentGradesModal from '../components/StudentGradesModal';
@@ -545,7 +545,7 @@ function StudentManagement() {
       const targetStudents = baseList.filter((st) => {
         if (dept !== 'All' && st.department !== dept) return false;
         return true;
-      });
+      }).sort(compareStudentsByLastName);
 
       if (format === 'excel') {
         await downloadChedFormAExcel(activeBatchYear, targetStudents, dept);
@@ -575,7 +575,7 @@ function StudentManagement() {
         if (deptFilter !== 'All' && st.department !== deptFilter) return false;
         if (targetSem && targetSem !== 'All' && st.semester && st.semester !== targetSem && st.semester !== 'Whole Academic Year') return false;
         return true;
-      });
+      }).sort(compareStudentsByLastName);
 
       if (format === 'excel') {
         await downloadChedFormBExcel(activeBatchYear, targetStudents, deptFilter);
@@ -665,7 +665,7 @@ function StudentManagement() {
         if (dept !== 'All' && st.department !== dept) return false;
         if (exportCourse !== 'All' && (st.program || '').toLowerCase() !== (exportCourse === 'BSED' ? 'bsed' : exportCourse).toLowerCase()) return false;
         return true;
-      });
+      }).sort(compareStudentsByLastName);
 
       await downloadChedFormBPdf(activeBatchYear, targetStudents, dept);
       setShowExportModal(false);

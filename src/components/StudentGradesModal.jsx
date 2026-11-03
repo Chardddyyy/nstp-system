@@ -361,9 +361,10 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   // ── Official OSDS-NSTP Form 2-A PDF & Excel Generator (Summary Matrix) ──
   const handleDownloadOSDSForm2A = async () => {
     try {
+      const sorted = (students || []).slice().sort(compareStudentsByLastName);
       await downloadChedFormAPdf(
         selectedSchoolYear,
-        students,
+        sorted,
         selectedDept
       );
     } catch (err) {
@@ -374,9 +375,10 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
   const handleDownloadOSDSForm2AExcel = async () => {
     try {
+      const sorted = (students || []).slice().sort(compareStudentsByLastName);
       await downloadChedFormAExcel(
         selectedSchoolYear,
-        students,
+        sorted,
         selectedDept
       );
     } catch (err) {
@@ -1116,7 +1118,8 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 <button
                   type="button"
                   onClick={() => {
-                    downloadChedFormBPdf(selectedSchoolYear, students, formBDept, formBSem);
+                    const sorted = (students || []).slice().sort(compareStudentsByLastName);
+                    downloadChedFormBPdf(selectedSchoolYear, sorted, formBDept, formBSem);
                     setShowFormBModal(false);
                   }}
                   className="px-4 py-2.5 text-xs font-black bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 text-emerald-950 rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"
@@ -1127,7 +1130,8 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                 <button
                   type="button"
                   onClick={() => {
-                    downloadChedFormBExcel(selectedSchoolYear, students, formBDept, formBSem);
+                    const sorted = (students || []).slice().sort(compareStudentsByLastName);
+                    downloadChedFormBExcel(selectedSchoolYear, sorted, formBDept, formBSem);
                     setShowFormBModal(false);
                   }}
                   className="px-4 py-2.5 text-xs font-black bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl shadow-md cursor-pointer active:scale-95 transition-all flex items-center gap-1.5"

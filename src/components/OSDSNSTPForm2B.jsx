@@ -1,4 +1,5 @@
 import React from 'react';
+import { compareStudentsByLastName, getStudentLastName, getStudentFirstName } from '../utils/gradeSection';
 
 const OSDSNSTPForm2B = ({
   academicYear = '2025-2026',
@@ -9,8 +10,8 @@ const OSDSNSTPForm2B = ({
   nstpComponents = 'CWTS / ROTC / LTS',
   students = []
 }) => {
-  // Ensure we display rows or blank rows if empty
-  const displayStudents = (students && students.length > 0) ? students : [
+  // Ensure we display rows or blank rows if empty, strictly sorted A-Z by Last Name
+  const baseStudents = (students && students.length > 0) ? students : [
     {
       studentId: '2022-12345',
       lastName: 'Dela Cruz',
@@ -26,6 +27,7 @@ const OSDSNSTPForm2B = ({
       email: 'juan.delacruz@example.com'
     }
   ];
+  const displayStudents = baseStudents.slice().sort(compareStudentsByLastName);
 
   const baseUrl = import.meta.env.BASE_URL || '/';
   const cleanBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
@@ -136,19 +138,18 @@ const OSDSNSTPForm2B = ({
           {/* TABLE BODY */}
           <tbody>
             {displayStudents.map((st, index) => {
-              let surname = st.lastName || '';
-              let firstName = st.firstName || '';
-              let middleName = st.middleName || '';
-              if (!surname && st.name && st.name.includes(',')) {
+              const surname = getStudentLastName(st);
+              const firstName = getStudentFirstName(st);
+              let middleName = st.middleName || st.middle_name || '';
+              if (!middleName && st.name && st.name.includes(',')) {
                 const parts = st.name.split(',');
-                surname = parts[0].trim();
                 const rest = (parts[1] || '').trim().split(/\s+/);
-                firstName = rest[0] || '';
                 middleName = rest.slice(1).join(' ') || '';
-              } else if (!surname && st.name) {
+              } else if (!middleName && st.name) {
                 const parts = st.name.trim().split(/\s+/);
-                surname = parts[parts.length - 1] || '';
-                firstName = parts.slice(0, -1).join(' ') || '';
+                if (parts.length > 2) {
+                  middleName = parts[parts.length - 2];
+                }
               }
 
               let street = st.street || '';

@@ -105,6 +105,9 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
     students = students.filter(s => (s.department || '').toUpperCase() === dept.toUpperCase());
   }
 
+  // Strictly sort students A to Z by Last Name (Surname)
+  students = students.slice().sort(compareStudentsByLastName);
+
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
@@ -278,19 +281,18 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
       doc.setFontSize(6.5);
     }
 
-    let surname = st.lastName || '';
-    let firstName = st.firstName || '';
-    let middleName = st.middleName || '';
-    if (!surname && st.name && st.name.includes(',')) {
+    let surname = getStudentLastName(st);
+    let firstName = getStudentFirstName(st);
+    let middleName = st.middleName || st.middle_name || '';
+    if (!middleName && st.name && st.name.includes(',')) {
       const parts = st.name.split(',');
-      surname = parts[0].trim();
       const rest = (parts[1] || '').trim().split(/\s+/);
-      firstName = rest[0] || '';
       middleName = rest.slice(1).join(' ') || '';
-    } else if (!surname && st.name) {
+    } else if (!middleName && st.name) {
       const parts = st.name.trim().split(/\s+/);
-      surname = parts[parts.length - 1] || '';
-      firstName = parts.slice(0, -1).join(' ') || '';
+      if (parts.length > 2) {
+        middleName = parts[parts.length - 2];
+      }
     }
 
     let street = st.street || st.barangay || '';
@@ -664,16 +666,124 @@ export async function downloadChedFormAPdf(batchOrYear, studentList = null, dept
   doc.text('Campus NSTP Director', 110, sigY + 5);
   doc.text('Campus Administrator', 215, sigY + 5);
 
-  // Footer Note
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 116, 139);
-  doc.text(
-    `Official CHED OSDS-NSTP Form 2-A Summary Matrix • Cavite State University - Naic • Academic Year ${yearStr}`,
-    148.5,
-    202,
-    { align: 'center' }
-  );
+  // ── ANNEX: STUDENT MASTERLIST ROSTER (Strictly Sorted A to Z by Last Name) ──
+  const sortedAnnexStudents = (students || []).slice().sort(compareStudentsByLastName);
+  if (sortedAnnexStudents.length > 0) {
+    doc.addPage('a4', 'landscape');
+
+    const annexCols = [
+      { key: 'no', title: 'No.', w: 8, align: 'center' },
+      { key: 'studentId', title: 'Student No.', w: 22, align: 'center' },
+      { key: 'lastName', title: 'Surname', w: 25, align: 'left' },
+      { key: 'firstName', title: 'First Name', w: 25, align: 'left' },
+      { key: 'middleName', title: 'Middle Name', w: 20, align: 'left' },
+      { key: 'department', title: 'Track', w: 14, align: 'center' },
+      { key: 'program', title: 'Degree', w: 16, align: 'center' },
+      { key: 'sex', title: 'Sex', w: 9, align: 'center' },
+      { key: 'section', title: 'NSTP Sec', w: 16, align: 'center' },
+      { key: 'contactNumber', title: 'Contact No.', w: 23, align: 'center' },
+      { key: 'g1', title: '1st Sem', w: 15, align: 'center' },
+      { key: 'g2', title: '2nd Sem', w: 15, align: 'center' },
+      { key: 'status', title: 'Status / Remarks', w: 69, align: 'left' }
+    ];
+
+    const bottomMarginAnnex = 16;
+    const pageHeightAnnex = 210;
+    const rowHeightAnnex = 5.8;
+
+    function renderAnnexHeader(pgNum) {
+      if (chedLogo) {
+        try { doc.addImage(chedLogo, 'PNG', leftMargin + 2, topMargin, 14, 14); } catch (_) {}
+      }
+      if (cvsuLogo) {
+        try { doc.addImage(cvsuLogo, 'PNG', 287 - 16, topMargin, 14, 14); } catch (_) {}
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Republic of the Philippines • Office of the President • COMMISSION ON HIGHER EDUCATION', 148.5, topMargin + 3.5, { align: 'center' });
+
+      doc.setFontSize(10);
+      doc.setTextColor(6, 78, 59);
+      doc.text('OSDS-NSTP Form 2-A: ANNEX MASTERLIST OF ENROLLEES & GRADUATES', 148.5, topMargin + 8, { align: 'center' });
+
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Academic Year: ${yearStr} • Track: ${dept === 'All' ? 'ALL TRACKS' : dept} • Page ${pgNum} (Alphabetical A - Z by Surname)`, 148.5, topMargin + 12.5, { align: 'center' });
+
+      const tblTop = topMargin + 16;
+      doc.setFillColor(226, 239, 218);
+      doc.rect(leftMargin, tblTop, 277, 7, 'FD');
+
+      doc.setFontSize(6.8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+
+      let x = leftMargin;
+      annexCols.forEach(col => {
+        doc.rect(x, tblTop, col.w, 7);
+        const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.2;
+        doc.text(col.title, textX, tblTop + 4.5, { align: col.align === 'center' ? 'center' : 'left' });
+        x += col.w;
+      });
+
+      return tblTop + 7;
+    }
+
+    let annexY = renderAnnexHeader(2);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+
+    sortedAnnexStudents.forEach((st, idx) => {
+      if (annexY + rowHeightAnnex > (pageHeightAnnex - bottomMarginAnnex)) {
+        doc.addPage('a4', 'landscape');
+        annexY = renderAnnexHeader(doc.internal.getNumberOfPages());
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+      }
+
+      const surname = getStudentLastName(st);
+      const firstName = getStudentFirstName(st);
+      let middleName = st.middleName || st.middle_name || '';
+      if (!middleName && st.name && st.name.includes(',')) {
+        const parts = st.name.split(',');
+        const rest = (parts[1] || '').trim().split(/\s+/);
+        middleName = rest.slice(1).join(' ') || '';
+      }
+
+      const g1 = st.final_grade_1 || (st.semester === '1st Semester' ? st.final_grade : '') || '-';
+      const g2 = st.final_grade_2 || (st.semester === '2nd Semester' ? st.final_grade : '') || '-';
+      const statusRemarks = st.remarks || st.status || (g2 && g2 !== '-' ? 'Completed' : 'Enrolled');
+
+      const rowData = {
+        no: String(idx + 1),
+        studentId: st.studentId || st.student_no || st.id || '',
+        lastName: surname,
+        firstName: firstName,
+        middleName: middleName,
+        department: st.department || 'CWTS',
+        program: st.program || st.course || 'BSIT',
+        sex: (st.sex || st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
+        section: st.nstp_section || st.section || '1',
+        contactNumber: st.contactNumber || st.contact_no || '',
+        g1: String(g1),
+        g2: String(g2),
+        status: String(statusRemarks)
+      };
+
+      let x = leftMargin;
+      annexCols.forEach(col => {
+        doc.rect(x, annexY, col.w, rowHeightAnnex);
+        const val = fitText(doc, rowData[col.key] ?? '', col.w - 1.5);
+        const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.2;
+        doc.text(val, textX, annexY + 4, { align: col.align === 'center' ? 'center' : 'left' });
+        x += col.w;
+      });
+
+      annexY += rowHeightAnnex;
+    });
+  }
 
   const safeLabel = String(yearStr).replace(/[^a-zA-Z0-9_-]/g, '_');
   const filename = `OSDS-NSTP-Form-2-A_Summary_${dept !== 'All' ? dept : 'ALL'}_${safeLabel}.pdf`;
@@ -781,7 +891,8 @@ export async function downloadAnnualForm2APdf({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
 
-  students.forEach((st, idx) => {
+  const sortedStudents = (students || []).slice().sort(compareStudentsByLastName);
+  sortedStudents.forEach((st, idx) => {
     if (currentY + rowHeight > (pageHeight - bottomMargin)) {
       doc.addPage('a4', 'landscape');
       currentY = renderHeader();
@@ -792,11 +903,10 @@ export async function downloadAnnualForm2APdf({
     const sid = st.studentId || st.id;
     const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
 
-    let fullName = st.name || '';
-    if (!fullName) {
-      const parts = [st.lastName, st.firstName, st.middleName].filter(Boolean);
-      fullName = parts.join(', ');
-    }
+    const lName = getStudentLastName(st);
+    const fName = getStudentFirstName(st);
+    const mName = st.middleName || st.middle_name || '';
+    const fullName = lName ? `${lName}, ${fName}${mName ? ' ' + mName : ''}` : (st.name || '');
 
     const rowData = {
       no: String(idx + 1),
@@ -974,7 +1084,8 @@ export async function downloadGradesSheetPdf({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
 
-  students.forEach((st, idx) => {
+  const sortedStudents = (students || []).slice().sort(compareStudentsByLastName);
+  sortedStudents.forEach((st, idx) => {
     if (currentY + rowHeight > (pageHeight - bottomMargin)) {
       doc.addPage('a4', 'landscape');
       currentY = renderHeader();
@@ -986,11 +1097,10 @@ export async function downloadGradesSheetPdf({
     const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
     const g = gradesMap[sid] || {};
 
-    let fullName = st.name || '';
-    if (!fullName) {
-      const parts = [st.lastName, st.firstName, st.middleName].filter(Boolean);
-      fullName = parts.join(', ');
-    }
+    const lName = getStudentLastName(st);
+    const fName = getStudentFirstName(st);
+    const mName = st.middleName || st.middle_name || '';
+    const fullName = lName ? `${lName}, ${fName}${mName ? ' ' + mName : ''}` : (st.name || '');
 
     const rowData = isAnnualView ? {
       no: String(idx + 1),
@@ -1318,7 +1428,8 @@ export async function downloadDailyAttendancePdf({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
 
-  records.forEach((r, idx) => {
+  const sortedRecords = (records || []).slice().sort(compareStudentsByLastName);
+  sortedRecords.forEach((r, idx) => {
     if (currentY + rowHeight > (pageHeight - bottomMargin)) {
       doc.addPage('a4', 'portrait');
       currentY = renderHeader();
@@ -1326,10 +1437,15 @@ export async function downloadDailyAttendancePdf({
       doc.setFontSize(6.8);
     }
 
+    const lName = getStudentLastName(r);
+    const fName = getStudentFirstName(r);
+    const mName = r.middleName || r.middle_name || '';
+    const displayName = lName ? `${lName}, ${fName}${mName ? ' ' + mName : ''}` : (r.name || '');
+
     const rowData = {
       no: String(idx + 1),
       studentId: r.studentId || r.student_id || '',
-      name: r.name || `${r.lastName || ''}, ${r.firstName || ''}`.trim(),
+      name: displayName,
       department: r.department || selectedDept,
       section: r.section || r.nstp_section || '-',
       timeIn: r.timeIn || r.time_in || 'Present',
