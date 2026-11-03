@@ -1019,6 +1019,7 @@ function StudentManagement() {
   }, [viewingArchive, currentBatch]);
 
   const handleSendDigitalId = async (student) => {
+    if (!isAdmin) return;
     if (!student) return;
     if (isPastBatchOrStudent(student)) {
       showToast('Cannot send Digital ID: Digital IDs cannot be issued for completed or past academic batches.', 'warning');
@@ -1055,6 +1056,7 @@ function StudentManagement() {
   };
 
   const openEditModal = (student) => {
+    if (!isAdmin) return;
     if (!student) return;
     setSelectedStudent(student);
 
@@ -3282,8 +3284,9 @@ function StudentManagement() {
                   </div>
                 </div>
 
-                {/* Step 4: Official Student Documents & Photos Section */}
-                <div className="bg-slate-50/90 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                {/* Step 4: Official Student Documents & Photos Section - Admin only */}
+                {isAdmin && (
+                  <div className="bg-slate-50/90 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
                   <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-slate-200/80">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0">
@@ -3486,27 +3489,30 @@ function StudentManagement() {
                     })()}
                   </div>
                 </div>
-              </div>
+              )}
+            </div>
 
               {/* Sticky Footer */}
               <div className="sticky bottom-0 bg-white p-4 border-t flex flex-wrap justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleSendDigitalId(currentViewStudent)}
-                  disabled={isPastBatchOrStudent(currentViewStudent) || sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)}
-                  className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 border ${
-                    isPastBatchOrStudent(currentViewStudent)
-                      ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
-                      : sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)
-                      ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300 cursor-pointer active:scale-95'
-                  }`}
-                  title={isPastBatchOrStudent(currentViewStudent) ? 'Cannot send Digital ID to past or archived students' : `Send Official Digital ID to ${currentViewStudent.email || currentViewStudent.name}`}
-                >
-                  <CreditCard className="w-4 h-4 text-emerald-700" />
-                  <span>{sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId) ? 'Sending ID...' : 'Send Digital ID to Email'}</span>
-                </button>
-                {!viewingArchive && (
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleSendDigitalId(currentViewStudent)}
+                    disabled={isPastBatchOrStudent(currentViewStudent) || sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)}
+                    className={`px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 border ${
+                      isPastBatchOrStudent(currentViewStudent)
+                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                        : sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId)
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300 cursor-pointer active:scale-95'
+                    }`}
+                    title={isPastBatchOrStudent(currentViewStudent) ? 'Cannot send Digital ID to past or archived students' : `Send Official Digital ID to ${currentViewStudent.email || currentViewStudent.name}`}
+                  >
+                    <CreditCard className="w-4 h-4 text-emerald-700" />
+                    <span>{sendingIdFor === (currentViewStudent.id || currentViewStudent.studentId) ? 'Sending ID...' : 'Send Digital ID to Email'}</span>
+                  </button>
+                )}
+                {isAdmin && !viewingArchive && (
                   <button type="button"
                     onClick={() => {
                       const st = currentViewStudent;
@@ -3528,7 +3534,7 @@ function StudentManagement() {
             </div>
           </div>
         )}
-        {showEditModal && (
+        {isAdmin && showEditModal && (
           <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setShowEditModal(false)}>
             <div 
               className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden" 
