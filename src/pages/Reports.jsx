@@ -3,7 +3,7 @@ import {
   FileText, Plus, Search, Calendar,
   Send, MessageCircle, CheckCircle, Clock,
   Trash2, Upload, File, X, Menu, Archive, RotateCcw, AlertCircle, User, Pencil,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -772,9 +772,9 @@ function Reports() {
                   </div>
                 </div>
 
-                {/* Reference File Upload */}
+                {/* Reference File / Picture Upload */}
                 <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Reference File (Optional)</label>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Reference File or Picture (Optional)</label>
                   <input
                     type="file"
                     id="create-report-file-input"
@@ -782,32 +782,41 @@ function Reports() {
                     ref={fileInputRef}
                     onChange={handleReferenceFileChange}
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*,.png,.jpg,.jpeg,.webp,.gif"
                   />
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-3 flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       <Upload className="w-4 h-4 text-emerald-700" />
-                      <span>{createForm.referenceFile ? 'Change Reference File' : 'Upload Reference File'}</span>
+                      <span>{createForm.referenceFile ? 'Change Reference File / Picture' : 'Upload Reference File / Picture'}</span>
                     </button>
                     {createForm.referenceFile && (
                       <div className="flex items-center gap-2 bg-emerald-100/70 border border-emerald-200 px-3 py-1.5 rounded-xl text-emerald-950 font-bold text-xs">
-                        <File className="w-4 h-4 text-emerald-700" />
+                        {createForm.referenceFile.type && createForm.referenceFile.type.startsWith('image/') ? (
+                          <img
+                            src={createForm.referenceFile.data}
+                            alt="Reference Preview"
+                            className="w-5 h-5 rounded object-cover border border-emerald-300 shrink-0"
+                          />
+                        ) : (
+                          <File className="w-4 h-4 text-emerald-700 shrink-0" />
+                        )}
                         <span className="truncate max-w-[200px]">{createForm.referenceFile.name}</span>
                         <button
                           type="button"
                           onClick={() => setCreateForm({ ...createForm, referenceFile: null })}
                           className="text-emerald-700 hover:text-red-600 ml-1 cursor-pointer"
+                          title="Remove file"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-1.5">Attach optional reference material or instructions (PDF, Word, Excel, PowerPoint)</p>
+                  <p className="text-[11px] text-gray-500 mt-1.5">Attach optional reference document or photo/picture (PDF, Word, Excel, Images/Photos, PowerPoint)</p>
                 </div>
               </div>
 

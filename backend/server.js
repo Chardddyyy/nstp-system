@@ -982,6 +982,38 @@ async function restoreCorFromEnrollments() {
   } catch (err) {
     console.warn('[Auto-Heal Warning] Could not auto-sync COR documents from enrollments:', err.message);
   }
+
+// Auto-sync students' NSTP matriculation/serial numbers and QR tokens with their current department
+async function autoSyncStudentSerialTrack() {
+  try {
+    const trackPairs = [
+      { from: 'ROTC', to: 'CWTS' },
+      { from: 'LTS', to: 'CWTS' },
+      { from: 'CWTS', to: 'ROTC' },
+      { from: 'LTS', to: 'ROTC' },
+      { from: 'CWTS', to: 'LTS' },
+      { from: 'ROTC', to: 'LTS' }
+    ];
+    for (const { from, to } of trackPairs) {
+      await pool.execute(
+        `UPDATE students 
+         SET nstp_serial_id = REPLACE(nstp_serial_id, '-${from}-', '-${to}-'),
+             qr_token = REPLACE(qr_token, '-${from}-', '-${to}-')
+         WHERE department = ? AND nstp_serial_id LIKE ?`,
+        [to, `%-` + from + `-%`]
+      ).catch(() => {});
+      await pool.execute(
+        `UPDATE enrollments 
+         SET nstp_serial_id = REPLACE(nstp_serial_id, '-${from}-', '-${to}-'),
+             qr_token = REPLACE(qr_token, '-${from}-', '-${to}-')
+         WHERE department = ? AND nstp_serial_id LIKE ?`,
+        [to, `%-` + from + `-%`]
+      ).catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[autoSyncStudentSerialTrack] Notice:', err.message);
+  }
+}
 }
 
 var enrollmentColumnsMigrated = false;
@@ -2263,8 +2295,15 @@ async function sendEnrollmentApprovalEmail(studentData) {
   const studentId = studentData.studentId || 'N/A';
   const nstpDept = (studentData.department || studentData.nstpComponent || 'CWTS').toUpperCase();
   const designatedSection = studentData.section || studentData.nstp_section || 'A';
-  const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2026-00001`;
-  const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
+  let serialNo = studentData.nstp_serial_id;
+  if (!serialNo || !serialNo.includes(`-${nstpDept}-`)) {
+    if (serialNo) {
+      serialNo = serialNo.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${nstpDept}-`);
+    } else {
+      serialNo = `NSTP-${nstpDept}-2026-00001`;
+    }
+  }
+  const qrToken = `NSTP-${studentId}-${serialNo}`;
   const program = studentData.program || studentData.course || 'Undergraduate Degree';
 
   // Generate high-resolution QR code PNG buffer
@@ -2529,8 +2568,15 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
   }
   const section = nstpSection.replace('-', ' ').trim();
 
-  const serialNo = studentData.nstp_serial_id || `NSTP-${nstpDept}-2024-00001`;
-  const qrToken = studentData.qr_token || `NSTP-${studentId}-${serialNo}`;
+  let serialNo = studentData.nstp_serial_id;
+  if (!serialNo || !serialNo.includes(`-${nstpDept}-`)) {
+    if (serialNo) {
+      serialNo = serialNo.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${nstpDept}-`);
+    } else {
+      serialNo = `NSTP-${nstpDept}-2024-00001`;
+    }
+  }
+  const qrToken = `NSTP-${studentId}-${serialNo}`;
   const qrUrl = studentData.qr_code || studentData.qrCode || `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
   
   let rawSy = studentData.schoolYear || studentData.academicYear || studentData.batch || '';
@@ -4120,7 +4166,18 @@ app.post('/api/students', authenticateToken, async (req, res) => {
     const finalSuffix = n(suffix);
     const finalName = name || `${lastName || ''}, ${firstName || ''} ${middleName || ''}${finalSuffix ? ' ' + finalSuffix : ''}`.replace(/\s+/g, ' ').trim();
     const finalGender = n(gender) || n(sex);
-    const finalYear = n(yearLevel) || n(year);
+    const finalYear = n(yearLevel) || n(year) || '1st Year';
+    let finalSection = n(section) || '1-A';
+    const yrMatch = String(finalYear).match(/\d+/);
+    const yrNum = yrMatch ? yrMatch[0] : '1';
+    if (finalSection) {
+      const cleanSec = String(finalSection).replace(/SECTION|SEC|\s/gi, '').trim().toUpperCase();
+      if (/^[A-Z]$/.test(cleanSec)) {
+        finalSection = `${yrNum}-${cleanSec}`;
+      } else if (/^[1-4]-?[A-Z]$/.test(cleanSec)) {
+        finalSection = `${cleanSec[0]}-${cleanSec.slice(-1)}`;
+      }
+    }
     const finalEmergency = n(emergencyContact) || n(emergencyName);
     const finalVoter = n(registeredVoter) || n(isVoter) || 'No';
     const finalIdPhoto = n(req.body.id_photo_2x2) || n(req.body.idPhoto2x2) || n(req.body.photo) || n(req.body.profilePicture);
@@ -4148,7 +4205,7 @@ app.post('/api/students', authenticateToken, async (req, res) => {
         street, municipality, province, registrationPhoto, registration_photo, photo, id_photo_2x2
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        studentId, finalName, n(email), department, n(section), finalNstpSection, n(semester), n(schoolYear), n(program), finalYear,
+        studentId, finalName, n(email), department, finalSection, finalNstpSection, n(semester), n(schoolYear), n(program), finalYear,
         n(contactNumber), n(address), finalGender, safeBirthDate, n(birthMonth), n(birthDay), n(birthYear),
         n(age), n(civilStatus), n(bloodType), n(height), n(weight), n(facebookAccount),
         finalEmergency, n(emergencyNumber),
@@ -4176,26 +4233,13 @@ app.post('/api/students', authenticateToken, async (req, res) => {
 
     const [students] = await pool.execute('SELECT * FROM students WHERE id = ?', [result.insertId]);
     auditLog(
-      'serial_number_generated',
-      req.user?.id || 1,
-      JSON.stringify({
-        source: 'manual_student_registration',
-        studentId: studentId,
-        serialNumber: matriculationNumber,
-        department: dept,
-        year: currentYear,
-        registeredBy: req.user?.name || req.user?.email || 'Admin'
-      }),
-      req.ip || 'unknown'
-    );
-    auditLog(
       'student_created',
       req.user?.id || 1,
       JSON.stringify({
         studentId: studentId,
         name: finalName,
         department: dept,
-        section: n(section),
+        section: finalSection,
         serialNumber: matriculationNumber,
         registeredBy: req.user?.name || req.user?.email || 'Admin'
       }),
@@ -4239,11 +4283,23 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
     const finalName = n(req.body.name, current.name);
     const finalDept = n(req.body.department, current.department);
     const finalEmail = n(req.body.email, current.email);
-    const finalSection = n(req.body.section, current.section);
     const finalSemester = n(req.body.semester, current.semester);
     const finalSchoolYear = n(req.body.schoolYear, current.schoolYear);
     const finalProgram = n(req.body.program, current.program);
-    const finalYear = n(req.body.yearLevel, n(req.body.year, current.year));
+    const finalYear = n(req.body.yearLevel, n(req.body.year, current.year)) || '1st Year';
+    
+    // School Section: format as Year-Section (e.g. 1-A)
+    let finalSection = n(req.body.section, current.section) || '1-A';
+    const yrMatch = String(finalYear).match(/\d+/);
+    const yrNum = yrMatch ? yrMatch[0] : '1';
+    if (finalSection) {
+      const cleanSec = String(finalSection).replace(/SECTION|SEC|\s/gi, '').trim().toUpperCase();
+      if (/^[A-Z]$/.test(cleanSec)) {
+        finalSection = `${yrNum}-${cleanSec}`;
+      } else if (/^[1-4]-?[A-Z]$/.test(cleanSec)) {
+        finalSection = `${cleanSec[0]}-${cleanSec.slice(-1)}`;
+      }
+    }
     const finalContact = n(req.body.contactNumber, current.contactNumber);
     const finalAddress = n(req.body.address, current.address);
     const finalGender = n(req.body.gender, n(req.body.sex, current.gender));
@@ -4311,6 +4367,27 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       }
     }
 
+    // Synchronize nstp_serial_id and qr_token if department changed or if serial ID has mismatched track prefix
+    let finalSerialId = current.nstp_serial_id;
+    let finalQrToken = current.qr_token;
+    if (finalDept) {
+      const deptUpper = String(finalDept).toUpperCase().trim();
+      if (finalSerialId && !finalSerialId.includes(`-${deptUpper}-`)) {
+        finalSerialId = finalSerialId.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${deptUpper}-`);
+        finalQrToken = `NSTP-${finalStudentId}-${finalSerialId}`;
+      } else if (!finalSerialId) {
+        const currentYear = new Date().getFullYear();
+        const [trackRows] = await pool.execute(
+          'SELECT COUNT(*) as count FROM students WHERE department = ?',
+          [deptUpper]
+        ).catch(() => [[{ count: 0 }]]);
+        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
+        const countPadded = String(trackCount).padStart(5, '0');
+        finalSerialId = `NSTP-${deptUpper}-${currentYear}-${countPadded}`;
+        finalQrToken = `NSTP-${finalStudentId}-${finalSerialId}`;
+      }
+    }
+
     await pool.execute(
       `UPDATE students SET
          studentId = ?, name = ?, email = ?, department = ?, section = ?, nstp_section = ?, semester = ?, schoolYear = ?,
@@ -4319,7 +4396,7 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
          height = ?, weight = ?, facebookAccount = ?, emergencyContact = ?, emergencyNumber = ?,
          firstName = ?, lastName = ?, middleName = ?, suffix = ?, registeredVoter = ?,
          street = ?, municipality = ?, province = ?, registrationPhoto = ?, registration_photo = ?,
-         photo = ?, id_photo_2x2 = ?
+         photo = ?, id_photo_2x2 = ?, nstp_serial_id = ?, qr_token = ?
        WHERE id = ? OR studentId = ?`,
       [
         finalStudentId, finalName, finalEmail, finalDept, finalSection, finalNstpSection, finalSemester, finalSchoolYear,
@@ -4328,10 +4405,15 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
         finalHeight, finalWeight, finalFacebook, finalEmergency, finalEmergencyNumber,
         finalFirstName, finalLastName, finalMiddleName, finalSuffix, finalVoter,
         finalStreet, finalMunicipality, finalProvince, finalRegPhoto, finalRegPhoto,
-        finalPhoto, finalPhoto,
+        finalPhoto, finalPhoto, finalSerialId, finalQrToken,
         current.id, String(finalStudentId)
       ]
     );
+
+    await pool.execute(
+      'UPDATE enrollments SET department = ?, nstp_serial_id = ?, qr_token = ? WHERE studentId = ?',
+      [finalDept, finalSerialId, finalQrToken, String(finalStudentId)]
+    ).catch(() => {});
 
     const [updatedRows] = await pool.execute('SELECT * FROM students WHERE id = ? LIMIT 1', [current.id]);
     
@@ -7254,11 +7336,26 @@ const handleSendStudentDigitalId = async (req, res) => {
 
     const yr = new Date().getFullYear();
     const dept = (student.department || 'CWTS').toUpperCase();
-    if (!student.nstp_serial_id) {
-      student.nstp_serial_id = `NSTP-${dept}-${yr}-00001`;
-    }
-    if (!student.qr_token) {
+    if (!student.nstp_serial_id || !student.nstp_serial_id.includes(`-${dept}-`)) {
+      if (student.nstp_serial_id) {
+        student.nstp_serial_id = student.nstp_serial_id.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${dept}-`);
+      } else {
+        const [trackRows] = await pool.execute(
+          'SELECT COUNT(*) as count FROM students WHERE department = ?',
+          [dept]
+        ).catch(() => [[{ count: 0 }]]);
+        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
+        student.nstp_serial_id = `NSTP-${dept}-${yr}-${String(trackCount).padStart(5, '0')}`;
+      }
       student.qr_token = `NSTP-${student.studentId || student.id}-${student.nstp_serial_id}`;
+      await pool.execute(
+        'UPDATE students SET nstp_serial_id = ?, qr_token = ? WHERE id = ?',
+        [student.nstp_serial_id, student.qr_token, student.id]
+      ).catch(() => {});
+      await pool.execute(
+        'UPDATE enrollments SET department = ?, nstp_serial_id = ?, qr_token = ? WHERE studentId = ?',
+        [dept, student.nstp_serial_id, student.qr_token, student.studentId]
+      ).catch(() => {});
     }
 
     const result = await sendDigitalIdEmail(student, deliveryEmail);
@@ -8585,6 +8682,7 @@ async function runDatabaseInitialization() {
     ensureReportComments(),
     ensureConversationLastSender(),
     restoreCorFromEnrollments(),
+    autoSyncStudentSerialTrack(),
     ensurePerformanceIndexes(),
     ensureArchiveCalendarHolidays()
   ]).catch(function(err) {

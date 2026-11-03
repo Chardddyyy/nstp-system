@@ -1047,8 +1047,17 @@ function Enrollment() {
       const y = String(formData.birthYear || '').trim();
       const cleanBirthDate = (y && m && d) ? `${y}-${m}-${d}` : null;
 
+      const yrMatch = String(formData.yearLevel || '1st Year').match(/\d+/);
+      const yrNum = yrMatch ? yrMatch[0] : '1';
+      let secLetter = String(formData.section || 'A').toUpperCase().replace(/SECTION|SEC|\s/gi, '').trim();
+      if (secLetter.includes('-')) {
+        secLetter = secLetter.split('-').pop();
+      }
+      const combinedSection = `${yrNum}-${secLetter || 'A'}`;
+
       const enrollmentData = {
         ...formData,
+        section: combinedSection,
         studentId: cleanStudentId || formData.studentId.trim(),
         contactNumber: cleanContact || formData.contactNumber.trim(),
         emergencyNumber: cleanEmer || formData.emergencyNumber.trim(),

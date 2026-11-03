@@ -740,11 +740,21 @@ function StudentManagement() {
     const cleanProvince = toTitleCase(formData.province.trim());
     const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
 
-    const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim();
-    const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`;
+    const cleanFullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim();
+    const cleanFullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`;
+
+    const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+    let secLetter = String(formData.section || 'A').toUpperCase().replace(/SECTION|SEC|\s/gi, '').trim();
+    if (secLetter.includes('-')) {
+      secLetter = secLetter.split('-').pop();
+    }
+    const combinedSchoolSection = `${yrNum}-${secLetter || 'A'}`;
+    const activeSystemSemester = (currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester');
 
     const studentPayload = {
       ...formData,
+      section: combinedSchoolSection,
+      semester: activeSystemSemester,
       lastName: cleanLastName,
       firstName: cleanFirstName,
       middleName: cleanMiddleName,
@@ -752,12 +762,12 @@ function StudentManagement() {
       street: cleanStreet,
       municipality: cleanMunicipality,
       province: cleanProvince,
-      name: fullName,
-      address: fullAddress,
+      name: cleanFullName,
+      address: cleanFullAddress,
       gender: formData.sex || formData.gender,
       sex: formData.sex || formData.gender,
-      year: formData.yearLevel || formData.year,
-      yearLevel: formData.yearLevel || formData.year,
+      year: formData.yearLevel || formData.year || '1st Year',
+      yearLevel: formData.yearLevel || formData.year || '1st Year',
       registeredVoter: formData.registeredVoter || 'No',
       isVoter: formData.registeredVoter || 'No',
       emergencyName: cleanEmergencyContact,
@@ -909,12 +919,23 @@ function StudentManagement() {
       const cleanProvince = toTitleCase((formData.province || '').trim());
       const cleanEmergencyContact = toTitleCase((formData.emergencyContact || formData.emergencyName || '').trim());
 
-      const fullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim() || formData.name;
-      const fullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`.replace(/^,\s*|,\s*$/g, '') || formData.address;
+      const cleanFullName = `${cleanLastName}, ${cleanFirstName} ${cleanMiddleName}${cleanSuffix ? ' ' + cleanSuffix : ''}`.replace(/\s+/g, ' ').trim() || formData.name;
+      const cleanFullAddress = `${cleanStreet}, ${cleanMunicipality}, ${cleanProvince}`.replace(/^,\s*|,\s*$/g, '') || formData.address;
       const resolved2x2 = (formData.id_photo_2x2 || formData.photo || '').trim();
       const resolvedReg = (formData.registrationPhoto || formData.registration_photo || '').trim();
+
+      const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+      let secLetter = String(formData.section || 'A').toUpperCase().replace(/SECTION|SEC|\s/gi, '').trim();
+      if (secLetter.includes('-')) {
+        secLetter = secLetter.split('-').pop();
+      }
+      const combinedSchoolSection = `${yrNum}-${secLetter || 'A'}`;
+      const activeSystemSemester = (currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester');
+
       const payload = {
         ...formData,
+        section: combinedSchoolSection,
+        semester: activeSystemSemester,
         lastName: cleanLastName,
         firstName: cleanFirstName,
         middleName: cleanMiddleName,
@@ -922,12 +943,12 @@ function StudentManagement() {
         street: cleanStreet,
         municipality: cleanMunicipality,
         province: cleanProvince,
-        name: fullName,
-        address: fullAddress,
+        name: cleanFullName,
+        address: cleanFullAddress,
         gender: formData.sex || formData.gender,
         sex: formData.sex || formData.gender,
-        year: formData.yearLevel || formData.year,
-        yearLevel: formData.yearLevel || formData.year,
+        year: formData.yearLevel || formData.year || '1st Year',
+        yearLevel: formData.yearLevel || formData.year || '1st Year',
         registeredVoter: formData.registeredVoter || 'No',
         isVoter: formData.registeredVoter || 'No',
         emergencyName: cleanEmergencyContact,
@@ -2360,16 +2381,31 @@ function StudentManagement() {
                     </div>
                     <div>
                       <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
-                      <input
-                        type="text"
+                      <select
                         id="add-section"
                         name="section"
-                        placeholder="e.g. 1-A, 1-1, 1-B"
-                        value={formData.section || ''}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm uppercase"
+                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
+                        onChange={(e) => {
+                          const letter = e.target.value.toUpperCase();
+                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+                          setFormData(prev => ({
+                            ...prev,
+                            section: `${yrNum}-${letter}`
+                          }));
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
                         required
-                      />
+                      >
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                        <option value="D">Section D</option>
+                        <option value="E">Section E</option>
+                        <option value="F">Section F</option>
+                      </select>
+                      <p className="text-[10.5px] text-gray-500 font-semibold mt-1">
+                        Format: <span className="font-extrabold text-emerald-800">{`${String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1'}-${(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}`}</span>
+                      </p>
                     </div>
                     <div>
                       <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
@@ -2422,17 +2458,11 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="add-semester" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester *</label>
-                      <select
-                        id="add-semester"
-                        name="semester"
-                        value={formData.semester || '1st Semester'}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                      >
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                      </select>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester</label>
+                      <div className="w-full px-3.5 py-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl font-bold text-xs sm:text-sm text-emerald-950 flex items-center justify-between">
+                        <span>{(currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester')}</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900">System Active</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3683,16 +3713,31 @@ function StudentManagement() {
                     </div>
                     <div>
                       <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
-                      <input
-                        type="text"
+                      <select
                         id="edit-section"
                         name="section"
-                        placeholder="e.g. 1-A, 1-1, 1-B"
-                        value={formData.section || ''}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm uppercase"
+                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
+                        onChange={(e) => {
+                          const letter = e.target.value.toUpperCase();
+                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+                          setFormData(prev => ({
+                            ...prev,
+                            section: `${yrNum}-${letter}`
+                          }));
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
                         required
-                      />
+                      >
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                        <option value="D">Section D</option>
+                        <option value="E">Section E</option>
+                        <option value="F">Section F</option>
+                      </select>
+                      <p className="text-[10.5px] text-gray-500 font-semibold mt-1">
+                        Format: <span className="font-extrabold text-emerald-800">{`${String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1'}-${(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}`}</span>
+                      </p>
                     </div>
                     <div>
                       <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
@@ -3745,17 +3790,11 @@ function StudentManagement() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-semester" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester *</label>
-                      <select
-                        id="edit-semester"
-                        name="semester"
-                        value={formData.semester || '1st Semester'}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                      >
-                        <option value="1st Semester">1st Semester</option>
-                        <option value="2nd Semester">2nd Semester</option>
-                      </select>
+                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester</label>
+                      <div className="w-full px-3.5 py-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl font-bold text-xs sm:text-sm text-emerald-950 flex items-center justify-between">
+                        <span>{(currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester')}</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900">System Active</span>
+                      </div>
                     </div>
                   </div>
                 </div>
