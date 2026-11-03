@@ -976,7 +976,19 @@ function Chat() {
     } else {
       // Start recording
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request audio with autoGainControl: false & noiseSuppression: false to prevent dynamic volume drops or sudden jumps
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              autoGainControl: false,
+              echoCancellation: false,
+              noiseSuppression: false
+            }
+          });
+        } catch (_) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
 
         // Pick best supported MIME type (iOS needs mp4, Chrome prefers webm)
         const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
@@ -1110,6 +1122,7 @@ function Chat() {
       }
 
       const audio = new Audio(playbackUrl);
+      audio.volume = 1.0;
       audioPlayerRef.current = audio;
 
       audio.ontimeupdate = () => {

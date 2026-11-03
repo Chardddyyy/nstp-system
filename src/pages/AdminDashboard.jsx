@@ -4237,10 +4237,11 @@ function AdminDashboard() {
                 </div>
 
                 {/* Letter Formats Section */}
+                {/* Letter Formats Section */}
                 <div>
                   <h4 className="text-md font-semibold text-green-800 mb-3 border-b pb-2 flex items-center justify-between">
                     <span className="flex items-center">
-                      <FileCheck className="w-5 h-5 mr-2" />
+                      <FileCheck className="w-5 h-5 mr-2 text-emerald-700" />
                       Official Letter Formats &amp; Attachments
                     </span>
                     <button
@@ -4254,36 +4255,81 @@ function AdminDashboard() {
                       <span>Open Letter Formats Page &rarr;</span>
                     </button>
                   </h4>
-                  {archiveViewData.letterData && archiveViewData.letterData.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {archiveViewData.letterData.map((letter, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
-                                {letter.department || 'All'}
-                              </span>
+
+                  {(() => {
+                    const savedTemplates = (() => {
+                      try {
+                        const raw = localStorage.getItem('nstp_letter_templates');
+                        return raw ? JSON.parse(raw) : [];
+                      } catch (_) { return []; }
+                    })();
+                    const displayLetters = (archiveViewData.letterData && archiveViewData.letterData.length > 0)
+                      ? archiveViewData.letterData
+                      : savedTemplates;
+
+                    const addedCount = displayLetters.filter(l => l.isCustom || l.isAdded || l.file?.data).length;
+                    const removedCount = archiveViewData.deletedLetters?.length || 0;
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Summary of Added & Removed */}
+                        <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-4 text-xs">
+                            <div>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Aktibong Formats</span>
+                              <span className="text-sm font-black text-emerald-950">{displayLetters.length} Templates</span>
                             </div>
-                            <p className="text-xs text-gray-600 line-clamp-2 mb-2">{letter.description}</p>
+                            <div className="h-6 w-px bg-emerald-200" />
+                            <div>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Mga Dinagdag (+)</span>
+                              <span className="text-sm font-black text-emerald-700">{addedCount > 0 ? `+${addedCount} Nadagdag` : 'None (Baseline)'}</span>
+                            </div>
+                            <div className="h-6 w-px bg-emerald-200" />
+                            <div>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Mga Binawas (-)</span>
+                              <span className="text-sm font-black text-rose-700">{removedCount > 0 ? `-${removedCount} Inalis` : '0 Inalis'}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100 mt-1">
-                            <span className="truncate max-w-[140px] font-medium text-gray-700">{letter.file?.name || `${letter.title}.doc`}</span>
-                            <button
-                              type="button"
-                              onClick={() => downloadOfficialLetter(letter, archiveViewData.year)}
-                              className="px-2.5 py-1 text-[11px] font-black bg-emerald-800 hover:bg-emerald-700 text-amber-300 rounded-lg transition-all shadow-2xs cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
-                            >
-                              <Download className="w-3 h-3 text-amber-300" />
-                              <span>Download</span>
-                            </button>
-                          </div>
+                          <span className="text-[11px] font-semibold text-emerald-900 bg-emerald-100/90 px-3 py-1 rounded-xl border border-emerald-300">
+                            ✓ Mananatili sa Bagong Batch (Retained)
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-4">No letter format records saved in this archive batch</p>
-                  )}
+
+                        {displayLetters.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {displayLetters.map((letter, idx) => (
+                              <div key={idx} className="bg-gray-50 rounded-xl p-3.5 border border-gray-200 flex flex-col justify-between hover:border-emerald-300 transition-colors">
+                                <div>
+                                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <span className="text-xs font-bold text-gray-800 truncate">{letter.title}</span>
+                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                                      {letter.department || 'All'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600 line-clamp-2 mb-2">{letter.description}</p>
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded-lg border border-gray-100 mt-1">
+                                  <span className="truncate max-w-[140px] font-medium text-gray-700">{letter.file?.name || `${letter.title}.doc`}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadOfficialLetter(letter, archiveViewData.year)}
+                                    className="px-2.5 py-1 text-[11px] font-black bg-emerald-800 hover:bg-emerald-700 text-amber-300 rounded-lg transition-all shadow-2xs cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
+                                  >
+                                    <Download className="w-3 h-3 text-amber-300" />
+                                    <span>Download</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-xs">
+                            Walang custom na dinagdag o binawas. Lahat ng opisyal na template ay mananatili at magagamit sa bagong batch.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Archive Metadata */}

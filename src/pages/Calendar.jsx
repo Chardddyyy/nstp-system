@@ -447,6 +447,7 @@ function Calendar() {
         description: newEvent.description.trim(),
         track: newEvent.track || 'All Tracks',
         category: newEvent.category || 'Training',
+        type: 'custom',
         createdBy: user?.name || 'Administrator',
       };
 
@@ -1071,15 +1072,15 @@ function Calendar() {
                               {/* Footer Meta */}
                               <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-100 text-[10px] text-slate-400 font-medium">
                                 <span>Date: {ev.date}</span>
-                                {isAdmin && !viewingArchive && ev.type === 'custom' && (
+                                {isAdmin && !viewingArchive && ev.type !== 'holiday' && ev.category !== 'Holiday' && !ev.isHoliday && (
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
                                       onClick={() => openEditEventModal(ev)}
-                                      className="p-1 hover:bg-slate-100 text-slate-600 rounded transition-colors"
+                                      className="p-1 hover:bg-slate-100 text-slate-600 rounded transition-colors cursor-pointer"
                                       title="Edit Event"
                                     >
-                                      <Pencil className="w-3 h-3" />
+                                      <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                     <button
                                       type="button"
@@ -1087,7 +1088,7 @@ function Calendar() {
                                       className="p-1 hover:bg-red-50 text-red-600 rounded transition-colors cursor-pointer"
                                       title="Delete Event"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 )}
@@ -1190,12 +1191,12 @@ function Calendar() {
                           </div>
                         </div>
 
-                        {isAdmin && !viewingArchive && !isPastDay(selectedDate) && event.type === 'custom' && (
+                        {isAdmin && !viewingArchive && event.type !== 'holiday' && event.category !== 'Holiday' && !event.isHoliday && (
                           <div className="flex items-center space-x-1 shrink-0">
                             <button
                               type="button"
                               onClick={() => openEditEventModal(event)}
-                              className="p-1 hover:bg-white rounded-lg text-gray-500 hover:text-emerald-700 transition-colors"
+                              className="p-1 hover:bg-white rounded-lg text-gray-500 hover:text-emerald-700 transition-colors cursor-pointer"
                               title="Edit Event"
                             >
                               <Pencil className="w-4 h-4" />

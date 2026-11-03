@@ -116,10 +116,27 @@ function Reports() {
   const [isCreatingReport, setIsCreatingReport] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
 
+  // Safely parse due date using local timezone to avoid UTC-offset 1-day decreases
+  const parseLocalDateString = (val) => {
+    if (!val) return '';
+    const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+    const d = new Date(val);
+    if (isNaN(d.getTime())) {
+      return str.split('T')[0].split(' ')[0] || '';
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const openEditModal = (report) => {
     setEditingReport(report);
     const rawDate = report.dueDate || report.due_date || '';
-    const formattedDate = rawDate ? String(rawDate).split('T')[0].split(' ')[0] : '';
+    const formattedDate = parseLocalDateString(rawDate);
     setCreateForm({
       title: report.title || '',
       description: report.description || '',

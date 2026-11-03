@@ -4832,7 +4832,7 @@ app.get('/grades/student/:studentId', authenticateToken, handleGetStudentGrades)
 app.get('/api/reports', authenticateToken, async (req, res) => {
   try {
     const [reports] = await pool.execute(`
-      SELECT r.*, u.name as created_by_name 
+      SELECT r.*, DATE_FORMAT(r.due_date, '%Y-%m-%d') AS due_date, u.name as created_by_name 
       FROM reports r 
       LEFT JOIN users u ON r.created_by = u.id 
       ORDER BY r.created_at DESC, r.id DESC
@@ -8048,7 +8048,7 @@ app.get('/api/archives/:year', authenticateToken, async (req, res) => {
       );
 
       const [reports] = await pool.execute(
-        `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, r.due_date,
+        `SELECT r.id, r.title, LEFT(r.description, 300) AS description, r.department, r.status, DATE_FORMAT(r.due_date, '%Y-%m-%d') AS due_date,
                 u.name AS created_by_name,
                 (SELECT COUNT(*) FROM report_submissions WHERE report_id = r.id) AS submission_count
          FROM reports r
