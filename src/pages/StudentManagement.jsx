@@ -259,7 +259,7 @@ function StudentManagement() {
     municipality: '',
     province: '',
     address: '',
-    department: 'CWTS',
+    department: '',
     year: '',
     yearLevel: '',
     program: '',
@@ -430,12 +430,13 @@ function StudentManagement() {
 
   const toTitleCase = (str) => {
     if (!str || typeof str !== 'string') return '';
-    return str
-      .trim()
+    const endsWithSpace = /\s$/.test(str);
+    const converted = str
       .toLowerCase()
       .replace(/(?:^|[\s,.\-/()#])([a-zñà-öø-ÿ])/gi, (match) => match.toUpperCase())
       .replace(/\b(ii|iii|iv|vi|vii|viii|ix|x)\b/gi, (roman) => roman.toUpperCase())
       .replace(/\b(jr|sr)\b/gi, (sfx) => sfx.charAt(0).toUpperCase() + sfx.slice(1).toLowerCase());
+    return endsWithSpace && !/\s$/.test(converted) ? converted + ' ' : converted;
   };
 
   const handleFormFieldChange = (e) => {
@@ -465,16 +466,19 @@ function StudentManagement() {
         newValue = currentYear.toString();
       }
     } else if (['firstName', 'lastName', 'middleName', 'emergencyContact', 'emergencyName'].includes(name)) {
-      // Letters only, strictly no numbers
-      newValue = toTitleCase(value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, ''));
+      // Letters only, strictly no numbers, freely allows spaces
+      const cleanLetters = value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, '');
+      newValue = toTitleCase(cleanLetters);
     } else if (name === 'suffix') {
       newValue = value;
     } else if (['municipality', 'province'].includes(name)) {
-      // Municipality and Province: letters only, strictly no numbers
-      newValue = toTitleCase(value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, ''));
+      // Municipality and Province: letters only, strictly no numbers, freely allows spaces
+      const cleanLetters = value.replace(/[0-9]/g, '').replace(/[^a-zA-ZñÑÀ-ÖØ-öø-ÿ.\s'-]/g, '');
+      newValue = toTitleCase(cleanLetters);
     } else if (['street', 'barangay', 'address'].includes(name)) {
-      // Street / Barangay: allows numbers and letters
-      newValue = toTitleCase(value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#-]/g, ''));
+      // Street / Barangay: allows numbers, letters, spaces, commas, periods, etc. freely without stripping spaces
+      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#\-\/]/g, '');
+      newValue = toTitleCase(cleanAddress);
     }
 
     const updated = {
@@ -518,6 +522,32 @@ function StudentManagement() {
       contactNumber: '09', birthMonth: '', birthDay: '', birthYear: '', age: '',
       civilStatus: '', sex: '', gender: '', registeredVoter: '', height: '', weight: '', bloodType: '',
       facebookAccount: '', emergencyContact: '', emergencyName: '', emergencyNumber: '09'
+    });
+  };
+
+  const handleDepartmentSelect = (targetDept) => {
+    if (!targetDept) {
+      setFormData(prev => ({ ...prev, department: '', nstp_section: '' }));
+      return;
+    }
+    const currentDept = formData.department;
+    if (targetDept === currentDept) return;
+
+    const fullTrackName = targetDept === 'CWTS' ? 'CWTS (Civic Welfare Training Service)' 
+                        : targetDept === 'ROTC' ? 'ROTC (Reserve Officers\' Training Corps)' 
+                        : targetDept === 'LTS' ? 'LTS (Literacy Training Service)' : targetDept;
+
+    setConfirmDialog({
+      confirmText: 'Confirm Selection',
+      isDelete: false,
+      message: `Confirm NSTP Track Selection:\n\nAre you sure you want to select "${fullTrackName}" for this student?`,
+      onConfirm: () => {
+        setFormData(prev => ({
+          ...prev,
+          department: targetDept,
+          ...(prev.nstp_section && !getAvailableSectionsForDept(targetDept).includes(prev.nstp_section) ? { nstp_section: '' } : {})
+        }));
+      }
     });
   };
 
@@ -1398,7 +1428,10 @@ function StudentManagement() {
 
               {isAdmin && !viewingArchive && (
                 <button type="button"
-                  onClick={() => setShowAddModal(true)}
+                  onClick={() => {
+                    resetFormData();
+                    setShowAddModal(true);
+                  }}
                   className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl transition-all duration-200 justify-center text-white font-bold shadow-xs shadow-emerald-900/20 active:scale-95 text-[10.5px] sm:text-xs whitespace-nowrap bg-gradient-to-r from-emerald-700 to-green-700 hover:from-emerald-800 hover:to-green-800"
                 >
                   <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
@@ -2413,7 +2446,7 @@ function StudentManagement() {
                         id="add-department"
                         name="department"
                         value={formData.department || ''}
-                        onChange={handleFormFieldChange}
+                        onChange={(e) => handleDepartmentSelect(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
                         required
                       >
@@ -2441,7 +2474,7 @@ function StudentManagement() {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label htmlFor="add-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                       <select
                         id="add-year-level"
@@ -2456,13 +2489,6 @@ function StudentManagement() {
                         <option value="3rd Year">3rd Year</option>
                         <option value="4th Year">4th Year</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester</label>
-                      <div className="w-full px-3.5 py-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl font-bold text-xs sm:text-sm text-emerald-950 flex items-center justify-between">
-                        <span>{(currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester')}</span>
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900">System Active</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -3745,7 +3771,7 @@ function StudentManagement() {
                         id="edit-department"
                         name="department"
                         value={formData.department || ''}
-                        onChange={handleFormFieldChange}
+                        onChange={(e) => handleDepartmentSelect(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
                         required
                       >
@@ -3773,7 +3799,7 @@ function StudentManagement() {
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label htmlFor="edit-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
                       <select
                         id="edit-year-level"
@@ -3788,13 +3814,6 @@ function StudentManagement() {
                         <option value="3rd Year">3rd Year</option>
                         <option value="4th Year">4th Year</option>
                       </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Semester</label>
-                      <div className="w-full px-3.5 py-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl font-bold text-xs sm:text-sm text-emerald-950 flex items-center justify-between">
-                        <span>{(currentBatch && String(currentBatch).toLowerCase().includes('2nd')) ? '2nd Semester' : (formData.semester || '1st Semester')}</span>
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-900">System Active</span>
-                      </div>
                     </div>
                   </div>
                 </div>

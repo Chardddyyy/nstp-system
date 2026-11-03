@@ -85,6 +85,73 @@ function fitText(doc, text, maxWidth) {
 }
 
 /**
+ * Smart helper to fit text inside a cell:
+ * - Dynamically scales font size down (from base 6.5 down to 4.2)
+ * - Supports clean 2-line wrap if text still needs room
+ * - Prevents premature truncation of long addresses
+ */
+function drawCellText(doc, text, x, y, width, height, align = 'left', baseFontSize = 6.5, minFontSize = 4.2) {
+  const str = String(text ?? '').trim();
+  if (!str) return;
+
+  const maxWidth = width - 1.6; // cell horizontal padding
+  let currentFont = baseFontSize;
+  doc.setFontSize(currentFont);
+
+  // If text already fits comfortably at base font size:
+  if (doc.getTextWidth(str) <= maxWidth) {
+    const textX = align === 'center' ? x + (width / 2) : x + 0.8;
+    const textY = y + (height / 2) + 1.1;
+    doc.text(str, textX, textY, { align });
+    return;
+  }
+
+  // Smoothly reduce font size down to minFontSize
+  while (currentFont > minFontSize && doc.getTextWidth(str) > maxWidth) {
+    currentFont -= 0.3;
+    doc.setFontSize(currentFont);
+  }
+
+  if (doc.getTextWidth(str) <= maxWidth) {
+    const textX = align === 'center' ? x + (width / 2) : x + 0.8;
+    const textY = y + (height / 2) + (currentFont * 0.16);
+    doc.text(str, textX, textY, { align });
+    doc.setFontSize(baseFontSize);
+    return;
+  }
+
+  // Try wrapping into 2 lines if still too long
+  const lines = doc.splitTextToSize(str, maxWidth);
+  if (lines.length >= 2 && height >= 5.5) {
+    doc.setFontSize(minFontSize);
+    const textX = align === 'center' ? x + (width / 2) : x + 0.8;
+    // Render top line and second line (truncated with ellipsis if > 2)
+    const line1 = lines[0];
+    let line2 = lines.slice(1).join(' ');
+    if (doc.getTextWidth(line2) > maxWidth) {
+      while (line2.length > 1 && doc.getTextWidth(line2 + '…') > maxWidth) {
+        line2 = line2.slice(0, -1);
+      }
+      line2 = line2 + '…';
+    }
+    doc.text(line1, textX, y + 2.4, { align });
+    doc.text(line2, textX, y + 4.7, { align });
+    doc.setFontSize(baseFontSize);
+    return;
+  }
+
+  // Fallback: truncate with ellipsis at minFontSize
+  let truncated = str;
+  while (truncated.length > 1 && doc.getTextWidth(truncated + '…') > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+  const textX = align === 'center' ? x + (width / 2) : x + 0.8;
+  const textY = y + (height / 2) + (minFontSize * 0.16);
+  doc.text(truncated + '…', textX, textY, { align });
+  doc.setFontSize(baseFontSize);
+}
+
+/**
  * ─────────────────────────────────────────────────────────────────────────────
  * 1. OFFICIAL CHED OSDS-NSTP FORM 2-B PDF (Landscape A4 NSTP Enrollment List)
  * ─────────────────────────────────────────────────────────────────────────────
@@ -121,20 +188,21 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
   const formTitle = isSecondSem ? 'NSTP 2 ENROLLMENT LIST' : 'NSTP 1 ENROLLMENT LIST';
   const deptLabel = dept === 'All' ? 'CWTS / ROTC / LTS' : dept;
 
+  // Rebalanced column widths: Street expanded to 42mm, Municipality to 26mm, Province to 24mm (Total: 277mm)
   const cols = [
-    { key: 'no', w: 8, align: 'center' },
-    { key: 'studentId', w: 22, align: 'center' },
+    { key: 'no', w: 7, align: 'center' },
+    { key: 'studentId', w: 20, align: 'center' },
     { key: 'lastName', w: 22, align: 'left' },
     { key: 'firstName', w: 22, align: 'left' },
-    { key: 'middleName', w: 20, align: 'left' },
-    { key: 'program', w: 16, align: 'center' },
-    { key: 'sex', w: 9, align: 'center' },
-    { key: 'birthDate', w: 18, align: 'center' },
-    { key: 'street', w: 28, align: 'left' },
-    { key: 'municipality', w: 22, align: 'left' },
-    { key: 'province', w: 18, align: 'left' },
-    { key: 'contactNumber', w: 23, align: 'center' },
-    { key: 'email', w: 49, align: 'left' }
+    { key: 'middleName', w: 18, align: 'left' },
+    { key: 'program', w: 15, align: 'center' },
+    { key: 'sex', w: 8, align: 'center' },
+    { key: 'birthDate', w: 16, align: 'center' },
+    { key: 'street', w: 42, align: 'left' },
+    { key: 'municipality', w: 26, align: 'left' },
+    { key: 'province', w: 24, align: 'left' },
+    { key: 'contactNumber', w: 21, align: 'center' },
+    { key: 'email', w: 36, align: 'left' }
   ];
 
   const leftMargin = 10;
@@ -194,81 +262,81 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
 
     // 2. Tier 2 Sub-Headers Box Fill (Light Gray #F2F2F2)
     doc.setFillColor(242, 242, 242);
-    doc.rect(40, tableTop + tier1H, 64, tier2H, 'F');
-    doc.rect(147, tableTop + tier1H, 68, tier2H, 'F');
+    doc.rect(37, tableTop + tier1H, 62, tier2H, 'F'); // Student Name sub-headers (Surname, First, Middle)
+    doc.rect(138, tableTop + tier1H, 92, tier2H, 'F'); // Address sub-headers (Street, Municipality, Province)
 
     doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
 
     // Draw Tier 1 Full-Height Merged Header Cells:
-    // No. (x=10, w=8, h=11.5)
-    doc.rect(10, tableTop, 8, totalHeaderH);
-    doc.text('No.', 10 + 4, tableTop + 7, { align: 'center' });
+    // No. (x=10, w=7, h=11.5)
+    doc.rect(10, tableTop, 7, totalHeaderH);
+    doc.text('No.', 10 + 3.5, tableTop + 7, { align: 'center' });
 
-    // Student No. (x=18, w=22, h=11.5)
-    doc.rect(18, tableTop, 22, totalHeaderH);
-    doc.text('Student No.', 18 + 11, tableTop + 7, { align: 'center' });
+    // Student No. (x=17, w=20, h=11.5)
+    doc.rect(17, tableTop, 20, totalHeaderH);
+    doc.text('Student No.', 17 + 10, tableTop + 7, { align: 'center' });
 
-    // Student Name Group (x=40, w=64, h=6)
-    doc.rect(40, tableTop, 64, tier1H);
-    doc.text('Student Name', 40 + 32, tableTop + 4.2, { align: 'center' });
+    // Student Name Group (x=37, w=62, h=6)
+    doc.rect(37, tableTop, 62, tier1H);
+    doc.text('Student Name', 37 + 31, tableTop + 4.2, { align: 'center' });
 
-    // Program (x=104, w=16, h=11.5)
-    doc.rect(104, tableTop, 16, totalHeaderH);
-    doc.text('Program', 104 + 8, tableTop + 7, { align: 'center' });
+    // Program (x=99, w=15, h=11.5)
+    doc.rect(99, tableTop, 15, totalHeaderH);
+    doc.text('Program', 99 + 7.5, tableTop + 7, { align: 'center' });
 
-    // Sex (x=120, w=9, h=11.5)
-    doc.rect(120, tableTop, 9, totalHeaderH);
-    doc.text('Sex', 120 + 4.5, tableTop + 7, { align: 'center' });
+    // Sex (x=114, w=8, h=11.5)
+    doc.rect(114, tableTop, 8, totalHeaderH);
+    doc.text('Sex', 114 + 4, tableTop + 7, { align: 'center' });
 
-    // Birthdate (x=129, w=18, h=11.5)
-    doc.rect(129, tableTop, 18, totalHeaderH);
-    doc.text('Birthdate', 129 + 9, tableTop + 7, { align: 'center' });
+    // Birthdate (x=122, w=16, h=11.5)
+    doc.rect(122, tableTop, 16, totalHeaderH);
+    doc.text('Birthdate', 122 + 8, tableTop + 7, { align: 'center' });
 
-    // Address Group (x=147, w=68, h=6)
-    doc.rect(147, tableTop, 68, tier1H);
-    doc.text('Address', 147 + 34, tableTop + 4.2, { align: 'center' });
+    // Address Group (x=138, w=92, h=6)
+    doc.rect(138, tableTop, 92, tier1H);
+    doc.text('Address', 138 + 46, tableTop + 4.2, { align: 'center' });
 
-    // Contact Number (x=215, w=23, h=11.5)
-    doc.rect(215, tableTop, 23, totalHeaderH);
-    doc.text('Contact Number', 215 + 11.5, tableTop + 7, { align: 'center' });
+    // Contact Number (x=230, w=21, h=11.5)
+    doc.rect(230, tableTop, 21, totalHeaderH);
+    doc.text('Contact Number', 230 + 10.5, tableTop + 7, { align: 'center' });
 
-    // Email Address (x=238, w=49, h=11.5)
-    doc.rect(238, tableTop, 49, totalHeaderH);
-    doc.text('Email Address', 238 + 24.5, tableTop + 7, { align: 'center' });
+    // Email Address (x=251, w=36, h=11.5)
+    doc.rect(251, tableTop, 36, totalHeaderH);
+    doc.text('Email Address', 251 + 18, tableTop + 7, { align: 'center' });
 
     // Draw Tier 2 Sub-Headers:
     doc.setFontSize(6.5);
-    // Surname (x=40, w=22)
-    doc.rect(40, tableTop + tier1H, 22, tier2H);
-    doc.text('Surname', 40 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+    // Surname (x=37, w=22)
+    doc.rect(37, tableTop + tier1H, 22, tier2H);
+    doc.text('Surname', 37 + 11, tableTop + tier1H + 3.8, { align: 'center' });
 
-    // First Name (x=62, w=22)
-    doc.rect(62, tableTop + tier1H, 22, tier2H);
-    doc.text('First Name', 62 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+    // First Name (x=59, w=22)
+    doc.rect(59, tableTop + tier1H, 22, tier2H);
+    doc.text('First Name', 59 + 11, tableTop + tier1H + 3.8, { align: 'center' });
 
-    // Middle Name (x=84, w=20)
-    doc.rect(84, tableTop + tier1H, 20, tier2H);
-    doc.text('Middle Name', 84 + 10, tableTop + tier1H + 3.8, { align: 'center' });
+    // Middle Name (x=81, w=18)
+    doc.rect(81, tableTop + tier1H, 18, tier2H);
+    doc.text('Middle Name', 81 + 9, tableTop + tier1H + 3.8, { align: 'center' });
 
-    // Street / Barangay (x=147, w=28)
-    doc.rect(147, tableTop + tier1H, 28, tier2H);
-    doc.text('Street / Barangay', 147 + 14, tableTop + tier1H + 3.8, { align: 'center' });
+    // Street / Barangay (x=138, w=42)
+    doc.rect(138, tableTop + tier1H, 42, tier2H);
+    doc.text('Street / Barangay', 138 + 21, tableTop + tier1H + 3.8, { align: 'center' });
 
-    // Municipality / City (x=175, w=22)
-    doc.rect(175, tableTop + tier1H, 22, tier2H);
-    doc.text('Municipality / City', 175 + 11, tableTop + tier1H + 3.8, { align: 'center' });
+    // Municipality / City (x=180, w=26)
+    doc.rect(180, tableTop + tier1H, 26, tier2H);
+    doc.text('Municipality / City', 180 + 13, tableTop + tier1H + 3.8, { align: 'center' });
 
-    // Province (x=197, w=18)
-    doc.rect(197, tableTop + tier1H, 18, tier2H);
-    doc.text('Province', 197 + 9, tableTop + tier1H + 3.8, { align: 'center' });
+    // Province (x=206, w=24)
+    doc.rect(206, tableTop + tier1H, 24, tier2H);
+    doc.text('Province', 206 + 12, tableTop + tier1H + 3.8, { align: 'center' });
 
     return tableTop + totalHeaderH;
   }
 
   let currentY = renderHeader(1);
-  const rowHeight = 5.8;
+  const rowHeight = 6.2; // slightly elevated row height for clean multi-line address support
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
@@ -345,11 +413,7 @@ export async function downloadChedFormBPdf(batchOrYear, studentList = null, dept
     let x = leftMargin;
     cols.forEach(col => {
       doc.rect(x, currentY, col.w, rowHeight);
-      const val = fitText(doc, rowData[col.key] ?? '', col.w - 2.5);
-      const textX = col.align === 'center' ? x + (col.w / 2) : x + 1.5;
-      doc.text(val, textX, currentY + 3.9, {
-        align: col.align === 'center' ? 'center' : 'left'
-      });
+      drawCellText(doc, rowData[col.key] ?? '', x, currentY, col.w, rowHeight, col.align);
       x += col.w;
     });
 

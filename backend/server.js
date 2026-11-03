@@ -982,8 +982,72 @@ async function restoreCorFromEnrollments() {
   } catch (err) {
     console.warn('[Auto-Heal Warning] Could not auto-sync COR documents from enrollments:', err.message);
   }
+}
+
+// Generate and guarantee a 100% unique NSTP Matriculation / Serial Number
+async function getGuaranteedUniqueSerialId(dept, yr, studentDbId = null, preferredNum = null) {
+  const cleanDept = (dept || 'CWTS').toUpperCase();
+  const cleanYr = yr || new Date().getFullYear();
+  const prefix = `NSTP-${cleanDept}-${cleanYr}-`;
+
+  // Fetch all existing serials for this department & year
+  const [existing] = await pool.execute(
+    'SELECT id, nstp_serial_id FROM students WHERE nstp_serial_id LIKE ?',
+    [`${prefix}%`]
+  ).catch(() => [[]]);
+
+  let highestNum = 0;
+  const takenSerials = new Set();
+
+  for (const row of existing) {
+    if (studentDbId && row.id === studentDbId) continue;
+    if (row.nstp_serial_id) {
+      takenSerials.add(row.nstp_serial_id);
+      const match = row.nstp_serial_id.match(/-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > highestNum) highestNum = num;
+      }
+    }
+  }
+
+  // Also verify enrollments to guarantee cross-table uniqueness
+  const [enrollRows] = await pool.execute(
+    'SELECT nstp_serial_id FROM enrollments WHERE nstp_serial_id LIKE ?',
+    [`${prefix}%`]
+  ).catch(() => [[]]);
+
+  for (const row of enrollRows) {
+    if (row.nstp_serial_id) {
+      takenSerials.add(row.nstp_serial_id);
+      const match = row.nstp_serial_id.match(/-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > highestNum) highestNum = num;
+      }
+    }
+  }
+
+  // If a preferred sequential number was provided (e.g. from existing record)
+  if (preferredNum && typeof preferredNum === 'number' && preferredNum > 0) {
+    const candidate = `${prefix}${String(preferredNum).padStart(5, '0')}`;
+    if (!takenSerials.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  let nextNum = Math.max(highestNum + 1, 1);
+  let finalSerial = `${prefix}${String(nextNum).padStart(5, '0')}`;
+  while (takenSerials.has(finalSerial)) {
+    nextNum++;
+    finalSerial = `${prefix}${String(nextNum).padStart(5, '0')}`;
+  }
+
+  return finalSerial;
+}
 
 // Auto-sync students' NSTP matriculation/serial numbers and QR tokens with their current department
+// and guarantee no duplicate serial IDs exist across any students
 async function autoSyncStudentSerialTrack() {
   try {
     const trackPairs = [
@@ -1010,10 +1074,35 @@ async function autoSyncStudentSerialTrack() {
         [to, `%-` + from + `-%`]
       ).catch(() => {});
     }
+
+    // Uniqueness healing: if any duplicate serials ever exist, resolve each duplicate with a unique number
+    const [studentsWithSerial] = await pool.execute(
+      'SELECT id, studentId, department, nstp_serial_id FROM students WHERE nstp_serial_id IS NOT NULL AND nstp_serial_id != "" ORDER BY id ASC'
+    ).catch(() => [[]]);
+
+    const seenSerials = new Map();
+    for (const st of studentsWithSerial) {
+      if (seenSerials.has(st.nstp_serial_id)) {
+        const dep = (st.department || 'CWTS').toUpperCase();
+        const yr = new Date().getFullYear();
+        const uniqueSerial = await getGuaranteedUniqueSerialId(dep, yr, st.id);
+        const uniqueToken = `NSTP-${st.studentId || st.id}-${uniqueSerial}`;
+        await pool.execute(
+          'UPDATE students SET nstp_serial_id = ?, qr_token = ? WHERE id = ?',
+          [uniqueSerial, uniqueToken, st.id]
+        ).catch(() => {});
+        await pool.execute(
+          'UPDATE enrollments SET nstp_serial_id = ?, qr_token = ? WHERE studentId = ?',
+          [uniqueSerial, uniqueToken, st.studentId]
+        ).catch(() => {});
+        seenSerials.set(uniqueSerial, st.id);
+      } else {
+        seenSerials.set(st.nstp_serial_id, st.id);
+      }
+    }
   } catch (err) {
     console.warn('[autoSyncStudentSerialTrack] Notice:', err.message);
   }
-}
 }
 
 var enrollmentColumnsMigrated = false;
@@ -4214,16 +4303,10 @@ app.post('/api/students', authenticateToken, async (req, res) => {
       ]
     );
 
-    // Generate and assign unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
+    // Generate and assign guaranteed unique NSTP Matriculation Number: NSTP-[TRACK]-[YEAR]-[00001]
     const currentYear = new Date().getFullYear();
     const dept = (department || 'CWTS').toUpperCase();
-    const [trackRows] = await pool.execute(
-      'SELECT COUNT(*) as count FROM students WHERE department = ?',
-      [dept]
-    ).catch(() => [[{ count: 0 }]]);
-    const trackCount = ((trackRows && trackRows[0]?.count) || 1);
-    const countPadded = String(trackCount).padStart(5, '0');
-    const matriculationNumber = `NSTP-${dept}-${currentYear}-${countPadded}`;
+    const matriculationNumber = await getGuaranteedUniqueSerialId(dept, currentYear, result.insertId);
     const token = `NSTP-${studentId}-${matriculationNumber}`;
 
     await pool.execute(
@@ -4367,24 +4450,29 @@ app.put('/api/students/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Synchronize nstp_serial_id and qr_token if department changed or if serial ID has mismatched track prefix
+    // Synchronize nstp_serial_id and qr_token if department changed or if serial ID has mismatched track prefix, guaranteeing 100% uniqueness
     let finalSerialId = current.nstp_serial_id;
     let finalQrToken = current.qr_token;
     if (finalDept) {
       const deptUpper = String(finalDept).toUpperCase().trim();
+      const currentYear = new Date().getFullYear();
       if (finalSerialId && !finalSerialId.includes(`-${deptUpper}-`)) {
-        finalSerialId = finalSerialId.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${deptUpper}-`);
+        const match = finalSerialId.match(/-(\d+)$/);
+        const prevNum = match ? parseInt(match[1], 10) : null;
+        finalSerialId = await getGuaranteedUniqueSerialId(deptUpper, currentYear, current.id, prevNum);
         finalQrToken = `NSTP-${finalStudentId}-${finalSerialId}`;
       } else if (!finalSerialId) {
-        const currentYear = new Date().getFullYear();
-        const [trackRows] = await pool.execute(
-          'SELECT COUNT(*) as count FROM students WHERE department = ?',
-          [deptUpper]
-        ).catch(() => [[{ count: 0 }]]);
-        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
-        const countPadded = String(trackCount).padStart(5, '0');
-        finalSerialId = `NSTP-${deptUpper}-${currentYear}-${countPadded}`;
+        finalSerialId = await getGuaranteedUniqueSerialId(deptUpper, currentYear, current.id);
         finalQrToken = `NSTP-${finalStudentId}-${finalSerialId}`;
+      } else {
+        const [collision] = await pool.execute(
+          'SELECT id FROM students WHERE nstp_serial_id = ? AND id != ? LIMIT 1',
+          [finalSerialId, current.id]
+        ).catch(() => [[]]);
+        if (collision && collision.length > 0) {
+          finalSerialId = await getGuaranteedUniqueSerialId(deptUpper, currentYear, current.id);
+          finalQrToken = `NSTP-${finalStudentId}-${finalSerialId}`;
+        }
       }
     }
 
@@ -7337,16 +7425,9 @@ const handleSendStudentDigitalId = async (req, res) => {
     const yr = new Date().getFullYear();
     const dept = (student.department || 'CWTS').toUpperCase();
     if (!student.nstp_serial_id || !student.nstp_serial_id.includes(`-${dept}-`)) {
-      if (student.nstp_serial_id) {
-        student.nstp_serial_id = student.nstp_serial_id.replace(/NSTP-(ROTC|CWTS|LTS)-/i, `NSTP-${dept}-`);
-      } else {
-        const [trackRows] = await pool.execute(
-          'SELECT COUNT(*) as count FROM students WHERE department = ?',
-          [dept]
-        ).catch(() => [[{ count: 0 }]]);
-        const trackCount = ((trackRows && trackRows[0]?.count) || 1);
-        student.nstp_serial_id = `NSTP-${dept}-${yr}-${String(trackCount).padStart(5, '0')}`;
-      }
+      const match = student.nstp_serial_id ? student.nstp_serial_id.match(/-(\d+)$/) : null;
+      const prevNum = match ? parseInt(match[1], 10) : null;
+      student.nstp_serial_id = await getGuaranteedUniqueSerialId(dept, yr, student.id, prevNum);
       student.qr_token = `NSTP-${student.studentId || student.id}-${student.nstp_serial_id}`;
       await pool.execute(
         'UPDATE students SET nstp_serial_id = ?, qr_token = ? WHERE id = ?',
