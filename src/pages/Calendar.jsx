@@ -200,7 +200,7 @@ function Calendar() {
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
+  const [newEvent, setNewEvent] = useState({ title: '', date: '', description: '', track: 'All Tracks', category: 'Event' });
 
   // Summary view filters
   const [summaryTrack, setSummaryTrack] = useState('all'); // 'all' | 'CWTS' | 'ROTC' | 'LTS'
@@ -412,7 +412,7 @@ function Calendar() {
         date: newEvent.date,
         description: newEvent.description.trim(),
         track: newEvent.track || 'All Tracks',
-        category: newEvent.category || 'Training',
+        category: newEvent.category || 'Event',
       };
 
       // Optimistic update
@@ -436,7 +436,7 @@ function Calendar() {
         });
       }
 
-      setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
+      setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Event' });
       setEditingEvent(null);
       setShowAddEventModal(false);
     } else {
@@ -446,7 +446,7 @@ function Calendar() {
         date: newEvent.date,
         description: newEvent.description.trim(),
         track: newEvent.track || 'All Tracks',
-        category: newEvent.category || 'Training',
+        category: newEvent.category || 'Event',
         type: 'custom',
         createdBy: user?.name || 'Administrator',
       };
@@ -473,7 +473,7 @@ function Calendar() {
         });
       }
 
-      setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
+      setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Event' });
       setShowAddEventModal(false);
     }
   };
@@ -485,7 +485,7 @@ function Calendar() {
       date: event.date || '',
       description: event.description || '',
       track: event.track || 'All Tracks',
-      category: event.category || 'Training'
+      category: event.category || 'Event'
     });
     setSelectedDate(null);
     setShowAddEventModal(true);
@@ -612,18 +612,25 @@ function Calendar() {
   // Category Badge Styler
   const getCategoryBadgeClass = (category) => {
     switch (category) {
+      case 'Event':
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
       case 'Orientation':
         return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'Immersion':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'Training':
         return 'bg-amber-50 text-amber-800 border-amber-200';
+      case 'Community Service':
+        return 'bg-teal-50 text-teal-800 border-teal-200';
+      case 'Immersion':
+        return 'bg-cyan-50 text-cyan-800 border-cyan-200';
+      case 'General Assembly':
+      case 'Assembly':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       case 'Evaluation':
         return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'Culmination':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       case 'Deadline':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'Holiday':
         return 'bg-red-50 text-red-700 border-red-200';
       default:
@@ -744,7 +751,7 @@ function Calendar() {
                 <button type="button"
                   onClick={() => {
                     setEditingEvent(null);
-                    setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Training' });
+                    setNewEvent({ title: '', date: '', description: '', track: 'All Tracks', category: 'Event' });
                     setShowAddEventModal(true);
                   }}
                   className="flex items-center space-x-1 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-emerald-950 font-black px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 text-[11px] sm:text-xs cursor-pointer shrink-0"
@@ -854,11 +861,7 @@ function Calendar() {
                               className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-bold truncate border ${
                                 event.type === 'holiday'
                                   ? 'bg-red-50 text-red-700 border-red-200'
-                                  : event.category === 'Immersion'
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                    : event.category === 'Evaluation'
-                                      ? 'bg-purple-50 text-purple-800 border-purple-200'
-                                      : 'bg-blue-50 text-blue-800 border-blue-200'
+                                  : getCategoryBadgeClass(event.category)
                               }`}
                               title={`${event.title}${past ? ' (Past Event)' : ''}`}
                             >
@@ -877,7 +880,21 @@ function Calendar() {
                               <span
                                 key={idx}
                                 className={`w-1.5 h-1.5 rounded-full inline-block ${
-                                  event.type === 'holiday' ? 'bg-red-500' : event.category === 'Immersion' ? 'bg-emerald-500' : 'bg-blue-500'
+                                  event.type === 'holiday'
+                                    ? 'bg-red-500'
+                                    : event.category === 'Immersion' || event.category === 'Community Service'
+                                      ? 'bg-teal-500'
+                                      : event.category === 'Orientation'
+                                        ? 'bg-blue-500'
+                                        : event.category === 'Training'
+                                          ? 'bg-amber-500'
+                                          : event.category === 'Evaluation'
+                                            ? 'bg-purple-500'
+                                            : event.category === 'Culmination'
+                                              ? 'bg-rose-500'
+                                              : event.category === 'General Assembly' || event.category === 'Assembly'
+                                                ? 'bg-indigo-500'
+                                                : 'bg-emerald-500'
                                 }`}
                               />
                             ))}
@@ -1234,7 +1251,7 @@ function Calendar() {
                         const pad = (n) => String(n).padStart(2, '0');
                         const dateStr = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(selectedDate)}`;
                         setEditingEvent(null);
-                        setNewEvent({ title: '', date: dateStr, description: '', track: 'All Tracks', category: 'Training' });
+                        setNewEvent({ title: '', date: dateStr, description: '', track: 'All Tracks', category: 'Event' });
                         setSelectedDate(null);
                         setShowAddEventModal(true);
                       }}
@@ -1298,16 +1315,18 @@ function Calendar() {
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Category</label>
                     <select
-                      value={newEvent.category || 'Training'}
+                      value={newEvent.category || 'Event'}
                       onChange={(e) => setNewEvent({...newEvent, category: e.target.value})}
                       className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium"
                     >
+                      <option value="Event">Event</option>
                       <option value="Orientation">Orientation</option>
-                      <option value="Immersion">Immersion</option>
                       <option value="Training">Training</option>
+                      <option value="Community Service">Community Service</option>
+                      <option value="Immersion">Immersion</option>
+                      <option value="General Assembly">General Assembly</option>
                       <option value="Evaluation">Evaluation</option>
                       <option value="Culmination">Culmination</option>
-                      <option value="Deadline">Deadline</option>
                     </select>
                   </div>
 

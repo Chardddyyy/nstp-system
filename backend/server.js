@@ -2972,15 +2972,26 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     });
   }
 
-  // 1. Prioritize Direct Gmail SMTP with multi-tier fallback (natively embeds CID inline images for Gmail)
+  // 1. Prioritize Persistent SMTP Connection Pool for lightning-fast dispatch (<1s)
   if (emailUser && emailPass) {
+    const pooledTransporter = getSharedMailTransporter();
+    if (pooledTransporter) {
+      try {
+        const info = await pooledTransporter.sendMail(mailOptions);
+        console.log(`[DIGITAL ID EMAIL] Delivered via persistent SMTP pool to ${deliveryEmail} (${info.messageId})`);
+        return { sent: true, method: 'pooled-smtp', messageId: info.messageId };
+      } catch (poolErr) {
+        console.warn('[DIGITAL ID EMAIL] Persistent SMTP pool notice, falling back:', poolErr.message);
+      }
+    }
+
     try {
       const t1 = nodemailer.createTransport({
         service: 'gmail',
         auth: { user: emailUser, pass: emailPass },
-        connectionTimeout: 12000,
-        greetingTimeout: 9000,
-        socketTimeout: 12000
+        connectionTimeout: 8000,
+        greetingTimeout: 6000,
+        socketTimeout: 8000
       });
       const info = await t1.sendMail(mailOptions);
       console.log(`[DIGITAL ID EMAIL] Delivered via Gmail service with PDF & CID photo to ${deliveryEmail} (${info.messageId})`);
@@ -4946,7 +4957,7 @@ app.get('/api/calendar/events', async (req, res) => {
         title VARCHAR(255) NOT NULL,
         date VARCHAR(30) NOT NULL,
         track VARCHAR(50) DEFAULT 'All Tracks',
-        category VARCHAR(50) DEFAULT 'Training',
+        category VARCHAR(50) DEFAULT 'Event',
         description TEXT,
         created_by VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -4970,7 +4981,7 @@ app.post('/api/calendar/events', authenticateToken, async (req, res) => {
 
     const eventId = String(id || 'cev_' + Date.now());
     const eventTrack = track || 'All Tracks';
-    const eventCategory = category || 'Training';
+    const eventCategory = category || 'Event';
     const eventDesc = description || '';
     const creatorName = req.user.name || 'Administrator';
 

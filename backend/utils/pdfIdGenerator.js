@@ -20,8 +20,8 @@ async function resolveImageBuffer(imgSource) {
 
     // 2. HTTP/HTTPS URL (e.g. Cloudinary, QuickChart, etc.)
     if (clean.startsWith('http://') || clean.startsWith('https://')) {
-      const resp = await fetch(clean);
-      if (resp.ok) {
+      const resp = await fetch(clean, { signal: AbortSignal.timeout(3000) }).catch(() => null);
+      if (resp && resp.ok) {
         const arrayBuf = await resp.arrayBuffer();
         return Buffer.from(arrayBuf);
       }
