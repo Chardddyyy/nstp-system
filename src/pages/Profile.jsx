@@ -4,7 +4,7 @@ import {
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
   Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
   UserPlus, Trash2, Activity, History, RefreshCw, Search, Download, Filter, ChevronLeft, ChevronRight,
-  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock
+  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock, UserMinus
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -525,6 +525,9 @@ function Profile() {
       attendance_scanned: { label: 'Attendance Scanned', color: 'bg-sky-100/90 text-sky-950 border-sky-300', type: 'attendance', icon: CheckCircle2 },
       attendance_excused: { label: 'Attendance Excused', color: 'bg-indigo-100/90 text-indigo-950 border-indigo-300', type: 'attendance', icon: CheckCircle },
       attendance_override: { label: 'Attendance Override', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'attendance', icon: Pencil },
+      attendance_session_student_removed: { label: 'Student Removed', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'attendance', icon: UserMinus },
+      attendance_cleared_all: { label: 'Attendance Cleared', color: 'bg-red-100 text-red-950 border-red-300', type: 'attendance', icon: Trash2 },
+      attendance_deleted: { label: 'Record Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'attendance', icon: Trash2 },
       
       enrollment_approved: { label: 'Enrollment Approved', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'student', icon: CheckCircle2 },
       enrollment_declined: { label: 'Enrollment Declined', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'student', icon: X },
@@ -1202,7 +1205,7 @@ function Profile() {
           onClick={() => setShowAuditModal(false)}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl max-h-[92vh] flex flex-col border border-emerald-100/80 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1284,7 +1287,7 @@ function Profile() {
               </select>
             </div>
 
-            {/* Content Area - Scrollable (No Horizontal Scroll) */}
+            {/* Content Area - Scrollable with generous room */}
             <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 divide-y divide-gray-100">
               {auditLoading && auditLogs.length === 0 ? (
                 <div className="py-16 text-center text-gray-400 flex flex-col items-center justify-center gap-2">
@@ -1301,16 +1304,16 @@ function Profile() {
                 </div>
               ) : (
                 <>
-                  {/* Desktop Table View (Full width, no horizontal scroll) */}
-                  <div className="hidden sm:block w-full overflow-hidden">
-                    <table className="w-full table-fixed text-left border-collapse">
+                  {/* Desktop Table View (Spacious layout with no column overlapping) */}
+                  <div className="hidden sm:block w-full overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-gray-100/90 sticky top-0 z-10 backdrop-blur-xs border-b border-gray-200 text-[10px] sm:text-[10.5px] uppercase font-black tracking-wider text-gray-500">
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[135px] lg:w-[145px]">Timestamp</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[165px] lg:w-[185px]">User / Actor</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 w-[185px] lg:w-[205px]">Action</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5">Details &amp; Context</th>
-                          <th className="py-2.5 sm:py-3 px-3 sm:px-3.5 text-right w-[95px] lg:w-[105px]">IP Address</th>
+                          <th className="py-2.5 sm:py-3 px-3.5 w-[140px] lg:w-[155px] shrink-0">Timestamp</th>
+                          <th className="py-2.5 sm:py-3 px-3.5 w-[190px] lg:w-[220px] shrink-0">User / Actor</th>
+                          <th className="py-2.5 sm:py-3 px-3.5 w-[195px] lg:w-[225px] shrink-0">Action</th>
+                          <th className="py-2.5 sm:py-3 px-3.5 min-w-[260px]">Details &amp; Context</th>
+                          <th className="py-2.5 sm:py-3 px-3.5 text-right w-[110px] lg:w-[125px] shrink-0">IP Address</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-xs text-gray-700">
@@ -1323,7 +1326,7 @@ function Profile() {
                           
                           return (
                             <tr key={log.id} className="hover:bg-emerald-50/40 transition-colors">
-                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                              <td className="py-2.5 sm:py-3 px-3.5 align-middle">
                                 <div className="flex items-center gap-1.5 leading-tight">
                                   <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0 self-start mt-0.5" />
                                   <div className="flex flex-col font-mono leading-snug">
@@ -1332,7 +1335,7 @@ function Profile() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
+                              <td className="py-2.5 sm:py-3 px-3.5 align-middle">
                                 <div className="flex items-center gap-2 min-w-0">
                                   <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs ${
                                     isUserAdmin ? 'bg-emerald-700 text-white' : 'bg-blue-600 text-white'
@@ -1352,18 +1355,18 @@ function Profile() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black border shadow-2xs whitespace-nowrap ${act.color}`}>
+                              <td className="py-2.5 sm:py-3 px-3.5 align-middle">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black border shadow-2xs max-w-full ${act.color}`} title={act.label}>
                                   <ActionIcon className="w-3.5 h-3.5 shrink-0" />
-                                  <span>{act.label}</span>
+                                  <span className="truncate">{act.label}</span>
                                 </span>
                               </td>
-                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 align-middle">
-                                <p className="text-gray-700 text-xs leading-relaxed break-words line-clamp-2" title={log.detail || '—'}>
+                              <td className="py-2.5 sm:py-3 px-3.5 align-middle">
+                                <p className="text-gray-800 text-xs leading-relaxed break-words font-medium" title={log.detail || '—'}>
                                   {log.detail || '—'}
                                 </p>
                               </td>
-                              <td className="py-2.5 sm:py-3 px-3 sm:px-3.5 text-right align-middle">
+                              <td className="py-2.5 sm:py-3 px-3.5 text-right align-middle">
                                 <span className="font-mono text-[10px] sm:text-[10.5px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200 inline-block">
                                   {log.ip || '127.0.0.1'}
                                 </span>
@@ -1384,10 +1387,10 @@ function Profile() {
                       const ts = formatAuditParts(log.created_at);
                       return (
                         <div key={log.id} className="p-3.5 space-y-2 hover:bg-gray-50/60 transition-colors">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border shadow-2xs whitespace-nowrap ${act.color}`}>
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black border shadow-2xs max-w-[65%] shrink min-w-0 ${act.color}`} title={act.label}>
                               <ActionIcon className="w-3 h-3 shrink-0" />
-                              <span>{act.label}</span>
+                              <span className="truncate">{act.label}</span>
                             </span>
                             <div className="text-right text-[10px] font-mono leading-tight shrink-0">
                               <span className="text-gray-700 font-semibold block whitespace-nowrap">{ts.date}</span>
@@ -1395,7 +1398,7 @@ function Profile() {
                             </div>
                           </div>
 
-                          <p className="text-xs text-gray-800 leading-snug">{log.detail || '—'}</p>
+                          <p className="text-xs text-gray-800 leading-snug break-words">{log.detail || '—'}</p>
 
                           <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-50">
                             <div className="flex items-center gap-1.5 truncate">
