@@ -297,6 +297,26 @@ CREATE TABLE IF NOT EXISTS student_grades (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 18. LETTER TEMPLATES TABLE (Official Formats & Departmental Templates)
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS letter_templates (
+  id              VARCHAR(64) PRIMARY KEY,
+  title           VARCHAR(255) NOT NULL,
+  department      VARCHAR(50) NOT NULL DEFAULT 'All',
+  description     TEXT,
+  file_name       VARCHAR(255) DEFAULT NULL,
+  file_type       VARCHAR(100) DEFAULT NULL,
+  file_size       VARCHAR(50) DEFAULT NULL,
+  file_data       LONGTEXT,
+  created_by      VARCHAR(255) DEFAULT NULL,
+  created_by_id   INT DEFAULT NULL,
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_letter_dept (department),
+  INDEX idx_letter_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- SEED DATA
 -- Passwords are bcrypt-hashed (cost 12):
 --   admin123 / cwts123 / lts123 / rotc123
