@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   profilePicture TEXT,
   phone         VARCHAR(50),
   bio           TEXT,
+  signature     LONGTEXT,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

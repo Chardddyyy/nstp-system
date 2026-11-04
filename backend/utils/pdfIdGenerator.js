@@ -226,8 +226,13 @@ async function generateStudentIdPdf(studentData) {
 
       // ── Coordinator Signature ──
       const sigY = emY + 8;
+      const customSigBuf = await resolveImageBuffer(studentData.coordinatorSignature || studentData.signature);
       const sigPath = path.join(__dirname, '..', '..', 'public', 'signature.png');
-      if (fs.existsSync(sigPath)) {
+      if (customSigBuf) {
+        try {
+          doc.image(customSigBuf, cardX + (cardWidth - 55) / 2, sigY - 5, { fit: [55, 17], align: 'center' });
+        } catch (_) {}
+      } else if (fs.existsSync(sigPath)) {
         doc.image(sigPath, cardX + (cardWidth - 55) / 2, sigY - 5, { fit: [55, 17], align: 'center' });
       }
       doc.moveTo(cardX + (cardWidth - 80) / 2, sigY + 12).lineTo(cardX + (cardWidth + 80) / 2, sigY + 12)

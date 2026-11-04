@@ -9,8 +9,10 @@ import {
   COORDINATOR_INSTITUTION
 } from '../utils/signatureAssets';
 
-export function NstpIdCard({ student }) {
+export function NstpIdCard({ student, coordinatorSignature }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
+
+  const sigSrc = student?.coordinatorSignature || coordinatorSignature || `${import.meta.env.BASE_URL}signature.png`;
 
   const studentName = (
     student.name ||
@@ -169,7 +171,7 @@ export function NstpIdCard({ student }) {
           {/* Coordinator E-Signature Graphic above name */}
           <div className="h-[6mm] w-28 flex items-center justify-center -mb-1">
             <img 
-              src={`${import.meta.env.BASE_URL}signature.png`} 
+              src={sigSrc} 
               alt="Coordinator E-Signature" 
               className="h-full w-full object-contain pointer-events-none" 
               onError={(e) => { e.currentTarget.src = DEMO_COORDINATOR_SIGNATURE_SVG; }}

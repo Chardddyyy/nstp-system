@@ -36,6 +36,29 @@ function DigitalIdViewer() {
   const photoUrl = searchParams.get('photo') || null;
   const qrToken = searchParams.get('qr') || `NSTP-${studentId}-${serialNo}`;
 
+  const [coordinator, setCoordinator] = useState({
+    name: COORDINATOR_NAME,
+    title: COORDINATOR_TITLE,
+    institution: COORDINATOR_INSTITUTION,
+    signature: null
+  });
+
+  useEffect(() => {
+    fetch('/api/coordinator/signature')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.name) {
+          setCoordinator({
+            name: data.name || COORDINATOR_NAME,
+            title: data.title || COORDINATOR_TITLE,
+            institution: data.institution || COORDINATOR_INSTITUTION,
+            signature: data.signature || null
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const trackLabels = {
     CWTS: 'CIVIC WELFARE TRAINING SERVICE',
     ROTC: "RESERVE OFFICERS' TRAINING CORPS",
@@ -336,12 +359,17 @@ function DigitalIdViewer() {
           {/* Coordinator Signature */}
           <div className="mt-1 text-center">
             <div className="h-8 flex items-center justify-center -mb-2 pointer-events-none">
-              <img src={`${import.meta.env.BASE_URL}signature.png`} alt="Coordinator Signature" className="h-full object-contain" onError={(e) => { e.currentTarget.src = DEMO_COORDINATOR_SIGNATURE_SVG; }} />
+              <img 
+                src={coordinator.signature || `${import.meta.env.BASE_URL}signature.png`} 
+                alt="Coordinator Signature" 
+                className="h-full object-contain" 
+                onError={(e) => { e.currentTarget.src = DEMO_COORDINATOR_SIGNATURE_SVG; }} 
+              />
             </div>
             <div className="w-36 border-t border-slate-600 mx-auto mb-0.5"></div>
-            <div className="text-[8px] font-black text-slate-900 uppercase tracking-wider">{COORDINATOR_NAME}</div>
-            <div className="text-[6.5px] font-extrabold text-emerald-800 uppercase leading-tight">{COORDINATOR_TITLE}</div>
-            <div className="text-[6px] text-slate-500 leading-tight">{COORDINATOR_INSTITUTION}</div>
+            <div className="text-[8px] font-black text-slate-900 uppercase tracking-wider">{coordinator.name}</div>
+            <div className="text-[6.5px] font-extrabold text-emerald-800 uppercase leading-tight">{coordinator.title}</div>
+            <div className="text-[6px] text-slate-500 leading-tight">{coordinator.institution}</div>
           </div>
 
         </div>

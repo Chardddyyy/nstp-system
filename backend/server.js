@@ -860,6 +860,7 @@ async function ensureUserColumns() {
     'ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL',
     'ALTER TABLE users MODIFY COLUMN last_active_at DATETIME NULL',
     "ALTER TABLE users ADD COLUMN assigned_section VARCHAR(255) DEFAULT 'All'",
+    'ALTER TABLE users ADD COLUMN signature LONGTEXT DEFAULT NULL'
   ];
   for (var i = 0; i < alters.length; i++) {
     try { await pool.execute(alters[i]); } catch (e) { /* column already exists */ }
@@ -868,6 +869,24 @@ async function ensureUserColumns() {
   try {
     await pool.execute("UPDATE users SET email = CONCAT('instructor', id, '@cvsu.edu.ph') WHERE email IS NULL OR TRIM(email) = ''");
   } catch (e) {}
+
+  // Auto-seed official coordinator signature into admin user if currently empty
+  try {
+    const [adminWithSig] = await pool.execute("SELECT id, signature FROM users WHERE role = 'admin' OR id = 1 ORDER BY id ASC LIMIT 1");
+    if (adminWithSig.length > 0 && !adminWithSig[0].signature) {
+      const sigPath = path.join(__dirname, '..', 'public', 'signature.png');
+      const fallbackPath = path.join(__dirname, 'public', 'signature.png');
+      const actualPath = fs.existsSync(sigPath) ? sigPath : (fs.existsSync(fallbackPath) ? fallbackPath : null);
+      if (actualPath) {
+        const sigData = `data:image/png;base64,${fs.readFileSync(actualPath).toString('base64')}`;
+        await pool.execute("UPDATE users SET signature = ? WHERE id = ?", [sigData, adminWithSig[0].id]);
+        console.log(`[DB Migration] Auto-seeded official coordinator signature for admin #${adminWithSig[0].id}`);
+      }
+    }
+  } catch (seedErr) {
+    console.warn('[DB Migration] Notice seeding admin signature:', seedErr.message);
+  }
+
   await ensureNstpIdAndAttendanceTables();
 }
 
@@ -2762,12 +2781,27 @@ async function sendDigitalIdEmail(studentData, overrideEmail = null) {
     </table>
   `);
 
-  // Official Coordinator E-Signature for CID inline embedding
+  // Official Coordinator E-Signature for CID inline embedding (prefers Database signature)
+  let dbSig = null;
+  try {
+    const [adminRows] = await pool.execute("SELECT signature FROM users WHERE (role = 'admin' OR id = 1) AND signature IS NOT NULL AND TRIM(signature) != '' ORDER BY id ASC LIMIT 1");
+    if (adminRows.length > 0 && adminRows[0].signature) {
+      dbSig = adminRows[0].signature;
+    }
+  } catch (_) {}
+
   const sigFilePath = path.join(__dirname, '..', 'public', 'signature.png');
   const fallbackSigPath = path.join(__dirname, 'public', 'signature.png');
   const targetSigPath = fs.existsSync(sigFilePath) ? sigFilePath : (fs.existsSync(fallbackSigPath) ? fallbackSigPath : null);
-  const sigBuffer = targetSigPath ? fs.readFileSync(targetSigPath) : null;
-  const sigBase64 = sigBuffer ? `data:image/png;base64,${sigBuffer.toString('base64')}` : 'https://chardddyyy.github.io/nstp-system/signature.png';
+  let sigBuffer = null;
+  if (dbSig && dbSig.includes('base64,')) {
+    try {
+      sigBuffer = Buffer.from(dbSig.split('base64,')[1], 'base64');
+    } catch (_) {}
+  } else if (targetSigPath) {
+    sigBuffer = fs.readFileSync(targetSigPath);
+  }
+  const sigBase64 = dbSig || (sigBuffer ? `data:image/png;base64,${sigBuffer.toString('base64')}` : 'https://chardddyyy.github.io/nstp-system/signature.png');
   const sigImgSrc = sigBuffer ? 'cid:coordinator_signature' : sigBase64;
 
   const htmlContent = `
@@ -3474,7 +3508,7 @@ app.post('/forgot-password', (req, res, next) => {
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section, COALESCE(last_active_at, updated_at, created_at) as last_active_at FROM users'
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, signature, assigned_section, COALESCE(last_active_at, updated_at, created_at) as last_active_at FROM users'
     );
     res.json(users);
   } catch (error) {
@@ -3488,7 +3522,7 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   await ensureUserColumns().catch(() => {});
   try {
     const [users] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section FROM users WHERE id = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, signature, assigned_section FROM users WHERE id = ?',
       [req.user.id]
     );
 
@@ -3637,7 +3671,7 @@ async function handleUpdateUser(req, res) {
       targetUserId = req.user.id;
     }
 
-    const { name, email, phone, bio, avatar, profilePicture, role, department, password, assigned_section, assignedSection } = req.body;
+    const { name, email, phone, bio, avatar, profilePicture, signature, role, department, password, assigned_section, assignedSection } = req.body;
 
     // Validate email format
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email))) {
@@ -3646,6 +3680,10 @@ async function handleUpdateUser(req, res) {
     // Cap profile picture at ~10 MB base64 (≈ 13.3 MB string)
     if (profilePicture && String(profilePicture).length > 14_000_000) {
       return res.status(400).json({ message: 'Profile picture too large. Maximum 10 MB.' });
+    }
+    // Cap signature at ~10 MB base64
+    if (signature && String(signature).length > 14_000_000) {
+      return res.status(400).json({ message: 'Signature too large. Maximum 10 MB.' });
     }
 
     // Validate password if updating
@@ -3670,13 +3708,15 @@ async function handleUpdateUser(req, res) {
     const targetAvatar = (avatar !== undefined && avatar !== null && String(avatar).trim() !== '') ? sanitizeStr(avatar, 50) : existingUser.avatar;
     // Only overwrite profilePicture if explicitly provided and not undefined
     const targetProfilePicture = profilePicture !== undefined ? (profilePicture || null) : existingUser.profilePicture;
+    // Only overwrite signature if explicitly provided
+    const targetSignature = signature !== undefined ? (signature || null) : existingUser.signature;
 
     if (req.user.role === 'admin' && String(targetUserId) !== String(req.user.id)) {
       const targetRole = role !== undefined ? role : (existingUser.role || 'instructor');
       const targetDept = targetRole === 'admin' ? 'NSTP Office' : (department !== undefined ? department : (existingUser.department || 'CWTS'));
       const targetAssignedSec = targetRole === 'admin' ? 'All' : (assigned_section !== undefined ? assigned_section : (assignedSection !== undefined ? assignedSection : (existingUser.assigned_section || 'All')));
 
-      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, role = ?, department = ?, assigned_section = ?';
+      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, signature = ?, role = ?, department = ?, assigned_section = ?';
       const params = [
         targetName,
         targetEmail,
@@ -3684,6 +3724,7 @@ async function handleUpdateUser(req, res) {
         targetBio,
         targetAvatar,
         targetProfilePicture,
+        targetSignature,
         targetRole,
         targetDept,
         targetAssignedSec
@@ -3697,14 +3738,15 @@ async function handleUpdateUser(req, res) {
       params.push(targetUserId);
       await pool.execute(updateSql, params);
     } else {
-      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?';
+      let updateSql = 'UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar = ?, profilePicture = ?, signature = ?';
       const params = [
         targetName,
         targetEmail,
         targetPhone,
         targetBio,
         targetAvatar,
-        targetProfilePicture
+        targetProfilePicture,
+        targetSignature
       ];
       if (password && String(password).trim().length >= 8) {
         const hashed = await bcrypt.hash(String(password).trim(), 12);
@@ -3717,7 +3759,7 @@ async function handleUpdateUser(req, res) {
     }
 
     const [updatedUsers] = await pool.execute(
-      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, assigned_section FROM users WHERE id = ?',
+      'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, signature, assigned_section FROM users WHERE id = ?',
       [targetUserId]
     );
 
@@ -3729,6 +3771,35 @@ async function handleUpdateUser(req, res) {
 }
 app.put('/api/users/me', authenticateToken, handleUpdateUser);
 app.put('/api/users/:id', authenticateToken, handleUpdateUser);
+
+// Public / system endpoint to retrieve official coordinator info & e-signature
+app.get('/api/coordinator/signature', async (req, res) => {
+  try {
+    await ensureUserColumns().catch(() => {});
+    const [adminRows] = await pool.execute(
+      "SELECT id, name, email, department, avatar, profilePicture, signature FROM users WHERE role = 'admin' OR id = 1 ORDER BY id ASC LIMIT 1"
+    );
+    if (adminRows.length > 0) {
+      const admin = adminRows[0];
+      return res.json({
+        id: admin.id,
+        name: admin.name || 'HENRY R. BALANZA',
+        title: 'NSTP COORDINATOR',
+        institution: 'Cavite State University Naic',
+        signature: admin.signature || null
+      });
+    }
+    res.json({
+      name: 'HENRY R. BALANZA',
+      title: 'NSTP COORDINATOR',
+      institution: 'Cavite State University Naic',
+      signature: null
+    });
+  } catch (error) {
+    console.error('Get coordinator signature error:', error.message);
+    res.status(500).json({ message: 'Server error retrieving coordinator signature' });
+  }
+});
 
 // Change password (own account) or admin reset (any account)
 app.put('/api/users/:id/password', authenticateToken, async (req, res) => {
