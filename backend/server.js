@@ -8026,7 +8026,7 @@ app.post('/api/letter-templates', authenticateToken, async (req, res) => {
       [templateId, title.trim(), targetDept, (description || '').trim(), fileName, fileType, fileSize, fileData, authorName, req.user.id]
     );
 
-    auditLog('letter_template_created', req.user.id, `Created template "${title.trim()}" for ${targetDept}`, req.ip);
+    auditLog('letter_template_created', req.user.id, `Added ${targetDept} letter format: "${title.trim()}"${fileName ? ` (${fileName})` : ''}`, req.ip);
 
     res.status(201).json({
       id: templateId,
@@ -8072,7 +8072,7 @@ app.put('/api/letter-templates/:id', authenticateToken, async (req, res) => {
       [title ? title.trim() : existing[0].title, targetDept, (description || '').trim(), fileName, fileType, fileSize, fileData, id]
     );
 
-    auditLog('letter_template_updated', req.user.id, `Updated template id: ${id}`, req.ip);
+    auditLog('letter_template_updated', req.user.id, `Updated ${targetDept} letter format: "${title ? title.trim() : existing[0].title}"`, req.ip);
     res.json({ message: 'Template updated successfully' });
   } catch (err) {
     console.error('Error updating letter template:', err.message);
@@ -8092,7 +8092,7 @@ app.delete('/api/letter-templates/:id', authenticateToken, async (req, res) => {
     }
 
     await pool.query('DELETE FROM letter_templates WHERE id = ?', [id]);
-    auditLog('letter_template_deleted', req.user.id, `Deleted template "${existing[0].title}" (${existing[0].department})`, req.ip);
+    auditLog('letter_template_deleted', req.user.id, `Deleted ${existing[0].department} letter format: "${existing[0].title}"`, req.ip);
     res.json({ message: 'Template deleted successfully' });
   } catch (err) {
     console.error('Error deleting letter template:', err.message);

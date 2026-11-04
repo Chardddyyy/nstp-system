@@ -540,7 +540,11 @@ function Profile() {
       password_changed: { label: 'Password Changed', color: 'bg-violet-100/90 text-violet-950 border-violet-300', type: 'system', icon: Key },
       password_reset_success: { label: 'Password Reset', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'system', icon: RotateCcw },
       update_enrollment_schedule: { label: 'Schedule Updated', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'system', icon: Calendar },
-      user_account_deleted: { label: 'Account Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'system', icon: Trash2 }
+      user_account_deleted: { label: 'Account Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'system', icon: Trash2 },
+
+      letter_template_created: { label: 'Letter Format Added', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'letter', icon: FileText },
+      letter_template_updated: { label: 'Letter Format Updated', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'letter', icon: Pencil },
+      letter_template_deleted: { label: 'Letter Format Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'letter', icon: Trash2 }
     };
     
     if (map[action]) return map[action];
