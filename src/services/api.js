@@ -1845,3 +1845,38 @@ export const auditLogsAPI = {
   }
 };
 
+// ── Letter Templates API (Synchronized between Admin & Instructors) ─────────
+export const letterTemplatesAPI = {
+  getAll: async () => {
+    try {
+      return await apiCall('/letter-templates');
+    } catch (err) {
+      console.warn('Fetch letter templates API fallback:', err);
+      try {
+        const cached = localStorage.getItem('nstp_letter_templates');
+        return cached ? JSON.parse(cached) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+  },
+  create: async (data) => {
+    return await apiCall('/letter-templates', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+  update: async (id, data) => {
+    return await apiCall(`/letter-templates/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+  delete: async (id) => {
+    return await apiCall(`/letter-templates/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  }
+};
+
+

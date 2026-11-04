@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
 import { FileCheck, Plus, FileText, Download, Trash2, Edit3, CheckCircle, AlertCircle, X, Search, Menu, Paperclip, Eye, File, History, Archive, RotateCcw } from 'lucide-react';
 import { downloadOfficialLetter, generateOfficialLetterHTML } from '../utils/letterDocumentGenerator';
+import { letterTemplatesAPI } from '../services/api';
 import xss from 'xss';
 
 const DEFAULT_TEMPLATES = [];
@@ -53,6 +54,40 @@ export default function LetterFormats() {
 
   const [viewingFile, setViewingFile] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Load letter templates from MySQL backend API and keep synced across Admin & Instructors
+  useEffect(() => {
+    let isMounted = true;
+    const syncLetterTemplates = async () => {
+      try {
+        const remote = await letterTemplatesAPI.getAll();
+        if (Array.isArray(remote) && isMounted) {
+          if (remote.length > 0) {
+            setTemplates(remote);
+            try { localStorage.setItem('nstp_letter_templates', JSON.stringify(remote)); } catch (_) {}
+          } else {
+            // If database is empty, migrate any pre-existing templates in localStorage to the database
+            const local = JSON.parse(localStorage.getItem('nstp_letter_templates') || '[]');
+            if (Array.isArray(local) && local.length > 0) {
+              for (const item of local) {
+                if (item.file && item.file.data) {
+                  await letterTemplatesAPI.create(item).catch(() => {});
+                }
+              }
+              const reloaded = await letterTemplatesAPI.getAll().catch(() => local);
+              if (isMounted && Array.isArray(reloaded) && reloaded.length > 0) {
+                setTemplates(reloaded);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Notice loading letter templates:', err.message);
+      }
+    };
+    syncLetterTemplates();
+    return () => { isMounted = false; };
+  }, []);
 
   // Handle Escape key to close open overlays/modals in LetterFormats
   useEffect(() => {
@@ -125,14 +160,16 @@ export default function LetterFormats() {
         showToast(`You can only edit letter formats for your assigned department (${user.department}).`, 'error');
         return;
       }
-      updated = templates.map(t => t.id === editingTemplate.id ? {
-        ...t,
+      const updatedTemplate = {
+        ...editingTemplate,
         title: title.trim(),
         department: targetDept,
         description: (description || '').trim(),
         file: finalFile,
         updatedAt: new Date().toISOString()
-      } : t);
+      };
+      letterTemplatesAPI.update(editingTemplate.id, updatedTemplate).catch(() => {});
+      updated = templates.map(t => t.id === editingTemplate.id ? updatedTemplate : t);
       showToast('Template updated successfully!', 'success');
     } else {
       const newT = {
@@ -144,6 +181,7 @@ export default function LetterFormats() {
         createdBy: user?.name || (user?.role === 'instructor' ? `${user.department} Instructor` : 'Admin'),
         createdAt: new Date().toISOString()
       };
+      letterTemplatesAPI.create(newT).catch(() => {});
       updated = [newT, ...templates];
       showToast(`New ${targetDept} letter format saved successfully!`, 'success');
     }
@@ -175,6 +213,7 @@ export default function LetterFormats() {
   const confirmDeleteTemplate = () => {
     if (!templateToDelete) return;
     const target = templateToDelete;
+    letterTemplatesAPI.delete(target.id).catch(() => {});
     const updated = templates.filter(t => t.id !== target.id);
     setTemplates(updated);
     try { localStorage.setItem('nstp_letter_templates', JSON.stringify(updated)); } catch {}
@@ -225,10 +264,16 @@ export default function LetterFormats() {
           const isAllowed = t.department === 'All' || t.department === user.department;
           if (!isAllowed) return false;
         }
-        // Strict tab filtering:
-        // When 'All' is selected -> only templates with department === 'All'
-        // When a specific department (e.g. 'CWTS') is selected -> only templates with that department
-        const deptMatch = activeTab === 'All' ? t.department === 'All' : t.department === activeTab;
+        // Tab filtering:
+        // When 'All' is selected for Admin: show ALL formats (All, CWTS, ROTC, LTS) so Admin sees everything!
+        // When 'All' is selected for an Instructor: show general 'All' formats
+        // When a specific department ('CWTS', 'ROTC', 'LTS') is selected: show templates for that department
+        let deptMatch = false;
+        if (activeTab === 'All') {
+          deptMatch = user?.role === 'admin' ? true : t.department === 'All';
+        } else {
+          deptMatch = t.department === activeTab;
+        }
         const searchMatch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (t.description || '').toLowerCase().includes(searchTerm.toLowerCase());
         return deptMatch && searchMatch;

@@ -649,6 +649,23 @@ async function ensureAllCoreTables() {
       setting_key VARCHAR(100) PRIMARY KEY,
       setting_value LONGTEXT,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    `CREATE TABLE IF NOT EXISTS letter_templates (
+      id VARCHAR(64) PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      department VARCHAR(50) NOT NULL DEFAULT 'All',
+      description TEXT NULL,
+      file_name VARCHAR(255) NULL,
+      file_type VARCHAR(100) NULL,
+      file_size VARCHAR(50) NULL,
+      file_data LONGTEXT NULL,
+      created_by VARCHAR(255) NULL,
+      created_by_id INT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_letter_dept (department),
+      INDEX idx_letter_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
   ];
 
@@ -7941,6 +7958,145 @@ app.post('/api/attendance/override', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error overriding attendance record:', err);
     res.json({ success: true, message: 'Updated locally' });
+  }
+});
+
+// ── LETTER TEMPLATES CRUD (Synchronized across Admin & Instructors) ──────────
+app.get('/api/letter-templates', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, title, department, description, file_name, file_type, file_size, file_data, created_by, created_at, updated_at FROM letter_templates ORDER BY created_at DESC'
+    );
+    const formatted = rows.map(r => ({
+      id: String(r.id),
+      title: r.title,
+      department: r.department,
+      description: r.description,
+      file: r.file_data ? {
+        name: r.file_name,
+        type: r.file_type,
+        size: r.file_size,
+        data: r.file_data
+      } : null,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at
+    }));
+    res.json(formatted);
+  } catch (err) {
+    console.error('Error fetching letter templates:', err.message);
+    res.json([]);
+  }
+});
+
+app.post('/api/letter-templates', authenticateToken, async (req, res) => {
+  try {
+    const { id, title, department, description, file, createdBy } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+
+    let targetDept = department || 'All';
+    if (req.user.role === 'instructor') {
+      if (!req.user.department) {
+        return res.status(403).json({ message: 'Instructor department missing' });
+      }
+      targetDept = req.user.department;
+    }
+
+    const templateId = String(id || Date.now());
+    const authorName = createdBy || req.user.name || (req.user.role === 'instructor' ? `${targetDept} Instructor` : 'Admin');
+    const fileName = file?.name || null;
+    const fileType = file?.type || null;
+    const fileSize = file?.size || null;
+    const fileData = file?.data || null;
+
+    await pool.query(
+      `INSERT INTO letter_templates (id, title, department, description, file_name, file_type, file_size, file_data, created_by, created_by_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+         title = VALUES(title),
+         department = VALUES(department),
+         description = VALUES(description),
+         file_name = VALUES(file_name),
+         file_type = VALUES(file_type),
+         file_size = VALUES(file_size),
+         file_data = VALUES(file_data),
+         updated_at = NOW()`,
+      [templateId, title.trim(), targetDept, (description || '').trim(), fileName, fileType, fileSize, fileData, authorName, req.user.id]
+    );
+
+    auditLog('letter_template_created', req.user.id, `Created template "${title.trim()}" for ${targetDept}`, req.ip);
+
+    res.status(201).json({
+      id: templateId,
+      title: title.trim(),
+      department: targetDept,
+      description: (description || '').trim(),
+      file: file || null,
+      createdBy: authorName,
+      createdAt: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error saving letter template:', err.message);
+    res.status(500).json({ message: 'Error saving letter template' });
+  }
+});
+
+app.put('/api/letter-templates/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, department, description, file } = req.body;
+    const [existing] = await pool.query('SELECT * FROM letter_templates WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+    if (req.user.role === 'instructor' && existing[0].department !== req.user.department) {
+      return res.status(403).json({ message: 'Cannot edit letter template of another department' });
+    }
+
+    let targetDept = existing[0].department;
+    if (req.user.role === 'admin' && department) {
+      targetDept = department;
+    }
+
+    const fileName = file?.name || existing[0].file_name;
+    const fileType = file?.type || existing[0].file_type;
+    const fileSize = file?.size || existing[0].file_size;
+    const fileData = file?.data || existing[0].file_data;
+
+    await pool.query(
+      `UPDATE letter_templates
+       SET title = ?, department = ?, description = ?, file_name = ?, file_type = ?, file_size = ?, file_data = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [title ? title.trim() : existing[0].title, targetDept, (description || '').trim(), fileName, fileType, fileSize, fileData, id]
+    );
+
+    auditLog('letter_template_updated', req.user.id, `Updated template id: ${id}`, req.ip);
+    res.json({ message: 'Template updated successfully' });
+  } catch (err) {
+    console.error('Error updating letter template:', err.message);
+    res.status(500).json({ message: 'Error updating letter template' });
+  }
+});
+
+app.delete('/api/letter-templates/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [existing] = await pool.query('SELECT * FROM letter_templates WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ message: 'Template not found' });
+    }
+    if (req.user.role === 'instructor' && existing[0].department !== req.user.department) {
+      return res.status(403).json({ message: 'Cannot delete letter template of another department' });
+    }
+
+    await pool.query('DELETE FROM letter_templates WHERE id = ?', [id]);
+    auditLog('letter_template_deleted', req.user.id, `Deleted template "${existing[0].title}" (${existing[0].department})`, req.ip);
+    res.json({ message: 'Template deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting letter template:', err.message);
+    res.status(500).json({ message: 'Error deleting letter template' });
   }
 });
 
