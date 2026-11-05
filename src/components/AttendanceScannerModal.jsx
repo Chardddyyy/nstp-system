@@ -3,10 +3,15 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { 
   X, Camera, CheckCircle2, AlertCircle, RefreshCw, Users, Calendar, 
   Clock, ShieldCheck, ArrowRight, ArrowLeft, Search, Check, AlertTriangle, 
-  UserCheck, ShieldAlert, Lock, RotateCcw, Trash2
+  UserCheck, ShieldAlert, Lock, RotateCcw, Trash2, BookOpen
 } from 'lucide-react';
 import { attendanceAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { 
+  DEPARTMENT_SECTIONS, 
+  getAvailableSectionsForDept, 
+  compareStudentsByLastName 
+} from '../utils/gradeSection';
 
 // Web Audio API Beep Generator - Silenced completely to eliminate continuous beeps or audio feedback
 function playScanBeep(_success = true) {
@@ -206,11 +211,21 @@ export function AttendanceScannerModal({
   // Workflow step: 1 = Session Setup, 2 = Live Scanner & Roster
   const [step, setStep] = useState(1);
 
+  // Session Mode: 'in-person' (Live QR Scanner) | 'asynchronous' (Modular Credit)
+  const [sessionMode, setSessionMode] = useState('in-person');
+
   // Session Configuration State (Step 1)
   const [selectedDay, setSelectedDay] = useState('Day 1');
   const [activityName, setActivityName] = useState('NSTP Field Session');
   const [sessionStartTime, setSessionStartTime] = useState('08:00'); // '08:00' default
   const [gracePeriod, setGracePeriod] = useState(15); // minutes (0, 10, 15, 30)
+
+  // Asynchronous Class Attendance State
+  const [asyncSection, setAsyncSection] = useState('All');
+  const [asyncSearchQuery, setAsyncSearchQuery] = useState('');
+  const [asyncSaving, setAsyncSaving] = useState(false);
+  const [asyncSelectedStudentIds, setAsyncSelectedStudentIds] = useState([]);
+  const [markDayAsConducted, setMarkDayAsConducted] = useState(true);
 
   // Scanner & Live Session State (Step 2)
   const [scanType, setScanType] = useState('TIME_IN'); // 'TIME_IN' | 'TIME_OUT'
@@ -318,9 +333,11 @@ export function AttendanceScannerModal({
   useEffect(() => {
     if (isOpen) {
       setStep(1);
+      setSessionMode('in-person');
       setSelectedDay('Day 1');
       setScanStatus(null);
       setLastScannedStudent(null);
+      setAsyncSearchQuery('');
 
       let isMounted = true;
       attendanceAPI.getRecords({ limit: 5000 })
@@ -381,6 +398,143 @@ export function AttendanceScannerModal({
       }
     }
   }, [isOpen, completedDays, selectedDay]);
+
+  // Dynamic sections available for target department
+  const availableSections = useMemo(() => {
+    const set = new Set();
+    const predefined = (DEPARTMENT_SECTIONS[targetDept] || getAvailableSectionsForDept(targetDept)) || [];
+    predefined.forEach(s => set.add(s));
+    availableStudents.forEach(st => {
+      const sec = st.nstp_section || st.section;
+      if (sec) set.add(sec);
+    });
+    return Array.from(set).sort();
+  }, [targetDept, availableStudents]);
+
+  // Filter students eligible for Asynchronous session crediting
+  const asyncEligibleStudents = useMemo(() => {
+    return availableStudents.filter(st => {
+      const stStatus = (st.status || '').toLowerCase().trim();
+      if (stStatus === 'inactive' || stStatus === 'dropped' || stStatus === 'archived') {
+        return false;
+      }
+      if (asyncSection !== 'All') {
+        const sec = String(st.nstp_section || st.section || '').trim().toLowerCase();
+        if (!sec.includes(asyncSection.toLowerCase())) return false;
+      }
+      if (asyncSearchQuery.trim()) {
+        const q = asyncSearchQuery.toLowerCase().trim();
+        const name = (st.name || `${st.firstName || ''} ${st.lastName || ''}`).toLowerCase();
+        const id = String(st.studentId || st.id || '').toLowerCase();
+        const sec = String(st.nstp_section || st.section || '').toLowerCase();
+        return name.includes(q) || id.includes(q) || sec.includes(q);
+      }
+      return true;
+    }).sort(compareStudentsByLastName);
+  }, [availableStudents, asyncSection, asyncSearchQuery]);
+
+  // Auto-select eligible students when entering async mode or changing section
+  useEffect(() => {
+    if (sessionMode === 'asynchronous') {
+      setAsyncSelectedStudentIds(asyncEligibleStudents.map(s => String(s.studentId || s.id)));
+    }
+  }, [sessionMode, asyncSection]);
+
+  // Batch Credit selected students for an Asynchronous Session
+  const handleBatchAsyncAttendance = async () => {
+    if (!selectedDay || asyncSelectedStudentIds.length === 0) {
+      showToast?.('Please select at least one student to credit for this asynchronous session.', 'error');
+      return;
+    }
+
+    try {
+      setAsyncSaving(true);
+      const targetList = availableStudents.filter(s => asyncSelectedStudentIds.includes(String(s.studentId || s.id)));
+      
+      const rawTitle = (activityName || '').trim();
+      const actTitle = rawTitle.toLowerCase().includes(selectedDay.toLowerCase())
+        ? rawTitle
+        : `${selectedDay} - ${rawTitle || 'Asynchronous Session: Modular Activity Submission'}`;
+
+      const nowIso = new Date().toISOString();
+      const recordsToSave = targetList.map(st => {
+        const sid = String(st.studentId || st.id || '').trim();
+        return {
+          id: Date.now() + Math.random(),
+          student_id: sid,
+          student_name: st.name || `${st.firstName || ''} ${st.lastName || ''}`,
+          department: st.department || targetDept || currentUser?.department || 'CWTS',
+          section: st.nstp_section || st.section || '',
+          activity_name: actTitle,
+          scan_type: 'TIME_OUT',
+          status: 'Present',
+          day: selectedDay,
+          notes: 'Asynchronous Class: Modular Output Verified',
+          scanned_at: nowIso
+        };
+      });
+
+      // 1. Bulk upsert records to backend
+      const res = await attendanceAPI.batchSave(recordsToSave);
+      if (res && res.success === false) {
+        console.warn('Batch save API returned false, proceeding with local update & sync');
+      }
+
+      // 2. Immediate local cache update
+      const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
+      const targetSids = new Set(targetList.map(s => String(s.studentId || s.id).toLowerCase()));
+
+      const filtered = cached.filter(r => !(
+        targetSids.has(String(r.student_id).toLowerCase()) &&
+        (String(r.day || '').toLowerCase() === selectedDay.toLowerCase() || 
+         (r.activity_name || '').toLowerCase().includes(selectedDay.toLowerCase()))
+      ));
+
+      const updatedCache = [...filtered, ...recordsToSave];
+      localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(updatedCache));
+
+      // 3. Update active session logs
+      const newLogs = recordsToSave.map(r => ({
+        ...r,
+        student: targetList.find(s => String(s.studentId || s.id) === String(r.student_id)) || null,
+        formattedTime: new Date(r.scanned_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+      setSessionLogs(newLogs);
+
+      const deptUpper = (targetDept || 'CWTS').toUpperCase();
+      const draftKey = `nstp_draft_session_logs_${deptUpper}_${selectedDay}`;
+      localStorage.setItem(draftKey, JSON.stringify(newLogs));
+
+      // 4. Mark day as conducted
+      if (markDayAsConducted) {
+        const currentClosed = Array.isArray(closedDaysMap[deptUpper]) ? [...closedDaysMap[deptUpper]] : [];
+        if (!currentClosed.includes(selectedDay)) {
+          currentClosed.push(selectedDay);
+        }
+        const updatedClosedMap = { ...closedDaysMap, [deptUpper]: currentClosed };
+        setClosedDaysMap(updatedClosedMap);
+        localStorage.setItem('nstp_closed_attendance_days', JSON.stringify(updatedClosedMap));
+      }
+
+      // 5. Notify rest of app
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      showToast?.(`Successfully credited ${targetList.length} students as Present (P) for ${selectedDay}!`, 'success');
+
+      // Refresh in background
+      attendanceAPI.getRecords({ limit: 5000 }).then(recs => {
+        if (Array.isArray(recs) && recs.length > 0) {
+          try { localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(recs)); } catch (_) {}
+        }
+      }).catch(() => {});
+
+      handleCloseModal();
+    } catch (err) {
+      console.error('Batch async attendance error:', err);
+      showToast?.('Failed to batch save asynchronous attendance. Please try again.', 'error');
+    } finally {
+      setAsyncSaving(false);
+    }
+  };
 
   // Handle QR code scanning process
   const handleProcessScan = useCallback(async (rawCode) => {
@@ -706,6 +860,7 @@ export function AttendanceScannerModal({
   const handleCloseModal = useCallback(async () => {
     await stopCamera();
     setStep(1);
+    setSessionMode('in-person');
     onClose?.();
   }, [stopCamera, onClose]);
 
@@ -1059,22 +1214,32 @@ export function AttendanceScannerModal({
         {/* Header with Stepper Progress */}
         <div className="p-3.5 sm:p-5 bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-950 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-400 text-emerald-950 flex items-center justify-center font-black shadow-md shrink-0">
-              {step === 1 ? <Clock className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-black shadow-md shrink-0 ${
+              sessionMode === 'asynchronous' ? 'bg-indigo-500 text-white' : 'bg-amber-400 text-emerald-950'
+            }`}>
+              {sessionMode === 'asynchronous' ? <BookOpen className="w-5 h-5" /> : (step === 1 ? <Clock className="w-5 h-5" /> : <Camera className="w-5 h-5" />)}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-black leading-tight">
-                  {step === 1 ? 'Configure Attendance Session' : 'Live QR Attendance Scanner'}
+                  {sessionMode === 'asynchronous' 
+                    ? 'Asynchronous Class Attendance' 
+                    : (step === 1 ? 'Configure Attendance Session' : 'Live QR Attendance Scanner')}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  Step {step} of 2
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                  sessionMode === 'asynchronous'
+                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                }`}>
+                  {sessionMode === 'asynchronous' ? 'Modular Mode' : `Step ${step} of 2`}
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-emerald-200 font-medium">
-                {step === 1 
-                  ? 'Set class day, activity title, and scheduled start time' 
-                  : `${selectedDay} • ${activityName} (Start: ${formatTime12h(sessionStartTime)})`}
+                {sessionMode === 'asynchronous'
+                  ? 'Credit student attendance based on modular output submission'
+                  : (step === 1 
+                      ? 'Set class day, activity title, and scheduled start time' 
+                      : `${selectedDay} • ${activityName} (Start: ${formatTime12h(sessionStartTime)})`)}
               </p>
             </div>
           </div>
@@ -1092,229 +1257,460 @@ export function AttendanceScannerModal({
         {/* STEP 1: SESSION SETUP SCREEN                                         */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {step === 1 && (
-          <div className="p-3.5 sm:p-5 flex-1 bg-slate-50 flex flex-col justify-between space-y-3 sm:space-y-3.5 overflow-hidden">
+          <div className="p-3.5 sm:p-5 flex-1 bg-slate-50 flex flex-col justify-between space-y-3 sm:space-y-3.5 overflow-hidden min-h-0">
             
-            {/* Step 1 Introduction Notice (Compact) */}
-            <div className="px-3.5 py-2 rounded-xl bg-white border border-emerald-100 shadow-2xs flex items-center justify-between gap-3 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                  <Clock className="w-3.5 h-3.5" />
-                </div>
-                <span className="font-bold text-slate-800 text-xs">
-                  Set session schedule before scanning. Students timing in after cutoff are automatically marked as <b>Late (L)</b>.
-                </span>
-              </div>
-              <span className="hidden sm:inline-block font-mono text-[10px] font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
-                {targetDept} Attendance
-              </span>
+            {/* Session Mode Selector Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/90 rounded-2xl shrink-0">
+              <button
+                type="button"
+                onClick={() => setSessionMode('in-person')}
+                className={`py-2 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  sessionMode === 'in-person'
+                    ? 'bg-white text-emerald-950 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+                }`}
+              >
+                <Camera className="w-4 h-4 text-emerald-700" />
+                <span>In-Person Field Class (Live QR Scanner)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSessionMode('asynchronous');
+                  if (!activityName || activityName === 'NSTP Field Session') {
+                    setActivityName(`${selectedDay} - Asynchronous Session: Modular Activity Submission`);
+                  }
+                }}
+                className={`py-2 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  sessionMode === 'asynchronous'
+                    ? 'bg-gradient-to-r from-indigo-700 to-indigo-800 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-indigo-900 hover:bg-white/40'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-indigo-300" />
+                <span>Asynchronous Class (Modular Credit)</span>
+              </button>
             </div>
 
-            {/* 2-Column Grid: Left (Day & Topic) | Right (Time & Grace Period) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
-              
-              {/* Left Column: Day & Session Topic */}
-              <div className="space-y-3">
-                {/* Field 1: Attendance Day */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="setup-attendance-day" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>1. Attendance Day</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleResetToDay1}
-                        className="text-[10px] text-emerald-700 hover:text-emerald-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                        title="Reset all days and return to Day 1"
+            {sessionMode === 'in-person' ? (
+              <>
+                {/* Step 1 Introduction Notice (Compact) */}
+                <div className="px-3.5 py-2 rounded-xl bg-white border border-emerald-100 shadow-2xs flex items-center justify-between gap-3 text-xs text-slate-600 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                      <Clock className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-bold text-slate-800 text-xs">
+                      Set session schedule before scanning. Students timing in after cutoff are automatically marked as <b>Late (L)</b>.
+                    </span>
+                  </div>
+                  <span className="hidden sm:inline-block font-mono text-[10px] font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
+                    {targetDept} Attendance
+                  </span>
+                </div>
+
+                {/* 2-Column Grid: Left (Day & Topic) | Right (Time & Grace Period) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
+                  
+                  {/* Left Column: Day & Session Topic */}
+                  <div className="space-y-3">
+                    {/* Field 1: Attendance Day */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="setup-attendance-day" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>1. Attendance Day</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleResetToDay1}
+                            className="text-[10px] text-emerald-700 hover:text-emerald-900 font-extrabold hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                            title="Reset all days and return to Day 1"
+                          >
+                            <RotateCcw className="w-2.5 h-2.5 text-emerald-600" />
+                            <span>Reset to Day 1</span>
+                          </button>
+                          <span className="text-[10px] text-slate-400 font-medium">Day 1 to 15</span>
+                        </div>
+                      </div>
+                      <select
+                        id="setup-attendance-day"
+                        value={selectedDay}
+                        onChange={(e) => setSelectedDay(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
                       >
-                        <RotateCcw className="w-2.5 h-2.5 text-emerald-600" />
-                        <span>Reset to Day 1</span>
-                      </button>
-                      <span className="text-[10px] text-slate-400 font-medium">Day 1 to 15</span>
+                        {ATTENDANCE_DAYS.map((day) => {
+                          const isCompleted = completedDays.has(day);
+                          return (
+                            <option 
+                              key={day} 
+                              value={day} 
+                              disabled={isCompleted}
+                              className={isCompleted ? 'text-slate-400 bg-slate-100 font-normal italic' : 'text-emerald-950 font-bold'}
+                            >
+                              {day} {isCompleted ? '— (Conducted / Closed)' : '— (Available)'}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {completedDays.has(selectedDay) && (
+                        <div className="flex items-center justify-between text-[10.5px] text-rose-700 font-bold mt-1 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                          <div className="flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                            <span>{selectedDay} conducted. Session locked.</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleResetToDay1}
+                            className="text-[9.5px] bg-rose-600 hover:bg-rose-700 text-white font-black px-2 py-0.5 rounded cursor-pointer transition-colors"
+                          >
+                            Reopen Day 1
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Field 2: Session / Activity Title */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="setup-activity-name" className="block text-xs font-black uppercase text-slate-700">
+                          2. Session / Activity Title
+                        </label>
+                        <span className="text-[10px] font-bold text-slate-400">Topic for {selectedDay}</span>
+                      </div>
+                      <input
+                        type="text"
+                        id="setup-activity-name"
+                        value={activityName}
+                        onChange={(e) => setActivityName(e.target.value)}
+                        placeholder="e.g., Community Profiling, Tree Planting..."
+                        className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/30"
+                      />
                     </div>
                   </div>
-                  <select
-                    id="setup-attendance-day"
-                    value={selectedDay}
-                    onChange={(e) => setSelectedDay(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border-2 border-emerald-600 font-black text-emerald-950 text-sm focus:outline-none focus:bg-white cursor-pointer"
+
+                  {/* Right Column: Start Time & Grace Period */}
+                  <div className="space-y-3">
+                    {/* Field 3: Scheduled Start Time */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="setup-start-time" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>3. Class Start Time</span>
+                        </label>
+                        <span className="text-xs font-black font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                          {formatTime12h(sessionStartTime)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          id="setup-start-time"
+                          value={sessionStartTime}
+                          onChange={(e) => setSessionStartTime(e.target.value)}
+                          className="w-28 sm:w-32 px-2.5 sm:px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-300 font-black text-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+                        />
+                        <div className="flex items-center gap-1 flex-wrap flex-1">
+                          {['07:00', '08:00', '08:30', '13:00'].map(t => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setSessionStartTime(t)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                                sessionStartTime === t ? 'bg-emerald-800 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              {formatTime12h(t)}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const d = new Date();
+                              const hh = String(d.getHours()).padStart(2, '0');
+                              const mm = String(d.getMinutes()).padStart(2, '0');
+                              setSessionStartTime(`${hh}:${mm}`);
+                            }}
+                            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all cursor-pointer"
+                          >
+                            Now
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Field 4: Lateness Grace Period */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
+                          <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                          <span>4. Grace Period</span>
+                        </label>
+                        <span className="text-[11px] font-bold text-amber-700">
+                          Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { mins: 0, label: '0 min', sub: 'Strict' },
+                          { mins: 10, label: '+10m', sub: 'Grace' },
+                          { mins: 15, label: '+15m', sub: 'Standard' },
+                          { mins: 30, label: '+30m', sub: 'Extended' }
+                        ].map(opt => (
+                          <button
+                            key={opt.mins}
+                            type="button"
+                            onClick={() => setGracePeriod(opt.mins)}
+                            className={`p-1.5 sm:p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                              gracePeriod === opt.mins
+                                ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/20'
+                                : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <p className={`text-xs font-black ${gracePeriod === opt.mins ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</p>
+                            <p className="text-[9px] text-slate-400 leading-tight">{opt.sub}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Unified Bar: Session Policy Summary + Proceed Button */}
+                <div className="p-3 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-200/60 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <Check className="w-4 h-4" />
+                    </div>
+                    <div className="text-xs min-w-0">
+                      <p className="font-extrabold text-slate-800 truncate">
+                        {fullActivityTitle}
+                      </p>
+                      <p className="text-slate-600 text-[11px]">
+                        Start: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b className="text-amber-800">{getCutoffTime12h(sessionStartTime, gracePeriod)}</b> (Late thereafter)
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={completedDays.has(selectedDay)}
+                    onClick={() => {
+                      if (completedDays.has(selectedDay)) {
+                        showToast?.(`${selectedDay} has already been conducted. Please select another day.`, 'error');
+                        return;
+                      }
+                      setStep(2);
+                    }}
+                    className={`w-full sm:w-auto px-5 py-2.5 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 ${
+                      completedDays.has(selectedDay)
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
+                        : 'bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white active:scale-95 cursor-pointer'
+                    }`}
                   >
-                    {ATTENDANCE_DAYS.map((day) => {
-                      const isCompleted = completedDays.has(day);
-                      return (
-                        <option 
-                          key={day} 
-                          value={day} 
-                          disabled={isCompleted}
-                          className={isCompleted ? 'text-slate-400 bg-slate-100 font-normal italic' : 'text-emerald-950 font-bold'}
-                        >
-                          {day} {isCompleted ? '— (Conducted / Closed)' : '— (Available)'}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  {completedDays.has(selectedDay) && (
-                    <div className="flex items-center justify-between text-[10.5px] text-rose-700 font-bold mt-1 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
-                      <div className="flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                        <span>{selectedDay} conducted. Session locked.</span>
+                    <span>Proceed to QR Scanner (Step 2)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
+                {/* Async Form Controls: Day, Section, and Output Title */}
+                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-indigo-100 shadow-2xs space-y-3 shrink-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-black uppercase text-slate-700 mb-1 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-700" />
+                        <span>Session Day</span>
+                      </label>
+                      <select
+                        value={selectedDay}
+                        onChange={(e) => {
+                          const newDay = e.target.value;
+                          setSelectedDay(newDay);
+                          if (!activityName || activityName.includes('Asynchronous Session: Modular Activity Submission') || activityName === 'NSTP Field Session') {
+                            setActivityName(`${newDay} - Asynchronous Session: Modular Activity Submission`);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                      >
+                        {ATTENDANCE_DAYS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-black uppercase text-slate-700 mb-1 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-indigo-700" />
+                        <span>Section Filter</span>
+                      </label>
+                      <select
+                        value={asyncSection}
+                        onChange={(e) => setAsyncSection(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                      >
+                        <option value="All">All Sections ({targetDept})</option>
+                        {availableSections.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-black uppercase text-slate-700 mb-1">
+                        Activity / Modular Output Title
+                      </label>
+                      <input
+                        type="text"
+                        value={activityName}
+                        onChange={(e) => setActivityName(e.target.value)}
+                        placeholder="e.g. Module 3: Disaster Risk Reduction Community Plan Submission"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        This title and remark "Asynchronous Output Verified" will be attached to each student's official attendance record.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Student Checklist Container */}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0 border border-slate-200 rounded-2xl bg-white shadow-2xs">
+                  {/* Checklist Header with Search and Selection Controls */}
+                  <div className="p-2.5 sm:p-3 bg-slate-100/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-slate-800">
+                        Students to Credit ({asyncSelectedStudentIds.length} of {asyncEligibleStudents.length} selected):
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={asyncSearchQuery}
+                          onChange={(e) => setAsyncSearchQuery(e.target.value)}
+                          placeholder="Search student or ID..."
+                          className="pl-7 pr-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 w-40 sm:w-48 font-medium"
+                        />
                       </div>
                       <button
                         type="button"
-                        onClick={handleResetToDay1}
-                        className="text-[9.5px] bg-rose-600 hover:bg-rose-700 text-white font-black px-2 py-0.5 rounded cursor-pointer transition-colors"
+                        onClick={() => setAsyncSelectedStudentIds(asyncEligibleStudents.map(s => String(s.studentId || s.id)))}
+                        className="text-[11px] font-black text-indigo-700 hover:text-indigo-900 cursor-pointer whitespace-nowrap"
                       >
-                        Reopen Day 1
+                        Select All
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setAsyncSelectedStudentIds([])}
+                        className="text-[11px] font-black text-slate-500 hover:text-slate-800 cursor-pointer whitespace-nowrap"
+                      >
+                        Deselect All
                       </button>
                     </div>
-                  )}
-                </div>
-
-                {/* Field 2: Session / Activity Title */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="setup-activity-name" className="block text-xs font-black uppercase text-slate-700">
-                      2. Session / Activity Title
-                    </label>
-                    <span className="text-[10px] font-bold text-slate-400">Topic for {selectedDay}</span>
-                  </div>
-                  <input
-                    type="text"
-                    id="setup-activity-name"
-                    value={activityName}
-                    onChange={(e) => setActivityName(e.target.value)}
-                    placeholder="e.g., Community Profiling, Tree Planting..."
-                    className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 text-xs sm:text-sm focus:outline-none focus:bg-white focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                </div>
-              </div>
-
-              {/* Right Column: Start Time & Grace Period */}
-              <div className="space-y-3">
-                {/* Field 3: Scheduled Start Time */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="setup-start-time" className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>3. Class Start Time</span>
-                    </label>
-                    <span className="text-xs font-black font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
-                      {formatTime12h(sessionStartTime)}
-                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  {/* Scrollable Student List */}
+                  <div className="flex-1 overflow-y-auto p-2 sm:p-2.5 space-y-1.5 min-h-[160px] max-h-[300px]">
+                    {asyncEligibleStudents.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-slate-400">
+                        No students found matching current filters.
+                      </div>
+                    ) : (
+                      asyncEligibleStudents.map(st => {
+                        const sid = String(st.studentId || st.id);
+                        const isChecked = asyncSelectedStudentIds.includes(sid);
+                        return (
+                          <label
+                            key={sid}
+                            className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl text-xs cursor-pointer border transition-colors ${
+                              isChecked
+                                ? 'bg-indigo-50/50 border-indigo-200 shadow-2xs'
+                                : 'bg-slate-50/80 border-slate-200/60 text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setAsyncSelectedStudentIds(prev => [...prev, sid]);
+                                  } else {
+                                    setAsyncSelectedStudentIds(prev => prev.filter(id => id !== sid));
+                                  }
+                                }}
+                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                              <div className="min-w-0">
+                                <span className="font-extrabold text-slate-900 block truncate">
+                                  {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-500">
+                                  ID: {st.studentId || st.id || 'N/A'}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10.5px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200 shrink-0 ml-2">
+                              {st.gradeAndSection || st.section || 'N/A'}
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Bottom Bar: Conducted Checkbox + Submit Button */}
+                <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-indigo-950 font-bold select-none">
                     <input
-                      type="time"
-                      id="setup-start-time"
-                      value={sessionStartTime}
-                      onChange={(e) => setSessionStartTime(e.target.value)}
-                      className="w-28 sm:w-32 px-2.5 sm:px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-300 font-black text-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+                      type="checkbox"
+                      checked={markDayAsConducted}
+                      onChange={(e) => setMarkDayAsConducted(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                    <div className="flex items-center gap-1 flex-wrap flex-1">
-                      {['07:00', '08:00', '08:30', '13:00'].map(t => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setSessionStartTime(t)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                            sessionStartTime === t ? 'bg-emerald-800 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          {formatTime12h(t)}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const d = new Date();
-                          const hh = String(d.getHours()).padStart(2, '0');
-                          const mm = String(d.getMinutes()).padStart(2, '0');
-                          setSessionStartTime(`${hh}:${mm}`);
-                        }}
-                        className="px-2 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all cursor-pointer"
-                      >
-                        Now
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                    <span>Mark {selectedDay} as officially conducted in Attendance Records</span>
+                  </label>
 
-                {/* Field 4: Lateness Grace Period */}
-                <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-black uppercase text-slate-700 flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-                      <span>4. Grace Period</span>
-                    </label>
-                    <span className="text-[11px] font-bold text-amber-700">
-                      Cutoff: <b>{getCutoffTime12h(sessionStartTime, gracePeriod)}</b>
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {[
-                      { mins: 0, label: '0 min', sub: 'Strict' },
-                      { mins: 10, label: '+10m', sub: 'Grace' },
-                      { mins: 15, label: '+15m', sub: 'Standard' },
-                      { mins: 30, label: '+30m', sub: 'Extended' }
-                    ].map(opt => (
-                      <button
-                        key={opt.mins}
-                        type="button"
-                        onClick={() => setGracePeriod(opt.mins)}
-                        className={`p-1.5 sm:p-2 rounded-xl border text-center transition-all cursor-pointer ${
-                          gracePeriod === opt.mins
-                            ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-500/20'
-                            : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        <p className={`text-xs font-black ${gracePeriod === opt.mins ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</p>
-                        <p className="text-[9px] text-slate-400 leading-tight">{opt.sub}</p>
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setSessionMode('in-person')}
+                      disabled={asyncSaving}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                    >
+                      Cancel / Switch Mode
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBatchAsyncAttendance}
+                      disabled={asyncSaving || asyncSelectedStudentIds.length === 0}
+                      className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-indigo-700 to-indigo-800 hover:from-indigo-800 hover:to-indigo-900 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {asyncSaving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Saving Records...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Credit {asyncSelectedStudentIds.length} Students as Present (P)</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Bottom Unified Bar: Session Policy Summary + Proceed Button */}
-            <div className="p-3 bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-teal-500/10 rounded-2xl border border-emerald-200/60 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                  <Check className="w-4 h-4" />
-                </div>
-                <div className="text-xs min-w-0">
-                  <p className="font-extrabold text-slate-800 truncate">
-                    {fullActivityTitle}
-                  </p>
-                  <p className="text-slate-600 text-[11px]">
-                    Start: <b>{formatTime12h(sessionStartTime)}</b> • Cutoff: <b className="text-amber-800">{getCutoffTime12h(sessionStartTime, gracePeriod)}</b> (Late thereafter)
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={completedDays.has(selectedDay)}
-                onClick={() => {
-                  if (completedDays.has(selectedDay)) {
-                    showToast?.(`${selectedDay} has already been conducted. Please select another day.`, 'error');
-                    return;
-                  }
-                  setStep(2);
-                }}
-                className={`w-full sm:w-auto px-5 py-2.5 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 shrink-0 ${
-                  completedDays.has(selectedDay)
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
-                    : 'bg-gradient-to-r from-emerald-700 to-teal-800 hover:from-emerald-800 hover:to-teal-900 text-white active:scale-95 cursor-pointer'
-                }`}
-              >
-                <span>Proceed to QR Scanner (Step 2)</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            )}
 
           </div>
         )}
