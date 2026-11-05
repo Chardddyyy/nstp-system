@@ -2566,9 +2566,6 @@ function Enrollment() {
                     <span className="text-justify">File a complaint before the National Privacy Commission (NPC) if your privacy rights have been violated.</span>
                   </li>
                 </ul>
-                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-950 font-medium">
-                  For data privacy inquiries or requests, contact the CvSU Data Protection Officer at: <a href="mailto:dpo@cvsu.edu.ph" className="text-emerald-700 font-black underline hover:text-emerald-900">dpo@cvsu.edu.ph</a> or the NSTP Office of CvSU Naic.
-                </div>
               </div>
 
               {/* SECTION 7: STUDENT DECLARATION AND CONSENT */}

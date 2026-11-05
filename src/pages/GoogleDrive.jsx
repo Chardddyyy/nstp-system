@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/layout/Sidebar';
-import { triggerDatabaseBackup } from '../services/api';
+import { triggerDatabaseBackup, downloadDatabaseBackup } from '../services/api';
 import {
   ExternalLink,
   Copy,
@@ -18,10 +18,11 @@ import {
   Info,
   RefreshCw,
   CloudUpload,
+  Download,
   X
 } from 'lucide-react';
 
-const GDRIVE_URL = 'https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
+const GDRIVE_URL = 'https://drive.google.com/drive/folders/1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
 
 export function GoogleDriveIcon({ className = "w-6 h-6" }) {
   return (
@@ -108,6 +109,25 @@ export default function GoogleDrive() {
       navigator.clipboard.writeText(GDRIVE_URL);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadLocalBackup = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await downloadDatabaseBackup();
+      if (typeof showToast === 'function') {
+        showToast('Database backup JSON successfully downloaded!', 'success');
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') {
+        showToast(err.message || 'Download failed.', 'error');
+      }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -257,6 +277,26 @@ export default function GoogleDrive() {
                     <>
                       <CloudUpload className="w-4 h-4" />
                       <span>Backup Database to Drive Now</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadLocalBackup}
+                  disabled={isDownloading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-emerald-950 rounded-2xl font-black text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                  title="Download instant full database JSON backup directly to your computer"
+                >
+                  {isDownloading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Downloading Backup JSON...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>Download Backup JSON File</span>
                     </>
                   )}
                 </button>

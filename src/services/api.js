@@ -369,6 +369,26 @@ export function triggerDatabaseBackup(activity) {
   });
 }
 
+export async function downloadDatabaseBackup() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const res = await fetch('/api/backup/download', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to download backup');
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CvSU_NSTP_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export function createInstructor(data) {
   return apiCall('/users', {
     method: 'POST',

@@ -8531,6 +8531,45 @@ app.post('/api/backup/now', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+// ── Download Instant Database Backup JSON (Admin Only) ────────────────────────
+app.get('/api/backup/download', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [tablesResult] = await pool.execute('SHOW TABLES');
+    const tableNames = tablesResult.map(r => Object.values(r)[0]);
+
+    const databaseTables = {};
+    const summaryCounts = {};
+
+    for (const tableName of tableNames) {
+      try {
+        const [rows] = await pool.execute(`SELECT * FROM \`${tableName}\``);
+        databaseTables[tableName] = rows;
+        summaryCounts[tableName] = rows.length;
+      } catch (_) {
+        databaseTables[tableName] = [];
+        summaryCounts[tableName] = 0;
+      }
+    }
+
+    const payload = {
+      system: 'Cavite State University Naic - NSTP Record & Report Management System',
+      backupTimestamp: new Date().toISOString(),
+      targetFolderId: process.env.GDRIVE_FOLDER_ID || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1',
+      totalTablesCaptured: tableNames.length,
+      tableSummaryCounts: summaryCounts,
+      databaseTables: databaseTables
+    };
+
+    const fileName = `CvSU_NSTP_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err) {
+    console.error('Backup download error:', err);
+    res.status(500).json({ message: 'Failed to download backup: ' + err.message });
+  }
+});
+
 // Global error handling middleware
 app.use(function(err, req, res, next) {
   console.error('Unhandled server error:', err);

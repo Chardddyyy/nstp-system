@@ -6,7 +6,7 @@ import {
   Calendar, User, LogOut, Shield, X, FileCheck, Archive, RotateCcw, Lock, HardDrive
 } from 'lucide-react';
 
-const GDRIVE_URL = 'https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
+const GDRIVE_URL = 'https://drive.google.com/drive/folders/1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
 
 const DEPT_COLORS = {
   CWTS:  { bg: 'bg-blue-500',  text: 'text-white' },

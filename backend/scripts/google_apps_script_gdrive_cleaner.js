@@ -25,17 +25,19 @@ function doPost(e) {
     var rawData = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     var data = JSON.parse(rawData);
 
-    // Kuhanin o kusa gumawa ng backup folder sa Google Drive ng account
+    // Kuhanin ang opisyal na folder sa Google Drive ng account
+    var targetFolderId = data.folderId || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
     var folder = null;
-    if (data.folderId) {
+    if (targetFolderId) {
       try {
-        folder = DriveApp.getFolderById(data.folderId);
+        folder = DriveApp.getFolderById(targetFolderId);
       } catch (err) {
+        console.error('Error getting folder by ID ' + targetFolderId + ':', err);
         folder = null;
       }
     }
 
-    // Kung walang folder ID o inaccessible, gamitin o gumawa ng "CvSU_NSTP_Backups" folder
+    // Kung hindi makuha ang folder ID (hal. permissions), mag-fallback sa "CvSU_NSTP_Backups" folder
     if (!folder) {
       var folderName = 'CvSU_NSTP_Backups';
       var existingFolders = DriveApp.getFoldersByName(folderName);

@@ -402,7 +402,7 @@ function GlobalKeyboardManager() {
           navigate('/letter-formats');
         } else if (key === 'g' && user.role === 'admin') {
           e.preventDefault();
-          window.open('https://drive.google.com/drive/folders/1lWSgMdKMBD8148A_wFb6UufFgmloD4e3', '_blank', 'noopener,noreferrer');
+          window.open('https://drive.google.com/drive/folders/1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1', '_blank', 'noopener,noreferrer');
         }
       }
     };
