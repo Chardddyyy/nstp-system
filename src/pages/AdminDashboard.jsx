@@ -4350,22 +4350,22 @@ function AdminDashboard() {
                         <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-4 text-xs">
                             <div>
-                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Aktibong Formats</span>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Active Formats</span>
                               <span className="text-sm font-black text-emerald-950">{displayLetters.length} Templates</span>
                             </div>
                             <div className="h-6 w-px bg-emerald-200" />
                             <div>
-                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Mga Dinagdag (+)</span>
-                              <span className="text-sm font-black text-emerald-700">{addedCount > 0 ? `+${addedCount} Nadagdag` : 'None (Baseline)'}</span>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Added (+)</span>
+                              <span className="text-sm font-black text-emerald-700">{addedCount > 0 ? `+${addedCount} Added` : 'None (Baseline)'}</span>
                             </div>
                             <div className="h-6 w-px bg-emerald-200" />
                             <div>
-                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Mga Binawas (-)</span>
-                              <span className="text-sm font-black text-rose-700">{removedCount > 0 ? `-${removedCount} Inalis` : '0 Inalis'}</span>
+                              <span className="text-gray-500 block text-[10.5px] uppercase font-bold">Removed (-)</span>
+                              <span className="text-sm font-black text-rose-700">{removedCount > 0 ? `-${removedCount} Removed` : '0 Removed'}</span>
                             </div>
                           </div>
                           <span className="text-[11px] font-semibold text-emerald-900 bg-emerald-100/90 px-3 py-1 rounded-xl border border-emerald-300">
-                            ✓ Mananatili sa Bagong Batch (Retained)
+                            ✓ Retained in New Batch
                           </span>
                         </div>
 
@@ -4398,7 +4398,7 @@ function AdminDashboard() {
                           </div>
                         ) : (
                           <p className="text-gray-500 text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-xs">
-                            Walang custom na dinagdag o binawas. Lahat ng opisyal na template ay mananatili at magagamit sa bagong batch.
+                            No custom formats added or removed. All official templates are retained and available for the new batch.
                           </p>
                         )}
                       </div>
