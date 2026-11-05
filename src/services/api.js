@@ -224,11 +224,11 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
       
       const offlineAccounts = [
         {
-          emails: ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'admin', 'richardbelen99@gmail.com'],
+          emails: ['richardbelen99@gmail.com'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'cvsunaicnstp@gmail.com',
+            email: 'richardbelen99@gmail.com',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -236,7 +236,7 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
           }
         },
         {
-          emails: ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'cwts@cvsu.edu.ph', 'clarkebelen28@gmail.com'],
+          emails: ['belenjoshua58@gmail.com'],
           passwords: ['cwts123', 'cwts'],
           user: {
             id: 2,
@@ -248,7 +248,7 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
           }
         },
         {
-          emails: ['lts@gmail.com', 'lts@cvsu.edu.ph'],
+          emails: ['lts@gmail.com'],
           passwords: ['lts123', 'admin123', 'lts'],
           user: {
             id: 3,
@@ -260,7 +260,7 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
           }
         },
         {
-          emails: ['rotc@gmail.com', 'rotc@cvsu.edu.ph'],
+          emails: ['rotc@gmail.com'],
           passwords: ['rotc123', 'rotc'],
           user: {
             id: 4,
@@ -335,7 +335,7 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office' },
+        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
         { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },

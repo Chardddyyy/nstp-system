@@ -1674,24 +1674,14 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    var aliases = [email];
-    if (email === 'admin@cvsu.edu.ph' || email === 'cvsunaicnstp@gmail.com' || email === 'admin' || email === 'admin@gmail.com' || email === 'richardbelen99@gmail.com') {
-      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
-    } else if (email === 'cwts@cvsu.edu.ph' || email === 'belenjoshua58@gmail.com' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor' || email === 'cwts@gmail.com') {
-      aliases = ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
-    } else if (email === 'lts@cvsu.edu.ph' || email === 'lts' || email === 'lts@gmail.com') {
-      aliases = ['lts@cvsu.edu.ph', 'lts@gmail.com'];
-    } else if (email === 'rotc@cvsu.edu.ph' || email === 'rotc' || email === 'rotc@gmail.com') {
-      aliases = ['rotc@cvsu.edu.ph', 'rotc@gmail.com'];
-    }
+    var cleanEmail = String(email || '').trim().toLowerCase();
 
     var result = await pool.execute(
       `SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, password, current_session_id, last_active_at, TIMESTAMPDIFF(SECOND, last_active_at, NOW()) as seconds_since_active 
        FROM users 
-       WHERE LOWER(email) IN (${aliases.map(() => '?').join(',')}) OR LOWER(email) LIKE ? OR LOWER(name) = ? OR (role = 'admin' AND ? IN ('admin@cvsu.edu.ph', 'cvsunaicnstp@gmail.com', 'richardbelen99@gmail.com', 'admin@gmail.com'))
-       ORDER BY (CASE WHEN LOWER(email) = ? THEN 0 ELSE 1 END), id ASC
+       WHERE LOWER(TRIM(email)) = ?
        LIMIT 1`,
-      [...aliases, email + '@%', email, email, email]
+      [cleanEmail]
     );
     var users = result[0];
 
@@ -1737,7 +1727,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     // ── Two-Factor Authentication (2FA) for Admin & ALL Instructors ──────────────
     if (user.role === 'admin' || user.role === 'instructor') {
-      var deliveryEmail = user.email || (user.role === 'admin' ? 'cvsunaicnstp@gmail.com' : 'belenjoshua58@gmail.com');
+      var deliveryEmail = user.email || (user.role === 'admin' ? 'richardbelen99@gmail.com' : 'belenjoshua58@gmail.com');
       var userKey = deliveryEmail.toLowerCase();
 
       // Check if locked out (4 attempts reached)
@@ -3392,22 +3382,10 @@ const handleResetPassword = async (req, res) => {
 
     var hashedPassword = await bcrypt.hash(String(new_password).trim(), 12);
 
-    // Resolve user by email or aliases so the exact account is updated by primary ID
-    var aliases = [cleanEmail];
-    if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'cvsunaicnstp@gmail.com' || cleanEmail === 'admin' || cleanEmail === 'admin@gmail.com' || cleanEmail === 'richardbelen99@gmail.com') {
-      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
-    } else if (cleanEmail === 'cwts@cvsu.edu.ph' || cleanEmail === 'belenjoshua58@gmail.com' || cleanEmail === 'clarkebelen28@gmail.com' || cleanEmail === 'cwts' || cleanEmail === 'instructor@cvsu.edu.ph' || cleanEmail === 'instructor' || cleanEmail === 'cwts@gmail.com') {
-      aliases = ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
-    } else if (cleanEmail === 'lts@cvsu.edu.ph' || cleanEmail === 'lts' || cleanEmail === 'lts@gmail.com') {
-      aliases = ['lts@cvsu.edu.ph', 'lts@gmail.com'];
-    } else if (cleanEmail === 'rotc@cvsu.edu.ph' || cleanEmail === 'rotc' || cleanEmail === 'rotc@gmail.com') {
-      aliases = ['rotc@cvsu.edu.ph', 'rotc@gmail.com'];
-    }
-
     try {
       var [foundUsers] = await pool.execute(
-        `SELECT id, email FROM users WHERE LOWER(TRIM(email)) IN (${aliases.map(() => '?').join(',')}) LIMIT 1`,
-        aliases
+        'SELECT id, email FROM users WHERE LOWER(TRIM(email)) = ? LIMIT 1',
+        [cleanEmail]
       );
 
       if (foundUsers.length > 0) {

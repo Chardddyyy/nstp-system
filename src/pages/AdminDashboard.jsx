@@ -4897,7 +4897,7 @@ function AdminDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span className="text-gray-600">Admin Account:</span>
-                  <strong className="text-emerald-950 font-bold truncate">{user?.email || 'cvsunaicnstp@gmail.com'}</strong>
+                  <strong className="text-emerald-950 font-bold truncate">{user?.email || 'richardbelen99@gmail.com'}</strong>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500"></span>

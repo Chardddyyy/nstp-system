@@ -939,7 +939,7 @@ function Login() {
                   spellCheck="false"
                   data-lpignore="true"
                   className="w-full min-h-[42px] sm:min-h-[44px] pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:bg-white focus:border-transparent outline-none transition-all font-medium"
-                  placeholder="Admin@gmail.com"
+                  placeholder="Enter your registered email"
                   autoComplete="off"
                   required
                 />
