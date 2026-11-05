@@ -7301,7 +7301,7 @@ app.post('/api/attendance/scan', authenticateToken, async (req, res) => {
   }
 });
 
-// POST batch save attendance records from session
+// POST batch save attendance records from session (High-Performance Bulk Insert & Upsert)
 app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
   try {
     const { records } = req.body || {};
@@ -7309,45 +7309,80 @@ app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'No attendance records provided' });
     }
 
-    let savedCount = 0;
+    const validRecords = [];
+    const studentIds = [];
+    const actNames = new Set();
+    const dayNames = new Set();
+
     for (const r of records) {
-      const sid = r.student_id || r.studentId;
+      const sid = String(r.student_id || r.studentId || '').trim();
       if (!sid) continue;
       const sName = r.student_name || r.name || '';
       const dept = r.department || (req.user.role === 'instructor' ? req.user.department : 'CWTS');
       const sec = r.section || '';
-      const act = r.activity_name || 'NSTP Session';
-      const sType = r.scan_type || 'TIME_IN';
+      const act = (r.activity_name || r.day || 'NSTP Session').trim();
+      const sType = r.scan_type || 'TIME_OUT';
       const statusVal = r.status || (sType === 'TIME_OUT' ? 'Present' : (sType === 'EXCUSED' ? 'Excused' : 'Incomplete'));
       const scanDate = r.scanned_at ? new Date(r.scanned_at) : new Date();
+      const notes = r.notes || null;
 
-      const [existing] = await pool.execute(
-        `SELECT id FROM attendance_records 
-         WHERE student_id = ? 
-           AND activity_name = ? 
-           AND scan_type = ? 
-           AND DATE(scanned_at) = DATE(?) LIMIT 1`,
-        [sid, act, sType, scanDate]
-      );
+      validRecords.push([sid, sName, dept, sec, act, sType, req.user.id, scanDate, statusVal, notes]);
+      studentIds.push(sid);
+      actNames.add(act);
 
-      if (existing.length === 0) {
-        await pool.execute(
-          `INSERT INTO attendance_records (
-            student_id, student_name, department, section,
-            activity_name, scan_type, scanned_by, scanned_at, status, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [sid, sName, dept, sec, act, sType, req.user.id, scanDate, statusVal, r.notes || null]
-        );
-        savedCount++;
-      } else {
-        await pool.execute(
-          `UPDATE attendance_records SET status = ?, student_name = ?, department = ?, section = ? WHERE id = ?`,
-          [statusVal, sName, dept, sec, existing[0].id]
-        );
+      // Extract day number if present (e.g. "Day 1", "Day 2", etc.)
+      const dayMatch = (act + ' ' + (r.day || '')).match(/\bDay\s*(\d+)\b/i);
+      if (dayMatch) {
+        dayNames.add(`Day ${dayMatch[1]}`);
       }
     }
 
-    res.json({ success: true, message: `Successfully saved ${savedCount} attendance records`, count: savedCount });
+    if (validRecords.length === 0) {
+      return res.status(400).json({ message: 'No valid attendance records to save' });
+    }
+
+    // Fast cleanup of prior conflicting/incomplete records for these students on this specific day/activity
+    // This guarantees that a newly credited 'Present' record replaces any old absent or incomplete entry cleanly
+    if (studentIds.length > 0) {
+      const placeholders = studentIds.map(() => '?').join(',');
+      for (const dayStr of dayNames) {
+        await pool.execute(
+          `DELETE FROM attendance_records 
+           WHERE student_id IN (${placeholders}) 
+             AND (activity_name LIKE ? OR activity_name LIKE ?)`,
+          [...studentIds, `%${dayStr}%`, `%${dayStr.replace(' ', '')}%`]
+        ).catch(() => {});
+      }
+      for (const act of actNames) {
+        await pool.execute(
+          `DELETE FROM attendance_records 
+           WHERE student_id IN (${placeholders}) 
+             AND activity_name = ?`,
+          [...studentIds, act]
+        ).catch(() => {});
+      }
+    }
+
+    // High-performance bulk insert in batches of 100
+    const chunkSize = 100;
+    for (let i = 0; i < validRecords.length; i += chunkSize) {
+      const chunk = validRecords.slice(i, i + chunkSize);
+      const valuePlaceholders = chunk.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+      const flatParams = chunk.flat();
+      await pool.execute(
+        `INSERT INTO attendance_records (
+          student_id, student_name, department, section,
+          activity_name, scan_type, scanned_by, scanned_at, status, notes
+        ) VALUES ${valuePlaceholders}`,
+        flatParams
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully saved ${validRecords.length} attendance records`,
+      count: validRecords.length
+    });
   } catch (err) {
     console.error('Batch save attendance error:', err);
     res.status(500).json({ message: 'Server error saving attendance records' });

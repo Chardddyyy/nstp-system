@@ -64,7 +64,7 @@ export function StudentAttendanceMatrixModal({
   const [showAsyncModal, setShowAsyncModal] = useState(false);
   const [asyncDay, setAsyncDay] = useState('Day 1');
   const [asyncSection, setAsyncSection] = useState('All');
-  const [asyncActivityTitle, setAsyncActivityTitle] = useState('Asynchronous Session: Modular Activity Submission');
+  const [asyncActivityTitle, setAsyncActivityTitle] = useState('Day 1 - Asynchronous Session: Modular Activity Submission');
   const [asyncSaving, setAsyncSaving] = useState(false);
   const [asyncSelectedStudentIds, setAsyncSelectedStudentIds] = useState([]);
 
@@ -298,24 +298,33 @@ export function StudentAttendanceMatrixModal({
         });
         
         if (matchingRecords.length > 0) {
-          const isExcused = matchingRecords.some(r => r.status === 'Excused');
-          const isAbsent = matchingRecords.some(r => r.status === 'Absent');
-          const isInc = matchingRecords.some(r => r.status === 'Incomplete') || 
-            (matchingRecords.some(r => r.scan_type === 'TIME_IN') && !matchingRecords.some(r => r.scan_type === 'TIME_OUT' && r.status !== 'Incomplete'));
-          const isLate = matchingRecords.some(r => r.status === 'Late');
-          const isPresent = matchingRecords.some(r => r.status === 'Present') || 
-            matchingRecords.some(r => r.scan_type === 'TIME_OUT' && r.status !== 'Absent' && r.status !== 'Incomplete');
+          // Sort records descending so recent overrides/records take precedence
+          const sortedRecs = matchingRecords.slice().sort((a, b) => {
+            const timeA = new Date(a.scanned_at || 0).getTime();
+            const timeB = new Date(b.scanned_at || 0).getTime();
+            if (timeB !== timeA) return timeB - timeA;
+            return (b.id || 0) - (a.id || 0);
+          });
 
-          if (isExcused) {
-            dayStatuses[dayStr] = 'Excused';
-          } else if (isAbsent) {
-            dayStatuses[dayStr] = 'Absent';
-          } else if (isInc) {
-            dayStatuses[dayStr] = 'Incomplete';
+          const isPresent = sortedRecs.some(r => r.status === 'Present' || (r.scan_type === 'TIME_OUT' && r.status !== 'Absent' && r.status !== 'Incomplete'));
+          const isLate = !isPresent && sortedRecs.some(r => r.status === 'Late');
+          const isExcused = !isPresent && !isLate && sortedRecs.some(r => r.status === 'Excused');
+          const isInc = !isPresent && !isLate && !isExcused && (
+            sortedRecs.some(r => r.status === 'Incomplete') || 
+            (sortedRecs.some(r => r.scan_type === 'TIME_IN') && !sortedRecs.some(r => r.scan_type === 'TIME_OUT'))
+          );
+          const isAbsent = !isPresent && !isLate && !isExcused && !isInc && sortedRecs.some(r => r.status === 'Absent');
+
+          if (isPresent) {
+            dayStatuses[dayStr] = 'Present';
           } else if (isLate) {
             dayStatuses[dayStr] = 'Late';
-          } else if (isPresent) {
-            dayStatuses[dayStr] = 'Present';
+          } else if (isExcused) {
+            dayStatuses[dayStr] = 'Excused';
+          } else if (isInc) {
+            dayStatuses[dayStr] = 'Incomplete';
+          } else if (isAbsent) {
+            dayStatuses[dayStr] = 'Absent';
           } else {
             dayStatuses[dayStr] = 'Absent';
           }
@@ -482,42 +491,60 @@ export function StudentAttendanceMatrixModal({
     try {
       setAsyncSaving(true);
       const targetList = studentMatrixList.filter(s => asyncSelectedStudentIds.includes(String(s.studentId || s.id)));
-      const actTitle = asyncActivityTitle.trim() || `${asyncDay} - Asynchronous Class (Modular Output)`;
+      
+      const rawTitle = (asyncActivityTitle || '').trim();
+      const actTitle = rawTitle.toLowerCase().includes(asyncDay.toLowerCase())
+        ? rawTitle
+        : `${asyncDay} - ${rawTitle || 'Asynchronous Session: Modular Activity Submission'}`;
 
+      const nowIso = new Date().toISOString();
       const recordsToSave = targetList.map(st => {
         const sid = String(st.studentId || st.id);
         return {
+          id: Date.now() + Math.random(),
           student_id: sid,
           student_name: st.name || `${st.firstName || ''} ${st.lastName || ''}`,
           department: st.department || selectedDept || currentUser?.department || 'CWTS',
-          section: st.section || '',
+          section: st.nstp_section || st.section || '',
           activity_name: actTitle,
           scan_type: 'TIME_OUT',
           status: 'Present',
           day: asyncDay,
           notes: 'Asynchronous Class: Modular Output Verified',
-          scanned_at: new Date().toISOString()
+          scanned_at: nowIso
         };
       });
 
-      // 1. Backend batch save
-      await attendanceAPI.batchSave(recordsToSave);
+      // 1. Backend batch save (fast bulk upsert)
+      const res = await attendanceAPI.batchSave(recordsToSave);
+      if (res && res.success === false) {
+        console.warn('Batch save API returned false, proceeding with local update & sync');
+      }
 
-      // 2. Update local storage cache & state
+      // 2. Immediate local cache & state update
       const cached = JSON.parse(localStorage.getItem('nstp_cached_attendance_records') || '[]');
       const targetSids = new Set(targetList.map(s => String(s.studentId || s.id).toLowerCase()));
 
       const filtered = cached.filter(r => !(
         targetSids.has(String(r.student_id).toLowerCase()) &&
-        (r.day === asyncDay || (r.activity_name || '').toLowerCase().includes(asyncDay.toLowerCase()))
+        (String(r.day || '').toLowerCase() === asyncDay.toLowerCase() || 
+         (r.activity_name || '').toLowerCase().includes(asyncDay.toLowerCase()))
       ));
 
       const updatedCache = [...filtered, ...recordsToSave];
       localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(updatedCache));
       setAttendanceRecords(updatedCache);
 
+      // 3. Re-fetch from server to ensure perfect synchronization
+      attendanceAPI.getRecords({ limit: 5000 }).then(recs => {
+        if (Array.isArray(recs) && recs.length > 0) {
+          setAttendanceRecords(recs);
+          try { localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(recs)); } catch (_) {}
+        }
+      }).catch(() => {});
+
       window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
-      showToast?.(`Successfully credited ${targetList.length} students for ${asyncDay} Asynchronous Class!`, 'success');
+      showToast?.(`Successfully credited ${targetList.length} students as Present (P) for ${asyncDay}!`, 'success');
       setShowAsyncModal(false);
     } catch (err) {
       console.error('Batch async attendance error:', err);
@@ -706,7 +733,9 @@ export function StudentAttendanceMatrixModal({
             <button
               type="button"
               onClick={() => {
-                setAsyncDay(maxDayConducted > 0 ? `Day ${maxDayConducted}` : 'Day 1');
+                const targetDay = maxDayConducted > 0 ? `Day ${maxDayConducted}` : 'Day 1';
+                setAsyncDay(targetDay);
+                setAsyncActivityTitle(`${targetDay} - Asynchronous Session: Modular Activity Submission`);
                 setShowAsyncModal(true);
               }}
               className="px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-indigo-700 to-indigo-800 hover:from-indigo-800 hover:to-indigo-900 text-white font-black text-[10.5px] sm:text-xs rounded-md sm:rounded-lg shadow-xs active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer border border-indigo-900/50"
@@ -1127,7 +1156,16 @@ export function StudentAttendanceMatrixModal({
                   <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Session Day:</label>
                   <select
                     value={asyncDay}
-                    onChange={(e) => setAsyncDay(e.target.value)}
+                    onChange={(e) => {
+                      const newDay = e.target.value;
+                      setAsyncDay(newDay);
+                      setAsyncActivityTitle(prev => {
+                        if (!prev || prev.includes('Asynchronous Session: Modular Activity Submission')) {
+                          return `${newDay} - Asynchronous Session: Modular Activity Submission`;
+                        }
+                        return prev;
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     {DAYS_ARRAY.map(d => (

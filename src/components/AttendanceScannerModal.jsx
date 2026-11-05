@@ -542,6 +542,12 @@ export function AttendanceScannerModal({
     }
   }, [fullActivityTitle, scanType, selectedDay, sessionLogs, sessionStartTime, gracePeriod, currentDepartment, currentUser?.department, currentUser?.role, propStudents]);
 
+  // Keep a ref to the latest handleProcessScan so startCamera does not need to restart on every scan or state change
+  const handleProcessScanRef = useRef(handleProcessScan);
+  useEffect(() => {
+    handleProcessScanRef.current = handleProcessScan;
+  });
+
   // Stop QR Camera Scanner and forcefully release all media tracks
   const stopCamera = useCallback(async () => {
     isCameraCancelledRef.current = true;
@@ -564,17 +570,19 @@ export function AttendanceScannerModal({
     stopAllCameraStreams();
   }, []);
 
-  // Start QR Camera Scanner
+  // Start QR Camera Scanner (Steady - will not restart on scans or state updates)
   const startCamera = useCallback(async () => {
     isCameraCancelledRef.current = false;
     try {
       if (scannerRef.current) {
         const prev = scannerRef.current;
+        if (prev.isScanning) {
+          // Camera is already actively streaming & scanning, keep it steady!
+          return;
+        }
         scannerRef.current = null;
         try {
-          if (prev.isScanning) {
-            await prev.stop().catch(() => {});
-          }
+          await prev.stop().catch(() => {});
           prev.clear();
         } catch (_) {}
       }
@@ -605,7 +613,7 @@ export function AttendanceScannerModal({
 
       const onScanSuccess = (decodedText) => {
         if (!isCameraCancelledRef.current && !isProcessingRef.current && decodedText) {
-          handleProcessScan(decodedText);
+          handleProcessScanRef.current?.(decodedText);
         }
       };
 
@@ -666,15 +674,15 @@ export function AttendanceScannerModal({
       console.warn('[Scanner] Fatal camera initialization error:', err);
       stopAllCameraStreams();
     }
-  }, [cameraFacing, handleProcessScan]);
+  }, [cameraFacing]);
 
-  // Control Camera strictly on Step 2
+  // Control Camera strictly on Step 2 - keeps camera steady without restarts on scan
   useEffect(() => {
     let isCancelled = false;
     if (isOpen && step === 2) {
       const timer = setTimeout(() => {
         if (!isCancelled) startCamera();
-      }, 250);
+      }, 150);
       return () => {
         isCancelled = true;
         clearTimeout(timer);
@@ -683,7 +691,7 @@ export function AttendanceScannerModal({
     } else {
       stopCamera();
     }
-  }, [isOpen, step, startCamera, stopCamera]);
+  }, [isOpen, step, cameraFacing, startCamera, stopCamera]);
 
   // Force stop camera whenever modal is closed or unmounted
   useEffect(() => {
