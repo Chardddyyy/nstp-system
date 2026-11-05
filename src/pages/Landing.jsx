@@ -1030,7 +1030,7 @@ function Landing() {
               to="/enrollment"
               className="inline-flex items-center gap-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black px-8 sm:px-12 py-4 rounded-2xl text-base sm:text-lg transition-all shadow-xl shadow-amber-950/40 hover:shadow-2xl hover:-translate-y-1 active:scale-95 group"
             >
-              <span>Fill Up Online Enrollment Form</span>
+              <span>Fill Out Online Enrollment Form</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform" />
             </Link>
           ) : (
@@ -1078,7 +1078,7 @@ function Landing() {
                 <span className="w-12 h-12 bg-emerald-700 text-white font-black text-lg rounded-2xl flex items-center justify-center mb-4 shadow-sm">
                   2
                 </span>
-                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Fill Form & Upload COR</h3>
+                <h3 className="text-base sm:text-lg font-black text-emerald-950 mb-1.5">Fill Out Form &amp; Upload COR</h3>
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   Enter student details, verify 9-digit Student ID, and attach your CvSU Registration Form (COR).
                 </p>
