@@ -4,30 +4,54 @@
  * ==============================================================================
  * 
  * Paano Gamitin:
- * 1. Pumunta sa https://script.google.com/
- * 2. Buksan ang inyong Apps Script Project na nakakabit sa Webhook URL.
- * 3. I-paste ang code sa ibaba sa `Code.gs`.
- * 4. I-click ang "Deploy" > "Manage Deployments" > "Edit" > New version > "Deploy".
- * 5. Siguraduhing "Anyone" ang may access upang matanggap ang webhook mula sa NSTP server.
+ * 1. Pumunta sa https://script.google.com/ gamit ang cvsunaicnstp@gmail.com
+ * 2. Buksan ang inyong Apps Script Project.
+ * 3. I-replace/I-paste ang buong code sa ibaba sa `Code.gs`.
+ * 4. I-click ang "Deploy" > "Manage Deployments" > "Edit" (pencil icon) > 
+ *    Version: "New version" > I-click ang "Deploy".
+ * 5. Siguraduhing "Anyone" ang naka-set sa "Who has access".
  */
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'online',
+    system: 'Cavite State University Naic - NSTP Automated Backup Webhook',
+    timestamp: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
 function doPost(e) {
   try {
-    var rawData = e.postData.contents;
+    var rawData = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     var data = JSON.parse(rawData);
 
-    // Default target Google Drive Folder ID
-    var folderId = data.folderId || '1lWSgMdKMBD8148A_wFb6UufFgmloD4e3';
-    var folder = DriveApp.getFolderById(folderId);
+    // Kuhanin o kusa gumawa ng backup folder sa Google Drive ng account
+    var folder = null;
+    if (data.folderId) {
+      try {
+        folder = DriveApp.getFolderById(data.folderId);
+      } catch (err) {
+        folder = null;
+      }
+    }
+
+    // Kung walang folder ID o inaccessible, gamitin o gumawa ng "CvSU_NSTP_Backups" folder
+    if (!folder) {
+      var folderName = 'CvSU_NSTP_Backups';
+      var existingFolders = DriveApp.getFoldersByName(folderName);
+      if (existingFolders.hasNext()) {
+        folder = existingFolders.next();
+      } else {
+        folder = DriveApp.createFolder(folderName);
+      }
+    }
 
     // 1. LINISIN ANG MGA LUMANG KALAT NA BACKUP FILES
-    // Kapag cleanOld = true, itatapon sa trash ang lahat ng lumang backup files sa folder
-    // upang mapanatiling malinis at isa lang ang makikita.
+    // Kapag cleanOld = true, itatapon sa trash ang mga lumang duplicate backup dumps
     if (data.cleanOld) {
       var files = folder.getFiles();
       while (files.hasNext()) {
         var oldFile = files.next();
-        // Linisin ang lahat ng lumang JSON o text dumps
         if (oldFile.getName().indexOf('CvSU_NSTP_') !== -1 || oldFile.getName().indexOf('.json') !== -1) {
           oldFile.setTrashed(true);
         }
@@ -36,9 +60,11 @@ function doPost(e) {
 
     // 2. ISAHANG MALINIS NA BACKUP FILE
     var fileName = data.fileName || 'CvSU_NSTP_Latest_Database_Backup.json';
-    var fileContent = JSON.stringify(data.backupData, null, 2);
+    var fileContent = typeof data.backupData === 'string' 
+      ? data.backupData 
+      : JSON.stringify(data.backupData || data, null, 2);
 
-    // Kung umiiral na ang file at hindi na-trash, i-update ang content; kung wala pa, gumawa ng bago
+    // Kung umiiral na ang file, i-update ang laman; kung wala pa, gumawa ng bago
     var existingFiles = folder.getFilesByName(fileName);
     var targetFile;
     if (existingFiles.hasNext()) {
@@ -52,8 +78,10 @@ function doPost(e) {
       success: true,
       fileId: targetFile.getId(),
       fileName: targetFile.getName(),
+      folderName: folder.getName(),
+      folderUrl: folder.getUrl(),
       updatedAt: new Date().toISOString(),
-      message: 'Clean unified backup saved successfully'
+      message: 'Backup file saved successfully to Google Drive'
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {

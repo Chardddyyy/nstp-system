@@ -940,7 +940,7 @@ function Profile() {
                     disabled={!isEditing}
                     autoComplete="email"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none disabled:bg-gray-100 font-medium"
-                    placeholder="e.g. richardbelen99@gmail.com"
+                    placeholder="e.g. cvsunaicnstp@gmail.com"
                   />
                   <p className="text-[11px] text-gray-500 mt-1">
                     Password recovery codes and system notices will be sent to this email address.

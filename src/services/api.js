@@ -3,8 +3,8 @@ import { DEMO_COORDINATOR_SIGNATURE_SVG, COORDINATOR_NAME } from '../utils/signa
 function getPrimaryApiUrl() {
   if (typeof window !== 'undefined') {
     var custom = localStorage.getItem('nstp_custom_api_url') || localStorage.getItem('nstp_backend_url');
-    // If a stale Render URL was saved in localStorage, remove it to prevent connecting to Render
-    if (custom && custom.includes('onrender.com')) {
+    // If a stale Cloud (Render / Aiven) URL was saved in localStorage, remove it to ensure 100% local operation
+    if (custom && (custom.includes('onrender.com') || custom.includes('render.com') || custom.includes('aivencloud.com'))) {
       localStorage.removeItem('nstp_custom_api_url');
       localStorage.removeItem('nstp_backend_url');
       custom = null;
@@ -138,12 +138,12 @@ async function apiCall(endpoint, options) {
         response = fbRes2;
       } else {
         var isAbort = err.name === 'AbortError' || (err.message && (err.message.includes('aborted') || err.message.includes('signal')));
-        var cleanErr = new Error(isAbort ? 'Connection timeout. Cloud server is waking up (~15s) — please try again.' : (err.message || 'Network connection failed'));
+        var cleanErr = new Error(isAbort ? 'Connection timeout. Backend server took too long to respond — please try again.' : (err.message || 'Network connection failed'));
         throw cleanErr;
       }
     } else {
       var isAbort2 = err.name === 'AbortError' || (err.message && (err.message.includes('aborted') || err.message.includes('signal')));
-      var cleanErr2 = new Error(isAbort2 ? 'Connection timeout. Cloud server is waking up (~15s) — please try again.' : (err.message || 'Network connection failed'));
+      var cleanErr2 = new Error(isAbort2 ? 'Connection timeout. Backend server took too long to respond — please try again.' : (err.message || 'Network connection failed'));
       throw cleanErr2;
     }
   }
@@ -209,7 +209,7 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
     }
     return res;
   } catch (netErr) {
-    // If Cloud Server is sleeping, suspended, or timing out, check known faculty/admin credentials as offline recovery
+    // If Backend Server is unreachable or timing out, check known faculty/admin credentials as offline recovery
     const isNetworkOrTimeout = netErr && (
       netErr.message?.includes('timeout') ||
       netErr.message?.includes('Network') ||
@@ -220,15 +220,15 @@ export async function loginUser(email, password, _forceLogin = true, recaptchaTo
     );
 
     if (isNetworkOrTimeout) {
-      console.warn('Cloud server unreachable, attempting resilient offline credentials check...');
+      console.warn('Backend server unreachable, attempting resilient offline credentials check...');
       
       const offlineAccounts = [
         {
-          emails: ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com', 'admin'],
+          emails: ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'admin', 'richardbelen99@gmail.com'],
           passwords: ['admin123', 'admin'],
           user: {
             id: 1,
-            email: 'richardbelen99@gmail.com',
+            email: 'cvsunaicnstp@gmail.com',
             name: 'NSTP Administrator',
             role: 'admin',
             department: 'NSTP Office',
@@ -335,7 +335,7 @@ export function getUsers() {
         if (Array.isArray(stored) && stored.length > 0) return stored;
       } catch (_) {}
       return [
-        { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office' },
+        { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office' },
         { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS' },
         { id: 3, name: 'LTS Facilitator', email: 'lts@cvsu.edu.ph', role: 'instructor', department: 'LTS' },
         { id: 4, name: 'ROTC Training Staff', email: 'rotc@cvsu.edu.ph', role: 'instructor', department: 'ROTC' },
@@ -827,60 +827,16 @@ export function clearBatch() {
   return apiCall('/clear-batch', { method: 'POST' });
 }
 
-// Calls
-export function initiateCall(conversationId, callType) {
-  return apiCall('/calls', {
-    method: 'POST',
-    body: JSON.stringify({ conversation_id: conversationId, call_type: callType })
-  });
-}
-
-export function getIncomingCalls() {
-  return apiCall('/calls/incoming');
-}
-
-export function answerCall(id) {
-  const targetId = (typeof id === 'object' && id !== null) ? id.id : id;
-  return apiCall('/calls/' + targetId + '/answer', {
-    method: 'PUT'
-  }).catch(function() { return { message: 'Call connected', call_id: targetId }; });
-}
-
-export function endCall(id, status) {
-  return apiCall('/calls/' + id + '/end', {
-    method: 'PUT',
-    body: JSON.stringify({ status: status || 'ended' })
-  });
-}
-
-export function getCallById(id) {
-  return apiCall('/calls/' + id);
-}
-
-export function sendCallOffer(callId, sdp) {
-  return apiCall('/calls/' + callId + '/webrtc/offer', {
-    method: 'PUT',
-    body: JSON.stringify({ sdp: sdp })
-  });
-}
-
-export function sendCallAnswer(callId, sdp) {
-  return apiCall('/calls/' + callId + '/webrtc/answer', {
-    method: 'PUT',
-    body: JSON.stringify({ sdp: sdp })
-  });
-}
-
-export function sendCallIce(callId, candidate) {
-  return apiCall('/calls/' + callId + '/webrtc/ice', {
-    method: 'POST',
-    body: JSON.stringify({ candidate: candidate })
-  });
-}
-
-export function getCallWebRTCSignaling(callId) {
-  return apiCall('/calls/' + callId + '/webrtc');
-}
+// Calls (Decommissioned - Voice & Video Calling removed, Voice Message preserved)
+export function initiateCall() { return Promise.resolve({ id: null }); }
+export function getIncomingCalls() { return Promise.resolve([]); }
+export function answerCall() { return Promise.resolve({}); }
+export function endCall() { return Promise.resolve({}); }
+export function getCallById() { return Promise.resolve({ status: 'ended' }); }
+export function sendCallOffer() { return Promise.resolve({}); }
+export function sendCallAnswer() { return Promise.resolve({}); }
+export function sendCallIce() { return Promise.resolve({}); }
+export function getCallWebRTCSignaling() { return Promise.resolve({}); }
 
 export async function logoutUser() {
   const token = localStorage.getItem('nstp_token');

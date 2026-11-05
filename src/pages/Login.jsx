@@ -663,11 +663,11 @@ function Login() {
     setLoadingText('Verifying credentials...');
 
     const timer1 = setTimeout(() => {
-      setLoadingText('Waking up Cloud Server (please wait ~15s)...');
+      setLoadingText('Connecting to Backend Server...');
     }, 3500);
 
     const timer2 = setTimeout(() => {
-      setLoadingText('Connecting to Cloud Database...');
+      setLoadingText('Connecting to Local Database...');
     }, 14000);
 
     try {
@@ -802,7 +802,7 @@ function Login() {
       } catch (retryErr) {
         var msg = retryErr?.message || err?.message || 'Failed to send reset code.';
         if (msg.toLowerCase().includes('timeout') || msg.toLowerCase().includes('waking up') || msg.toLowerCase().includes('network') || msg.toLowerCase().includes('failed to fetch')) {
-          setForgotError('Cloud server was waking up from sleep. It is now active — please click "Send 6-Digit Reset Code" again!');
+          setForgotError('Backend server is temporarily unreachable. Please ensure the local server is running and try again.');
         } else {
           setForgotError(msg);
         }

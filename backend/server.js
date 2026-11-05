@@ -125,16 +125,6 @@ io.on('connection', (socket) => {
   socket.on('stop_typing', ({ convId, userName }) => {
     if (convId) socket.to(`conv_${convId}`).emit('user_stop_typing', { convId, userName });
   });
-
-  socket.on('call_signal', (data) => {
-    if (data && data.targetUserId) {
-      io.to(`user_${data.targetUserId}`).emit('call_signal', {
-        fromUserId: user?.id,
-        signal: data.signal,
-        callId: data.callId
-      });
-    }
-  });
 });
 
 // ── Helmet: sets comprehensive defensive HTTP security headers ──────────────
@@ -1252,42 +1242,6 @@ async function ensureWebRTCColumns() {
   }
 }
 
-async function getCallForUser(callId, userId) {
-  const [calls] = await pool.execute(
-    'SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR receiver_id = ?)',
-    [callId, userId, userId]
-  );
-  return calls.length > 0 ? calls[0] : null;
-}
-
-async function appendCallIce(callId, column, candidate) {
-  // Whitelist the column name — never interpolate raw user-influenced values into SQL.
-  if (column !== 'caller_ice' && column !== 'receiver_ice') {
-    throw new Error('Invalid ICE column');
-  }
-  const [rows] = await pool.execute(
-    'SELECT caller_ice, receiver_ice FROM calls WHERE id = ?',
-    [callId]
-  );
-  if (rows.length === 0) return;
-  var list = [];
-  var raw = rows[0][column];
-  if (raw) {
-    try {
-      list = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (!Array.isArray(list)) list = [];
-    } catch (e) {
-      list = [];
-    }
-  }
-  list.push(candidate);
-  // Safe: column is already whitelisted above.
-  var sql = column === 'caller_ice'
-    ? 'UPDATE calls SET caller_ice = ? WHERE id = ?'
-    : 'UPDATE calls SET receiver_ice = ? WHERE id = ?';
-  await pool.execute(sql, [JSON.stringify(list), callId]);
-}
-
 // Production Performance Indexes (Safely checks information_schema first; idempotent & zero side-effects)
 async function ensurePerformanceIndexes() {
   const candidateIndexes = [
@@ -1722,7 +1676,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     var aliases = [email];
     if (email === 'admin@cvsu.edu.ph' || email === 'cvsunaicnstp@gmail.com' || email === 'admin' || email === 'admin@gmail.com' || email === 'richardbelen99@gmail.com') {
-      aliases = ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com'];
+      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
     } else if (email === 'cwts@cvsu.edu.ph' || email === 'belenjoshua58@gmail.com' || email === 'clarkebelen28@gmail.com' || email === 'cwts' || email === 'instructor@cvsu.edu.ph' || email === 'instructor' || email === 'cwts@gmail.com') {
       aliases = ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
     } else if (email === 'lts@cvsu.edu.ph' || email === 'lts' || email === 'lts@gmail.com') {
@@ -1783,7 +1737,7 @@ app.post('/api/auth/login', loginLimiter, async function(req, res) {
 
     // ── Two-Factor Authentication (2FA) for Admin & ALL Instructors ──────────────
     if (user.role === 'admin' || user.role === 'instructor') {
-      var deliveryEmail = user.email || (user.role === 'admin' ? 'richardbelen99@gmail.com' : 'belenjoshua58@gmail.com');
+      var deliveryEmail = user.email || (user.role === 'admin' ? 'cvsunaicnstp@gmail.com' : 'belenjoshua58@gmail.com');
       var userKey = deliveryEmail.toLowerCase();
 
       // Check if locked out (4 attempts reached)
@@ -3227,8 +3181,7 @@ app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) =>
 
     var user = foundUsers[0];
     var targetDeliveryEmail = user.email ? user.email.toLowerCase().trim() : cleanEmail;
-    // targetDeliveryEmail is the admin's actual email (richardbelen99@gmail.com)
-    // cvsunaicnstp@gmail.com is only the SMTP FROM sender, not the delivery address
+    // targetDeliveryEmail is the recipient's registered email address (e.g. cvsunaicnstp@gmail.com for admin)
 
     var now = Date.now();
     var existingReset = inMemoryResetOtps.get(cleanEmail) || inMemoryResetOtps.get(targetDeliveryEmail);
@@ -3442,7 +3395,7 @@ const handleResetPassword = async (req, res) => {
     // Resolve user by email or aliases so the exact account is updated by primary ID
     var aliases = [cleanEmail];
     if (cleanEmail === 'admin@cvsu.edu.ph' || cleanEmail === 'cvsunaicnstp@gmail.com' || cleanEmail === 'admin' || cleanEmail === 'admin@gmail.com' || cleanEmail === 'richardbelen99@gmail.com') {
-      aliases = ['richardbelen99@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'cvsunaicnstp@gmail.com'];
+      aliases = ['cvsunaicnstp@gmail.com', 'admin@cvsu.edu.ph', 'admin@gmail.com', 'richardbelen99@gmail.com'];
     } else if (cleanEmail === 'cwts@cvsu.edu.ph' || cleanEmail === 'belenjoshua58@gmail.com' || cleanEmail === 'clarkebelen28@gmail.com' || cleanEmail === 'cwts' || cleanEmail === 'instructor@cvsu.edu.ph' || cleanEmail === 'instructor' || cleanEmail === 'cwts@gmail.com') {
       aliases = ['belenjoshua58@gmail.com', 'cwts@gmail.com', 'clarkebelen28@gmail.com', 'cwts@cvsu.edu.ph'];
     } else if (cleanEmail === 'lts@cvsu.edu.ph' || cleanEmail === 'lts' || cleanEmail === 'lts@gmail.com') {
@@ -6248,368 +6201,6 @@ app.delete('/api/conversations/:id/messages', authenticateToken, async (req, res
     res.json({ message: 'Messages cleared for you' });
   } catch (error) {
     console.error('Clear messages error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ===== CALL MANAGEMENT =====
-
-// Get incoming calls for current user (must be before /:id route)
-app.get('/api/calls/incoming', authenticateToken, async (req, res) => {
-  try {
-    const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name, conv.participant_1_id, conv.participant_2_id, conv.is_group, conv.group_name
-       FROM calls c
-       JOIN users u ON c.caller_id = u.id
-       JOIN conversations conv ON c.conversation_id = conv.id
-       WHERE c.receiver_id = ? AND c.status = 'ringing' AND c.ended_at IS NULL`,
-      [req.user.id]
-    );
-    res.json(calls);
-  } catch (error) {
-    console.error('Get incoming calls error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Initiate a call
-app.post('/api/calls', authenticateToken, async (req, res) => {
-  try {
-    const { conversation_id, call_type } = req.body;
-    const caller_id = req.user.id;
-    
-    if (!(await userCanAccessConversation(conversation_id, caller_id))) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    const [conversations] = await pool.execute(
-      'SELECT * FROM conversations WHERE id = ?',
-      [conversation_id]
-    );
-    
-    if (conversations.length === 0) {
-      return res.status(404).json({ message: 'Conversation not found' });
-    }
-
-    const conversation = conversations[0];
-    const [callers] = await pool.execute('SELECT name FROM users WHERE id = ?', [caller_id]);
-    const caller_name = callers[0]?.name || 'Unknown';
-
-    // Group call: create one call record per other participant, share a group_call_id
-    if (conversation.is_group) {
-      // Ensure group_call_id column exists
-      try { await pool.execute('ALTER TABLE calls ADD COLUMN group_call_id VARCHAR(36) NULL'); } catch (_) {}
-
-      const [participantRows] = await pool.execute(
-        'SELECT user_id FROM conversation_participants WHERE conversation_id = ?',
-        [conversation_id]
-      );
-      const others = participantRows.map(r => r.user_id).filter(id => id !== caller_id);
-      if (others.length === 0) {
-        return res.status(400).json({ message: 'No other participants in group.' });
-      }
-
-      const groupCallId = `grp-${Date.now()}-${caller_id}`;
-      const callIds = [];
-
-      for (const receiver_id of others) {
-        // Cancel any existing ringing call with this receiver
-        await pool.execute(
-          `UPDATE calls SET status='ended', ended_at=NOW() WHERE status='ringing' AND ended_at IS NULL AND caller_id=? AND receiver_id=?`,
-          [caller_id, receiver_id]
-        );
-        const [result] = await pool.execute(
-          `INSERT INTO calls (conversation_id, caller_id, receiver_id, call_type, status, group_call_id, started_at)
-           VALUES (?, ?, ?, ?, 'ringing', ?, NOW())`,
-          [conversation_id, caller_id, receiver_id, call_type, groupCallId]
-        );
-        callIds.push(result.insertId);
-      }
-
-      return res.status(201).json({
-        id: callIds[0],
-        group_call_id: groupCallId,
-        call_ids: callIds,
-        conversation_id,
-        caller_id,
-        caller_name,
-        call_type,
-        is_group: true,
-        status: 'ringing'
-      });
-    }
-
-    const receiver_id = conversation.participant_1_id === caller_id
-      ? conversation.participant_2_id
-      : conversation.participant_1_id;
-
-    // Auto-clean stale calls: ringing > 2 min or connected > 3 hours are considered abandoned
-    await pool.execute(
-      `UPDATE calls SET status='ended', ended_at=NOW()
-       WHERE ended_at IS NULL AND (
-         (status='ringing'   AND started_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)) OR
-         (status='connected' AND started_at < DATE_SUB(NOW(), INTERVAL 3 HOUR))
-       )`
-    );
-
-    // Check if caller is already in a live call (ringing ≤ 2 min or connected ≤ 3 h)
-    const [callerBusy] = await pool.execute(
-      `SELECT id FROM calls WHERE status IN ('connected','ringing') AND ended_at IS NULL
-       AND (caller_id = ? OR receiver_id = ?) LIMIT 1`,
-      [caller_id, caller_id]
-    );
-    if (callerBusy.length > 0) {
-      return res.status(409).json({ message: 'You are already in a call.' });
-    }
-
-    // Check if receiver is already in a live call
-    const [receiverBusy] = await pool.execute(
-      `SELECT id FROM calls WHERE status IN ('connected','ringing') AND ended_at IS NULL
-       AND (caller_id = ? OR receiver_id = ?) LIMIT 1`,
-      [receiver_id, receiver_id]
-    );
-    if (receiverBusy.length > 0) {
-      return res.status(409).json({ message: 'User is currently busy on another call.' });
-    }
-
-    await pool.execute(
-      `UPDATE calls SET status = 'ended', ended_at = NOW()
-       WHERE status = 'ringing' AND ended_at IS NULL
-       AND ((caller_id = ? AND receiver_id = ?) OR (caller_id = ? AND receiver_id = ?))`,
-      [caller_id, receiver_id, receiver_id, caller_id]
-    );
-
-    // Create call record
-    const [result] = await pool.execute(
-      `INSERT INTO calls (conversation_id, caller_id, receiver_id, call_type, status, started_at)
-       VALUES (?, ?, ?, ?, 'ringing', NOW())`,
-      [conversation_id, caller_id, receiver_id, call_type]
-    );
-
-    res.status(201).json({
-      id: result.insertId,
-      conversation_id,
-      caller_id,
-      receiver_id,
-      caller_name,
-      call_type,
-      status: 'ringing'
-    });
-  } catch (error) {
-    console.error('Initiate call error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Get call status (caller/receiver polling)
-app.get('/api/calls/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const [calls] = await pool.execute(
-      `SELECT c.*, u.name as caller_name
-       FROM calls c
-       JOIN users u ON c.caller_id = u.id
-       WHERE c.id = ? AND (c.caller_id = ? OR c.receiver_id = ?)`,
-      [id, req.user.id, req.user.id]
-    );
-    if (calls.length === 0) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    res.json(calls[0]);
-  } catch (error) {
-    console.error('Get call error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Answer a call (accepts POST & PUT, allows answering any active call)
-app.all('/api/calls/:id/answer', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id || id === 'undefined') {
-      return res.json({ message: 'Call connected', call_id: id });
-    }
-
-    try {
-      await pool.execute(
-        'UPDATE calls SET status = "connected", connected_at = NOW() WHERE id = ?',
-        [id]
-      );
-    } catch (_) {
-      try {
-        await pool.execute(
-          'UPDATE calls SET status = "connected" WHERE id = ?',
-          [id]
-        );
-      } catch (_) {}
-    }
-
-    return res.json({ message: 'Call connected', call_id: id });
-  } catch (error) {
-    console.error('Answer call error:', error);
-    return res.json({ message: 'Call connected', call_id: req.params.id });
-  }
-});
-
-// Decline/End a call
-app.put('/api/calls/:id/end', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const rawStatus = req.body.status;
-    const validCallStatuses = ['ended', 'declined', 'missed'];
-    const status = validCallStatuses.includes(rawStatus) ? rawStatus : 'ended';
-
-    // Verify user is part of this call
-    const [calls] = await pool.execute(
-      'SELECT * FROM calls WHERE id = ? AND (caller_id = ? OR receiver_id = ?)',
-      [id, req.user.id, req.user.id]
-    );
-    
-    if (calls.length === 0) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    
-    const call = calls[0];
-    
-    // Calculate duration if call was connected
-    let duration = 0;
-    if (call.connected_at) {
-      duration = Math.floor((Date.now() - new Date(call.connected_at).getTime()) / 1000);
-    }
-    
-    await pool.execute(
-      'UPDATE calls SET status = ?, ended_at = NOW(), duration = ? WHERE id = ?',
-      [status || 'ended', duration, id]
-    );
-
-    // Group call: if only 1 participant remains connected, they are alone — end their call too
-    if (call.group_call_id) {
-      const [remaining] = await pool.execute(
-        `SELECT id FROM calls WHERE group_call_id = ? AND status = 'connected' AND id != ?`,
-        [call.group_call_id, id]
-      );
-      if (remaining.length === 1) {
-        await pool.execute(
-          `UPDATE calls SET status = 'ended', ended_at = NOW() WHERE id = ?`,
-          [remaining[0].id]
-        );
-      }
-    }
-
-    // Send system message about call result
-    const finalStatus = status || 'ended';
-    let messageText = '';
-    
-    const callLabel = call.call_type === 'video' ? 'Video call' : 'Voice call';
-    let durationStr = '';
-    if (duration > 0) {
-      const hours = Math.floor(duration / 3600);
-      const mins = Math.floor((duration % 3600) / 60);
-      const secs = duration % 60;
-      if (hours > 0) {
-        durationStr = `${hours} hr ${mins} min ${secs} sec`;
-      } else if (mins > 0) {
-        durationStr = `${mins} min ${secs} sec`;
-      } else {
-        durationStr = `${secs} sec`;
-      }
-    }
-
-    if (finalStatus === 'missed') {
-      messageText = `📞 Missed ${callLabel.toLowerCase()}`;
-    } else if (finalStatus === 'declined') {
-      messageText = `📞 ${callLabel} declined`;
-    } else if (duration > 0) {
-      messageText = `📞 ${callLabel} ended • ${durationStr}`;
-    } else {
-      messageText = `📞 ${callLabel} ended`;
-    }
-    
-    // Insert call log message
-    await pool.execute(
-      `INSERT INTO messages (conversation_id, sender_id, text, type, created_at) 
-       VALUES (?, ?, ?, 'system', NOW())`,
-      [call.conversation_id, call.caller_id, messageText]
-    );
-    
-    res.json({ 
-      message: 'Call ended', 
-      call_id: id, 
-      status: finalStatus,
-      duration 
-    });
-  } catch (error) {
-    console.error('End call error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// WebRTC signaling for calls
-app.get('/api/calls/:id/webrtc', authenticateToken, async (req, res) => {
-  try {
-    const call = await getCallForUser(req.params.id, req.user.id);
-    if (!call) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    res.json({
-      offer_sdp: call.offer_sdp,
-      answer_sdp: call.answer_sdp,
-      caller_ice: call.caller_ice,
-      receiver_ice: call.receiver_ice,
-      call_type: call.call_type,
-      status: call.status
-    });
-  } catch (error) {
-    console.error('Get WebRTC signaling error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.all('/api/calls/:id/webrtc/offer', authenticateToken, async (req, res) => {
-  try {
-    const call = await getCallForUser(req.params.id, req.user.id);
-    if (!call) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    await pool.execute(
-      'UPDATE calls SET offer_sdp = ? WHERE id = ?',
-      [req.body.sdp, req.params.id]
-    );
-    res.json({ message: 'Offer saved' });
-  } catch (error) {
-    console.error('Save offer error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.all('/api/calls/:id/webrtc/answer', authenticateToken, async (req, res) => {
-  try {
-    const call = await getCallForUser(req.params.id, req.user.id);
-    if (!call) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    await pool.execute(
-      'UPDATE calls SET answer_sdp = ? WHERE id = ?',
-      [req.body.sdp, req.params.id]
-    );
-    res.json({ message: 'Answer saved' });
-  } catch (error) {
-    console.error('Save answer error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-app.post('/api/calls/:id/webrtc/ice', authenticateToken, async (req, res) => {
-  try {
-    const call = await getCallForUser(req.params.id, req.user.id);
-    if (!call) {
-      return res.status(404).json({ message: 'Call not found' });
-    }
-    const column = call.caller_id === req.user.id ? 'caller_ice' : 'receiver_ice';
-    await appendCallIce(req.params.id, column, req.body.candidate);
-    res.json({ message: 'ICE candidate saved' });
-  } catch (error) {
-    console.error('Save ICE error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

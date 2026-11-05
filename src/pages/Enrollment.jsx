@@ -112,147 +112,6 @@ function Enrollment() {
     return () => clearTimeout(timer);
   }, [formData.studentId, formData.email]);
 
-  // Google reCAPTCHA v2 State, Container Ref & Dynamic Script Loader
-  const [googleRecaptchaToken, setGoogleRecaptchaToken] = useState('');
-  const [isCaptchaBlocked, setIsCaptchaBlocked] = useState(false);
-  const [_isCaptchaLoaded, setIsCaptchaLoaded] = useState(false);
-  const recaptchaContainerRef = useRef(null);
-  const recaptchaWidgetIdRef = useRef(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    let timer = null;
-    let interval = null;
-    let fallbackTimer = null;
-
-    window.onGoogleRecaptchaSuccess = (token) => {
-      if (isMounted) {
-        setGoogleRecaptchaToken(token);
-        setErrors(prev => ({ ...prev, captcha: '' }));
-      }
-    };
-    window.onGoogleRecaptchaExpired = () => {
-      if (isMounted) setGoogleRecaptchaToken('');
-    };
-
-    // Google official public test key for reCAPTCHA v2 (guaranteed to work on localhost/LAN without domain restrictions):
-    const GOOGLE_TEST_SITE_KEY = '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI';
-    const PROD_SITE_KEY = '6Lc4LX4tAAAAAAMAb6-PYaBFKG62IL9baIYpU0zg';
-
-    const isLocalhost = typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '[::1]' ||
-      window.location.hostname.startsWith('192.168.') ||
-      window.location.hostname.startsWith('10.') ||
-      window.location.hostname.endsWith('.local')
-    );
-
-    // On localhost / testing, ALWAYS use Google's official test site key so the checkbox works smoothly without domain errors
-    const siteKey = isLocalhost ? GOOGLE_TEST_SITE_KEY : (import.meta.env.VITE_RECAPTCHA_SITE_KEY || PROD_SITE_KEY);
-
-    const renderWidget = () => {
-      if (!isMounted) return;
-      if (recaptchaWidgetIdRef.current !== null) return;
-      const container = recaptchaContainerRef.current;
-      if (!container) return;
-
-      // If already rendered with an iframe, keep it steady
-      if (container.querySelector('iframe')) {
-        if (isMounted) setIsCaptchaLoaded(true);
-        return;
-      }
-
-      if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
-        try {
-          container.innerHTML = '';
-          const target = document.createElement('div');
-          target.className = 'recaptcha-v2-target';
-          container.appendChild(target);
-
-          recaptchaWidgetIdRef.current = window.grecaptcha.render(target, {
-            sitekey: siteKey,
-            callback: (token) => {
-              if (isMounted) {
-                setGoogleRecaptchaToken(token);
-                setErrors(prev => ({ ...prev, captcha: '' }));
-              }
-            },
-            'expired-callback': () => {
-              if (isMounted) setGoogleRecaptchaToken('');
-            },
-            'error-callback': () => {
-              console.warn('Google reCAPTCHA network notice.');
-            }
-          });
-          if (isMounted) {
-            setIsCaptchaLoaded(true);
-            setIsCaptchaBlocked(false);
-          }
-        } catch (e) {
-          console.warn('reCAPTCHA render notice:', e);
-        }
-      }
-    };
-
-    if (window.grecaptcha && window.grecaptcha.render) {
-      if (window.grecaptcha.ready) {
-        window.grecaptcha.ready(renderWidget);
-      } else {
-        renderWidget();
-      }
-    } else {
-      window.onRecaptchaLoaded = () => {
-        if (window.grecaptcha && window.grecaptcha.ready) {
-          window.grecaptcha.ready(renderWidget);
-        } else {
-          renderWidget();
-        }
-      };
-
-      const scriptId = 'google-recaptcha-v2-script';
-      let script = document.getElementById(scriptId);
-      if (!script) {
-        script = document.createElement('script');
-        script.id = scriptId;
-        script.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoaded&render=explicit';
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-      }
-    }
-
-    let attempts = 0;
-    timer = setTimeout(renderWidget, 400);
-    interval = setInterval(() => {
-      attempts++;
-      if (recaptchaWidgetIdRef.current !== null || attempts >= 8) {
-        clearInterval(interval);
-        return;
-      }
-      renderWidget();
-    }, 700);
-
-    // If after 3.5s grecaptcha is not available (e.g. Brave Shields / adblockers), activate resilient fallback
-    fallbackTimer = setTimeout(() => {
-      if (isMounted && recaptchaWidgetIdRef.current === null && !window.grecaptcha) {
-        setIsCaptchaBlocked(true);
-      }
-    }, 3500);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-      clearTimeout(fallbackTimer);
-      clearInterval(interval);
-      if (recaptchaWidgetIdRef.current !== null && window.grecaptcha && window.grecaptcha.reset) {
-        try {
-          window.grecaptcha.reset(recaptchaWidgetIdRef.current);
-        } catch (_) { }
-      }
-    };
-  }, []);
-
   const convertToCm = (val, unit) => {
     if (!val || String(val).trim() === '') return '';
     const numStr = String(val).trim();
@@ -712,32 +571,6 @@ function Enrollment() {
       }
     }
 
-    // Security Verification - Google reCAPTCHA v2 (with resilient fallback for adblockers / shields)
-    let effectiveCaptchaToken = googleRecaptchaToken;
-    if (!effectiveCaptchaToken && window.grecaptcha) {
-      try {
-        if (recaptchaWidgetIdRef.current !== null) {
-          effectiveCaptchaToken = window.grecaptcha.getResponse(recaptchaWidgetIdRef.current);
-        } else if (typeof window.grecaptcha.getResponse === 'function') {
-          effectiveCaptchaToken = window.grecaptcha.getResponse();
-        }
-      } catch (_) { }
-    }
-    if (!effectiveCaptchaToken && typeof document !== 'undefined') {
-      const respEl = document.getElementById('g-recaptcha-response');
-      if (respEl && respEl.value) {
-        effectiveCaptchaToken = respEl.value;
-      }
-    }
-
-    if (effectiveCaptchaToken && !googleRecaptchaToken) {
-      setGoogleRecaptchaToken(effectiveCaptchaToken);
-    }
-
-    if (!effectiveCaptchaToken && !isCaptchaBlocked && window.grecaptcha) {
-      newErrors.captcha = 'Security Verification: Please check the "I\'m not a robot" box.';
-    }
-
     // Contact Number - 11 digits
     let cDigits = (formData.contactNumber || '').replace(/\D/g, '');
     if (cDigits.length === 12 && cDigits.startsWith('63')) cDigits = '0' + cDigits.slice(2);
@@ -1079,7 +912,6 @@ function Enrollment() {
         photo: idPhoto2x2 || null,
         is_flagged_regform: Boolean(corUploadWarning),
         regform_flag_reason: corUploadWarning || null,
-        recaptchaToken: googleRecaptchaToken || null,
       };
 
       setSubmitStatusMessage('Submitting your enrollment... (This may take a moment on slower connections)');
@@ -1117,10 +949,6 @@ function Enrollment() {
 
       showToast('Enrollment submitted successfully! Your application has been received.', 'success');
       setSubmitted(true);
-      if (window.grecaptcha && recaptchaWidgetIdRef.current !== null) {
-        try { window.grecaptcha.reset(recaptchaWidgetIdRef.current); } catch (_) { }
-      }
-      setGoogleRecaptchaToken('');
       localStorage.removeItem(DRAFT_STORAGE_KEY);
       localStorage.removeItem('enrollmentFormData');
 
@@ -2482,28 +2310,6 @@ function Enrollment() {
                   </div>
                 </div>
               )}
-
-              {/* Google reCAPTCHA v2 Widget - Steady & Flush Left-Aligned */}
-              <div className="flex flex-col items-start justify-start my-4 w-full text-left">
-                {!isCaptchaBlocked ? (
-                  <div className="recaptcha-center-wrapper">
-                    <div
-                      ref={recaptchaContainerRef}
-                      className="recaptcha-slot-container"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2.5 p-3.5 bg-emerald-50/80 border border-emerald-200/90 text-emerald-800 rounded-2xl text-xs font-semibold shadow-2xs">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Browser Shield Active: Human verification verified via secure institutional rate-limiting.</span>
-                  </div>
-                )}
-                {errors.captcha && (
-                  <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1.5 text-left">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" /> {errors.captcha}
-                  </p>
-                )}
-              </div>
 
               {/* Terms & Agreement Box */}
               <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-6 shadow-2xs">

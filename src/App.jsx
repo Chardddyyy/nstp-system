@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import { useState, useContext, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { AuthContext } from './context/AuthContext';
-import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, callsAPI, calendarAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
+import { authAPI, usersAPI, studentsAPI, reportsAPI, conversationsAPI, enrollmentsAPI, archivesAPI, calendarAPI, clearBatch, pingTelemetry, getPersistentVisitorId, DEFAULT_PAST_BATCHES } from './services/api';
 import { initSocket, disconnectSocket, getSocket } from './services/socket';
 
 // Direct Page Imports for Guaranteed 0-404 Deployments across all devices
@@ -434,7 +434,7 @@ function App() {
       if (Array.isArray(cached) && cached.length > 0) return cached;
     } catch {}
     return [
-      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
@@ -717,11 +717,6 @@ function App() {
   const notificationsRef = useRef([]);
   notificationsRef.current = notifications;
   const [toasts, setToasts] = useState([]);
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [pendingAnsweredCall, setPendingAnsweredCall] = useState(null);
-  const [outgoingCallStatus, setOutgoingCallStatus] = useState(null);
-  const outgoingCallIdRef = useRef(null);
-  const handledCallIdsRef = useRef(new Set());
 
   const baselineReady = useRef(false);
   const seenEnrollmentIds = useRef(new Set());
@@ -1224,27 +1219,11 @@ function App() {
       }
     };
 
-    // 4. Instant Incoming Call Alert
-    const handleIncomingCall = (payload) => {
-      if (payload?.call) {
-        setIncomingCall(payload.call);
-      }
-    };
-
-    const handleCallEnded = (payload) => {
-      if (payload?.callId) {
-        setIncomingCall(null);
-        setOutgoingCallStatus(null);
-      }
-    };
-
     socket.on('chat:message', handleChatMessage);
     socket.on('new_message', handleChatMessage);
     socket.on('attendance:scanned', handleAttendanceScanned);
     socket.on('enrollment:new', handleNewEnrollment);
     socket.on('enrollment:updated', handleEnrollmentUpdated);
-    socket.on('call:incoming', handleIncomingCall);
-    socket.on('call:ended', handleCallEnded);
 
     return () => {
       socket.off('chat:message', handleChatMessage);
@@ -1252,8 +1231,6 @@ function App() {
       socket.off('attendance:scanned', handleAttendanceScanned);
       socket.off('enrollment:new', handleNewEnrollment);
       socket.off('enrollment:updated', handleEnrollmentUpdated);
-      socket.off('call:incoming', handleIncomingCall);
-      socket.off('call:ended', handleCallEnded);
     };
   }, [user, pushNotification, showToast, deleteNotifications]);
 
@@ -2368,44 +2345,6 @@ function App() {
 
 
 
-  function registerOutgoingCall(callId) {
-    outgoingCallIdRef.current = callId;
-    setOutgoingCallStatus('ringing');
-  }
-
-  function clearOutgoingCall() {
-    outgoingCallIdRef.current = null;
-    setOutgoingCallStatus(null);
-  }
-
-  async function declineIncomingCall(callId) {
-    if (callId) handledCallIdsRef.current.add(String(callId));
-    setIncomingCall(null);
-    try {
-      await callsAPI.end(callId, 'declined');
-    } catch (e) {
-      console.warn('Decline call failed:', e);
-    }
-  }
-
-  async function answerIncomingCall(call) {
-    const targetId = (typeof call === 'object' && call !== null) ? call.id : call;
-    if (targetId) handledCallIdsRef.current.add(String(targetId));
-    
-    // Immediately dismiss incoming call overlay & stop ringtone synchronously
-    setIncomingCall(null);
-    setPendingAnsweredCall(call);
-    window.dispatchEvent(new CustomEvent('nstp-call-answered', { detail: call }));
-
-    if (targetId) {
-      try {
-        await callsAPI.answer(targetId);
-      } catch (e) {
-        console.warn('Answer call warning:', e);
-      }
-    }
-  }
-
   // Handle session expiry — api.js dispatches this event so React Router can
   // navigate to /login without a hard reload, preserving any open form state.
   useEffect(() => {
@@ -2983,7 +2922,7 @@ function App() {
     notificationsLoadedUserRef.current = null;
     setUser(null);
     setUsers([
-      { id: 1, name: 'NSTP Administrator', email: 'richardbelen99@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
+      { id: 1, name: 'NSTP Administrator', email: 'cvsunaicnstp@gmail.com', role: 'admin', department: 'NSTP Office', avatar: 'avatar-4' },
       { id: 2, name: 'CWTS Facilitator', email: 'belenjoshua58@gmail.com', role: 'instructor', department: 'CWTS', avatar: 'avatar-2' },
       { id: 3, name: 'LTS Facilitator', email: 'lts@gmail.com', role: 'instructor', department: 'LTS', avatar: 'avatar-6' },
       { id: 4, name: 'ROTC Training Staff', email: 'rotc@gmail.com', role: 'instructor', department: 'ROTC', avatar: 'avatar-8' },
@@ -3504,10 +3443,6 @@ function App() {
     notifications, setNotifications, pushNotification, deleteNotifications, markAllNotificationsRead,
     markConversationAsRead, markAllMessagesAsRead,
     toasts, dismissToast, showToast,
-    incomingCall, outgoingCallStatus,
-    pendingAnsweredCall, setPendingAnsweredCall,
-    registerOutgoingCall, clearOutgoingCall,
-    answerIncomingCall, declineIncomingCall,
     displayZoom, setDisplayZoom,
     currentBatchRange, setCurrentBatchRange: setCurrentBatchRangeState,
     updateActiveBatchRange,
