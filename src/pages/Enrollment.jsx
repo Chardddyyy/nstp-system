@@ -2394,81 +2394,81 @@ function Enrollment() {
             </div>
 
             {/* Body Content - Summarized Frameworks */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-3.5 text-xs sm:text-sm text-gray-700 leading-relaxed max-h-[60vh]">
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm md:text-[14.5px] text-gray-700 leading-relaxed max-h-[65vh]">
               {/* SECTION 1: CVSU RULES & REGULATIONS */}
-              <div className="bg-emerald-50/70 rounded-2xl p-4 sm:p-4.5 border border-emerald-200/80 shadow-2xs">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-5.5 h-5.5 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+              <div className="bg-emerald-50/70 rounded-2xl p-4 sm:p-5 border border-emerald-200/80 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
                     1
                   </div>
-                  <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
                     CvSU Rules, Regulations &amp; Student Code of Conduct
                   </h4>
                 </div>
-                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Academic Integrity:</strong> All submitted personal data, 2x2 photograph, and Certificate of Registration (COR) are authentic and official. Any falsification is subject to disciplinary action and dropping from the course.</span>
+                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Academic Integrity:</strong> All submitted personal data, 2x2 photograph, and Certificate of Registration (COR) are authentic and official. Any falsification is subject to disciplinary action and dropping from the course.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>80% Attendance Rule:</strong> Maintaining a minimum of 80% physical attendance in classroom lectures and community fieldwork activities is mandatory. More than 2 unexcused absences will result in a failing grade (5.00/DRP).</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>80% Attendance Rule:</strong> Maintaining a minimum of 80% physical attendance in classroom lectures and community fieldwork activities is mandatory. More than 2 unexcused absences will result in a failing grade (5.00/DRP).</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Anti-Hazing Policy (R.A. 11053):</strong> Any form of hazing, initiation rites, or physical and psychological violence across all components (CWTS, LTS, ROTC) is strictly prohibited.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Anti-Hazing Policy (R.A. 11053):</strong> Any form of hazing, initiation rites, or physical and psychological violence across all components (CWTS, LTS, ROTC) is strictly prohibited.</span>
                   </li>
                 </ul>
               </div>
 
               {/* SECTION 2: REPUBLIC ACT NO. 9163 (NSTP ACT OF 2001) */}
-              <div className="bg-amber-50/70 rounded-2xl p-4 sm:p-4.5 border border-amber-200/80 shadow-2xs">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-5.5 h-5.5 rounded-lg bg-amber-500 text-emerald-950 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+              <div className="bg-amber-50/70 rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-amber-500 text-emerald-950 flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
                     2
                   </div>
-                  <h4 className="text-xs sm:text-sm font-black text-amber-950">
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-amber-950">
                     Republic Act No. 9163 (NSTP Act of 2001)
                   </h4>
                 </div>
-                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Graduation Prerequisite:</strong> Completion of 2 semesters (NSTP 1 and 2, 3 units each) is a statutory prerequisite for college graduation.</span>
+                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Graduation Prerequisite:</strong> Completion of 2 semesters (NSTP 1 and 2, 3 units each) is a statutory prerequisite for college graduation.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
-                    <span><strong>Component Continuity:</strong> Both semesters must be completed under the same component track (CWTS, LTS, or ROTC); switching components without official university approval is prohibited.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Component Continuity:</strong> Both semesters must be completed under the same component track (CWTS, LTS, or ROTC); switching components without official university approval is prohibited.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-1.5"></span>
-                    <span><strong>National Serial Number:</strong> Upon completion, CWTS/LTS graduates will be inducted into the NSRC and ROTC graduates into the AFP Reserve Force, each with an official CHED/DND National Serial Number.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>National Serial Number:</strong> Upon completion, CWTS/LTS graduates will be inducted into the NSRC and ROTC graduates into the AFP Reserve Force, each with an official CHED/DND National Serial Number.</span>
                   </li>
                 </ul>
               </div>
 
               {/* SECTION 3: REPUBLIC ACT NO. 10173 (DATA PRIVACY ACT OF 2012) */}
-              <div className="bg-slate-50 rounded-2xl p-4 sm:p-4.5 border border-slate-200/90 shadow-2xs">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-5.5 h-5.5 rounded-lg bg-teal-800 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+              <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-teal-800 text-white flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
                     3
                   </div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-slate-900">
                     Republic Act No. 10173 (Data Privacy Act of 2012)
                   </h4>
                 </div>
-                <ul className="space-y-1.5 text-gray-700 text-xs font-medium">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Legitimate Academic Use:</strong> Your personal and medical information will be utilized exclusively for official NSTP enrollment, field immersion safety, and CHED institutional reporting.</span>
+                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Legitimate Academic Use:</strong> Your personal and medical information will be utilized exclusively for official NSTP enrollment, field immersion safety, and CHED institutional reporting.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Confidentiality &amp; Security:</strong> The database is encrypted and secured; information will never be disclosed or distributed to unauthorized third parties.</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Confidentiality &amp; Security:</strong> The database is encrypted and secured; information will never be disclosed or distributed to unauthorized third parties.</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-1.5"></span>
-                    <span><strong>Data Subject Rights:</strong> You retain the right to request access, rectify inaccurate records, and inquire with the CvSU Data Protection Officer (dpo@cvsu.edu.ph).</span>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Data Subject Rights:</strong> You retain the right to request access, rectify inaccurate records, and inquire with the CvSU Data Protection Officer (dpo@cvsu.edu.ph).</span>
                   </li>
                 </ul>
               </div>

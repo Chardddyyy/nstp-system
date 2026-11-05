@@ -20,9 +20,9 @@ const GRADE_OPTIONS = [
 ];
 
 const NSTP_SECTIONS = [
-  'CWTS 1', 'CWTS 2', 'CWTS 3',
-  'LTS 1', 'LTS 2', 'LTS 3',
-  'ROTC 1', 'ROTC 2', 'ROTC 3'
+  ...Array.from({ length: 10 }, (_, i) => `CWTS ${i + 1}`),
+  ...Array.from({ length: 10 }, (_, i) => `LTS ${i + 1}`),
+  ...Array.from({ length: 10 }, (_, i) => `ROTC ${i + 1}`)
 ];
 
 export default function StudentGradesModal({ isOpen, onClose, students = [], currentUser, onSaved }) {

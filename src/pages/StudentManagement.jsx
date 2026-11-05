@@ -74,11 +74,11 @@ function getArchivedCorDoc(s, batchYear) {
   return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sId}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sProg}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sYear} (${sSem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${sDept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${sDept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`;
 }
 
-export const getAvailableSectionsForDept = (dept) => {
+export const getAvailableSectionsForDept = (dept, count = 10) => {
   const d = String(dept || '').trim().toUpperCase();
-  if (d === 'ROTC') return ['ROTC 1', 'ROTC 2', 'ROTC 3'];
-  if (d === 'CWTS') return ['CWTS 1', 'CWTS 2', 'CWTS 3'];
-  if (d === 'LTS') return ['LTS 1', 'LTS 2', 'LTS 3'];
+  if (['CWTS', 'LTS', 'ROTC'].includes(d)) {
+    return Array.from({ length: count }, (_, i) => `${d} ${i + 1}`);
+  }
   return [];
 };
 
@@ -1492,19 +1492,19 @@ function StudentManagement() {
                 ) : (
                   <>
                     <optgroup label="CWTS">
-                      <option value="CWTS 1">CWTS 1</option>
-                      <option value="CWTS 2">CWTS 2</option>
-                      <option value="CWTS 3">CWTS 3</option>
+                      {getAvailableSectionsForDept('CWTS').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
                     </optgroup>
                     <optgroup label="LTS">
-                      <option value="LTS 1">LTS 1</option>
-                      <option value="LTS 2">LTS 2</option>
-                      <option value="LTS 3">LTS 3</option>
+                      {getAvailableSectionsForDept('LTS').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
                     </optgroup>
                     <optgroup label="ROTC">
-                      <option value="ROTC 1">ROTC 1</option>
-                      <option value="ROTC 2">ROTC 2</option>
-                      <option value="ROTC 3">ROTC 3</option>
+                      {getAvailableSectionsForDept('ROTC').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
                     </optgroup>
                   </>
                 )}
@@ -1589,23 +1589,23 @@ function StudentManagement() {
                       <option key={sec} value={sec}>{sec}</option>
                     ))
                   ) : (
-                    <>
-                      <optgroup label="CWTS">
-                        <option value="CWTS 1">CWTS 1</option>
-                        <option value="CWTS 2">CWTS 2</option>
-                        <option value="CWTS 3">CWTS 3</option>
-                      </optgroup>
-                      <optgroup label="LTS">
-                        <option value="LTS 1">LTS 1</option>
-                        <option value="LTS 2">LTS 2</option>
-                        <option value="LTS 3">LTS 3</option>
-                      </optgroup>
-                      <optgroup label="ROTC">
-                        <option value="ROTC 1">ROTC 1</option>
-                        <option value="ROTC 2">ROTC 2</option>
-                        <option value="ROTC 3">ROTC 3</option>
-                      </optgroup>
-                    </>
+                  <>
+                    <optgroup label="CWTS">
+                      {getAvailableSectionsForDept('CWTS').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="LTS">
+                      {getAvailableSectionsForDept('LTS').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="ROTC">
+                      {getAvailableSectionsForDept('ROTC').map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                  </>
                   )}
                 </select>
               </div>

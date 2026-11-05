@@ -1597,25 +1597,47 @@ function Profile() {
                       >
                         All {f.department || ''} Sections
                       </button>
-                      {(DEPARTMENT_SECTIONS[f.department] || ['CWTS 1', 'CWTS 2', 'CWTS 3']).map(sec => (
-                        <button
-                          key={sec}
-                          type="button"
-                          onClick={() => setInstructorForm(prev => ({ ...prev, assigned_section: sec }))}
-                          className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                            f.assigned_section === sec
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                          }`}
-                        >
-                          {sec}
-                        </button>
-                      ))}
+                      {(DEPARTMENT_SECTIONS[f.department] || Array.from({ length: 10 }, (_, i) => `${f.department || 'CWTS'} ${i + 1}`)).map(sec => {
+                        const currentList = (f.assigned_section || '').split(',').map(s => s.trim()).filter(Boolean);
+                        const isSelected = f.assigned_section !== 'All' && currentList.includes(sec);
+                        return (
+                          <button
+                            key={sec}
+                            type="button"
+                            onClick={() => {
+                              setInstructorForm(prev => {
+                                const list = (prev.assigned_section || '').split(',').map(s => s.trim()).filter(Boolean);
+                                if (list.includes('All') || !prev.assigned_section) {
+                                  return { ...prev, assigned_section: sec };
+                                }
+                                let updated;
+                                if (list.includes(sec)) {
+                                  updated = list.filter(s => s !== sec);
+                                } else {
+                                  updated = [...list, sec];
+                                }
+                                return {
+                                  ...prev,
+                                  assigned_section: updated.length > 0 ? updated.join(', ') : 'All'
+                                };
+                              });
+                            }}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                              isSelected
+                                ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            }`}
+                          >
+                            {isSelected && <span>✓</span>}
+                            <span>{sec}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1">
                       {(!f.assigned_section || f.assigned_section === 'All')
-                        ? `This instructor can view, manage, and grade ALL students under ${f.department || 'their department'}.`
-                        : `This instructor will ONLY view, manage, and grade students enrolled in ${f.assigned_section}.`}
+                        ? `This instructor can view, manage, and grade ALL students under ${f.department || 'their department'} (Sections 1-10).`
+                        : `This instructor will ONLY view, manage, and grade students enrolled in: ${f.assigned_section}.`}
                     </p>
                   </div>
                 )}
@@ -1780,25 +1802,47 @@ function Profile() {
                     >
                       All {editInstructorForm.department || ''} Sections
                     </button>
-                    {(DEPARTMENT_SECTIONS[editInstructorForm.department] || ['CWTS 1', 'CWTS 2', 'CWTS 3']).map(sec => (
-                      <button
-                        key={sec}
-                        type="button"
-                        onClick={() => setEditInstructorForm(prev => ({ ...prev, assigned_section: sec }))}
-                        className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          editInstructorForm.assigned_section === sec
-                            ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                        }`}
-                      >
-                        {sec}
-                      </button>
-                    ))}
+                    {(DEPARTMENT_SECTIONS[editInstructorForm.department] || Array.from({ length: 10 }, (_, i) => `${editInstructorForm.department || 'CWTS'} ${i + 1}`)).map(sec => {
+                      const currentList = (editInstructorForm.assigned_section || '').split(',').map(s => s.trim()).filter(Boolean);
+                      const isSelected = editInstructorForm.assigned_section !== 'All' && currentList.includes(sec);
+                      return (
+                        <button
+                          key={sec}
+                          type="button"
+                          onClick={() => {
+                            setEditInstructorForm(prev => {
+                              const list = (prev.assigned_section || '').split(',').map(s => s.trim()).filter(Boolean);
+                              if (list.includes('All') || !prev.assigned_section) {
+                                return { ...prev, assigned_section: sec };
+                              }
+                              let updated;
+                              if (list.includes(sec)) {
+                                updated = list.filter(s => s !== sec);
+                              } else {
+                                updated = [...list, sec];
+                              }
+                              return {
+                                ...prev,
+                                assigned_section: updated.length > 0 ? updated.join(', ') : 'All'
+                              };
+                            });
+                          }}
+                          className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {isSelected && <span>✓</span>}
+                          <span>{sec}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1">
                     {(!editInstructorForm.assigned_section || editInstructorForm.assigned_section === 'All')
-                      ? `Instructor has full access to all students in ${editInstructorForm.department || 'their department'}.`
-                      : `Instructor is restricted to managing and grading students in ${editInstructorForm.assigned_section} only.`}
+                      ? `Instructor has full access to all students in ${editInstructorForm.department || 'their department'} (Sections 1-10).`
+                      : `Instructor is restricted to managing and grading students in: ${editInstructorForm.assigned_section}.`}
                   </p>
                 </div>
               )}

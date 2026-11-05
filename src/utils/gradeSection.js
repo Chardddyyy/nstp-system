@@ -46,10 +46,18 @@ export function formatGradeAndSection(student) {
 }
 
 export const DEPARTMENT_SECTIONS = {
-  CWTS: ['CWTS 1', 'CWTS 2', 'CWTS 3'],
-  LTS: ['LTS 1', 'LTS 2', 'LTS 3'],
-  ROTC: ['ROTC 1', 'ROTC 2', 'ROTC 3']
+  CWTS: Array.from({ length: 10 }, (_, i) => `CWTS ${i + 1}`),
+  LTS: Array.from({ length: 10 }, (_, i) => `LTS ${i + 1}`),
+  ROTC: Array.from({ length: 10 }, (_, i) => `ROTC ${i + 1}`)
 };
+
+export function getAvailableSectionsForDept(dept, count = 10) {
+  const d = String(dept || '').trim().toUpperCase();
+  if (['CWTS', 'LTS', 'ROTC'].includes(d)) {
+    return Array.from({ length: count }, (_, i) => `${d} ${i + 1}`);
+  }
+  return [];
+}
 
 export function matchesAssignedSection(studentSection, assignedSection) {
   if (!assignedSection || assignedSection === 'All' || assignedSection === 'ALL') {
