@@ -1102,6 +1102,7 @@ export async function downloadDailyAttendanceExcel({
 export async function downloadAuditTrailExcel({
   logs = [],
   formatAuditAction = (a) => ({ label: a }),
+  formatAuditDetail = null,
   exportedBy = 'Administrator'
 }) {
   const workbook = new ExcelJS.Workbook();
@@ -1162,6 +1163,32 @@ export async function downloadAuditTrailExcel({
     const role = log.user_role || (String(log.user_name || '').toLowerCase().includes('admin') ? 'Admin' : 'Instructor');
     const actionLabel = formatAuditAction ? formatAuditAction(log.action).label : (log.action || 'Activity');
 
+    let detailVal = log.detail || 'Standard portal transaction';
+    if (typeof formatAuditDetail === 'function') {
+      detailVal = formatAuditDetail(detailVal);
+    } else if (typeof detailVal === 'string' && detailVal.trim().startsWith('{') && detailVal.trim().endsWith('}')) {
+      try {
+        const obj = JSON.parse(detailVal.trim());
+        if (obj.name && obj.studentId) {
+          detailVal = `${obj.name} (${obj.studentId})${obj.department ? ` • ${obj.department}` : ''}${obj.section ? ` • Sec ${obj.section}` : ''}${obj.serialNumber ? ` • Serial: ${obj.serialNumber}` : ''}${obj.status ? ` • Status: ${obj.status}` : ''}`;
+        } else if (obj.action === 'batch_save_grades' || obj.savedCount !== undefined) {
+          detailVal = `Saved ${obj.savedCount} student grades • ${obj.semester || ''} ${obj.schoolYear || ''}${obj.department ? ` • ${obj.department}` : ''}`;
+        } else if (obj.type === 'gdrive_sync' || obj.type === 'json_download') {
+          detailVal = obj.type === 'gdrive_sync' ? `Google Drive Sync: ${obj.activity || 'Snapshot'}` : `Downloaded database JSON (${obj.tableCount || 0} tables)`;
+        } else if (obj.createdUserId || obj.targetName || (obj.name && obj.email && obj.role)) {
+          detailVal = `Staff: ${obj.targetName || obj.name} (${obj.targetEmail || obj.email}) • Role: ${obj.role || 'Instructor'}${obj.department ? ` • Dept: ${obj.department}` : ''}`;
+        } else if (obj.title && obj.date) {
+          detailVal = `Calendar Event: "${obj.title}" on ${obj.date}${obj.track ? ` • ${obj.track}` : ''}`;
+        } else if (obj.archivedYear) {
+          detailVal = `Archived Batch: A.Y. ${obj.archivedYear} (${obj.totalStudents || 0} students)${obj.nextBatch ? ` • New Batch: ${obj.nextBatch}` : ''}`;
+        } else if (obj.activity && obj.days) {
+          detailVal = `Attendance: ${obj.activity} (${obj.days}) • ${obj.savedCount || 0} students credited`;
+        } else {
+          detailVal = Object.entries(obj).map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(' | ');
+        }
+      } catch (_) {}
+    }
+
     row.values = [
       log.id || (idx + 1),
       dateFormatted,
@@ -1170,7 +1197,7 @@ export async function downloadAuditTrailExcel({
       role,
       log.user_department || 'All / NSTP Office',
       actionLabel,
-      log.detail || 'Standard portal transaction',
+      detailVal,
       log.ip || '127.0.0.1'
     ];
 

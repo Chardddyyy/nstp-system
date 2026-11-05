@@ -2102,6 +2102,16 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
   try {
     if (req.user && req.user.id) {
       await pool.execute('UPDATE users SET current_session_id = NULL, last_active_at = NULL WHERE id = ?', [req.user.id]);
+      auditLog(
+        'logout',
+        req.user.id,
+        JSON.stringify({
+          name: req.user.name || req.user.email,
+          email: req.user.email,
+          role: req.user.role
+        }),
+        req.ip || 'unknown'
+      );
     }
   } catch (err) {
     console.warn('Logout DB update error:', err.message);
@@ -3527,6 +3537,21 @@ app.post('/api/users', authenticateToken, async (req, res) => {
       }
     } catch (_) { /* non-fatal */ }
 
+    auditLog(
+      'user_created',
+      req.user.id,
+      JSON.stringify({
+        createdUserId: newUserId,
+        name: name,
+        email: email,
+        role: assignedRole,
+        department: assignedDept,
+        assignedSection: targetAssignedSection,
+        createdBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.status(201).json({ id: newUserId, name, email, role: assignedRole, department: assignedDept, phone: cleanPhone, assigned_section: targetAssignedSection });
   } catch (error) {
     console.error('Create user error:', error);
@@ -3697,6 +3722,21 @@ async function handleUpdateUser(req, res) {
     const [updatedUsers] = await pool.execute(
       'SELECT id, email, name, role, department, avatar, profilePicture, phone, bio, signature, assigned_section FROM users WHERE id = ?',
       [targetUserId]
+    );
+
+    auditLog(
+      'user_updated',
+      req.user.id,
+      JSON.stringify({
+        targetUserId: targetUserId,
+        name: updatedUsers[0]?.name || targetName,
+        email: updatedUsers[0]?.email || targetEmail,
+        role: updatedUsers[0]?.role,
+        department: updatedUsers[0]?.department,
+        assignedSection: updatedUsers[0]?.assigned_section,
+        modifiedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
     );
 
     res.json(updatedUsers[0]);
@@ -4965,6 +5005,19 @@ app.post('/api/reports', authenticateToken, async (req, res) => {
     const [reports] = await pool.execute('SELECT * FROM reports WHERE id = ?', [result.insertId]);
     reports[0].submissions = [];
 
+    auditLog(
+      'report_template_created',
+      req.user.id,
+      JSON.stringify({
+        reportId: result.insertId,
+        title: title,
+        department: department || 'All',
+        dueDate: safeDueDate,
+        createdBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.status(201).json(reports[0]);
   } catch (error) {
     console.error('Add report error:', error.message, error.code);
@@ -5029,6 +5082,20 @@ app.post('/api/calendar/events', authenticateToken, async (req, res) => {
       [eventId, title, date, eventTrack, eventCategory, eventDesc, creatorName]
     );
 
+    auditLog(
+      'calendar_event_created',
+      req.user.id,
+      JSON.stringify({
+        eventId: eventId,
+        title: title,
+        date: date,
+        track: eventTrack,
+        category: eventCategory,
+        createdBy: creatorName
+      }),
+      req.ip || 'unknown'
+    );
+
     res.status(201).json({
       id: eventId,
       title,
@@ -5056,6 +5123,21 @@ app.put('/api/calendar/events/:id', authenticateToken, requireAdmin, async (req,
       `UPDATE calendar_events SET title = ?, date = ?, track = ?, category = ?, description = ? WHERE id = ?`,
       [title, date, track || 'All Tracks', category || 'Training', description || '', id]
     );
+
+    auditLog(
+      'calendar_event_updated',
+      req.user.id,
+      JSON.stringify({
+        eventId: id,
+        title: title,
+        date: date,
+        track: track || 'All Tracks',
+        category: category || 'Training',
+        updatedBy: req.user.name || 'Admin'
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({ id, title, date, track, category, description });
   } catch (err) {
     console.error('[Calendar] Update event error:', err.message);
@@ -5070,6 +5152,18 @@ app.delete('/api/calendar/events/:id', authenticateToken, requireAdmin, async (r
     const [existing] = await pool.execute('SELECT * FROM calendar_events WHERE id = ?', [id]).catch(() => [[]]);
     const eventData = existing && existing[0];
     await pool.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
+
+    auditLog(
+      'calendar_event_deleted',
+      req.user.id,
+      JSON.stringify({
+        eventId: id,
+        title: eventData?.title || 'Scheduled Event',
+        date: eventData?.date,
+        deletedBy: req.user?.name || 'Administrator'
+      }),
+      req.ip || 'unknown'
+    );
 
     // Broadcast deletion so all users get notified in real time on their devices
     try {
@@ -5108,6 +5202,20 @@ app.put('/api/reports/:id', authenticateToken, requireAdmin, async (req, res) =>
     );
 
     const [reports] = await pool.execute('SELECT * FROM reports WHERE id = ?', [id]);
+
+    auditLog(
+      'report_updated',
+      req.user.id,
+      JSON.stringify({
+        reportId: id,
+        title: title,
+        department: department,
+        status: status,
+        updatedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json(reports[0]);
   } catch (error) {
     console.error('Update report error:', error);
@@ -5148,6 +5256,18 @@ app.post('/api/reports/:id/submit', authenticateToken, async (req, res) => {
       ['Submitted', id]
     );
 
+    auditLog(
+      'report_submitted',
+      req.user.id,
+      JSON.stringify({
+        reportId: id,
+        fileName: file_name || 'Accomplishment Report Document',
+        instructor: req.user.name || req.user.email,
+        department: req.user.department || 'All'
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({ message: 'Report submitted successfully' });
   } catch (error) {
     console.error('Submit report error:', error);
@@ -5159,7 +5279,21 @@ app.post('/api/reports/:id/submit', authenticateToken, async (req, res) => {
 app.delete('/api/reports/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    const [existing] = await pool.execute('SELECT title, department FROM reports WHERE id = ?', [id]).catch(() => [[]]);
     await pool.execute('DELETE FROM reports WHERE id = ?', [id]);
+
+    auditLog(
+      'report_deleted',
+      req.user.id,
+      JSON.stringify({
+        reportId: id,
+        title: existing && existing[0] ? existing[0].title : 'Report Template',
+        department: existing && existing[0] ? existing[0].department : 'All',
+        deletedBy: req.user.name || 'Admin'
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({ message: 'Report deleted' });
   } catch (error) {
     console.error('Delete report error:', error);
@@ -5971,6 +6105,18 @@ app.delete('/api/conversations/:conversationId/messages/:messageId', authenticat
         );
       }
 
+      auditLog(
+        'message_deleted_everyone',
+        req.user.id,
+        JSON.stringify({
+          messageId: messageId,
+          conversationId: conversationId,
+          senderName: req.user.name || req.user.email,
+          preview: String(message.text || message.file_name || '[Media]').slice(0, 100)
+        }),
+        req.ip || 'unknown'
+      );
+
       res.json({ message: 'Message deleted for everyone', forEveryone: true });
     } else {
       // Delete for me only - add user to deleted_for array
@@ -6673,6 +6819,21 @@ app.post('/api/enrollments', enrollmentLimiter, async (req, res) => {
       }
     }
 
+    auditLog(
+      'enrollment_submitted',
+      null,
+      JSON.stringify({
+        enrollmentId: insertId,
+        studentId: sid,
+        name: finalStudentName,
+        department: nstpComponent || 'CWTS',
+        program: program,
+        section: section,
+        email: String(email).trim()
+      }),
+      clientIp
+    );
+
     res.status(201).json(newEnrollmentPayload);
   } catch (error) {
     console.error('Submit enrollment error:', error);
@@ -6732,13 +6893,26 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
         [status, req.user.id, id]
       );
     }
-    auditLog(`enrollment_${status.toLowerCase()}`, req.user.id, `enrollment_id: ${id}`, req.ip || 'unknown');
+    const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
+    const enrollment = enrollments && enrollments[0];
+
+    auditLog(
+      `enrollment_${status.toLowerCase()}`,
+      req.user.id,
+      JSON.stringify({
+        enrollmentId: id,
+        studentId: enrollment?.studentId || enrollment?.student_id,
+        name: enrollment?.student_name || enrollment?.fullName || `${enrollment?.lastName || ''}, ${enrollment?.firstName || ''}`.trim(),
+        department: enrollment?.department,
+        status: status,
+        assignedSection: designatedSection || enrollment?.section,
+        reviewedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
 
     // If approved, create student record (skip if already exists)
     if (status === 'Approved') {
-      const [enrollments] = await pool.execute('SELECT * FROM enrollments WHERE id = ?', [id]);
-      const enrollment = enrollments[0];
-      
       if (enrollment) {
         try {
           const studentIdVal = enrollment.studentId || enrollment.student_id;
@@ -7382,6 +7556,19 @@ app.post('/api/attendance/batch-save', authenticateToken, async (req, res) => {
         flatParams
       );
     }
+
+    auditLog(
+      'attendance_batch_saved',
+      req.user.id,
+      JSON.stringify({
+        savedCount: validRecords.length,
+        activity: Array.from(actNames).join(', '),
+        days: Array.from(dayNames).join(', '),
+        instructor: req.user.name || req.user.email,
+        department: req.user.department || 'All'
+      }),
+      req.ip || 'unknown'
+    );
 
     res.json({
       success: true,
@@ -8033,6 +8220,22 @@ app.post('/api/archives', authenticateToken, requireAdmin, async (req, res) => {
       }
     }
     
+    auditLog(
+      'batch_archived',
+      req.user.id,
+      JSON.stringify({
+        archivedYear: archiveYear,
+        totalStudents: totalStudents,
+        cwts: cwts,
+        lts: lts,
+        rotc: rotc,
+        reports: reportCount[0]?.count || 0,
+        nextBatch: next_batch || 'New Batch',
+        archivedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({ 
       message: `Batch ${archiveYear} archived successfully`, 
       year: archiveYear,
@@ -8050,6 +8253,17 @@ app.delete('/api/archives/:year', authenticateToken, requireAdmin, async (req, r
   try {
     const { year } = req.params;
     await pool.execute('DELETE FROM archived_years WHERE year = ?', [year]);
+
+    auditLog(
+      'batch_archive_deleted',
+      req.user.id,
+      JSON.stringify({
+        deletedYear: year,
+        deletedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({ message: `Batch ${year} deleted from archives` });
   } catch (error) {
     console.error('Delete archive error:', error);
@@ -8060,7 +8274,7 @@ app.delete('/api/archives/:year', authenticateToken, requireAdmin, async (req, r
 // Audit log viewer — admin only
 app.get(['/api/audit-logs', '/api/admin/audit-logs'], authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const limit = Math.min(parseInt(req.query.limit) || 500, 2000);
     const [logs] = await pool.execute(
       `SELECT al.*, u.name as user_name, u.email as user_email, u.role as user_role, u.department as user_department, u.avatar as user_avatar, u.profilePicture as user_profile_picture
        FROM audit_logs al
@@ -8525,6 +8739,19 @@ app.post('/api/backup/now', authenticateToken, requireAdmin, async (req, res) =>
     const activityName = (req.body && req.body.activity) || `Manual Backup by ${req.user.name || 'Admin'}`;
     await autoSaveToGDrive(activityName);
     await recordBackupTimestamp('manual');
+
+    auditLog(
+      'backup_created',
+      req.user.id,
+      JSON.stringify({
+        type: 'gdrive_sync',
+        activity: activityName,
+        folderId: process.env.GDRIVE_FOLDER_ID || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1',
+        performedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.json({
       success: true,
       message: 'Complete database snapshot successfully uploaded to Google Drive!',
@@ -8566,6 +8793,19 @@ app.get('/api/backup/download', authenticateToken, requireAdmin, async (req, res
     };
 
     const fileName = `CvSU_NSTP_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+
+    auditLog(
+      'backup_downloaded',
+      req.user.id,
+      JSON.stringify({
+        type: 'json_download',
+        tableCount: tableNames.length,
+        fileName: fileName,
+        downloadedBy: req.user.name || req.user.email
+      }),
+      req.ip || 'unknown'
+    );
+
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.send(JSON.stringify(payload, null, 2));

@@ -4,7 +4,8 @@ import {
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
   Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
   UserPlus, Trash2, Activity, History, RefreshCw, Search, Download, Filter, ChevronLeft, ChevronRight,
-  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock, UserMinus, FileSpreadsheet
+  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock, UserMinus, FileSpreadsheet,
+  LogOut, Award, Archive, HardDrive
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
@@ -513,11 +514,53 @@ function Profile() {
     }
   }, [isAdmin, fetchAuditLogs]);
 
+  // Human-readable format mapping for audit details (decodes JSON payloads)
+  const formatAuditDetail = useCallback((detail) => {
+    if (!detail) return '—';
+    if (typeof detail !== 'string') return String(detail);
+    const trimmed = detail.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const obj = JSON.parse(trimmed);
+        if (obj.name && obj.studentId) {
+          return `${obj.name} (${obj.studentId})${obj.department ? ` • ${obj.department}` : ''}${obj.section ? ` • Sec ${obj.section}` : ''}${obj.serialNumber ? ` • Serial: ${obj.serialNumber}` : ''}${obj.status ? ` • Status: ${obj.status}` : ''}`;
+        }
+        if (obj.action === 'batch_save_grades' || obj.savedCount !== undefined) {
+          return `Saved ${obj.savedCount} student grades • ${obj.semester || ''} ${obj.schoolYear || ''}${obj.department ? ` • ${obj.department}` : ''}`;
+        }
+        if (obj.type === 'gdrive_sync' || obj.type === 'json_download') {
+          return obj.type === 'gdrive_sync' 
+            ? `Google Drive Sync: ${obj.activity || 'Snapshot'}` 
+            : `Downloaded database JSON (${obj.tableCount || 0} tables)`;
+        }
+        if (obj.createdUserId || obj.targetName || (obj.name && obj.email && obj.role)) {
+          return `Staff: ${obj.targetName || obj.name} (${obj.targetEmail || obj.email}) • Role: ${obj.role || 'Instructor'}${obj.department ? ` • Dept: ${obj.department}` : ''}`;
+        }
+        if (obj.title && obj.date) {
+          return `Calendar Event: "${obj.title}" on ${obj.date}${obj.track ? ` • ${obj.track}` : ''}`;
+        }
+        if (obj.archivedYear) {
+          return `Archived Batch: A.Y. ${obj.archivedYear} (${obj.totalStudents || 0} students)${obj.nextBatch ? ` • New Batch: ${obj.nextBatch}` : ''}`;
+        }
+        if (obj.activity && obj.days) {
+          return `Attendance: ${obj.activity} (${obj.days}) • ${obj.savedCount || 0} students credited`;
+        }
+        return Object.entries(obj)
+          .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+          .join(' | ');
+      } catch (_) {
+        return detail;
+      }
+    }
+    return detail;
+  }, []);
+
   // Human-readable format mapping for audit actions
   const formatAuditAction = useCallback((action) => {
     const map = {
       login_success: { label: 'User Logged In', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'auth', icon: LogIn },
       login_failed: { label: 'Failed Login', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'auth', icon: AlertTriangle },
+      logout: { label: 'User Logged Out', color: 'bg-slate-100/90 text-slate-950 border-slate-300', type: 'auth', icon: LogOut },
       admin_2fa_success: { label: '2FA Verified', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'auth', icon: ShieldCheck },
       admin_2fa_prompted: { label: '2FA Code Sent', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'auth', icon: Key },
       admin_2fa_failed: { label: '2FA Failed', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'auth', icon: AlertTriangle },
@@ -529,10 +572,12 @@ function Profile() {
       attendance_scanned: { label: 'Attendance Scanned', color: 'bg-sky-100/90 text-sky-950 border-sky-300', type: 'attendance', icon: CheckCircle2 },
       attendance_excused: { label: 'Attendance Excused', color: 'bg-indigo-100/90 text-indigo-950 border-indigo-300', type: 'attendance', icon: CheckCircle },
       attendance_override: { label: 'Attendance Override', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'attendance', icon: Pencil },
+      attendance_batch_saved: { label: 'Batch Attendance Credited', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'attendance', icon: CheckCircle2 },
       attendance_session_student_removed: { label: 'Student Removed', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'attendance', icon: UserMinus },
       attendance_cleared_all: { label: 'Attendance Cleared', color: 'bg-red-100 text-red-950 border-red-300', type: 'attendance', icon: Trash2 },
       attendance_deleted: { label: 'Record Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'attendance', icon: Trash2 },
       
+      enrollment_submitted: { label: 'Enrollment Submitted', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'student', icon: FileText },
       enrollment_approved: { label: 'Enrollment Approved', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'student', icon: CheckCircle2 },
       enrollment_declined: { label: 'Enrollment Declined', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'student', icon: X },
       send_digital_id: { label: 'Digital ID Sent', color: 'bg-cyan-100/90 text-cyan-950 border-cyan-300', type: 'student', icon: FileText },
@@ -540,15 +585,32 @@ function Profile() {
       student_updated: { label: 'Student Record Updated', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'student', icon: Pencil },
       student_deleted: { label: 'Student Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'student', icon: Trash2 },
       serial_number_generated: { label: 'Serial Generated', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'student', icon: FileText },
+      grade_batch_update: { label: 'Grades Encoded', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'grade', icon: Award },
       
       password_changed: { label: 'Password Changed', color: 'bg-violet-100/90 text-violet-950 border-violet-300', type: 'system', icon: Key },
       password_reset_success: { label: 'Password Reset', color: 'bg-purple-100/90 text-purple-950 border-purple-300', type: 'system', icon: RotateCcw },
       update_enrollment_schedule: { label: 'Schedule Updated', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'system', icon: Calendar },
       user_account_deleted: { label: 'Account Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'system', icon: Trash2 },
+      user_created: { label: 'Faculty/User Created', color: 'bg-cyan-100/90 text-cyan-950 border-cyan-300', type: 'system', icon: UserPlus },
+      user_updated: { label: 'User Profile Updated', color: 'bg-sky-100/90 text-sky-950 border-sky-300', type: 'system', icon: Pencil },
+      calendar_event_created: { label: 'Event Added', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'system', icon: Calendar },
+      calendar_event_updated: { label: 'Event Updated', color: 'bg-amber-100/90 text-amber-950 border-amber-300', type: 'system', icon: Pencil },
+      calendar_event_deleted: { label: 'Event Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'system', icon: Trash2 },
+
+      report_template_created: { label: 'Report Format Added', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'report', icon: FileText },
+      report_updated: { label: 'Report Form Updated', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'report', icon: Pencil },
+      report_submitted: { label: 'Report Submitted', color: 'bg-teal-100/90 text-teal-950 border-teal-300', type: 'report', icon: CheckCircle2 },
+      report_deleted: { label: 'Report Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'report', icon: Trash2 },
 
       letter_template_created: { label: 'Letter Format Added', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'letter', icon: FileText },
       letter_template_updated: { label: 'Letter Format Updated', color: 'bg-blue-100/90 text-blue-950 border-blue-300', type: 'letter', icon: Pencil },
-      letter_template_deleted: { label: 'Letter Format Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'letter', icon: Trash2 }
+      letter_template_deleted: { label: 'Letter Format Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'letter', icon: Trash2 },
+
+      backup_created: { label: 'Database Backup Created', color: 'bg-emerald-100/90 text-emerald-950 border-emerald-300', type: 'backup', icon: HardDrive },
+      backup_downloaded: { label: 'Backup Downloaded', color: 'bg-cyan-100/90 text-cyan-950 border-cyan-300', type: 'backup', icon: Download },
+      batch_archived: { label: 'Batch Archived', color: 'bg-violet-100/90 text-violet-950 border-violet-300', type: 'archive', icon: Archive },
+      batch_archive_deleted: { label: 'Archive Record Deleted', color: 'bg-red-100 text-red-950 border-red-300', type: 'archive', icon: Trash2 },
+      message_deleted_everyone: { label: 'Message Deleted', color: 'bg-rose-100/90 text-rose-950 border-rose-300', type: 'system', icon: Trash2 }
     };
     
     if (map[action]) return map[action];
@@ -600,6 +662,7 @@ function Profile() {
       await downloadAuditTrailExcel({
         logs: filteredAuditLogs,
         formatAuditAction,
+        formatAuditDetail,
         exportedBy: user?.name || 'Administrator'
       });
       showToast(`Exported ${filteredAuditLogs.length} audit records to Excel (.xlsx) successfully.`, 'success');
@@ -1364,8 +1427,8 @@ function Profile() {
                                 </span>
                               </td>
                               <td className="py-2.5 sm:py-3 px-3.5 align-middle">
-                                <p className="text-gray-800 text-xs leading-relaxed break-words font-medium" title={log.detail || '—'}>
-                                  {log.detail || '—'}
+                                <p className="text-gray-800 text-xs leading-relaxed break-words font-medium" title={formatAuditDetail(log.detail)}>
+                                  {formatAuditDetail(log.detail)}
                                 </p>
                               </td>
                               <td className="py-2.5 sm:py-3 px-3.5 text-right align-middle">
@@ -1400,7 +1463,7 @@ function Profile() {
                             </div>
                           </div>
 
-                          <p className="text-xs text-gray-800 leading-snug break-words">{log.detail || '—'}</p>
+                          <p className="text-xs text-gray-800 leading-snug break-words">{formatAuditDetail(log.detail)}</p>
 
                           <div className="flex items-center justify-between text-[10px] text-gray-500 pt-1 border-t border-gray-50">
                             <div className="flex items-center gap-1.5 truncate">

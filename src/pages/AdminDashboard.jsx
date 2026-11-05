@@ -4974,12 +4974,16 @@ function AdminDashboard() {
                 <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
                   {[
                     { id: 'all', label: 'All Actions' },
-                    { id: 'login', label: 'Logins & 2FA' },
-                    { id: 'grade', label: 'Grade Updates' },
-                    { id: 'serial', label: 'Serial Generation' },
-                    { id: 'student', label: 'Student Records' },
+                    { id: 'login', label: 'Logins & Auth' },
+                    { id: 'grade', label: 'Grades' },
+                    { id: 'attendance', label: 'Attendance' },
                     { id: 'enrollment', label: 'Enrollments' },
-                    { id: 'attendance', label: 'Attendance' }
+                    { id: 'student', label: 'Students & Serials' },
+                    { id: 'user', label: 'Faculty & Users' },
+                    { id: 'report', label: 'Reports' },
+                    { id: 'calendar', label: 'Calendar' },
+                    { id: 'backup', label: 'Backups & Drive' },
+                    { id: 'archive', label: 'Batches' }
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -5004,6 +5008,46 @@ function AdminDashboard() {
                     <span className="text-xs font-bold text-gray-600">Retrieving audit security logs...</span>
                   </div>
                 ) : (() => {
+                  const formatAuditDetail = (detail) => {
+                    if (!detail) return '—';
+                    if (typeof detail !== 'string') return String(detail);
+                    const trimmed = detail.trim();
+                    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+                      try {
+                        const obj = JSON.parse(trimmed);
+                        if (obj.name && obj.studentId) {
+                          return `${obj.name} (${obj.studentId})${obj.department ? ` • ${obj.department}` : ''}${obj.section ? ` • Sec ${obj.section}` : ''}${obj.serialNumber ? ` • Serial: ${obj.serialNumber}` : ''}${obj.status ? ` • Status: ${obj.status}` : ''}`;
+                        }
+                        if (obj.action === 'batch_save_grades' || obj.savedCount !== undefined) {
+                          return `Saved ${obj.savedCount} student grades • ${obj.semester || ''} ${obj.schoolYear || ''}${obj.department ? ` • ${obj.department}` : ''}`;
+                        }
+                        if (obj.type === 'gdrive_sync' || obj.type === 'json_download') {
+                          return obj.type === 'gdrive_sync' 
+                            ? `Google Drive Sync: ${obj.activity || 'Snapshot'}` 
+                            : `Downloaded database JSON (${obj.tableCount || 0} tables)`;
+                        }
+                        if (obj.createdUserId || obj.targetName || (obj.name && obj.email && obj.role)) {
+                          return `Staff: ${obj.targetName || obj.name} (${obj.targetEmail || obj.email}) • Role: ${obj.role || 'Instructor'}${obj.department ? ` • Dept: ${obj.department}` : ''}`;
+                        }
+                        if (obj.title && obj.date) {
+                          return `Calendar Event: "${obj.title}" on ${obj.date}${obj.track ? ` • ${obj.track}` : ''}`;
+                        }
+                        if (obj.archivedYear) {
+                          return `Archived Batch: A.Y. ${obj.archivedYear} (${obj.totalStudents || 0} students)${obj.nextBatch ? ` • New Batch: ${obj.nextBatch}` : ''}`;
+                        }
+                        if (obj.activity && obj.days) {
+                          return `Attendance: ${obj.activity} (${obj.days}) • ${obj.savedCount || 0} students credited`;
+                        }
+                        return Object.entries(obj)
+                          .map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
+                          .join(' | ');
+                      } catch (_) {
+                        return detail;
+                      }
+                    }
+                    return detail;
+                  };
+
                   const filtered = auditLogs.filter((log) => {
                     const act = String(log.action || '').toLowerCase();
                     const det = String(log.detail || '').toLowerCase();
@@ -5012,17 +5056,27 @@ function AdminDashboard() {
                     const ip = String(log.ip || '').toLowerCase();
                     const q = auditSearch.toLowerCase().trim();
 
-                    if (auditFilter === 'login' && !act.includes('login') && !act.includes('2fa')) {
+                    if (auditFilter === 'login' && !act.includes('login') && !act.includes('2fa') && !act.includes('logout') && !act.includes('password')) {
                       return false;
                     } else if (auditFilter === 'grade' && !act.includes('grade')) {
                       return false;
                     } else if (auditFilter === 'serial' && !act.includes('serial')) {
                       return false;
-                    } else if (auditFilter === 'student' && !act.includes('student')) {
+                    } else if (auditFilter === 'student' && !act.includes('student') && !act.includes('serial') && !act.includes('digital_id')) {
                       return false;
                     } else if (auditFilter === 'enrollment' && !act.includes('enroll')) {
                       return false;
                     } else if (auditFilter === 'attendance' && !act.includes('attendance')) {
+                      return false;
+                    } else if (auditFilter === 'user' && !act.includes('user')) {
+                      return false;
+                    } else if (auditFilter === 'report' && !act.includes('report')) {
+                      return false;
+                    } else if (auditFilter === 'calendar' && !act.includes('calendar')) {
+                      return false;
+                    } else if (auditFilter === 'backup' && !act.includes('backup')) {
+                      return false;
+                    } else if (auditFilter === 'archive' && !act.includes('archive') && !act.includes('batch')) {
                       return false;
                     } else if (auditFilter !== 'all' && !act.includes(auditFilter)) {
                       return false;
@@ -5064,10 +5118,13 @@ function AdminDashboard() {
                             else if (action.includes('grade')) badgeStyle = 'bg-purple-100 text-purple-800 border-purple-300';
                             else if (action.includes('serial')) badgeStyle = 'bg-indigo-100 text-indigo-800 border-indigo-300';
                             else if (action.includes('student_updated')) badgeStyle = 'bg-sky-100 text-sky-800 border-sky-300';
-                            else if (action.includes('student_created')) badgeStyle = 'bg-cyan-100 text-cyan-800 border-cyan-300';
-                            else if (action.includes('approved') || action.includes('enrolled')) badgeStyle = 'bg-blue-100 text-blue-800 border-blue-300';
-                            else if (action.includes('schedule') || action.includes('password')) badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300';
+                            else if (action.includes('student_created') || action.includes('user_created')) badgeStyle = 'bg-cyan-100 text-cyan-800 border-cyan-300';
+                            else if (action.includes('approved') || action.includes('enrolled') || action.includes('submitted')) badgeStyle = 'bg-blue-100 text-blue-800 border-blue-300';
+                            else if (action.includes('schedule') || action.includes('password') || action.includes('calendar')) badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300';
                             else if (action.includes('attendance')) badgeStyle = 'bg-teal-100 text-teal-800 border-teal-300';
+                            else if (action.includes('backup')) badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                            else if (action.includes('archive')) badgeStyle = 'bg-violet-100 text-violet-800 border-violet-300';
+                            else if (action.includes('logout')) badgeStyle = 'bg-slate-100 text-slate-800 border-slate-300';
 
                             return (
                               <tr key={log.id} className="hover:bg-emerald-50/40 transition-colors">
@@ -5080,11 +5137,11 @@ function AdminDashboard() {
                                   </span>
                                 </td>
                                 <td className="py-2 px-3 whitespace-nowrap">
-                                  <div className="font-bold text-gray-900">{log.user_name || 'System / Guest'}</div>
+                                  <div className="font-bold text-gray-900">{log.user_name || 'System / Student'}</div>
                                   {log.user_email && <div className="text-[10px] text-gray-500 font-mono">{log.user_email}</div>}
                                 </td>
-                                <td className="py-2 px-3 max-w-xs sm:max-w-md truncate text-gray-700 font-mono text-[10.5px]">
-                                  {log.detail || '—'}
+                                <td className="py-2 px-3 max-w-xs sm:max-w-md truncate text-gray-800 font-medium text-[11px]" title={log.detail || '—'}>
+                                  {formatAuditDetail(log.detail)}
                                 </td>
                                 <td className="py-2 px-3 whitespace-nowrap text-gray-500 font-mono text-[10.5px]">
                                   {log.ip || '127.0.0.1'}
