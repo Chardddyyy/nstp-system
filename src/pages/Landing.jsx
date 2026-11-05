@@ -628,193 +628,193 @@ function Landing() {
             </button>
           </div>
         </div>
+      </header>
 
-        {/* ── Mobile Off-Canvas Slidebar Navigation (Aesthetic, Ultra-Smooth & Responsive) ── */}
-        {/* Click-outside backdrop overlay with smooth fade */}
-        <div
-          className={`fixed inset-0 bg-black/75 backdrop-blur-md z-50 lg:hidden transition-opacity duration-300 ease-out ${
-            mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
-          onClick={() => setMobileMenuOpen(false)}
-          aria-hidden="true"
-        />
+      {/* ── Mobile Off-Canvas Slidebar Navigation (Placed outside <header> to prevent backdrop-filter containment bug) ── */}
+      {/* Click-outside backdrop overlay with smooth fade */}
+      <div
+        className={`fixed inset-0 bg-black/80 backdrop-blur-sm z-[99] lg:hidden transition-opacity duration-300 ease-out ${
+          mobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
+        aria-hidden="true"
+      />
 
-        {/* Slide-in Sidebar Panel */}
-        <aside
-          ref={mobileMenuRef}
-          aria-label="Mobile Navigation Sidebar"
-          className={`fixed top-0 right-0 bottom-0 w-[84vw] max-w-xs sm:max-w-sm z-50 lg:hidden bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-l border-emerald-700/60 flex flex-col transition-transform duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
-            mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          {/* Ambient Glow Effects */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-10 left-0 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Slide-in Sidebar Panel */}
+      <aside
+        ref={mobileMenuRef}
+        aria-label="Mobile Navigation Sidebar"
+        className={`fixed top-0 right-0 bottom-0 h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[86vw] max-w-xs sm:max-w-sm z-[100] lg:hidden bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-950 text-white shadow-2xl border-l border-emerald-700/60 flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+        }`}
+      >
+        {/* Ambient Glow Effects */}
+        <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-10 left-0 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Drawer Header */}
-          <div className="relative px-4 py-3.5 sm:px-5 sm:py-4 border-b border-emerald-800/80 flex items-center justify-between gap-3 bg-emerald-950/70 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-900/80 border border-emerald-700 p-1 flex items-center justify-center shrink-0 shadow-xs">
-                <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-xs sm:text-sm font-black text-white truncate leading-tight tracking-tight">CvSU Naic Campus</h2>
-                <p className="text-[10px] sm:text-xs text-amber-400 font-bold font-mono truncate">NSTP Portal Navigation</p>
-              </div>
+        {/* Drawer Header */}
+        <div className="relative px-4 py-3.5 sm:px-5 sm:py-4 border-b border-emerald-800/80 flex items-center justify-between gap-3 bg-emerald-950/90 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-900/80 border border-emerald-700 p-1 flex items-center justify-center shrink-0 shadow-xs">
+              <img src={`${import.meta.env.BASE_URL}cvsu.png`} alt="CvSU Logo" className="w-full h-full object-contain" />
             </div>
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-black text-white truncate leading-tight tracking-tight">CvSU Naic Campus</h2>
+              <p className="text-[10px] sm:text-xs text-amber-400 font-bold font-mono truncate">NSTP Portal Navigation</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700/80 flex items-center justify-center text-emerald-200 hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
+            aria-label="Close navigation menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Drawer Scrollable Content */}
+        <div className="relative flex-1 min-h-0 overflow-y-auto px-4 py-3.5 space-y-4 overscroll-contain">
+          {/* Quick Actions CTAs */}
+          <div className="grid grid-cols-2 gap-2 shrink-0">
+            <Link
+              to="/enrollment"
+              onClick={() => setMobileMenuOpen(false)}
+              className="group py-2.5 px-3 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-500/70 shadow-sm transition-all active:scale-95"
+            >
+              <span>Enroll Now</span>
+              <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+            <Link
+              to="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="group py-2.5 px-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/30 transition-all active:scale-95"
+            >
+              <span>Portal Login</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+
+          {/* Section 1: Programs & Guides */}
+          <div className="space-y-1">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 py-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Programs &amp; Guides
+            </p>
 
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 border border-emerald-700/80 flex items-center justify-center text-emerald-200 hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
-              aria-label="Close navigation menu"
+              onClick={() => { scrollToSection('guide'); setMobileMenuOpen(false); }}
+              className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
             >
-              <X className="w-4 h-4" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-300 shrink-0 group-hover:scale-105 group-hover:border-emerald-500 transition-all">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">How to Enroll</p>
+                  <p className="text-[10px] text-emerald-300/70 truncate">3-step registration procedure</p>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { scrollToSection('schedule'); setMobileMenuOpen(false); }}
+              className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-105 group-hover:border-amber-400/50 transition-all">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Enrollment Schedule</p>
+                    {enrollmentStatus.isOpen && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  </div>
+                  <p className="text-[10px] text-emerald-300/70 truncate">Timeline &amp; deadline</p>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { scrollToSection('video'); setMobileMenuOpen(false); }}
+              className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 group-hover:border-emerald-400 transition-all">
+                  <Play className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Video Orientation</p>
+                  <p className="text-[10px] text-emerald-300/70 truncate">Visual walkthrough</p>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
             </button>
           </div>
 
-          {/* Drawer Scrollable Content */}
-          <div className="relative flex-1 overflow-y-auto px-4 py-3.5 space-y-4 scrollbar-thin scrollbar-thumb-emerald-700 scrollbar-track-emerald-950">
-            {/* Quick Actions CTAs */}
-            <div className="grid grid-cols-2 gap-2">
-              <Link
-                to="/enrollment"
-                onClick={() => setMobileMenuOpen(false)}
-                className="group py-2.5 px-3 bg-gradient-to-r from-emerald-800 to-emerald-700 hover:from-emerald-700 hover:to-emerald-600 text-white font-extrabold rounded-xl text-center text-xs flex items-center justify-center gap-1.5 border border-emerald-500/70 shadow-sm transition-all active:scale-95"
-              >
-                <span>Enroll Now</span>
-                <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="group py-2.5 px-3 bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-emerald-950 font-black rounded-xl text-center text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-950/30 transition-all active:scale-95"
-              >
-                <span>Portal Login</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
+          {/* Section 2: Help & Support */}
+          <div className="space-y-1 pt-1 border-t border-emerald-800/60">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 py-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              Help &amp; Contact
+            </p>
 
-            {/* Section 1: Programs & Guides */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 py-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                Programs &amp; Guides
-              </p>
-
-              <button
-                type="button"
-                onClick={() => { scrollToSection('guide'); setMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-300 shrink-0 group-hover:scale-105 group-hover:border-emerald-500 transition-all">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">How to Enroll</p>
-                    <p className="text-[10px] text-emerald-300/70 truncate">3-step registration procedure</p>
-                  </div>
+            <button
+              type="button"
+              onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }}
+              className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 group-hover:border-amber-400/50 transition-all">
+                  <HelpCircle className="w-4 h-4" />
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { scrollToSection('schedule'); setMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-105 group-hover:border-amber-400/50 transition-all">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Enrollment Schedule</p>
-                      {enrollmentStatus.isOpen && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                    </div>
-                    <p className="text-[10px] text-emerald-300/70 truncate">Timeline &amp; deadline</p>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">FAQ &amp; Knowledge Base</p>
+                  <p className="text-[10px] text-emerald-300/70 truncate">Common student questions</p>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
 
-              <button
-                type="button"
-                onClick={() => { scrollToSection('video'); setMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 group-hover:border-emerald-400 transition-all">
-                    <Play className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Video Orientation</p>
-                    <p className="text-[10px] text-emerald-300/70 truncate">Visual walkthrough</p>
-                  </div>
+            <button
+              type="button"
+              onClick={() => { scrollToSection('contact'); setMobileMenuOpen(false); }}
+              className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-300 shrink-0 group-hover:scale-105 group-hover:border-emerald-400 transition-all">
+                  <Phone className="w-4 h-4" />
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-            </div>
-
-            {/* Section 2: Help & Support */}
-            <div className="space-y-1 pt-1 border-t border-emerald-800/60">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-400/90 px-2 py-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                Help &amp; Contact
-              </p>
-
-              <button
-                type="button"
-                onClick={() => { scrollToSection('faq'); setMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-amber-300 shrink-0 group-hover:scale-105 group-hover:border-amber-400/50 transition-all">
-                    <HelpCircle className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">FAQ &amp; Knowledge Base</p>
-                    <p className="text-[10px] text-emerald-300/70 truncate">Common student questions</p>
-                  </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Campus Directory</p>
+                  <p className="text-[10px] text-emerald-300/70 truncate">Hotlines &amp; office hours</p>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { scrollToSection('contact'); setMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-emerald-900/80 active:bg-emerald-900 text-left flex items-center justify-between group cursor-pointer transition-all border border-transparent hover:border-emerald-700/60"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-900/90 border border-emerald-700 flex items-center justify-center text-emerald-300 shrink-0 group-hover:scale-105 group-hover:border-emerald-400 transition-all">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-white group-hover:text-amber-300 truncate transition-colors">Campus Directory</p>
-                    <p className="text-[10px] text-emerald-300/70 truncate">Hotlines &amp; office hours</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-            </div>
-
-            {/* Portal Live Badge */}
-            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800/80 text-[11px] flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${enrollmentStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              <span className="text-emerald-200/90 font-medium">
-                {enrollmentStatus.isOpen ? 'Online Enrollment Portal is active' : 'Enrollment Portal schedule standby'}
-              </span>
-            </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-emerald-500/70 group-hover:text-amber-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+            </button>
           </div>
 
-          {/* Drawer Footer */}
-          <div className="px-4 py-3 border-t border-emerald-800/80 bg-emerald-950/80 text-center shrink-0">
-            <p className="text-[10px] text-emerald-400/80 font-medium">CvSU Naic Campus • NSTP Office</p>
-            <p className="text-[9px] text-emerald-500/60 mt-0.5">R.A. 9163 • Republic of the Philippines</p>
+          {/* Portal Live Badge */}
+          <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800/80 text-[11px] flex items-center gap-2 shrink-0">
+            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${enrollmentStatus.isOpen ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="text-emerald-200/90 font-medium">
+              {enrollmentStatus.isOpen ? 'Online Enrollment Portal is active' : 'Enrollment Portal schedule standby'}
+            </span>
           </div>
-        </aside>
-      </header>
+        </div>
+
+        {/* Drawer Footer */}
+        <div className="px-4 py-3 border-t border-emerald-800/80 bg-emerald-950/90 text-center shrink-0">
+          <p className="text-[10px] text-emerald-400/80 font-medium">CvSU Naic Campus • NSTP Office</p>
+          <p className="text-[9px] text-emerald-500/60 mt-0.5">R.A. 9163 • Republic of the Philippines</p>
+        </div>
+      </aside>
 
       {/* ── Modern Hero Section (Hero Carousel & Direct Action CTAs - Full Screen Coverage) ───── */}
       <section 
