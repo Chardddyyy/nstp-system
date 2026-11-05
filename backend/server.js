@@ -39,8 +39,13 @@ process.on('uncaughtException', (err) => {
   console.error('[CRASH GUARD] Uncaught Exception:', err?.stack || err);
 });
 
-// Root Health Check
+const distPath = path.resolve(__dirname, '../dist');
+
+// Root Health Check & Production Frontend Fallback
 app.get('/', (req, res) => {
+  if (req.accepts('html') && fs.existsSync(path.join(distPath, 'index.html'))) {
+    return res.sendFile(path.join(distPath, 'index.html'));
+  }
   res.json({ status: 'ok', service: 'NSTP System Backend API', timestamp: new Date().toISOString() });
 });
 
@@ -8594,7 +8599,6 @@ app.use('/api', function(req, res) {
 });
 
 // ── Static Frontend Serving & Single Page App Fallback ────────────────────────
-const distPath = path.resolve(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
   app.get('*', function(req, res, next) {
