@@ -4,12 +4,13 @@ import {
   Building, Shield, Save, Lock, Eye, EyeOff, Upload, X, Menu,
   Calendar, CheckCircle, AlertCircle, Pencil, Type, Smile, RotateCcw, Check, SwitchCamera,
   UserPlus, Trash2, Activity, History, RefreshCw, Search, Download, Filter, ChevronLeft, ChevronRight,
-  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock, UserMinus
+  FileText, CheckCircle2, AlertTriangle, Key, LogIn, ExternalLink, ShieldCheck, Clock, UserMinus, FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usersAPI, getAllInstructorsGroup, auditLogsAPI } from '../services/api';
+import { downloadAuditTrailExcel } from '../utils/chedExportGenerator';
 
 const QUICK_EMOJIS = ['😊','😂','❤️','👍','🎉','🔥','✨','😎','🙏','💪','🤩','😍','🥳','😘','👏','🌟','💯','🥰','😆','🤔'];
 const DRAW_COLORS = ['#000000','#ffffff','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
@@ -587,33 +588,27 @@ function Profile() {
     return filteredAuditLogs.slice(start, start + auditPageSize);
   }, [filteredAuditLogs, auditPage, auditPageSize]);
 
-  // Export filtered logs to CSV
-  const handleExportAuditLogs = () => {
+  // Export filtered logs to Excel (.xlsx)
+  const [exportingAuditExcel, setExportingAuditExcel] = useState(false);
+  const handleExportAuditLogs = async () => {
     if (!filteredAuditLogs.length) {
       showToast('No activity logs match the current filters.', 'info');
       return;
     }
-    const headers = ['Log ID', 'Date & Time', 'User Name', 'Email', 'Role', 'Department', 'Action', 'Details', 'IP Address'];
-    const rows = filteredAuditLogs.map(log => [
-      log.id,
-      `"${new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila' })}"`,
-      `"${(log.user_name || 'System / Automated').replace(/"/g, '""')}"`,
-      `"${(log.user_email || 'N/A').replace(/"/g, '""')}"`,
-      log.user_role || (String(log.user_name || '').toLowerCase().includes('admin') ? 'Admin' : 'Instructor'),
-      log.user_department || 'N/A',
-      `"${formatAuditAction(log.action).label}"`,
-      `"${(log.detail || '').replace(/"/g, '""')}"`,
-      log.ip || '127.0.0.1'
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `cvsu_nstp_audit_trail_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(`Exported ${filteredAuditLogs.length} audit records to CSV successfully.`, 'success');
+    try {
+      setExportingAuditExcel(true);
+      await downloadAuditTrailExcel({
+        logs: filteredAuditLogs,
+        formatAuditAction,
+        exportedBy: user?.name || 'Administrator'
+      });
+      showToast(`Exported ${filteredAuditLogs.length} audit records to Excel (.xlsx) successfully.`, 'success');
+    } catch (err) {
+      console.error('Audit trail excel export error:', err);
+      showToast('Failed to export audit trail to Excel. Please try again.', 'error');
+    } finally {
+      setExportingAuditExcel(false);
+    }
   };
 
   const formatAuditParts = (dateStr) => {
@@ -1241,12 +1236,12 @@ function Profile() {
                 <button
                   type="button"
                   onClick={handleExportAuditLogs}
-                  disabled={auditLoading || filteredAuditLogs.length === 0}
+                  disabled={auditLoading || exportingAuditExcel || filteredAuditLogs.length === 0}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black shadow-xs transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                  title="Export audit trail to CSV"
+                  title="Export audit trail to Excel (.xlsx)"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Export CSV</span>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{exportingAuditExcel ? 'Exporting...' : 'Export Excel'}</span>
                 </button>
                 <button
                   type="button"

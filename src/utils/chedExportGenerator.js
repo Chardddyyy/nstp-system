@@ -1097,6 +1097,125 @@ export async function downloadDailyAttendanceExcel({
 }
 
 /**
+ * Trigger download of System Activity & Audit Trail as Excel (.xlsx)
+ */
+export async function downloadAuditTrailExcel({
+  logs = [],
+  formatAuditAction = (a) => ({ label: a }),
+  exportedBy = 'Administrator'
+}) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'CvSU Naic NSTP System';
+  const worksheet = workbook.addWorksheet('System Audit Trail');
+
+  // Title block
+  worksheet.mergeCells('A1:I1');
+  worksheet.getCell('A1').value = 'CAVITE STATE UNIVERSITY — NAIC CAMPUS';
+  worksheet.getCell('A1').font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF064E3B' } };
+  worksheet.getCell('A1').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A2:I2');
+  worksheet.getCell('A2').value = 'National Service Training Program (NSTP) Department';
+  worksheet.getCell('A2').font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF065F46' } };
+  worksheet.getCell('A2').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A3:I3');
+  worksheet.getCell('A3').value = 'OFFICIAL SYSTEM ACTIVITY & AUDIT TRAIL LOG';
+  worksheet.getCell('A3').font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FF1F2937' } };
+  worksheet.getCell('A3').alignment = { horizontal: 'center' };
+
+  worksheet.mergeCells('A4:I4');
+  const nowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', dateStyle: 'full', timeStyle: 'medium' });
+  worksheet.getCell('A4').value = `Generated on: ${nowStr} (PHT) • Exported by: ${exportedBy} • Total Log Entries: ${logs.length}`;
+  worksheet.getCell('A4').font = { name: 'Arial', size: 9, italic: true, color: { argb: 'FF4B5563' } };
+  worksheet.getCell('A4').alignment = { horizontal: 'center' };
+
+  // Header Row
+  const headerRow = worksheet.getRow(6);
+  headerRow.values = [
+    'Log ID',
+    'Date & Time (PHT)',
+    'User Name',
+    'Email Address',
+    'Role',
+    'Department / Track',
+    'Action Type',
+    'Activity Details & Metadata',
+    'IP Address'
+  ];
+  headerRow.font = { name: 'Arial', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF064E3B' } // Deep Emerald Green
+  };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  headerRow.height = 24;
+
+  let rowNum = 7;
+  logs.forEach((log, idx) => {
+    const row = worksheet.getRow(rowNum);
+    const dateFormatted = log.created_at
+      ? new Date(log.created_at).toLocaleString('en-US', { timeZone: 'Asia/Manila', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      : 'N/A';
+
+    const role = log.user_role || (String(log.user_name || '').toLowerCase().includes('admin') ? 'Admin' : 'Instructor');
+    const actionLabel = formatAuditAction ? formatAuditAction(log.action).label : (log.action || 'Activity');
+
+    row.values = [
+      log.id || (idx + 1),
+      dateFormatted,
+      log.user_name || 'System / Automated',
+      log.user_email || 'N/A',
+      role,
+      log.user_department || 'All / NSTP Office',
+      actionLabel,
+      log.detail || 'Standard portal transaction',
+      log.ip || '127.0.0.1'
+    ];
+
+    row.font = { name: 'Arial', size: 9 };
+    row.alignment = { vertical: 'middle' };
+
+    // Zebra striping for readability
+    if (idx % 2 === 1) {
+      row.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF9FAFB' }
+      };
+    }
+
+    // Border
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+      };
+    });
+
+    rowNum++;
+  });
+
+  worksheet.columns = [
+    { width: 10 }, // Log ID
+    { width: 22 }, // Date & Time
+    { width: 26 }, // User Name
+    { width: 28 }, // Email
+    { width: 14 }, // Role
+    { width: 22 }, // Department
+    { width: 28 }, // Action
+    { width: 48 }, // Details
+    { width: 18 }  // IP Address
+  ];
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  saveExcelBuffer(buffer, `CvSU_NSTP_Audit_Trail_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
  * Backward compatibility functions
  */
 export async function downloadChedFormat(batchOrYear, studentList = null, dept = 'All') {
