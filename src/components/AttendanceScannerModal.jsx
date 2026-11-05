@@ -1257,7 +1257,7 @@ export function AttendanceScannerModal({
         {/* STEP 1: SESSION SETUP SCREEN                                         */}
         {/* ══════════════════════════════════════════════════════════════════════ */}
         {step === 1 && (
-          <div className="p-3.5 sm:p-5 flex-1 bg-slate-50 flex flex-col justify-between space-y-3 sm:space-y-3.5 overflow-hidden min-h-0">
+          <div className="p-3 sm:p-4.5 flex-1 bg-slate-50 flex flex-col space-y-3 overflow-y-auto min-h-0">
             
             {/* Session Mode Selector Tabs */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/90 rounded-2xl shrink-0">
@@ -1517,10 +1517,10 @@ export function AttendanceScannerModal({
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col min-h-0 space-y-3 overflow-hidden">
+              <div className="flex-1 flex flex-col space-y-2.5 sm:space-y-3 min-h-0">
                 {/* Async Form Controls: Day, Section, and Output Title */}
-                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-indigo-100 shadow-2xs space-y-3 shrink-0">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-indigo-100 shadow-2xs space-y-2.5 shrink-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                     <div>
                       <label className="block text-[11px] font-black uppercase text-slate-700 mb-1 flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-indigo-700" />
@@ -1535,7 +1535,7 @@ export function AttendanceScannerModal({
                             setActivityName(`${newDay} - Asynchronous Session: Modular Activity Submission`);
                           }
                         }}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-xs"
                       >
                         {ATTENDANCE_DAYS.map(d => (
                           <option key={d} value={d}>{d}</option>
@@ -1551,7 +1551,7 @@ export function AttendanceScannerModal({
                       <select
                         value={asyncSection}
                         onChange={(e) => setAsyncSection(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer text-xs"
                       >
                         <option value="All">All Sections ({targetDept})</option>
                         {availableSections.map(s => (
@@ -1569,9 +1569,9 @@ export function AttendanceScannerModal({
                         value={activityName}
                         onChange={(e) => setActivityName(e.target.value)}
                         placeholder="e.g. Module 3: Disaster Risk Reduction Community Plan Submission"
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 text-xs sm:text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                       />
-                      <p className="text-[10px] text-slate-500 mt-1">
+                      <p className="text-[10px] text-slate-500 mt-0.5">
                         This title and remark "Asynchronous Output Verified" will be attached to each student's official attendance record.
                       </p>
                     </div>
@@ -1579,14 +1579,12 @@ export function AttendanceScannerModal({
                 </div>
 
                 {/* Student Checklist Container */}
-                <div className="flex-1 overflow-hidden flex flex-col min-h-0 border border-slate-200 rounded-2xl bg-white shadow-2xs">
+                <div className="flex flex-col border border-slate-200 rounded-2xl bg-white shadow-2xs overflow-hidden shrink-0">
                   {/* Checklist Header with Search and Selection Controls */}
-                  <div className="p-2.5 sm:p-3 bg-slate-100/80 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-slate-800">
-                        Students to Credit ({asyncSelectedStudentIds.length} of {asyncEligibleStudents.length} selected):
-                      </span>
-                    </div>
+                  <div className="p-2 sm:p-2.5 bg-slate-100/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
+                    <span className="font-black text-slate-800 text-[11.5px]">
+                      Students to Credit ({asyncSelectedStudentIds.length} of {asyncEligibleStudents.length} selected):
+                    </span>
 
                     <div className="flex items-center gap-2">
                       <div className="relative">
@@ -1595,8 +1593,8 @@ export function AttendanceScannerModal({
                           type="text"
                           value={asyncSearchQuery}
                           onChange={(e) => setAsyncSearchQuery(e.target.value)}
-                          placeholder="Search student or ID..."
-                          className="pl-7 pr-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 w-40 sm:w-48 font-medium"
+                          placeholder="Search student..."
+                          className="pl-7 pr-2.5 py-1 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 w-32 sm:w-44 font-medium"
                         />
                       </div>
                       <button
@@ -1618,9 +1616,9 @@ export function AttendanceScannerModal({
                   </div>
 
                   {/* Scrollable Student List */}
-                  <div className="flex-1 overflow-y-auto p-2 sm:p-2.5 space-y-1.5 min-h-[160px] max-h-[300px]">
+                  <div className="overflow-y-auto p-1.5 sm:p-2 space-y-1 h-44 sm:h-52 max-h-[240px]">
                     {asyncEligibleStudents.length === 0 ? (
-                      <div className="text-center py-8 text-xs text-slate-400">
+                      <div className="text-center py-6 text-xs text-slate-400">
                         No students found matching current filters.
                       </div>
                     ) : (
@@ -1630,13 +1628,13 @@ export function AttendanceScannerModal({
                         return (
                           <label
                             key={sid}
-                            className={`flex items-center justify-between p-2 sm:p-2.5 rounded-xl text-xs cursor-pointer border transition-colors ${
+                            className={`flex items-center justify-between p-1.5 sm:p-2 rounded-xl text-xs cursor-pointer border transition-colors ${
                               isChecked
                                 ? 'bg-indigo-50/50 border-indigo-200 shadow-2xs'
                                 : 'bg-slate-50/80 border-slate-200/60 text-slate-500 hover:bg-slate-100'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -1647,18 +1645,18 @@ export function AttendanceScannerModal({
                                     setAsyncSelectedStudentIds(prev => prev.filter(id => id !== sid));
                                   }
                                 }}
-                                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                className="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
                               />
                               <div className="min-w-0">
-                                <span className="font-extrabold text-slate-900 block truncate">
+                                <span className="font-extrabold text-slate-900 block truncate text-xs">
                                   {st.name || `${st.firstName || ''} ${st.lastName || ''}`}
                                 </span>
-                                <span className="text-[10px] font-mono text-slate-500">
+                                <span className="text-[9.5px] font-mono text-slate-500">
                                   ID: {st.studentId || st.id || 'N/A'}
                                 </span>
                               </div>
                             </div>
-                            <span className="text-[10.5px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200 shrink-0 ml-2">
+                            <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200 shrink-0 ml-2">
                               {st.gradeAndSection || st.section || 'N/A'}
                             </span>
                           </label>
@@ -1668,42 +1666,44 @@ export function AttendanceScannerModal({
                   </div>
                 </div>
 
-                {/* Bottom Bar: Conducted Checkbox + Submit Button */}
-                <div className="p-3 bg-indigo-50/80 rounded-2xl border border-indigo-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-indigo-950 font-bold select-none">
+                {/* Bottom Bar: Conducted Checkbox + Action Buttons */}
+                <div className="p-2.5 sm:p-3 bg-indigo-50/90 rounded-2xl border border-indigo-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shrink-0">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-indigo-950 font-bold select-none min-w-0">
                     <input
                       type="checkbox"
                       checked={markDayAsConducted}
                       onChange={(e) => setMarkDayAsConducted(e.target.checked)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
                     />
-                    <span>Mark {selectedDay} as officially conducted in Attendance Records</span>
+                    <span className="text-[11px] sm:text-xs">
+                      Mark {selectedDay} as officially conducted in Attendance Records
+                    </span>
                   </label>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                     <button
                       type="button"
                       onClick={() => setSessionMode('in-person')}
                       disabled={asyncSaving}
-                      className="flex-1 sm:flex-none px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                      className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors cursor-pointer shrink-0"
                     >
-                      Cancel / Switch Mode
+                      Cancel
                     </button>
                     <button
                       type="button"
                       onClick={handleBatchAsyncAttendance}
                       disabled={asyncSaving || asyncSelectedStudentIds.length === 0}
-                      className="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-indigo-700 to-indigo-800 hover:from-indigo-800 hover:to-indigo-900 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 sm:flex-none px-4 sm:px-5 py-2 bg-gradient-to-r from-indigo-700 to-indigo-800 hover:from-indigo-800 hover:to-indigo-900 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap"
                     >
                       {asyncSaving ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"></div>
                           <span>Saving Records...</span>
                         </>
                       ) : (
                         <>
-                          <Check className="w-4 h-4" />
-                          <span>Credit {asyncSelectedStudentIds.length} Students as Present (P)</span>
+                          <Check className="w-4 h-4 shrink-0" />
+                          <span>Credit {asyncSelectedStudentIds.length} Students (P)</span>
                         </>
                       )}
                     </button>

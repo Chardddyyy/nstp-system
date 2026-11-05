@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, BookOpen } from 'lucide-react';
+import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, BookOpen, RotateCcw } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
 import { formatGradeAndSection, matchesAssignedSection, compareStudentsByLastName, getStudentLastName, getStudentFirstName, DEPARTMENT_SECTIONS, getAvailableSectionsForDept } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
@@ -80,7 +80,13 @@ export function StudentAttendanceMatrixModal({
         if (isSubscribed) {
           if (Array.isArray(records)) {
             setAttendanceRecords(records);
-            try { localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(records)); } catch (_) {}
+            try { 
+              localStorage.setItem('nstp_cached_attendance_records', JSON.stringify(records)); 
+              if (records.length === 0) {
+                localStorage.removeItem('nstp_closed_attendance_days');
+                Object.keys(localStorage).filter(k => k.startsWith('nstp_draft_session_logs_')).forEach(k => localStorage.removeItem(k));
+              }
+            } catch (_) {}
           }
           if (Array.isArray(stList) && stList.length > 0) {
             setFetchedStudents(stList);
@@ -492,6 +498,27 @@ export function StudentAttendanceMatrixModal({
     }
   };
 
+  // Reset matrix and all attendance records back to Day 1
+  const handleResetMatrixToDay1 = async () => {
+    if (!window.confirm('Reset all attendance records back to Day 1? This will clear all attendance records for this track.')) {
+      return;
+    }
+    try {
+      await attendanceAPI.clearAll(selectedDept || 'All');
+      setAttendanceRecords([]);
+      try {
+        localStorage.removeItem('nstp_closed_attendance_days');
+        localStorage.removeItem('nstp_cached_attendance_records');
+        Object.keys(localStorage).filter(k => k.startsWith('nstp_draft_session_logs_')).forEach(k => localStorage.removeItem(k));
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent('nstp_attendance_updated'));
+      showToast?.('Attendance matrix has been successfully reset back to Day 1!', 'success');
+    } catch (err) {
+      console.error('Reset matrix error:', err);
+      showToast?.('Failed to reset attendance matrix.', 'error');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -630,8 +657,18 @@ export function StudentAttendanceMatrixModal({
             </div>
           </div>
 
-          {/* Export Master PDF & Excel */}
+          {/* Reset to Day 1 & Export Master PDF & Excel */}
           <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={handleResetMatrixToDay1}
+              className="px-2 sm:px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold text-[10.5px] sm:text-xs rounded-md sm:rounded-lg border border-rose-200 shadow-2xs active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+              title="Reset all attendance sessions back to Day 1"
+            >
+              <RotateCcw className="w-3 h-3 text-rose-600" />
+              <span>Reset to Day 1</span>
+            </button>
+
             <div className="flex items-center gap-1 bg-emerald-50 p-0.5 sm:p-1 rounded-lg sm:rounded-xl border border-emerald-300">
               <button
                 type="button"
