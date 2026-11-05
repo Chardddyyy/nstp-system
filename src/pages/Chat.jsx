@@ -2079,9 +2079,6 @@ function Chat() {
         <div className={`${!showConversations ? 'flex' : 'hidden'} flex-1 flex-col bg-gray-50 w-full max-w-full h-full min-h-0 max-h-full overflow-hidden relative`}>
           {activeConversation ? (
             <>
-              {/* Hidden audio element for remote WebRTC audio stream */}
-              <audio ref={(el) => { if (el && remoteStream) el.srcObject = remoteStream; }} autoPlay playsInline className="hidden" />
-
               {/* Chat Header */}
               <div className="bg-white px-2.5 py-2 sm:p-3 lg:p-4 border-b border-gray-200 flex items-center justify-between gap-1.5 flex-shrink-0 w-full max-w-full relative z-30">
                 <div className="flex items-center space-x-1.5 sm:space-x-3 min-w-0 flex-1">
