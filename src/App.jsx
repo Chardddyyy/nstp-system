@@ -2934,8 +2934,6 @@ function App() {
     setMessages({});
     setNotifications([]);
     setToasts([]);
-    setIncomingCall(null);
-    clearOutgoingCall();
     resetRealtimeBaseline();
     setViewingArchiveState(false);
     setArchiveViewDataState(null);
