@@ -22,6 +22,7 @@ backups/
 *.sql
 *.sql.gz
 !backend/database/schema.sql
+!backend/database/nstp_system_dump.sql
 
 # Editor directories and files
 .vscode/*
