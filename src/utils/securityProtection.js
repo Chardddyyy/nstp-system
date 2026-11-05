@@ -169,11 +169,10 @@ function installDevToolsShortcutBlocker() {
   }, true);
 }
 
-// 4. Sources Tab Anti-Debugger Protection (halts DevTools execution if Sources is opened)
+// 4. Sources Tab Anti-Debugger Protection & DevTools Detection Guard
 function installSourcesAntiDebugger() {
   if (typeof window === 'undefined') return;
 
-  // Protect Sources tab using self-invoking constructor debugger loop
   const antiDebuggerTrap = function () {
     try {
       (function () {
@@ -182,28 +181,67 @@ function installSourcesAntiDebugger() {
     } catch (_) { }
   };
 
+  const showDevToolsWarning = (show) => {
+    try {
+      const bannerId = '__nstp_inspect_security_shield';
+      let banner = document.getElementById(bannerId);
+      if (show) {
+        if (!banner && document.body) {
+          banner = document.createElement('div');
+          banner.id = bannerId;
+          banner.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(15,23,42,0.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:99999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px;-webkit-user-select:none;user-select:none;">
+              <div style="width:64px;height:64px;border-radius:20px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:18px;box-shadow:0 10px 25px -5px rgba(239,68,68,0.3);">
+                🛡️
+              </div>
+              <h2 style="font-size:22px;font-weight:900;letter-spacing:-0.02em;margin:0 0 10px;color:#f8fafc;">
+                Inspection & Developer Tools Restricted
+              </h2>
+              <p style="font-size:13.5px;color:#94a3b8;max-width:460px;line-height:1.6;margin:0 0 20px;">
+                In compliance with Republic Act No. 10173 (Data Privacy Act of 2012) and Cavite State University - Naic IT Security Policies, viewing, inspecting, or tampering with source code, system elements, or student data is prohibited.
+              </p>
+              <div style="font-size:12px;font-weight:700;color:#34d399;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:8px 18px;border-radius:12px;">
+                Please close Developer Tools / Inspect to continue
+              </div>
+            </div>
+          `;
+          document.body.appendChild(banner);
+        }
+      } else {
+        if (banner && banner.parentNode) {
+          banner.parentNode.removeChild(banner);
+        }
+      }
+    } catch (_) { }
+  };
+
   // Run periodic debugger guard
   try {
-    setInterval(antiDebuggerTrap, 1000);
+    setInterval(antiDebuggerTrap, 800);
   } catch (_) { }
 
-  // Detect DevTools open by window geometry threshold and clear console
+  // Detect DevTools open by window geometry threshold or debugger pause timing
   try {
-    let lastWidth = window.outerWidth - window.innerWidth;
-    let lastHeight = window.outerHeight - window.innerHeight;
     setInterval(() => {
       const dw = window.outerWidth - window.innerWidth;
       const dh = window.outerHeight - window.innerHeight;
-      if (dw > 160 || dh > 160) {
-        // DevTools is open: clear console and run anti-debugger
+      const isGeometryOpen = dw > 160 || dh > 160;
+
+      const t0 = performance.now();
+      antiDebuggerTrap();
+      const isTimingOpen = (performance.now() - t0) > 100;
+
+      const isDevToolsOpen = isGeometryOpen || isTimingOpen;
+
+      if (isDevToolsOpen) {
         if (window.console && typeof window.console.clear === 'function') {
           window.console.clear();
         }
-        antiDebuggerTrap();
+        showDevToolsWarning(true);
+      } else {
+        showDevToolsWarning(false);
       }
-      lastWidth = dw;
-      lastHeight = dh;
-    }, 1500);
+    }, 1000);
   } catch (_) { }
 }
 

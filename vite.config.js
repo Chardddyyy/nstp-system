@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5173,
+      sourcemapIgnoreList: () => true,
       proxy: {
         '/api': {
           target: 'http://localhost:3001',
