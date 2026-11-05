@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle, X, FileText, Shield, ShieldCheck, Eye, AlertCircle, AlertTriangle, Upload, Camera, Trash2, SwitchCamera, User, GraduationCap, Award, Phone, Heart, FileCheck, Check, Clock, Calendar, RotateCcw, ChevronUp, ChevronDown, ExternalLink } from 'lucide-react';
 import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../utils/enrollmentSchedule';
 import { analyzeDocumentFile } from '../utils/documentValidation';
 
 function Enrollment() {
+  const navigate = useNavigate();
   const { submitEnrollment, showToast: authShowToast } = useAuth();
   const showToast = useCallback((message, type = 'error') => {
     if (authShowToast) {
@@ -154,7 +155,8 @@ function Enrollment() {
 
   const [errors, setErrors] = useState({});
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(true);
+  const [privacyCheckbox, setPrivacyCheckbox] = useState(false);
   const [pendingTrack, setPendingTrack] = useState(null);
   const [errorBanner, setErrorBanner] = useState([]);
   const errorTimerRef = useRef(null);
@@ -618,7 +620,8 @@ function Enrollment() {
 
     // Terms and Privacy Policy agreement required
     if (!agreedToTerms) {
-      newErrors.terms = 'You must agree to the Terms and Privacy Policy to submit';
+      newErrors.terms = 'You must review and consent to the Data Privacy Notice to submit';
+      setShowTermsModal(true);
     }
 
     // Update state with errors
@@ -2298,28 +2301,31 @@ function Enrollment() {
                 </div>
               )}
 
-              {/* Terms & Agreement Box */}
-              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-3xl p-6 shadow-2xs">
-                <label htmlFor="terms_agreed" className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    id="terms_agreed"
-                    name="terms_agreed"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="w-5 h-5 rounded-lg border-emerald-300 text-emerald-700 focus:ring-emerald-500 mt-0.5 cursor-pointer shrink-0"
-                  />
-                  <span className="text-xs sm:text-sm text-emerald-950 font-medium leading-relaxed">
-                    I certify that all information provided in this enrollment application is true and correct to the best of my knowledge. I agree to the{' '}
-                    <button
-                      type="button"
-                      onClick={() => setShowTermsModal(true)}
-                      className="text-emerald-700 font-extrabold underline hover:text-emerald-900 cursor-pointer"
-                    >
-                      Terms of Service &amp; Privacy Policy
-                    </button>.
-                  </span>
-                </label>
+              {/* Privacy Notice Agreement & Acknowledgment Banner (Bottom Checkbox removed per request) */}
+              <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${agreedToTerms ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-emerald-950">
+                      CvSU Naic Data Privacy Notice &amp; Terms of Consent
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-gray-600 font-medium">
+                      {agreedToTerms
+                        ? 'Consent confirmed in compliance with R.A. 10173 & R.A. 9163.'
+                        : 'Review and consent required prior to enrollment submission.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="px-4 py-2 text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-300 rounded-xl transition-all cursor-pointer shadow-2xs shrink-0 flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>{agreedToTerms ? 'View Privacy Notice' : 'Review & Consent'}</span>
+                </button>
               </div>
 
               {/* High-Impact Submit Button matching Landing/Login */}
@@ -2345,146 +2351,308 @@ function Enrollment() {
         </div>
       </main>
 
-      {/* Terms and Privacy Policy Modal - Comprehensive Legal Framework */}
+      {/* Terms and Privacy Policy Modal - CvSU Naic Official Data Privacy Notice & Terms of Consent */}
       {showTermsModal && (
         <div
-          className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in"
-          onClick={() => setShowTermsModal(false)}
+          className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-5 animate-fade-in"
+          onClick={() => {
+            if (agreedToTerms) setShowTermsModal(false);
+          }}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-emerald-100 overflow-hidden"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col border border-emerald-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-xs">
-                  <Shield className="w-6 h-6" />
+                <div className="w-11 h-11 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-xs shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                    Terms of Service, CvSU Code &amp; Data Privacy Policy
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-widest font-black text-amber-300 bg-amber-400/15 px-2 py-0.5 rounded-full border border-amber-400/25">
+                      Official University Notice
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black tracking-tight text-white mt-0.5">
+                    Data Privacy Notice and Terms of Consent
                   </h3>
                   <p className="text-emerald-200 text-xs font-medium">
-                    Cavite State University - Naic Campus • NSTP Directorate • R.A. 9163 &amp; R.A. 10173
+                    Cavite State University - Naic • National Service Training Program (NSTP)
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowTermsModal(false)}
-                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
-                aria-label="Close Terms Modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {agreedToTerms && (
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(false)}
+                  className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 flex items-center justify-center text-emerald-200 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close Terms Modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            {/* Body Content - Summarized Frameworks */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm md:text-[14.5px] text-gray-700 leading-relaxed max-h-[65vh]">
-              {/* SECTION 1: CVSU RULES & REGULATIONS */}
-              <div className="bg-emerald-50/70 rounded-2xl p-4 sm:p-5 border border-emerald-200/80 shadow-2xs">
+            {/* Body Content - Exact CvSU Naic Official Notice */}
+            <div className="p-5 sm:p-7 overflow-y-auto space-y-4 text-xs sm:text-sm text-gray-700 leading-relaxed max-h-[62vh]">
+              {/* Introduction Card */}
+              <div className="bg-emerald-50/80 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs">
+                <p className="text-emerald-950 font-semibold leading-relaxed text-justify">
+                  <strong>Cavite State University - Naic (CvSU Naic)</strong> respects your right to privacy and is committed to protecting your personal data. In compliance with Republic Act No. 10173 (Data Privacy Act of 2012) and its Implementing Rules and Regulations (IRR), this Privacy Notice outlines how we collect, use, process, and protect your information when you enroll and use the National Service Training Program (NSTP) Record and Report Management System.
+                </p>
+              </div>
+
+              {/* SECTION 1: PURPOSE OF DATA COLLECTION */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                     1
                   </div>
                   <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
-                    CvSU Rules, Regulations &amp; Student Code of Conduct
+                    Purpose of Data Collection (Transparency &amp; Legitimate Purpose)
                   </h4>
                 </div>
-                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium mb-2 text-justify">
+                  We collect and process personal information strictly for legitimate educational, administrative, and statutory purposes related to the NSTP, which include:
+                </p>
+                <ul className="space-y-1.5 text-gray-700 text-xs sm:text-sm font-medium">
                   <li className="flex items-start gap-2.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Academic Integrity:</strong> All submitted personal data, 2x2 photograph, and Certificate of Registration (COR) are authentic and official. Any falsification is subject to disciplinary action and dropping from the course.</span>
+                    <span className="text-justify">Student registration and enrollment processing for CWTS, LTS, or ROTC components.</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>80% Attendance Rule:</strong> Maintaining a minimum of 80% physical attendance in classroom lectures and community fieldwork activities is mandatory. More than 2 unexcused absences will result in a failing grade (5.00/DRP).</span>
+                    <span className="text-justify">Academic record management, attendance tracking, grading, and report generation.</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Anti-Hazing Policy (R.A. 11053):</strong> Any form of hazing, initiation rites, or physical and psychological violence across all components (CWTS, LTS, ROTC) is strictly prohibited.</span>
+                    <span className="text-justify">Compliance with reporting requirements mandated by the Commission on Higher Education (CHED), the National Service Training Program (NSTP) offices, and other authorized government agencies.</span>
                   </li>
                 </ul>
               </div>
 
-              {/* SECTION 2: REPUBLIC ACT NO. 9163 (NSTP ACT OF 2001) */}
-              <div className="bg-amber-50/70 rounded-2xl p-4 sm:p-5 border border-amber-200/80 shadow-2xs">
+              {/* SECTION 2: LAWFUL BASIS FOR PROCESSING */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-amber-500 text-emerald-950 flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                     2
                   </div>
-                  <h4 className="text-xs sm:text-sm md:text-base font-black text-amber-950">
-                    Republic Act No. 9163 (NSTP Act of 2001)
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
+                    Lawful Basis for Processing
                   </h4>
                 </div>
-                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium mb-2 text-justify">
+                  In accordance with the DPA IRR, your data is processed based on:
+                </p>
+                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm font-medium">
                   <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Graduation Prerequisite:</strong> Completion of 2 semesters (NSTP 1 and 2, 3 units each) is a statutory prerequisite for college graduation.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Legal Obligation &amp; Public Authority:</strong> As a state university, CvSU Naic is mandated by Republic Act No. 9163 (NSTP Act of 2001) to implement the NSTP and submit student records and serial numbers to CHED and concerned agencies.</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Component Continuity:</strong> Both semesters must be completed under the same component track (CWTS, LTS, or ROTC); switching components without official university approval is prohibited.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Legitimate Educational Interest:</strong> Processing is necessary to administer your training, monitor participation, evaluate performance, and issue completion certificates.</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>National Serial Number:</strong> Upon completion, CWTS/LTS graduates will be inducted into the NSRC and ROTC graduates into the AFP Reserve Force, each with an official CHED/DND National Serial Number.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Consent:</strong> By checking the agreement and proceeding with your enrollment, you explicitly consent to the collection and processing of your personal data as described herein.</span>
                   </li>
                 </ul>
               </div>
 
-              {/* SECTION 3: REPUBLIC ACT NO. 10173 (DATA PRIVACY ACT OF 2012) */}
-              <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs">
+              {/* SECTION 3: PERSONAL & SENSITIVE INFORMATION COLLECTED AND STORED */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-teal-800 text-white flex items-center justify-center font-black text-xs md:text-sm shrink-0 shadow-xs">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
                     3
                   </div>
-                  <h4 className="text-xs sm:text-sm md:text-base font-black text-slate-900">
-                    Republic Act No. 10173 (Data Privacy Act of 2012)
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
+                    Personal &amp; Sensitive Information Collected and Stored
                   </h4>
                 </div>
-                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm md:text-[14px] font-medium leading-relaxed">
+                <p className="text-gray-700 text-xs sm:text-sm font-medium mb-2 text-justify">
+                  We collect only data necessary for your NSTP record:
+                </p>
+                <ul className="space-y-2 text-gray-700 text-xs sm:text-sm font-medium">
                   <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Legitimate Academic Use:</strong> Your personal and medical information will be utilized exclusively for official NSTP enrollment, field immersion safety, and CHED institutional reporting.</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Personal Information:</strong> Full name, student ID number, degree program, year &amp; section, contact numbers, email address, home address, and emergency contact details.</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Confidentiality &amp; Security:</strong> The database is encrypted and secured; information will never be disclosed or distributed to unauthorized third parties.</span>
-                  </li>
-                  <li className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-700 shrink-0 mt-2"></span>
-                    <span className="text-justify"><strong>Data Subject Rights:</strong> You retain the right to request access, rectify inaccurate records, and inquire with the CvSU Data Protection Officer (dpo@cvsu.edu.ph).</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify"><strong>Sensitive Personal Information:</strong> 2x2 formal ID photograph, Certificate of Registration (COR), and any disclosed health or physical condition declarations relevant to community field activities.</span>
                   </li>
                 </ul>
+              </div>
+
+              {/* SECTION 4: DISCLOSURE & INSTITUTIONAL REPORTING */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    4
+                  </div>
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
+                    Disclosure &amp; Institutional Reporting
+                  </h4>
+                </div>
+                <p className="text-gray-700 text-xs sm:text-sm font-medium mb-2 text-justify">
+                  Your information is treated with strict confidentiality and is shared only with authorized entities:
+                </p>
+                <ul className="space-y-1.5 text-gray-700 text-xs sm:text-sm font-medium">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">CHED Regional and Central Offices for official enrollment submission and National Serial Number issuance.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">Department of National Defense (DND) / Armed Forces of the Philippines (AFP) exclusively for students enrolled under the ROTC component.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">CvSU Naic Campus Administration, Registrar, and NSTP Coordinators/Instructors for legitimate academic evaluation.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify font-bold text-amber-950">We do not sell, rent, or disclose your personal information to commercial third parties.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* SECTION 5: SECURITY MEASURES */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    5
+                  </div>
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
+                    Security Measures
+                  </h4>
+                </div>
+                <p className="text-gray-700 text-xs sm:text-sm font-medium leading-relaxed text-justify">
+                  CvSU Naic implements reasonable and appropriate organizational, physical, and technical security measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction. Access to student records is restricted strictly to authorized NSTP personnel with authenticated system credentials.
+                </p>
+              </div>
+
+              {/* SECTION 6: YOUR RIGHTS AS A DATA SUBJECT & DPO INQUIRIES */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    6
+                  </div>
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-emerald-950">
+                    Your Rights as a Data Subject &amp; DPO Inquiries
+                  </h4>
+                </div>
+                <p className="text-gray-700 text-xs sm:text-sm font-medium mb-2 text-justify">
+                  Under the Data Privacy Act of 2012, you have the right to:
+                </p>
+                <ul className="space-y-1.5 text-gray-700 text-xs sm:text-sm font-medium mb-3">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">Be informed about the processing of your personal data.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">Access your personal data stored in the system.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">Object to or request rectification of inaccurate or outdated information.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-700 shrink-0 mt-2"></span>
+                    <span className="text-justify">File a complaint before the National Privacy Commission (NPC) if your privacy rights have been violated.</span>
+                  </li>
+                </ul>
+                <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-950 font-medium">
+                  For data privacy inquiries or requests, contact the CvSU Data Protection Officer at: <a href="mailto:dpo@cvsu.edu.ph" className="text-emerald-700 font-black underline hover:text-emerald-900">dpo@cvsu.edu.ph</a> or the NSTP Office of CvSU Naic.
+                </div>
+              </div>
+
+              {/* SECTION 7: STUDENT DECLARATION AND CONSENT */}
+              <div className="bg-amber-50/80 rounded-2xl p-4 sm:p-5 border border-amber-200/90 shadow-2xs">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-amber-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+                    7
+                  </div>
+                  <h4 className="text-xs sm:text-sm md:text-base font-black text-amber-950">
+                    Student Declaration and Consent
+                  </h4>
+                </div>
+                <p className="text-amber-950 text-xs sm:text-sm font-semibold mb-2 text-justify">
+                  By checking &apos;I Agree&apos; and submitting this enrollment application, I hereby declare that:
+                </p>
+                <ul className="space-y-1.5 text-gray-800 text-xs sm:text-sm font-medium">
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify">I have read, understood, and voluntarily accept this Data Privacy Notice and Terms of Consent.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify">All information provided and documents uploaded (COR, 2x2 Photo) are true, correct, and legally authentic.</span>
+                  </li>
+                  <li className="flex items-start gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 shrink-0 mt-2"></span>
+                    <span className="text-justify">I authorize CvSU Naic to collect, process, store, and transmit my personal data for official NSTP academic and reporting requirements.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Interactive Agreement Checkbox inside the Modal */}
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-300 rounded-2xl p-4 sm:p-5 shadow-xs">
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    id="privacy-consent-checkbox"
+                    checked={privacyCheckbox}
+                    onChange={(e) => setPrivacyCheckbox(e.target.checked)}
+                    className="w-5 h-5 rounded-lg border-emerald-400 text-emerald-700 focus:ring-emerald-500 mt-0.5 cursor-pointer shrink-0"
+                  />
+                  <span className="text-xs sm:text-sm font-black text-emerald-950 leading-snug">
+                    I have read, understood, and accept the CvSU Naic Data Privacy Notice and Terms of Consent. (Required)
+                  </span>
+                </label>
               </div>
             </div>
 
             {/* Footer Modal Actions */}
             <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <span className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                By clicking &quot;I Understand &amp; Agree&quot;, you bind yourself to the official University Code, R.A. 9163, and R.A. 10173.
+              <span className="text-[11px] sm:text-xs text-gray-500 font-medium text-center sm:text-left">
+                Republic Act No. 10173 (Data Privacy Act) &amp; Republic Act No. 9163 (NSTP Act)
               </span>
               <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowTermsModal(false)}
+                  onClick={() => {
+                    if (!agreedToTerms) {
+                      navigate('/');
+                    } else {
+                      setShowTermsModal(false);
+                    }
+                  }}
                   className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap"
                 >
-                  Close
+                  {agreedToTerms ? 'Close' : 'Decline & Return Home'}
                 </button>
                 <button
                   type="button"
+                  disabled={!privacyCheckbox && !agreedToTerms}
                   onClick={() => {
                     setAgreedToTerms(true);
+                    setPrivacyCheckbox(true);
                     setShowTermsModal(false);
-                    showToast('Agreed to CvSU Rules, R.A. 9163, and Data Privacy Policy.', 'success');
+                    showToast('Data Privacy Notice accepted. You may now proceed with the enrollment form.', 'success');
                   }}
-                  className="whitespace-nowrap px-6 py-2.5 bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition-all cursor-pointer active:scale-95 inline-flex items-center justify-center gap-1.5 shrink-0"
+                  className={`whitespace-nowrap px-6 py-2.5 rounded-xl font-black text-xs shadow-md transition-all inline-flex items-center justify-center gap-1.5 shrink-0 ${
+                    privacyCheckbox || agreedToTerms
+                      ? 'bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white cursor-pointer active:scale-95'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                  }`}
                 >
                   <Check className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                  <span>I Understand &amp; Agree</span>
+                  <span>Accept &amp; Proceed to Enrollment</span>
                 </button>
               </div>
             </div>
