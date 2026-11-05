@@ -2163,33 +2163,14 @@ function AdminDashboard() {
                             </div>
                           </div>
 
-                          {/* Academic School Year & Semester Indicator Footer */}
-                          <div className="mt-3 pt-3 border-t border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5 px-1 sm:px-2">
-                            <div className="flex items-center gap-2">
-                              <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-                              </span>
-                              <span className="text-[11px] sm:text-xs font-black text-gray-700 uppercase tracking-wide">
-                                Academic Term:
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-800 text-amber-300 font-extrabold text-xs shadow-xs border border-emerald-900/40">
-                                <Calendar className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                                <span>School Year: {chartAcademicYear}</span>
-                              </div>
-                              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400 text-emerald-950 font-black text-xs shadow-xs border border-amber-500/60">
-                                <GraduationCap className="w-3.5 h-3.5 text-emerald-950 shrink-0" />
-                                <span>Semester: {chartSemester}</span>
-                              </div>
-                              {viewingArchive && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300">
-                                  <Archive className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                  Archive
-                                </span>
-                              )}
-                            </div>
+                          {/* School Year & Semester Indicator Footer */}
+                          <div className="mt-3 pt-3 border-t border-slate-200/90 flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-center text-xs sm:text-sm font-black text-black">
+                            <span>School Year: {chartAcademicYear}</span>
+                            <span className="text-gray-400 font-bold hidden sm:inline">•</span>
+                            <span>Semester: {chartSemester}</span>
+                            {viewingArchive && (
+                              <span className="text-xs font-bold text-gray-700">(Archived Record)</span>
+                            )}
                           </div>
                         </div>
                       );
@@ -2332,7 +2313,7 @@ function AdminDashboard() {
                       );
                     })}
 
-                    {/* Academic School Year & Semester Indicator Footer for Horizontal View */}
+                    {/* School Year & Semester Indicator Footer for Horizontal View */}
                     {(() => {
                       const activeBatchStr = String(viewingArchive && archiveViewData?.year ? archiveViewData.year : currentBatch || '2026-2027 1st Semester').trim();
                       const yrMatch = activeBatchStr.match(/(\d{4}\s*[-–]\s*\d{4})/);
@@ -2340,32 +2321,13 @@ function AdminDashboard() {
                       const hSemester = (/2nd|second/i.test(activeBatchStr) ? '2nd Semester' : (/summer/i.test(activeBatchStr) ? 'Summer / Midyear' : '1st Semester'));
 
                       return (
-                        <div className="mt-4 pt-3 border-t border-slate-200/90 flex flex-wrap items-center justify-between gap-2.5 px-1 sm:px-2">
-                          <div className="flex items-center gap-2">
-                            <span className="relative flex h-2.5 w-2.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-                            </span>
-                            <span className="text-[11px] sm:text-xs font-black text-gray-700 uppercase tracking-wide">
-                              Academic Term:
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-800 text-amber-300 font-extrabold text-xs shadow-xs border border-emerald-900/40">
-                              <Calendar className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-                              <span>School Year: {hAcademicYear}</span>
-                            </div>
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-400 text-emerald-950 font-black text-xs shadow-xs border border-amber-500/60">
-                              <GraduationCap className="w-3.5 h-3.5 text-emerald-950 shrink-0" />
-                              <span>Semester: {hSemester}</span>
-                            </div>
-                            {viewingArchive && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300">
-                                <Archive className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                Archive
-                              </span>
-                            )}
-                          </div>
+                        <div className="mt-4 pt-3 border-t border-slate-200/90 flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-center text-xs sm:text-sm font-black text-black">
+                          <span>School Year: {hAcademicYear}</span>
+                          <span className="text-gray-400 font-bold hidden sm:inline">•</span>
+                          <span>Semester: {hSemester}</span>
+                          {viewingArchive && (
+                            <span className="text-xs font-bold text-gray-700">(Archived Record)</span>
+                          )}
                         </div>
                       );
                     })()}
