@@ -618,19 +618,20 @@ function App() {
   }, []);
   const [currentBatch, setCurrentBatch] = useState('2026-2027 1st Semester');
 
-  // Desktop Display Zoom Scale (25% zoom out = 75% crisp scale)
+  // Desktop Display Zoom Scale (Standard 100% Native Readable Scale)
   const [displayZoom, setDisplayZoomState] = useState(() => {
     try {
       const saved = localStorage.getItem('nstp_display_zoom');
-      if (saved && saved !== '78%' && saved !== '100%') return saved;
-      return '75%';
+      if (saved && saved !== '75%' && saved !== '78%') return saved;
+      localStorage.setItem('nstp_display_zoom', '100%');
+      return '100%';
     } catch (_) {
-      return '75%';
+      return '100%';
     }
   });
 
   const setDisplayZoom = useCallback((newZoom) => {
-    const clean = String(newZoom || '75%').trim();
+    const clean = String(newZoom || '100%').trim();
     setDisplayZoomState(clean);
     try {
       localStorage.setItem('nstp_display_zoom', clean);
@@ -638,28 +639,19 @@ function App() {
       document.documentElement.style.setProperty('--app-zoom', numeric);
       if (typeof window !== 'undefined') {
         document.documentElement.style.zoom = '';
-        if (window.innerWidth >= 768) {
-          document.body.style.zoom = numeric;
-        } else {
-          document.body.style.zoom = '0.90';
-        }
+        document.body.style.zoom = numeric;
       }
     } catch (_) {}
   }, []);
 
   useEffect(() => {
     try {
-      const zoomVal = displayZoom || '75%';
+      const zoomVal = displayZoom || '100%';
       const numeric = zoomVal.includes('%') ? String(parseFloat(zoomVal) / 100) : zoomVal;
       document.documentElement.style.setProperty('--app-zoom', numeric);
-      // Ensure html has no conflicting zoom rule
       document.documentElement.style.zoom = '';
       if (typeof window !== 'undefined') {
-        if (window.innerWidth >= 768) {
-          document.body.style.zoom = numeric;
-        } else {
-          document.body.style.zoom = '0.90';
-        }
+        document.body.style.zoom = numeric;
       }
     } catch (_) {}
   }, [displayZoom]);

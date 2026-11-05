@@ -11,14 +11,10 @@ initSecurityProtection();
 if (typeof window !== 'undefined') {
   window.name = 'nstp_system_tab';
 
-  // Enforce 75% compact zoom on desktop and 10% zoom out (0.90) on mobile screens
+  // Enforce standard 100% readable scale across desktop and mobile
   const applyResponsiveAppZoom = () => {
     try {
-      if (window.innerWidth >= 768) {
-        document.body.style.zoom = '0.75';
-      } else {
-        document.body.style.zoom = '0.90';
-      }
+      document.body.style.zoom = '1';
     } catch (_) {}
   };
   if (document.readyState === 'loading') {

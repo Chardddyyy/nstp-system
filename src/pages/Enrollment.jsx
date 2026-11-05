@@ -1114,7 +1114,7 @@ function Enrollment() {
 
           <div className="p-4 sm:p-8 space-y-5 sm:space-y-8">
             {/* Real-time Network Status Indicator */}
-            {!isOnline ? (
+            {!isOnline && (
               <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-red-900">
                   <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
@@ -1124,20 +1124,7 @@ function Enrollment() {
                   </div>
                 </div>
               </div>
-            ) : isSlowConnection ? (
-              <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-amber-950">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping shrink-0"></span>
-                  <div>
-                    <p className="font-extrabold text-amber-950 text-xs sm:text-sm">📶 Weak Signal / Data-Saver Active</p>
-                    <p className="text-[10.5px] sm:text-xs text-amber-850 font-medium">Photo and Certificate of Registration (COR) documents are automatically optimized to complete enrollment even on cellular data or slower networks.</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
-                  Lite Mode
-                </span>
-              </div>
-            ) : null}
+            )}
 
             {/* Saved Progress / Draft Restoration Banner */}
             {draftPromptVisible && (

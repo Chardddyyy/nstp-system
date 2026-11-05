@@ -436,37 +436,7 @@ function Landing() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white relative antialiased">
 
-      {/* ── Weak Internet & Data-Saver Notice Bar ──────── */}
-      {(isSlowConnection || dataSaverEnabled) && (
-        <aside aria-label="Data Saver Notice" className="bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 text-emerald-950 px-3 py-1.5 text-xs font-bold flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/40 shadow-xs z-50 relative">
-          <div className="flex items-center gap-2 max-w-full">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-950 animate-ping shrink-0"></span>
-            <span className="text-[11px] sm:text-xs">
-              <strong>📶 Data-Saver Active:</strong> The portal is optimized for low-bandwidth connections. You may proceed directly to expedited enrollment:
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link
-              to="/enrollment"
-              className="bg-emerald-950 hover:bg-emerald-900 text-amber-300 px-3 py-1 rounded-full text-[10.5px] font-black tracking-wide shadow-xs active:scale-95 transition-all flex items-center gap-1"
-            >
-              <span>🚀 Enroll Now (Lite Track)</span>
-              <span>&rarr;</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                const next = !dataSaverEnabled;
-                setDataSaverEnabled(next);
-                localStorage.setItem('nstp_datasaver', String(next));
-              }}
-              className="text-[10px] text-emerald-950/80 hover:text-emerald-950 underline cursor-pointer"
-            >
-              {dataSaverEnabled ? 'I-off' : 'I-on'}
-            </button>
-          </div>
-        </aside>
-      )}
+
 
       {/* ── Executive Glassmorphic Header with Dropdown Navigation ──────── */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 backdrop-blur-xl text-white shadow-xl border-b border-emerald-700/60 transition-all w-full">

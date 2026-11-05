@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --app-zoom: 0.75;
+  --app-zoom: 1;
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -21,26 +21,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  font-size: 16px;
 }
 
-/* 10% Zoom Out on Mobile (< 768px) for spacious, comfortable phone viewing */
-@media screen and (max-width: 767px) {
-  body {
-    zoom: 0.90;
-  }
+body {
+  zoom: 1;
 }
 
-/* Compact 75% Desktop & Laptop Scale for crisp, spacious dashboard viewing */
-@media screen and (min-width: 768px) {
-  body {
-    zoom: 0.75;
-  }
-}
-
-/* Responsive Hero Carousel Height:
-   - Mobile: Proportional card height (470px-560px) so content below is easily visible and scrollable.
-   - Desktop: Full viewport coverage adjusted for 75% system zoom.
-*/
+/* Responsive Hero Carousel Height */
 .hero-full-viewport {
   height: 470px;
   min-height: 470px;
@@ -62,51 +50,21 @@ html {
 
 @media screen and (min-width: 768px) {
   .hero-full-viewport {
-    height: calc((100vh - 62px) / 0.75);
-    min-height: calc((100vh - 62px) / 0.75);
+    height: calc(100vh - 62px);
+    min-height: calc(100vh - 62px);
   }
 }
 
-/* Full Screen Viewport Coverage adjusted for Desktop (0.75) and Mobile (0.90) Zoom */
+/* Full Screen Viewport Coverage */
 .min-h-screen,
 .app-min-screen-height {
   min-height: 100vh;
   min-height: 100dvh;
 }
 
-@media screen and (max-width: 767px) {
-  .min-h-screen,
-  .app-min-screen-height {
-    min-height: calc(100vh / 0.90);
-    min-height: calc(100dvh / 0.90);
-  }
-}
-
-@media screen and (min-width: 768px) {
-  .min-h-screen,
-  .app-min-screen-height {
-    min-height: calc(100vh / 0.75);
-    min-height: calc(100dvh / 0.75);
-  }
-}
-
 .app-screen-height {
   height: 100dvh;
   max-height: 100dvh;
-}
-
-@media screen and (max-width: 767px) {
-  .app-screen-height {
-    height: calc(100dvh / 0.90);
-    max-height: calc(100dvh / 0.90);
-  }
-}
-
-@media screen and (min-width: 768px) {
-  .app-screen-height {
-    height: calc(100dvh / 0.75);
-    max-height: calc(100dvh / 0.75);
-  }
 }
 
 /* Static Non-Scrolling Login Page */
@@ -118,19 +76,30 @@ html {
   overflow: hidden !important;
 }
 
-@media screen and (max-width: 767px) {
-  .login-static-page {
-    height: calc(100dvh / 0.90);
-    max-height: calc(100dvh / 0.90);
-    overflow: hidden !important;
+/* Desktop Typography Comfort Enhancements:
+   Scales up tiny sub-12px text so that tables, badges, pills, and dashboards are crystal-clear and readable on desktop screens.
+*/
+@media screen and (min-width: 1024px) {
+  /* Prevent microscopic sub-12px text on desktop monitors */
+  .text-\[8px\],
+  .text-\[8\.5px\],
+  .text-\[9px\],
+  .text-\[9\.5px\],
+  .text-\[10px\],
+  .text-\[10\.5px\],
+  .text-\[11px\] {
+    font-size: 0.775rem !important; /* ~12.4px */
+    line-height: 1.2rem !important;
   }
-}
 
-@media screen and (min-width: 768px) {
-  .login-static-page {
-    height: calc(100dvh / 0.75);
-    max-height: calc(100dvh / 0.75);
-    overflow: hidden !important;
+  .text-xs {
+    font-size: 0.85rem !important; /* ~13.6px */
+    line-height: 1.3rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.95rem !important; /* ~15.2px */
+    line-height: 1.45rem !important;
   }
 }
 
