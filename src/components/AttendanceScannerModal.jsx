@@ -1294,21 +1294,6 @@ export function AttendanceScannerModal({
 
             {sessionMode === 'in-person' ? (
               <>
-                {/* Step 1 Introduction Notice (Compact) */}
-                <div className="px-3.5 py-2 rounded-xl bg-white border border-emerald-100 shadow-2xs flex items-center justify-between gap-3 text-xs text-slate-600 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                      <Clock className="w-3.5 h-3.5" />
-                    </div>
-                    <span className="font-bold text-slate-800 text-xs">
-                      Set session schedule before scanning. Students timing in after cutoff are automatically marked as <b>Late (L)</b>.
-                    </span>
-                  </div>
-                  <span className="hidden sm:inline-block font-mono text-[10px] font-black text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 shrink-0">
-                    {targetDept} Attendance
-                  </span>
-                </div>
-
                 {/* 2-Column Grid: Left (Day & Topic) | Right (Time & Grace Period) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
                   
