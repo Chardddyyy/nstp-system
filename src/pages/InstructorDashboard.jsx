@@ -302,6 +302,41 @@ function InstructorDashboard() {
     return Math.max(notifCount, storeCount);
   }, [messageNotifications, messages, conversations, user, readTick]);
 
+  // Instructor-specific Program Distribution Analytics
+  const [barChartMode, setBarChartMode] = useState('vertical'); // 'vertical' | 'horizontal'
+  const instructorDept = (user?.department || 'CWTS').toUpperCase();
+
+  const instructorProgramStats = useMemo(() => {
+    const progMap = {};
+    OFFICIAL_PROGRAMS.forEach(p => {
+      progMap[p] = { program: p, count: 0, male: 0, female: 0, sections: new Set() };
+    });
+
+    (myStudents || []).forEach(s => {
+      const prog = getStudentProgram(s);
+      if (!progMap[prog]) {
+        progMap[prog] = { program: prog, count: 0, male: 0, female: 0, sections: new Set() };
+      }
+      progMap[prog].count += 1;
+      const g = String(s.gender || s.sex || '').toUpperCase();
+      if (g.startsWith('M')) progMap[prog].male += 1;
+      else if (g.startsWith('F')) progMap[prog].female += 1;
+      if (s.section) progMap[prog].sections.add(s.section);
+    });
+
+    return Object.values(progMap)
+      .map(p => ({ ...p, sectionCount: p.sections.size }))
+      .filter(p => p.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [myStudents]);
+
+  const maxInstructorProgramCount = useMemo(() => {
+    if (instructorProgramStats.length === 0) return 1;
+    return Math.max(...instructorProgramStats.map(p => p.count), 1);
+  }, [instructorProgramStats]);
+
+  const topInstructorProgram = instructorProgramStats[0] || null;
+
   // Check if user is loaded - after all hooks
   if (!user) {
     return (
@@ -561,41 +596,6 @@ function InstructorDashboard() {
   // Get recent students and reports
   const recentStudents = myStudents.slice(0, 5);
   const recentReports = myReports.slice(0, 5);
-
-  // Instructor-specific Program Distribution Analytics
-  const [barChartMode, setBarChartMode] = useState('vertical'); // 'vertical' | 'horizontal'
-  const instructorDept = (user?.department || 'CWTS').toUpperCase();
-
-  const instructorProgramStats = useMemo(() => {
-    const progMap = {};
-    OFFICIAL_PROGRAMS.forEach(p => {
-      progMap[p] = { program: p, count: 0, male: 0, female: 0, sections: new Set() };
-    });
-
-    (myStudents || []).forEach(s => {
-      const prog = getStudentProgram(s);
-      if (!progMap[prog]) {
-        progMap[prog] = { program: prog, count: 0, male: 0, female: 0, sections: new Set() };
-      }
-      progMap[prog].count += 1;
-      const g = String(s.gender || s.sex || '').toUpperCase();
-      if (g.startsWith('M')) progMap[prog].male += 1;
-      else if (g.startsWith('F')) progMap[prog].female += 1;
-      if (s.section) progMap[prog].sections.add(s.section);
-    });
-
-    return Object.values(progMap)
-      .map(p => ({ ...p, sectionCount: p.sections.size }))
-      .filter(p => p.count > 0)
-      .sort((a, b) => b.count - a.count);
-  }, [myStudents]);
-
-  const maxInstructorProgramCount = useMemo(() => {
-    if (instructorProgramStats.length === 0) return 1;
-    return Math.max(...instructorProgramStats.map(p => p.count), 1);
-  }, [instructorProgramStats]);
-
-  const topInstructorProgram = instructorProgramStats[0] || null;
 
   return (
     <div className="min-h-screen bg-slate-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-100/40 via-emerald-50/20 to-slate-50 page-enter">

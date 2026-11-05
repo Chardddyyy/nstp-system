@@ -983,7 +983,6 @@ export async function sendStudentDigitalId(studentOrId) {
   const deptFull = trackLabels[nstpDept] || 'CIVIC WELFARE TRAINING SERVICE';
 
   const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(qrToken)}&size=240&dark=064e3b&ecLevel=H`;
-  const directPdfDownloadUrl = `${getPrimaryApiUrl()}/students/${studentId}/download-id-pdf?name=${encodeURIComponent(studentName)}&dept=${encodeURIComponent(nstpDept)}&sec=${encodeURIComponent(section)}&serial=${encodeURIComponent(serialNo)}&sy=${encodeURIComponent(schoolYear)}`;
 
   const htmlContent = `
 <!DOCTYPE html>

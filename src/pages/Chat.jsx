@@ -1604,7 +1604,7 @@ function Chat() {
     }
     if (messagesEndRef.current) {
       try {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+        messagesEndRef.current.scrollIntoView({ behavior: behavior || 'auto', block: 'end' });
       } catch (_) {}
     }
   }, []);

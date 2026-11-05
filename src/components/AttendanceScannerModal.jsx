@@ -438,6 +438,7 @@ export function AttendanceScannerModal({
     if (sessionMode === 'asynchronous') {
       setAsyncSelectedStudentIds(asyncEligibleStudents.map(s => String(s.studentId || s.id)));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionMode, asyncSection]);
 
   // Batch Credit selected students for an Asynchronous Session

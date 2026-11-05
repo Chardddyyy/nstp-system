@@ -186,7 +186,7 @@ function Landing() {
     const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     return Boolean(conn?.saveData || (conn?.effectiveType && ['slow-2g', '2g', '3g'].includes(conn.effectiveType)));
   });
-  const [dataSaverEnabled, setDataSaverEnabled] = useState(() => {
+  const [dataSaverEnabled] = useState(() => {
     return localStorage.getItem('nstp_datasaver') === 'true' || Boolean(navigator.connection?.saveData);
   });
 

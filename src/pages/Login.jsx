@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { requestPasswordReset, verifyResetOtp, confirmPasswordReset, testBackendPing, getPrimaryApiUrl } from '../services/api';
@@ -570,7 +570,7 @@ function Login() {
       const errMsg = err?.message || '';
       if (errMsg.includes('another device') || errMsg.includes('currently active')) {
         try {
-          const retryResult = await login(cleanEmail, cleanPassword, true, effectiveCaptchaToken);
+          const retryResult = await login(cleanEmail, cleanPassword, true);
           if (retryResult.require2FA) {
             activate2FASession(retryResult, cleanEmail);
             return;

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   X, Search, FileSpreadsheet, CheckCircle, Clock, AlertTriangle,
-  Award, Save, Printer, RefreshCw, Check, UserCheck, ShieldAlert, Eye
+  Award, Save, RefreshCw, Check, UserCheck, ShieldAlert, Eye
 } from 'lucide-react';
 import { gradesAPI } from '../services/api';
-import { downloadGradesSheetPdf, downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
-import { downloadGradesSheetExcel, downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
+import { downloadChedFormBPdf, downloadChedFormAPdf } from '../utils/chedPdfGenerator';
+import { downloadChedFormAExcel, downloadChedFormBExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
 import { matchesAssignedSection, DEPARTMENT_SECTIONS, compareStudentsByLastName } from '../utils/gradeSection';
 import OSDSNSTPForm from './OSDSNSTPForm';
@@ -31,9 +31,9 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const defaultDept = isAdmin ? 'All' : (currentUser?.department || 'CWTS');
   const defaultSemester = isAdmin ? 'Whole Academic Year' : '1st Semester';
 
-  const [selectedDept, setSelectedDept] = useState(defaultDept);
-  const [selectedSemester, setSelectedSemester] = useState(defaultSemester);
-  const [selectedSchoolYear, setSelectedSchoolYear] = useState('2026-2027');
+  const [selectedDept] = useState(defaultDept);
+  const [selectedSemester] = useState(defaultSemester);
+  const [selectedSchoolYear] = useState('2026-2027');
   const [selectedNstpSection, setSelectedNstpSection] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -58,7 +58,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
-  const [batchFillGrade, setBatchFillGrade] = useState('1.75');
 
   const isAnnualView = selectedSemester === 'Whole Academic Year';
 
@@ -327,37 +326,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
     }
   };
 
-  const handleBatchFillUnfilled = () => {
-    if (!canEditGrades) return;
-    if (isAnnualView) {
-      showToast('Please select a specific semester (1st Sem / 2nd Sem) to quick-fill grades.', 'warning');
-      return;
-    }
-    if (!batchFillGrade) return;
-
-    setGradesMap((prev) => {
-      const next = { ...prev };
-      let fillCount = 0;
-      filteredStudents.forEach((st) => {
-        const sid = st.studentId || st.id;
-        const current = next[sid] || { midterm_grade: '', final_grade: '', remarks: '' };
-        if (!current.final_grade) {
-          fillCount++;
-          next[sid] = {
-            ...current,
-            midterm_grade: current.midterm_grade || batchFillGrade,
-            final_grade: batchFillGrade,
-            remarks: calculateRemarks(batchFillGrade),
-            isDirty: true,
-            isSaved: false
-          };
-        }
-      });
-      showToast(`Filled ${fillCount} unfilled student grades with "${batchFillGrade}". Click Save to finalize.`, 'info');
-      return next;
-    });
-  };
-
   // ── Official OSDS-NSTP Form 2-A PDF & Excel Generator (Summary Matrix) ──
   const handleDownloadOSDSForm2A = async () => {
     try {
@@ -385,186 +353,6 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
       console.error('Error generating Form 2-A Excel:', err);
       showToast('Failed to generate Form 2-A Excel. Please try again.', 'error');
     }
-  };
-
-  // ── Standard Grades Sheet PDF & Excel Exports ──
-  const handleExportGradesPdf = async () => {
-    try {
-      await downloadGradesSheetPdf({
-        students: filteredStudents,
-        gradesMap,
-        isAnnualView,
-        selectedSchoolYear,
-        selectedSemester,
-        selectedDepartment: selectedDept,
-        selectedSection: selectedNstpSection,
-        getAnnualStudentInfo
-      });
-    } catch (err) {
-      console.error('Error exporting Grades PDF:', err);
-      showToast('Failed to export Grades PDF. Please try again.', 'error');
-    }
-  };
-
-  const handleExportGradesExcel = async () => {
-    try {
-      await downloadGradesSheetExcel({
-        students: filteredStudents,
-        gradesMap,
-        isAnnualView,
-        selectedSchoolYear,
-        selectedSemester,
-        selectedDepartment: selectedDept,
-        selectedSection: selectedNstpSection,
-        getAnnualStudentInfo
-      });
-    } catch (err) {
-      console.error('Error exporting Grades Excel:', err);
-      showToast('Failed to export Grades Excel. Please try again.', 'error');
-    }
-  };
-
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const deptStr = selectedDept !== 'All' ? selectedDept : 'ALL TRACKS (CWTS / LTS / ROTC)';
-    const instructorName = currentUser?.name || 'NSTP Instructor';
-
-    const rowsHtml = filteredStudents.map((st, idx) => {
-      const sid = st.studentId || st.id;
-      const { g1, g2, finalRating, overallRemarks } = getAnnualStudentInfo(sid);
-      const g = gradesMap[sid] || {};
-      const semRemarks = g.remarks || calculateRemarks(g.final_grade) || '-';
-
-      const displayRemarks = isAnnualView ? overallRemarks : semRemarks;
-      const isPassed = displayRemarks === 'Passed';
-      const isFailed = displayRemarks === 'Failed';
-
-      if (isAnnualView) {
-        return `
-          <tr style="border-bottom: 1px solid #e5e7eb; font-size: 11px;">
-            <td style="padding: 6px 8px; text-align: center;">${idx + 1}</td>
-            <td style="padding: 6px 8px; font-family: monospace; font-weight: bold;">${st.studentId}</td>
-            <td style="padding: 6px 8px; font-weight: 600;">${st.name || `${st.lastName}, ${st.firstName}`}</td>
-            <td style="padding: 6px 8px; text-align: center;">${st.program || '-'}</td>
-            <td style="padding: 6px 8px; text-align: center;">${st.section || '-'}</td>
-            <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: #065f46;">${st.nstp_section || '-'}</td>
-            <td style="padding: 6px 8px; text-align: center; font-weight: bold;">${g1 || '-'}</td>
-            <td style="padding: 6px 8px; text-align: center; font-weight: bold;">${g2 || '-'}</td>
-            <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: #065f46;">${finalRating}</td>
-            <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: ${isPassed ? '#059669' : isFailed ? '#dc2626' : '#d97706'};">${displayRemarks}</td>
-          </tr>
-        `;
-      }
-
-      return `
-        <tr style="border-bottom: 1px solid #e5e7eb; font-size: 11px;">
-          <td style="padding: 6px 8px; text-align: center;">${idx + 1}</td>
-          <td style="padding: 6px 8px; font-family: monospace; font-weight: bold;">${st.studentId}</td>
-          <td style="padding: 6px 8px; font-weight: 600;">${st.name || `${st.lastName}, ${st.firstName}`}</td>
-          <td style="padding: 6px 8px; text-align: center;">${st.program || '-'}</td>
-          <td style="padding: 6px 8px; text-align: center;">${st.section || '-'}</td>
-          <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: #065f46;">${st.nstp_section || '-'}</td>
-          <td style="padding: 6px 8px; text-align: center; font-weight: bold;">${g.midterm_grade || '-'}</td>
-          <td style="padding: 6px 8px; text-align: center; font-weight: bold;">${g.final_grade || '-'}</td>
-          <td style="padding: 6px 8px; text-align: center; font-weight: bold; color: ${isPassed ? '#059669' : isFailed ? '#dc2626' : '#d97706'};">${displayRemarks}</td>
-        </tr>
-      `;
-    }).join('');
-
-    const tableHeaders = isAnnualView ? `
-      <tr>
-        <th style="width: 30px;">#</th>
-        <th>Student ID</th>
-        <th>Student Name</th>
-        <th>Course</th>
-        <th>School Sec</th>
-        <th>NSTP Sec</th>
-        <th>1st Sem</th>
-        <th>2nd Sem</th>
-        <th>Annual Rating</th>
-        <th>Remarks</th>
-      </tr>
-    ` : `
-      <tr>
-        <th style="width: 30px;">#</th>
-        <th>Student ID</th>
-        <th>Student Name</th>
-        <th>Course</th>
-        <th>School Sec</th>
-        <th>NSTP Sec</th>
-        <th>Midterm</th>
-        <th>Final</th>
-        <th>Remarks</th>
-      </tr>
-    `;
-
-    const titleText = isAnnualView 
-      ? 'ANNUAL SUMMARY OF RATINGS & COMPLETION SHEET (1ST & 2ND SEMESTER)' 
-      : 'OFFICIAL SEMESTER GRADING SHEET & SUMMARY OF RATINGS';
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>CvSU Naic - NSTP Official Grade Sheet</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #111827; }
-          .header { text-align: center; margin-bottom: 20px; }
-          .header h2 { margin: 0; font-size: 16px; text-transform: uppercase; color: #065f46; }
-          .header h3 { margin: 4px 0; font-size: 14px; }
-          .header p { margin: 2px 0; font-size: 12px; color: #4b5563; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { background-color: #065f46; color: white; padding: 8px; font-size: 11px; text-transform: uppercase; }
-          .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
-          .sig-box { width: 30%; text-align: center; }
-          .sig-line { border-top: 1px solid #111827; margin-top: 40px; padding-top: 5px; font-weight: bold; }
-          @media print {
-            body { margin: 10mm; }
-            button { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h2>Cavite State University - Naic Campus</h2>
-          <p>National Service Training Program (NSTP) Department</p>
-          <h3>${titleText}</h3>
-          <p><strong>Department / Component:</strong> ${deptStr} &nbsp;|&nbsp; <strong>Term:</strong> ${selectedSemester} &nbsp;|&nbsp; <strong>Academic Year:</strong> ${selectedSchoolYear} &nbsp;|&nbsp; <strong>NSTP Section:</strong> ${selectedNstpSection}</p>
-        </div>
-
-        <table>
-          <thead>
-            ${tableHeaders}
-          </thead>
-          <tbody>
-            ${rowsHtml || '<tr><td colspan="10" style="text-align: center; padding: 20px;">No students found for the selected filter.</td></tr>'}
-          </tbody>
-        </table>
-
-        <div class="signatures">
-          <div class="sig-box">
-            <div class="sig-line">${instructorName}<br/><span style="font-weight: normal; font-size: 10px;">Instructor-In-Charge</span></div>
-          </div>
-          <div class="sig-box">
-            <div class="sig-line">NSTP Department Coordinator<br/><span style="font-weight: normal; font-size: 10px;">Program Coordinator</span></div>
-          </div>
-          <div class="sig-box">
-            <div class="sig-line">Campus NSTP Director<br/><span style="font-weight: normal; font-size: 10px;">CvSU Naic NSTP Head</span></div>
-          </div>
-        </div>
-
-        <script>
-          window.onload = function() { window.print(); }
-        </script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.open();
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
   };
 
   if (!isOpen) return null;

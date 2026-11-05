@@ -74,7 +74,7 @@ function getArchivedCorDoc(s, batchYear) {
   return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 520' width='400' height='520'><rect width='400' height='520' fill='%23ffffff' stroke='%23cbd5e1' stroke-width='2'/><rect x='10' y='10' width='380' height='500' fill='%23ffffff' stroke='%23047857' stroke-width='1.5'/><text x='200' y='38' font-family='Arial,sans-serif' font-size='11' font-weight='bold' fill='%23065f46' text-anchor='middle'>CAVITE STATE UNIVERSITY</text><text x='200' y='52' font-family='Arial,sans-serif' font-size='9' fill='%23334155' text-anchor='middle'>CCAT Campus / Naic Campus • Office of the Registrar</text><text x='200' y='72' font-family='Arial,sans-serif' font-size='12' font-weight='900' fill='%230f172a' text-anchor='middle'>CERTIFICATE OF REGISTRATION (COR)</text><line x1='30' y1='82' x2='370' y2='82' stroke='%23047857' stroke-width='1'/><text x='40' y='106' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>STUDENT NO:</text><text x='130' y='106' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sId}</text><text x='40' y='126' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>FULL NAME:</text><text x='130' y='126' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sName}</text><text x='40' y='146' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>PROGRAM:</text><text x='130' y='146' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sProg}</text><text x='40' y='166' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>ACAD YEAR:</text><text x='130' y='166' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%230f172a'>${sYear} (${sSem})</text><text x='40' y='186' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%23475569'>COMPONENT:</text><text x='130' y='186' font-family='Arial,sans-serif' font-size='10' font-weight='900' fill='%23047857'>NSTP - ${sDept}</text><rect x='30' y='206' width='340' height='20' fill='%23f1f5f9'/><text x='40' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>COURSE CODE</text><text x='150' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>DESCRIPTION</text><text x='320' y='220' font-family='Arial,sans-serif' font-size='8' font-weight='bold' fill='%23334155'>UNITS</text><text x='40' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>NSTP 1 / 2</text><text x='150' y='246' font-family='Arial,sans-serif' font-size='9' fill='%230f172a'>National Service Training Program (${sDept})</text><text x='330' y='246' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%230f172a'>3.0</text><line x1='30' y1='266' x2='370' y2='266' stroke='%23e2e8f0' stroke-width='1'/><text x='40' y='296' font-family='Arial,sans-serif' font-size='9' fill='%23475569'>STATUS:</text><text x='120' y='296' font-family='Arial,sans-serif' font-size='9' font-weight='bold' fill='%2316a34a'>OFFICIALLY ENROLLED / ARCHIVED</text><rect x='30' y='330' width='340' height='60' rx='6' fill='%23f0fdf4' stroke='%2386efac'/><text x='200' y='355' font-family='Arial,sans-serif' font-size='10' font-weight='bold' fill='%23166534' text-anchor='middle'>OFFICIAL CERTIFICATE OF REGISTRATION</text><text x='200' y='372' font-family='Arial,sans-serif' font-size='8' fill='%2315803d' text-anchor='middle'>VERIFIED REGISTRAR ARCHIVE • CvSU NAIC CAMPUS</text><text x='350' y='490' font-family='Arial,sans-serif' font-size='8' fill='%2394a3b8' text-anchor='end'>CvSU-REG-COR-VERIFIED</text></svg>`;
 }
 
-export const getAvailableSectionsForDept = (dept, count = 10) => {
+const getAvailableSectionsForDept = (dept, count = 10) => {
   const d = String(dept || '').trim().toUpperCase();
   if (['CWTS', 'LTS', 'ROTC'].includes(d)) {
     return Array.from({ length: count }, (_, i) => `${d} ${i + 1}`);
@@ -477,7 +477,7 @@ function StudentManagement() {
       newValue = toTitleCase(cleanLetters);
     } else if (['street', 'barangay', 'address'].includes(name)) {
       // Street / Barangay: allows numbers, letters, spaces, commas, periods, etc. freely without stripping spaces
-      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#\-\/]/g, '');
+      const cleanAddress = value.replace(/[^a-zA-Z0-9ñÑÀ-ÖØ-öø-ÿ\s.,'#/-]/g, '');
       newValue = toTitleCase(cleanAddress);
     }
 
@@ -928,7 +928,7 @@ function StudentManagement() {
         setFilterNstpSection('All');
       }
     }
-  }, [filterDept]);
+  }, [filterDept, batchNstpSection, filterNstpSection]);
 
   const handleEditStudent = async () => {
     if (formData.nstp_section && formData.department) {

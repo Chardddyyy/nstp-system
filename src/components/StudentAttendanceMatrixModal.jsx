@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Search, FileSpreadsheet, UserX, CheckCircle, Clock, AlertTriangle, Users, Download, Edit3, Trash2, Check, ShieldCheck, HelpCircle, BookOpen, RotateCcw } from 'lucide-react';
 import { attendanceAPI, studentsAPI } from '../services/api';
-import { formatGradeAndSection, matchesAssignedSection, compareStudentsByLastName, getStudentLastName, getStudentFirstName, DEPARTMENT_SECTIONS, getAvailableSectionsForDept } from '../utils/gradeSection';
+import { formatGradeAndSection, matchesAssignedSection, compareStudentsByLastName, getStudentLastName, getStudentFirstName, DEPARTMENT_SECTIONS } from '../utils/gradeSection';
 import { downloadAttendanceMatrixPdf } from '../utils/chedPdfGenerator';
 import { downloadAttendanceMatrixExcel } from '../utils/chedExportGenerator';
 import { useAuth } from '../context/AuthContext';
@@ -348,7 +348,7 @@ export function StudentAttendanceMatrixModal({
         totalConducted
       };
     });
-  }, [baseStudents, attendanceRecords, selectedDept, maxDayConducted]);
+  }, [baseStudents, attendanceRecords, selectedDept, maxDayConducted, currentUser?.assigned_section, currentUser?.role]);
 
   // Apply search and viewFilter (All vs At-Risk)
   const filteredMatrix = useMemo(() => {
