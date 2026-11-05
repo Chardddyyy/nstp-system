@@ -1487,19 +1487,25 @@ function Profile() {
         const canSubmit = nameOk && emailOk && pwOk && confirmOk && deptOk;
 
         return (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowAddInstructor(false)}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-3 sm:p-6" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setShowAddInstructor(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden" onClick={e => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 shrink-0 bg-white">
                 <h3 className="text-base font-bold text-gray-800 flex items-center gap-2">
                   <UserPlus className="w-5 h-5 text-green-700" />
                   Add New {f.role === 'admin' ? 'Admin' : 'Instructor'}
                 </h3>
-                <button type="button" onClick={() => setShowAddInstructor(false)} className="text-gray-400 hover:text-gray-600">
-                  <X className="w-5 h-5" />
+                <button
+                  type="button"
+                  onClick={() => setShowAddInstructor(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-3">
+              {/* Scrollable Form Body */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-3.5">
                 <input type="text" id="add-instructor-username" name="username" value={f.email || ''} autoComplete="username" className="hidden" readOnly />
                 {/* Role */}
                 <div>
@@ -1676,15 +1682,16 @@ function Profile() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-5">
-                <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm transition-colors">
+              {/* Modal Footer / Action Buttons */}
+              <div className="flex gap-3 p-4 sm:p-5 border-t border-gray-100 bg-gray-50/80 shrink-0">
+                <button type="button" onClick={() => setShowAddInstructor(false)} className="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-100 rounded-xl text-sm font-semibold transition-colors cursor-pointer">
                   Cancel
                 </button>
                 <button type="button"
                   onClick={handleAddInstructor}
                   disabled={isAddingInstructor || !canSubmit}
                   title={canSubmit ? '' : 'Please fill in all required fields correctly'}
-                  className="flex-1 px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2.5 bg-green-700 hover:bg-green-800 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
                   {isAddingInstructor ? 'Adding...' : `Add ${f.role === 'admin' ? 'Admin' : 'Instructor'}`}
@@ -1697,8 +1704,8 @@ function Profile() {
 
       {/* View & Edit Instructor Modal */}
       {showEditInstructorModal && editingInstructor && (
-        <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setShowEditInstructorModal(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col border border-emerald-100/80 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-emerald-950/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in" onClick={() => setShowEditInstructorModal(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-emerald-100/80 overflow-hidden" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="bg-gradient-to-r from-emerald-900 via-emerald-850 to-teal-900 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3">
@@ -1722,7 +1729,7 @@ function Profile() {
             </div>
 
             {/* Form Body */}
-            <div className="p-6 space-y-4 text-xs sm:text-sm overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1">
               <input type="text" id="edit-instructor-username" name="username" value={editInstructorForm.email || ''} autoComplete="username" className="hidden" readOnly />
               {/* Account Role */}
               <div>
