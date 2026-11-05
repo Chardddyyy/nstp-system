@@ -1,22 +1,28 @@
 /**
- * Security & Data Privacy Protection Module
- * Cavite State University - NSTP System
+ * Security, Anti-Inspect & Data Privacy Protection Module
+ * Cavite State University - NSTP Record & Report Management System
  * 
- * - Allows DevTools & Inspect to be opened (right-click & shortcuts permitted)
- * - Protects sensitive student records, grades, and tokens in LocalStorage with seamless encoding
- *   (DevTools Application > Local Storage shows obfuscated data, preventing PII leaks)
- * - Sanitizes & redacts sensitive fields (passwords, tokens, PII) in Console logs
- * - Enforces Data Privacy Act (R.A. 10173) standards
+ * - Blocks Right-Click Context Menu ("Inspect", "View Page Source")
+ * - Blocks DevTools shortcuts: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
+ * - Protects Sources Tab: Employs dynamic anti-debugger loop to halt and prevent source code inspection
+ * - Silences and sanitizes browser Console logs to prevent variable/token leaks
+ * - Transparent LocalStorage Shield (obfuscates sensitive student PII, grades, and tokens in Application tab)
+ * - Enforces Republic Act No. 10173 (Data Privacy Act of 2012)
  */
 
 const SENSITIVE_STORAGE_KEYS = new Set([
+  'token',
+  'user',
+  'role',
   'nstp_token',
+  'enrollmentFormData',
   'nstp_cached_students',
   'nstp_cached_grades',
   'nstp_cached_attendance_records',
   'nstp_cached_user',
   'nstp_cached_all_users',
   'nstp_users',
+  'nstp_letter_templates',
   'nstp_cached_messages',
   'nstp_cached_conversations',
   'nstp_cached_archives',
@@ -32,7 +38,6 @@ function encodeStorageValue(val) {
   if (val === null || val === undefined) return val;
   const str = typeof val === 'string' ? val : JSON.stringify(val);
   try {
-    // URL-encoded Base64 envelope for safe storage representation
     return SEC_PREFIX + btoa(encodeURIComponent(str));
   } catch (_) {
     return str;
@@ -50,7 +55,7 @@ function decodeStorageValue(val) {
   return val;
 }
 
-// 1. Transparent LocalStorage Shield (obfuscates sensitive student PII & tokens in DevTools)
+// 1. Transparent LocalStorage Shield (obfuscates student records & tokens in DevTools Application tab)
 function installStorageShield() {
   if (typeof window === 'undefined' || !window.localStorage) return;
 
@@ -60,7 +65,6 @@ function installStorageShield() {
     const origGetItem = proto.getItem.bind(rawStorage);
     const origSetItem = proto.setItem.bind(rawStorage);
 
-    // Auto-protect existing sensitive keys currently stored in plain text
     SENSITIVE_STORAGE_KEYS.forEach((key) => {
       try {
         const existing = origGetItem(key);
@@ -70,7 +74,6 @@ function installStorageShield() {
       } catch (_) { }
     });
 
-    // Intercept setItem
     proto.setItem = function (key, val) {
       if (SENSITIVE_STORAGE_KEYS.has(key)) {
         return origSetItem(key, encodeStorageValue(val));
@@ -78,7 +81,6 @@ function installStorageShield() {
       return origSetItem(key, val);
     };
 
-    // Intercept getItem
     proto.getItem = function (key) {
       const val = origGetItem(key);
       if (SENSITIVE_STORAGE_KEYS.has(key)) {
@@ -89,125 +91,191 @@ function installStorageShield() {
   } catch (_) { }
 }
 
-// 2. Deep Sanitizer for Console Logs (prevents passwords, tokens & PII from leaking in Console tab)
-function sanitizeLogArg(arg, depth = 0) {
-  if (depth > 4 || arg === null || arg === undefined) return arg;
+// 2. Right-Click Context Menu Blocker (blocks "Inspect", "Inspect Element", "View Source")
+function installContextMenuBlocker() {
+  if (typeof window === 'undefined' || !window.document) return;
 
-  if (typeof arg === 'string') {
-    let s = arg;
-    // Redact JWT tokens
-    s = s.replace(/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]+/g, '[REDACTED_JWT_TOKEN]');
-    // Redact Bearer tokens
-    s = s.replace(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED_TOKEN]');
-    // Redact password assignment in strings
-    s = s.replace(/(["']?(?:password|confirmPassword|newPassword|pass|secret)["']?\s*[:=]\s*["'])([^"',\s]+)(["'])/gi, '$1***[PROTECTED]***$3');
-    return s;
-  }
-
-  if (typeof arg === 'object') {
-    if (Array.isArray(arg)) {
-      // If array contains sensitive student records, redact individual records
-      if (arg.length > 50) {
-        return `[Array(${arg.length}) - Data Privacy Protected under R.A. 10173]`;
-      }
-      return arg.map((item) => sanitizeLogArg(item, depth + 1));
+  window.document.addEventListener('contextmenu', function (e) {
+    const target = e.target;
+    // Allow right-click ONLY on user editable input fields (to paste text, COR ID, etc.)
+    const isEditable = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    );
+    if (!isEditable) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
     }
-
-    const clean = {};
-    for (const k in arg) {
-      if (Object.prototype.hasOwnProperty.call(arg, k)) {
-        const lower = k.toLowerCase();
-        if (
-          lower.includes('password') ||
-          lower.includes('secret') ||
-          lower.includes('token') ||
-          lower.includes('authorization')
-        ) {
-          clean[k] = '***[PROTECTED]***';
-        } else if (
-          lower === 'contactnumber' ||
-          lower === 'phonenumber' ||
-          lower === 'address' ||
-          lower === 'birthdate' ||
-          lower === 'bdate'
-        ) {
-          clean[k] = '[REDACTED_PII]';
-        } else {
-          clean[k] = sanitizeLogArg(arg[k], depth + 1);
-        }
-      }
-    }
-    return clean;
-  }
-
-  return arg;
+  }, true);
 }
 
-// Non-critical / benign messages to suppress from console noise
-const NOISY_PATTERNS = [
-  'react-devtools',
-  'React DevTools',
-  'Download the React DevTools',
-  'requestStorageAccess',
-  'StorageAccess',
-  'Permission denied',
-];
+// 3. DevTools Keyboard Shortcut Blocker
+function installDevToolsShortcutBlocker() {
+  if (typeof window === 'undefined' || !window.document) return;
 
-function shouldSuppressLog(args) {
+  window.document.addEventListener('keydown', function (e) {
+    // F12
+    if (e.key === 'F12' || e.keyCode === 123) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+    const key = (e.key || '').toLowerCase();
+    const keyCode = e.keyCode;
+
+    // Ctrl+Shift+I / Cmd+Option+I (Inspect)
+    if (isCtrlOrCmd && isShift && (key === 'i' || keyCode === 73)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Ctrl+Shift+J / Cmd+Option+J (Console)
+    if (isCtrlOrCmd && isShift && (key === 'j' || keyCode === 74)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Ctrl+Shift+C / Cmd+Option+C (Inspect Element)
+    if (isCtrlOrCmd && isShift && (key === 'c' || keyCode === 67)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Ctrl+U / Cmd+U / Cmd+Option+U (View Page Source)
+    if (isCtrlOrCmd && (key === 'u' || keyCode === 85)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Ctrl+S / Cmd+S (Save Page HTML)
+    if (isCtrlOrCmd && (key === 's' || keyCode === 83)) {
+      const target = e.target;
+      const isEditable = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+      if (!isEditable) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    }
+  }, true);
+}
+
+// 4. Sources Tab Anti-Debugger Protection (halts DevTools execution if Sources is opened)
+function installSourcesAntiDebugger() {
+  if (typeof window === 'undefined') return;
+
+  // Protect Sources tab using self-invoking constructor debugger loop
+  const antiDebuggerTrap = function () {
+    try {
+      (function () {
+        return false;
+      }['constructor']('debugger')['call']());
+    } catch (_) { }
+  };
+
+  // Run periodic debugger guard
   try {
-    for (let i = 0; i < args.length; i++) {
-      const a = args[i];
-      const str = typeof a === 'string' ? a : (a && a.message) || (a && typeof a.toString === 'function' ? a.toString() : '');
-      for (let j = 0; j < NOISY_PATTERNS.length; j++) {
-        if (str.includes(NOISY_PATTERNS[j])) return true;
-      }
-    }
+    setInterval(antiDebuggerTrap, 1000);
   } catch (_) { }
-  return false;
+
+  // Detect DevTools open by window geometry threshold and clear console
+  try {
+    let lastWidth = window.outerWidth - window.innerWidth;
+    let lastHeight = window.outerHeight - window.innerHeight;
+    setInterval(() => {
+      const dw = window.outerWidth - window.innerWidth;
+      const dh = window.outerHeight - window.innerHeight;
+      if (dw > 160 || dh > 160) {
+        // DevTools is open: clear console and run anti-debugger
+        if (window.console && typeof window.console.clear === 'function') {
+          window.console.clear();
+        }
+        antiDebuggerTrap();
+      }
+      lastWidth = dw;
+      lastHeight = dh;
+    }, 1500);
+  } catch (_) { }
 }
 
-// 3. Install Console Sanitizer
-function installConsoleSanitizer() {
+// 5. Console Silencer & Sanitizer (prevents source variables, tokens, and data from appearing in Console)
+function installConsoleShield() {
   if (typeof window === 'undefined' || !window.console) return;
 
   try {
-    const origLog = window.console.log.bind(window.console);
-    const origInfo = window.console.info.bind(window.console);
-    const origWarn = window.console.warn.bind(window.console);
-    const origError = window.console.error.bind(window.console);
+    const noop = function () {};
+    // Neutralize standard verbose console outputs in client browser
+    window.console.log = noop;
+    window.console.info = noop;
+    window.console.debug = noop;
+    window.console.dir = noop;
+    window.console.table = noop;
+    window.console.trace = noop;
 
-    window.console.log = function (...args) {
-      if (shouldSuppressLog(args)) return;
-      origLog(...args.map((a) => sanitizeLogArg(a)));
-    };
-    window.console.info = function (...args) {
-      if (shouldSuppressLog(args)) return;
-      origInfo(...args.map((a) => sanitizeLogArg(a)));
-    };
-    window.console.warn = function (...args) {
-      if (shouldSuppressLog(args)) return;
-      origWarn(...args.map((a) => sanitizeLogArg(a)));
-    };
-    window.console.error = function (...args) {
-      if (shouldSuppressLog(args)) return;
-      origError(...args.map((a) => sanitizeLogArg(a)));
-    };
+    // Sanitize critical warnings or errors
+    const origWarn = window.console.warn ? window.console.warn.bind(window.console) : noop;
+    const origError = window.console.error ? window.console.error.bind(window.console) : noop;
 
-    window.addEventListener('unhandledrejection', function (e) {
-      if (e && e.reason && shouldSuppressLog([e.reason])) {
-        e.preventDefault();
+    const sanitizeMsg = (args) => {
+      try {
+        return args.map(a => {
+          if (typeof a === 'string') {
+            return a
+              .replace(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [PROTECTED]')
+              .replace(/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]+/g, '[PROTECTED_TOKEN]');
+          }
+          return '[Data Protected]';
+        });
+      } catch (_) {
+        return ['[Protected Data]'];
       }
-    });
+    };
+
+    window.console.warn = function (...args) {
+      origWarn(...sanitizeMsg(args));
+    };
+
+    window.console.error = function (...args) {
+      origError(...sanitizeMsg(args));
+    };
+
+    // Print official university security notice once in Console
+    if (typeof origWarn === 'function') {
+      try {
+        origWarn(
+          '%c[SECURITY NOTICE] Cavite State University - Naic (CvSU Naic)\nInspect element, source code inspection, and DOM tampering are restricted under Republic Act No. 10173 & University IT Security Policies.',
+          'color: #047857; font-weight: bold; font-size: 12px; background: #ecfdf5; padding: 6px 10px; border: 1px solid #a7f3d0; border-radius: 6px;'
+        );
+      } catch (_) { }
+    }
   } catch (_) { }
 }
 
+// Master Security Initializer
 export function initSecurityProtection() {
   if (typeof window === 'undefined') return;
 
-  // 1. Install Storage Shield (hides student lists, grades, tokens in Application tab)
+  // 1. Obfuscate student records, grades, and tokens in LocalStorage
   installStorageShield();
 
-  // 2. Install Console Sanitizer (redacts passwords, tokens, PII in Console tab)
-  installConsoleSanitizer();
-}
+  // 2. Block right-click context menu ("Inspect", "View Source")
+  installContextMenuBlocker();
 
+  // 3. Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
+  installDevToolsShortcutBlocker();
+
+  // 4. Block Sources tab with anti-debugger trap
+  installSourcesAntiDebugger();
+
+  // 5. Silence and sanitize Console tab
+  installConsoleShield();
+}

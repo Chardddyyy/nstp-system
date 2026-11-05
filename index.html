@@ -43,6 +43,41 @@
         }
       }(window.location));
 
+      // Early Anti-Inspect & DevTools Restriction Shield (CvSU Naic Security)
+      (function() {
+        // Block right-click context menu (Inspect Element / View Source)
+        document.addEventListener('contextmenu', function(e) {
+          var tag = e.target && e.target.tagName;
+          if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !e.target.isContentEditable) {
+            e.preventDefault();
+            return false;
+          }
+        }, true);
+
+        // Block DevTools shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          var ctrlOrMeta = e.ctrlKey || e.metaKey;
+          var key = (e.key || '').toLowerCase();
+          if (ctrlOrMeta && e.shiftKey && (key === 'i' || key === 'j' || key === 'c' || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          if (ctrlOrMeta && (key === 'u' || key === 's' || e.keyCode === 85 || e.keyCode === 83)) {
+            var tag = e.target && e.target.tagName;
+            if (key === 's' && (tag === 'INPUT' || tag === 'TEXTAREA')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
+      })();
+
       // Early suppressor for non-critical third-party and dev-mode console noise
       (function() {
         if (!window.console) return;
