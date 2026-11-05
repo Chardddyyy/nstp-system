@@ -2354,17 +2354,17 @@ function Enrollment() {
       {/* Terms and Privacy Policy Modal - CvSU Naic Official Data Privacy Notice & Terms of Consent */}
       {showTermsModal && (
         <div
-          className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-5 animate-fade-in"
+          className="fixed inset-0 bg-emerald-950/80 backdrop-blur-md flex items-center justify-center z-50 p-2.5 sm:p-5 animate-fade-in"
           onClick={() => {
             if (agreedToTerms) setShowTermsModal(false);
           }}
         >
           <div
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col border border-emerald-200 overflow-hidden"
+            className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-3xl max-h-[94vh] max-h-[94dvh] flex flex-col border border-emerald-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
+            <div className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-950 text-white p-3.5 sm:p-6 flex items-center justify-between shadow-sm shrink-0">
               <div className="flex items-center space-x-3.5">
                 <div className="w-11 h-11 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-xs shrink-0">
                   <ShieldCheck className="w-6 h-6" />
@@ -2615,24 +2615,11 @@ function Enrollment() {
             </div>
 
             {/* Footer Modal Actions */}
-            <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-              <span className="text-[11px] sm:text-xs text-gray-500 font-medium text-center sm:text-left">
+            <div className="p-3.5 sm:p-5 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium text-center sm:text-left order-2 sm:order-1">
                 Republic Act No. 10173 (Data Privacy Act) &amp; Republic Act No. 9163 (NSTP Act)
               </span>
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!agreedToTerms) {
-                      navigate('/');
-                    } else {
-                      setShowTermsModal(false);
-                    }
-                  }}
-                  className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap"
-                >
-                  {agreedToTerms ? 'Close' : 'Decline & Return Home'}
-                </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end order-1 sm:order-2">
                 <button
                   type="button"
                   disabled={!privacyCheckbox && !agreedToTerms}
@@ -2642,7 +2629,7 @@ function Enrollment() {
                     setShowTermsModal(false);
                     showToast('Data Privacy Notice accepted. You may now proceed with the enrollment form.', 'success');
                   }}
-                  className={`whitespace-nowrap px-6 py-2.5 rounded-xl font-black text-xs shadow-md transition-all inline-flex items-center justify-center gap-1.5 shrink-0 ${
+                  className={`w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl font-black text-xs shadow-md transition-all inline-flex items-center justify-center gap-1.5 order-1 sm:order-2 ${
                     privacyCheckbox || agreedToTerms
                       ? 'bg-gradient-to-r from-emerald-800 to-teal-800 hover:from-emerald-700 hover:to-teal-700 text-white cursor-pointer active:scale-95'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
@@ -2650,6 +2637,19 @@ function Enrollment() {
                 >
                   <Check className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                   <span>Accept &amp; Proceed to Enrollment</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!agreedToTerms) {
+                      navigate('/');
+                    } else {
+                      setShowTermsModal(false);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center order-2 sm:order-1"
+                >
+                  {agreedToTerms ? 'Close' : 'Decline & Return Home'}
                 </button>
               </div>
             </div>
