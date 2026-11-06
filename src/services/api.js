@@ -39,7 +39,8 @@ function getPrimaryApiUrl() {
       return window.location.protocol + '//' + host + ':3001/api';
     }
 
-    return window.location.protocol + '//' + (host || '127.0.0.1') + ':3001/api';
+    // In production on custom domain or web server proxy (e.g. Hostinger, VPS, Cloudflare)
+    return window.location.origin + '/api';
   }
   return 'http://127.0.0.1:3001/api';
 }
