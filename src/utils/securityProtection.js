@@ -4,7 +4,7 @@
  * 
  * - Blocks Right-Click Context Menu ("Inspect", "View Page Source")
  * - Blocks DevTools shortcuts: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
- * - Protects Sources Tab: Employs dynamic anti-debugger loop to halt and prevent source code inspection
+ * - Protects Sources Tab: Disables sourcemaps, drops console logs and debuggers from production builds
  * - Silences and sanitizes browser Console logs to prevent variable/token leaks
  * - Transparent LocalStorage Shield (obfuscates sensitive student PII, grades, and tokens in Application tab)
  * - Enforces Republic Act No. 10173 (Data Privacy Act of 2012)
@@ -169,17 +169,9 @@ function installDevToolsShortcutBlocker() {
   }, true);
 }
 
-// 4. Sources Tab Anti-Debugger Protection & DevTools Detection Guard
+// 4. DevTools Detection & Console Sanitizer Guard
 function installSourcesAntiDebugger() {
   if (typeof window === 'undefined') return;
-
-  const antiDebuggerTrap = function () {
-    try {
-      (function () {
-        return false;
-      }['constructor']('debugger')['call']());
-    } catch (_) { }
-  };
 
   const showDevToolsWarning = (show) => {
     try {
@@ -215,25 +207,14 @@ function installSourcesAntiDebugger() {
     } catch (_) { }
   };
 
-  // Run periodic debugger guard
-  try {
-    setInterval(antiDebuggerTrap, 800);
-  } catch (_) { }
-
-  // Detect DevTools open by window geometry threshold or debugger pause timing
+  // Detect DevTools open by window geometry threshold without invoking disruptive debugger pauses
   try {
     setInterval(() => {
       const dw = window.outerWidth - window.innerWidth;
       const dh = window.outerHeight - window.innerHeight;
       const isGeometryOpen = dw > 160 || dh > 160;
 
-      const t0 = performance.now();
-      antiDebuggerTrap();
-      const isTimingOpen = (performance.now() - t0) > 100;
-
-      const isDevToolsOpen = isGeometryOpen || isTimingOpen;
-
-      if (isDevToolsOpen) {
+      if (isGeometryOpen) {
         if (window.console && typeof window.console.clear === 'function') {
           window.console.clear();
         }
@@ -241,7 +222,7 @@ function installSourcesAntiDebugger() {
       } else {
         showDevToolsWarning(false);
       }
-    }, 1000);
+    }, 1200);
   } catch (_) { }
 }
 
@@ -311,7 +292,7 @@ export function initSecurityProtection() {
   // 3. Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
   installDevToolsShortcutBlocker();
 
-  // 4. Block Sources tab with anti-debugger trap
+  // 4. Guard Sources & Console with DevTools inspection protection
   installSourcesAntiDebugger();
 
   // 5. Silence and sanitize Console tab
