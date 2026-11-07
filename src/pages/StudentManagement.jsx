@@ -2342,163 +2342,6 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="add-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
-                    <input
-                      type="text"
-                      id="add-street"
-                      name="street"
-                      value={formData.street || ''}
-                      onChange={handleFormFieldChange}
-                      placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label htmlFor="add-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
-                      <input
-                        type="text"
-                        id="add-municipality"
-                        name="municipality"
-                        value={formData.municipality || ''}
-                        onChange={handleFormFieldChange}
-                        placeholder="Naic"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="add-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
-                      <input
-                        type="text"
-                        id="add-province"
-                        name="province"
-                        value={formData.province || ''}
-                        onChange={handleFormFieldChange}
-                        placeholder="Cavite"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Academic Information */}
-                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-emerald-700" />
-                    2. Academic Information &amp; Section
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    <div>
-                      <label htmlFor="add-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
-                      <select
-                        id="add-program"
-                        name="program"
-                        value={formData.program || ''}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                        required
-                      >
-                        <option value="">Select Program</option>
-                        <option value="BSIT">BSIT</option>
-                        <option value="BSCS">BSCS</option>
-                        <option value="BSFAS">BSFAS</option>
-                        <option value="BSHM">BSHM</option>
-                        <option value="BSBA">BSBA</option>
-                        <option value="BEED Science">BEED Science</option>
-                        <option value="BSED">BSED</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
-                      <select
-                        id="add-section"
-                        name="section"
-                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
-                        onChange={(e) => {
-                          const letter = e.target.value.toUpperCase();
-                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
-                          setFormData(prev => ({
-                            ...prev,
-                            section: `${yrNum}-${letter}`
-                          }));
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
-                        required
-                      >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                        <option value="E">E</option>
-                        <option value="F">F</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
-                      <select
-                        id="add-department"
-                        name="department"
-                        value={formData.department || ''}
-                        onChange={(e) => handleDepartmentSelect(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
-                        required
-                      >
-                        <option value="">Select Track *</option>
-                        <option value="CWTS">CWTS (Civic Welfare)</option>
-                        <option value="LTS">LTS (Literacy Training)</option>
-                        <option value="ROTC">ROTC (Military Science)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
-                        NSTP Section {formData.department ? `(${formData.department})` : ''}
-                      </label>
-                      <select
-                        id="add-nstp-section"
-                        name="nstp_section"
-                        value={formData.nstp_section || ''}
-                        onChange={handleFormFieldChange}
-                        disabled={!formData.department}
-                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
-                        {getAvailableSectionsForDept(formData.department).map((sec) => (
-                          <option key={sec} value={sec}>{sec}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label htmlFor="add-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
-                      <select
-                        id="add-year-level"
-                        name="yearLevel"
-                        value={formData.yearLevel || formData.year || '1st Year'}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                        required
-                      >
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Demographic & Emergency Info */}
-                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 text-emerald-700" />
-                    3. Demographic &amp; Emergency Details
-                  </h4>
-                  
                   {/* Birth Date */}
                   <div className="grid grid-cols-3 gap-3.5">
                     <div>
@@ -2747,6 +2590,164 @@ function StudentManagement() {
                     />
                   </div>
 
+                  <div>
+                    <label htmlFor="add-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <input
+                      type="text"
+                      id="add-street"
+                      name="street"
+                      value={formData.street || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="Blk 1 Lot 2, Mahogany St., Brgy. Bucana"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label htmlFor="add-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                      <input
+                        type="text"
+                        id="add-municipality"
+                        name="municipality"
+                        value={formData.municipality || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Naic"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="add-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <input
+                        type="text"
+                        id="add-province"
+                        name="province"
+                        value={formData.province || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Cavite"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Academic Information */}
+                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-emerald-700" />
+                    2. Academic Information &amp; Section
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <div>
+                      <label htmlFor="add-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                      <select
+                        id="add-program"
+                        name="program"
+                        value={formData.program || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Program</option>
+                        <option value="BSIT">BSIT</option>
+                        <option value="BSCS">BSCS</option>
+                        <option value="BSFAS">BSFAS</option>
+                        <option value="BSHM">BSHM</option>
+                        <option value="BSBA">BSBA</option>
+                        <option value="BEED Science">BEED Science</option>
+                        <option value="BSED">BSED</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="add-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
+                      <select
+                        id="add-section"
+                        name="section"
+                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
+                        onChange={(e) => {
+                          const letter = e.target.value.toUpperCase();
+                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+                          setFormData(prev => ({
+                            ...prev,
+                            section: `${yrNum}-${letter}`
+                          }));
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
+                        required
+                      >
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="add-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
+                      <select
+                        id="add-department"
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={(e) => handleDepartmentSelect(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Track *</option>
+                        <option value="CWTS">CWTS (Civic Welfare)</option>
+                        <option value="LTS">LTS (Literacy Training)</option>
+                        <option value="ROTC">ROTC (Military Science)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="add-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
+                        NSTP Section {formData.department ? `(${formData.department})` : ''}
+                      </label>
+                      <select
+                        id="add-nstp-section"
+                        name="nstp_section"
+                        value={formData.nstp_section || ''}
+                        onChange={handleFormFieldChange}
+                        disabled={!formData.department}
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
+                        {getAvailableSectionsForDept(formData.department).map((sec) => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="add-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <select
+                        id="add-year-level"
+                        name="yearLevel"
+                        value={formData.yearLevel || formData.year || '1st Year'}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
+                        required
+                      >
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Emergency Contact & 2x2 ID Photo */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-emerald-700" />
+                    3. Emergency Contact &amp; 2x2 ID Photo
+                  </h4>
+                  
+                  {/* Emergency Contact Person & Number */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="add-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
@@ -3668,163 +3669,6 @@ function StudentManagement() {
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="edit-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
-                    <input
-                      type="text"
-                      id="edit-street"
-                      name="street"
-                      value={formData.street || ''}
-                      onChange={handleFormFieldChange}
-                      placeholder="Brgy. Bucana"
-                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label htmlFor="edit-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
-                      <input
-                        type="text"
-                        id="edit-municipality"
-                        name="municipality"
-                        value={formData.municipality || ''}
-                        onChange={handleFormFieldChange}
-                        placeholder="Naic"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="edit-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
-                      <input
-                        type="text"
-                        id="edit-province"
-                        name="province"
-                        value={formData.province || ''}
-                        onChange={handleFormFieldChange}
-                        placeholder="Cavite"
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Academic Information */}
-                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-emerald-700" />
-                    2. Academic Details &amp; Section
-                  </h4>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    <div>
-                      <label htmlFor="edit-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
-                      <select
-                        id="edit-program"
-                        name="program"
-                        value={formData.program || ''}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                        required
-                      >
-                        <option value="">Select Program</option>
-                        <option value="BSIT">BSIT</option>
-                        <option value="BSCS">BSCS</option>
-                        <option value="BSFAS">BSFAS</option>
-                        <option value="BSHM">BSHM</option>
-                        <option value="BSBA">BSBA</option>
-                        <option value="BEED Science">BEED Science</option>
-                        <option value="BSED">BSED</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
-                      <select
-                        id="edit-section"
-                        name="section"
-                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
-                        onChange={(e) => {
-                          const letter = e.target.value.toUpperCase();
-                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
-                          setFormData(prev => ({
-                            ...prev,
-                            section: `${yrNum}-${letter}`
-                          }));
-                        }}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
-                        required
-                      >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                        <option value="E">E</option>
-                        <option value="F">F</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
-                      <select
-                        id="edit-department"
-                        name="department"
-                        value={formData.department || ''}
-                        onChange={(e) => handleDepartmentSelect(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
-                        required
-                      >
-                        <option value="">Select Track *</option>
-                        <option value="CWTS">CWTS (Civic Welfare)</option>
-                        <option value="LTS">LTS (Literacy Training)</option>
-                        <option value="ROTC">ROTC (Military Science)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
-                        NSTP Section {formData.department ? `(${formData.department})` : ''}
-                      </label>
-                      <select
-                        id="edit-nstp-section"
-                        name="nstp_section"
-                        value={formData.nstp_section || ''}
-                        onChange={handleFormFieldChange}
-                        disabled={!formData.department}
-                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
-                        {getAvailableSectionsForDept(formData.department).map((sec) => (
-                          <option key={sec} value={sec}>{sec}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label htmlFor="edit-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
-                      <select
-                        id="edit-year-level"
-                        name="yearLevel"
-                        value={formData.yearLevel || formData.year || '1st Year'}
-                        onChange={handleFormFieldChange}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
-                        required
-                      >
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Demographic & Emergency Info */}
-                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
-                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 text-emerald-700" />
-                    3. Demographic &amp; Emergency Details
-                  </h4>
-                  
                   {/* Birth Date */}
                   <div className="grid grid-cols-3 gap-3.5">
                     <div>
@@ -4073,8 +3917,165 @@ function StudentManagement() {
                     />
                   </div>
 
+                  <div>
+                    <label htmlFor="edit-street" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Street / Barangay *</label>
+                    <input
+                      type="text"
+                      id="edit-street"
+                      name="street"
+                      value={formData.street || ''}
+                      onChange={handleFormFieldChange}
+                      placeholder="Brgy. Bucana"
+                      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label htmlFor="edit-municipality" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Municipality / City *</label>
+                      <input
+                        type="text"
+                        id="edit-municipality"
+                        name="municipality"
+                        value={formData.municipality || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Naic"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-province" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Province *</label>
+                      <input
+                        type="text"
+                        id="edit-province"
+                        name="province"
+                        value={formData.province || ''}
+                        onChange={handleFormFieldChange}
+                        placeholder="Cavite"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Academic Information */}
+                <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-100/80 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-emerald-700" />
+                    2. Academic Details &amp; Section
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    <div>
+                      <label htmlFor="edit-program" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Program *</label>
+                      <select
+                        id="edit-program"
+                        name="program"
+                        value={formData.program || ''}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Program</option>
+                        <option value="BSIT">BSIT</option>
+                        <option value="BSCS">BSCS</option>
+                        <option value="BSFAS">BSFAS</option>
+                        <option value="BSHM">BSHM</option>
+                        <option value="BSBA">BSBA</option>
+                        <option value="BEED Science">BEED Science</option>
+                        <option value="BSED">BSED</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-section" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">School Section *</label>
+                      <select
+                        id="edit-section"
+                        name="section"
+                        value={(formData.section ? String(formData.section).replace(/^[1-4]-?/i, '').trim().toUpperCase() : '') || 'A'}
+                        onChange={(e) => {
+                          const letter = e.target.value.toUpperCase();
+                          const yrNum = String(formData.yearLevel || formData.year || '1').match(/\d+/)?.[0] || '1';
+                          setFormData(prev => ({
+                            ...prev,
+                            section: `${yrNum}-${letter}`
+                          }));
+                        }}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer"
+                        required
+                      >
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-department" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">NSTP Track / Department *</label>
+                      <select
+                        id="edit-department"
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={(e) => handleDepartmentSelect(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-900 cursor-pointer"
+                        required
+                      >
+                        <option value="">Select Track *</option>
+                        <option value="CWTS">CWTS (Civic Welfare)</option>
+                        <option value="LTS">LTS (Literacy Training)</option>
+                        <option value="ROTC">ROTC (Military Science)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-nstp-section" className="block text-xs font-extrabold uppercase tracking-wider text-emerald-800 mb-1.5">
+                        NSTP Section {formData.department ? `(${formData.department})` : ''}
+                      </label>
+                      <select
+                        id="edit-nstp-section"
+                        name="nstp_section"
+                        value={formData.nstp_section || ''}
+                        onChange={handleFormFieldChange}
+                        disabled={!formData.department}
+                        className="w-full px-3.5 py-2.5 bg-emerald-50/70 border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-bold text-xs sm:text-sm text-emerald-950 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="">{formData.department ? 'Unassigned' : 'Select Track First'}</option>
+                        {getAvailableSectionsForDept(formData.department).map((sec) => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="edit-year-level" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Year Level *</label>
+                      <select
+                        id="edit-year-level"
+                        name="yearLevel"
+                        value={formData.yearLevel || formData.year || '1st Year'}
+                        onChange={handleFormFieldChange}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none font-medium text-xs sm:text-sm cursor-pointer"
+                        required
+                      >
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Emergency Contact & 2x2 ID Photo */}
+                <div className="bg-gray-50/70 rounded-2xl p-4 sm:p-5 border border-gray-100 space-y-4">
+                  <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-emerald-700" />
+                    3. Emergency Contact &amp; 2x2 ID Photo
+                  </h4>
+
                   {/* Emergency Contact Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-gray-200/60">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label htmlFor="edit-emergency-contact" className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 mb-1.5">Emergency Contact Person *</label>
                       <input
