@@ -1378,13 +1378,13 @@ function Landing() {
               <ul className="space-y-1.5 sm:space-y-2 text-emerald-200 text-[10px] sm:text-xs md:text-sm font-medium w-full flex flex-col items-end">
                 <li className="w-full flex items-center justify-end gap-1.5 sm:gap-2">
                   <a
-                    href="https://cvsu-naic.edu.ph/"
+                    href="https://cvsu.edu.ph/naic-campus/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-white transition-colors flex items-center justify-end gap-1 sm:gap-1.5 group max-w-full truncate"
                     title="Cavite State University Naic Campus Official Website"
                   >
-                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">cvsu-naic.edu.ph</span>
+                    <span className="text-[9.5px] xs:text-[11px] sm:text-sm group-hover:underline truncate">cvsu.edu.ph/naic-campus</span>
                     <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-amber-400 shrink-0 group-hover:scale-110 transition-transform" />
                   </a>
                 </li>
