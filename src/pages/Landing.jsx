@@ -12,7 +12,7 @@ import { calculateEnrollmentStatus, syncEnrollmentScheduleFromServer } from '../
 // Actual CvSU Naic campus photography
 const CAROUSEL_IMAGES = [
   {
-    src: `${import.meta.env.BASE_URL}cvsunaiccampus.png`,
+    src: `${import.meta.env.BASE_URL}cvsunaiccampus.jpg`,
     title: "Cavite State University Naic",
     subtitle: "Premier institution fostering character, academics, and sustainable community leadership through NSTP.",
     badge: "Official Campus Portal",
@@ -1123,7 +1123,7 @@ function Landing() {
                 controls
                 controlsList="nodownload"
                 playsInline
-                poster={`${import.meta.env.BASE_URL}cvsunaiccampus.png`}
+                poster={`${import.meta.env.BASE_URL}cvsunaiccampus.jpg`}
                 className="w-full h-full rounded-2xl object-cover bg-black"
               >
                 <source src={`${import.meta.env.BASE_URL}nstp-orientation.mp4`} type="video/mp4" />
