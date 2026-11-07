@@ -789,11 +789,11 @@ export function StudentAttendanceMatrixModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredMatrix.map((st) => {
+                  {filteredMatrix.map((st, idx) => {
                     const isWarning = st.isAtRisk;
                     return (
                       <tr 
-                        key={st.id} 
+                        key={st.id || st.studentId || `matrix-st-${idx}`} 
                         className={`hover:bg-slate-50/80 transition-colors group ${
                           isWarning ? 'bg-rose-50/30' : ''
                         }`}

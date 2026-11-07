@@ -517,7 +517,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
                     const isComplete = g1 && g2;
 
                     return (
-                      <tr key={sid} className="hover:bg-emerald-50/40 transition-colors">
+                      <tr key={sid || `annual-st-${idx}`} className="hover:bg-emerald-50/40 transition-colors">
                         <td className="p-2.5 sm:p-3 text-center text-gray-400 font-mono text-[11px]">
                           {idx + 1}
                         </td>
@@ -625,7 +625,7 @@ export default function StudentGradesModal({ isOpen, onClose, students = [], cur
 
                     return (
                       <tr
-                        key={sid}
+                        key={sid || `grade-st-${idx}`}
                         className={`hover:bg-emerald-50/40 transition-colors ${g.isDirty ? 'bg-amber-50/50' : ''}`}
                       >
                         <td className="p-2.5 sm:p-3 text-center text-gray-400 font-mono text-[11px]">

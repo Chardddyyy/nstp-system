@@ -776,11 +776,11 @@ function InstructorDashboard() {
                           No notifications yet
                         </div>
                       ) : (
-                        activeBellNotifications.map((notification) => {
+                        activeBellNotifications.map((notification, idx) => {
                           const isMsg = isMessageNotification(notification);
                           return (
                           <div
-                            key={notification.id}
+                            key={notification.id ? `notif-${notification.id}` : `notif-${idx}`}
                             className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
                               !notification.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
                             }`}
@@ -922,9 +922,9 @@ function InstructorDashboard() {
                           No message notifications yet
                         </div>
                       ) : (
-                        messageNotifications.map((notification) => (
+                        messageNotifications.map((notification, idx) => (
                           <div
-                            key={notification.id}
+                            key={notification.id ? `msg-${notification.id}` : `msg-${idx}`}
                             className={`p-2 sm:p-2.5 transition-colors flex items-start space-x-1.5 sm:space-x-2 ${
                               !notification.read ? 'bg-emerald-50/60 font-semibold' : 'hover:bg-gray-50'
                             }`}
@@ -1220,9 +1220,9 @@ function InstructorDashboard() {
                 <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
                 <span>Programs:</span>
               </span>
-              {instructorProgramStats.map(item => (
+              {instructorProgramStats.map((item, idx) => (
                 <button
-                  key={item.program}
+                  key={item.program ? `prog-btn-${item.program}` : `prog-btn-${idx}`}
                   type="button"
                   onClick={() => navigate(`/students?course=${encodeURIComponent(item.program)}`)}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-black transition-all cursor-pointer border active:scale-95 shadow-2xs ${
@@ -1289,12 +1289,12 @@ function InstructorDashboard() {
 
                             {/* Columns Container */}
                             <div className="relative h-full flex items-end justify-around px-2 z-10 gap-2 sm:gap-4">
-                              {instructorProgramStats.map(item => {
+                              {instructorProgramStats.map((item, idx) => {
                                 const heightPercent = maxVal > 0 ? Math.max(12, Math.round((item.count / maxVal) * 100)) : 12;
                                 const sharePercent = myStudents.length > 0 ? Math.round((item.count / myStudents.length) * 100) : 0;
                                 return (
                                   <div
-                                    key={item.program}
+                                    key={item.program ? `bar-${item.program}` : `bar-${idx}`}
                                     onClick={() => navigate(`/students?course=${encodeURIComponent(item.program)}`)}
                                     className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer max-w-[80px]"
                                     title={`Click to view ${item.program}: ${item.count} students (${sharePercent}% of ${instructorDept})`}
@@ -1342,13 +1342,13 @@ function InstructorDashboard() {
           ) : (
             /* Horizontal Program Progress Cards */
             <div className="space-y-2.5">
-              {instructorProgramStats.map(item => {
+              {instructorProgramStats.map((item, idx) => {
                 const maxVal = maxInstructorProgramCount;
                 const barWidth = maxVal > 0 ? Math.max(8, Math.round((item.count / maxVal) * 100)) : 8;
                 const sharePercent = myStudents.length > 0 ? Math.round((item.count / myStudents.length) * 100) : 0;
                 return (
                   <div
-                    key={item.program}
+                    key={item.program ? `prog-card-${item.program}` : `prog-card-${idx}`}
                     className="p-3 sm:p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all flex flex-col gap-2"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -1424,8 +1424,8 @@ function InstructorDashboard() {
               {recentStudents.length === 0 ? (
                 <p className="text-xs text-gray-500 text-center py-6">No enrolled students assigned yet.</p>
               ) : (
-                recentStudents.map((student) => (
-                  <div key={student.id} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50/80 hover:bg-emerald-50/40 rounded-xl border border-gray-200/60 transition-all group">
+                recentStudents.map((student, idx) => (
+                  <div key={student.id || student.studentId || `student-${idx}`} className="flex items-center justify-between p-2 sm:p-3 bg-gray-50/80 hover:bg-emerald-50/40 rounded-xl border border-gray-200/60 transition-all group">
                     <div className="flex items-center space-x-2 min-w-0">
                       <div className="w-7 h-7 sm:w-9 sm:h-9 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center font-bold text-xs shrink-0">
                         {(student.name || 'S').charAt(0).toUpperCase()}
@@ -1459,8 +1459,8 @@ function InstructorDashboard() {
               {recentReports.length === 0 ? (
                 <p className="text-xs text-gray-500 text-center py-6">No recent report submissions.</p>
               ) : (
-                recentReports.map((report) => (
-                  <div key={report.id} className="p-2.5 sm:p-3 bg-gray-50/80 hover:bg-amber-50/40 rounded-xl border border-gray-200/60 transition-all group">
+                recentReports.map((report, idx) => (
+                  <div key={report.id || report._id || `report-${idx}`} className="p-2.5 sm:p-3 bg-gray-50/80 hover:bg-amber-50/40 rounded-xl border border-gray-200/60 transition-all group">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <p className="font-extrabold text-xs sm:text-sm text-gray-900 truncate group-hover:text-amber-900 transition-colors">{report.title}</p>
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${
@@ -1568,7 +1568,7 @@ function InstructorDashboard() {
                       const kB = getSortKey(b);
                       if (kA.startYear !== kB.startYear) return kB.startYear - kA.startYear;
                       return kA.semRank - kB.semRank;
-                    }).map((year) => {
+                    }).map((year, idx) => {
                       // Calculate strictly department students count for this batch
                       const sList = year.studentData || year.data?.studentData;
                       const deptStudentsCount = Array.isArray(sList) && sList.length > 0
@@ -1577,7 +1577,7 @@ function InstructorDashboard() {
 
                       return (
                         <div
-                          key={year.year}
+                          key={year.id || year.year || `batch-year-${idx}`}
                           className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 hover:bg-emerald-50/60 rounded-2xl p-4 sm:p-5 border border-gray-200/80 hover:border-emerald-300 transition-all gap-3 shadow-2xs group"
                         >
                           <div className="flex items-center space-x-3.5">
@@ -1782,7 +1782,7 @@ function InstructorDashboard() {
                   {archiveViewData.reportData && archiveViewData.reportData.length > 0 ? (
                     <div className="space-y-3">
                       {archiveViewData.reportData.map((report, idx) => (
-                        <div key={idx} className="bg-gray-50 rounded-lg p-4">
+                        <div key={report.id || `arch-report-${idx}`} className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <h5 className="font-medium text-gray-800">{report.title}</h5>
                             <span className="px-2 py-1 rounded text-xs bg-emerald-100 text-emerald-800 font-bold">
@@ -1851,7 +1851,7 @@ function InstructorDashboard() {
                       }
 
                       return deptEvents.map((evt, idx) => (
-                        <div key={idx} className="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex flex-col justify-between">
+                        <div key={evt.id || `${evt.date}_${evt.title || ''}_${idx}`} className="bg-gray-50/80 border border-gray-200/80 rounded-xl p-3 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between gap-1 mb-1">
                               <span className="text-[11px] font-black text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md font-mono">{evt.date}</span>
