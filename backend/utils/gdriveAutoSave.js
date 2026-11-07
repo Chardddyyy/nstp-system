@@ -34,11 +34,11 @@ async function autoSaveToGDrive(activity = 'Scheduled Midnight Daily Backup', cl
     const timestamp = new Date().toISOString();
 
     // Unified single clean backup name: "CvSU_NSTP_Latest_Database_Backup.json"
-    const targetFolderId = process.env.GDRIVE_FOLDER_ID || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
+    const targetFolderId = process.env.GDRIVE_FOLDER_ID || '1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv';
     const backupPayload = {
       fileName: 'CvSU_NSTP_Latest_Database_Backup.json',
       folderId: targetFolderId,
-      folderUrl: process.env.GDRIVE_FOLDER_URL || `https://drive.google.com/drive/folders/${targetFolderId}`,
+      folderUrl: process.env.GDRIVE_FOLDER_URL || `https://drive.google.com/drive/u/3/folders/${targetFolderId}`,
       cleanOld: cleanOld,
       backupData: {
         system: 'Cavite State University Naic - NSTP Record & Report Management System',

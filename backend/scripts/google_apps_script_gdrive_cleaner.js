@@ -26,7 +26,7 @@ function doPost(e) {
     var data = JSON.parse(rawData);
 
     // Kuhanin ang opisyal na folder sa Google Drive ng account
-    var targetFolderId = data.folderId || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
+    var targetFolderId = data.folderId || '1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv';
     var folder = null;
     if (targetFolderId) {
       try {

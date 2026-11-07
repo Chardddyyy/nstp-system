@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "dev:all": "concurrently \"npm run dev\" \"cd backend && node server.js\" \"npm run pma\"",
-    "pma": "/Applications/XAMPP/xamppfiles/bin/php -S localhost:8888 -t /Applications/XAMPP/xamppfiles/phpmyadmin",
+    "pma": "/Applications/XAMPP/xamppfiles/bin/php -S localhost:8080 -t /Applications/XAMPP/xamppfiles/phpmyadmin",
     "prebuild": "node scripts/generate-version.js",
     "build": "vite build",
     "postbuild": "node scripts/generate-spa-routes.js",

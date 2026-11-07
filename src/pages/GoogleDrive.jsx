@@ -22,7 +22,7 @@ import {
   X
 } from 'lucide-react';
 
-const GDRIVE_URL = 'https://drive.google.com/drive/folders/1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
+const GDRIVE_URL = 'https://drive.google.com/drive/u/3/folders/1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv';
 
 export function GoogleDriveIcon({ className = "w-6 h-6" }) {
   return (
