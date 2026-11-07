@@ -1355,20 +1355,6 @@ function Landing() {
                   <p className="text-amber-400 text-[9px] sm:text-xs font-bold font-mono">Naic Campus</p>
                 </div>
               </div>
-              <div className="space-y-1.5 mb-2.5 max-w-md text-emerald-200/90 text-[9.5px] xs:text-[10px] sm:text-xs leading-snug sm:leading-relaxed">
-                <div>
-                  <span className="font-extrabold uppercase text-amber-400 tracking-wider text-[8.5px] sm:text-[9.5px] block">Vision</span>
-                  <p>
-                    The premier university in historic Cavite globally recognized for excellence in character development, academics, research, innovation, and sustainable community engagement.
-                  </p>
-                </div>
-                <div>
-                  <span className="font-extrabold uppercase text-amber-400 tracking-wider text-[8.5px] sm:text-[9.5px] block">Mission</span>
-                  <p>
-                    Cavite State University shall provide excellent, equitable and relevant educational opportunities in the arts, sciences and technology through quality instruction and responsive research and development activities. It shall produce professional, skilled and morally upright individuals for global competitiveness.
-                  </p>
-                </div>
-              </div>
               <p className="text-amber-400/90 text-[8px] xs:text-[9.5px] sm:text-xs font-bold tracking-tight sm:tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">Truth • Integrity • Excellence • Service</p>
             </div>
 
