@@ -8746,7 +8746,7 @@ app.post('/api/backup/now', authenticateToken, requireAdmin, async (req, res) =>
       JSON.stringify({
         type: 'gdrive_sync',
         activity: activityName,
-        folderId: process.env.GDRIVE_FOLDER_ID || '1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv',
+        folderId: process.env.GDRIVE_FOLDER_ID || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1',
         performedBy: req.user.name || req.user.email
       }),
       req.ip || 'unknown'
@@ -8786,7 +8786,7 @@ app.get('/api/backup/download', authenticateToken, requireAdmin, async (req, res
     const payload = {
       system: 'Cavite State University Naic - NSTP Record & Report Management System',
       backupTimestamp: new Date().toISOString(),
-      targetFolderId: process.env.GDRIVE_FOLDER_ID || '1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv',
+      targetFolderId: process.env.GDRIVE_FOLDER_ID || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1',
       totalTablesCaptured: tableNames.length,
       tableSummaryCounts: summaryCounts,
       databaseTables: databaseTables

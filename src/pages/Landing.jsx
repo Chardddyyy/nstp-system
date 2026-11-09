@@ -1419,12 +1419,7 @@ function Landing() {
               </ul>
             </div>
 
-            {/* CvSU Core Values (Centered & Lowered) */}
-            <div className="col-span-2 text-center pt-2.5 sm:pt-4">
-              <p className="text-amber-400/90 text-[8.5px] xs:text-[10px] sm:text-xs font-bold tracking-tight sm:tracking-wide whitespace-nowrap overflow-hidden text-ellipsis text-center">
-                Truth • Integrity • Excellence • Service
-              </p>
-            </div>
+
 
           </div>
         </div>

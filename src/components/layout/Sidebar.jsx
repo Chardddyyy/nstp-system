@@ -168,55 +168,8 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
       e.preventDefault();
       e.stopPropagation();
     }
-    onClose();
-
-    // Open Google Drive in a new tab
-    const driveWin = window.open(GDRIVE_URL, '_blank');
-
-    if (driveWin) {
-      let redirected = false;
-      const doRedirect = () => {
-        if (redirected) return;
-        redirected = true;
-        navigate(dashPath);
-      };
-
-      // Periodic check if the Google Drive tab was closed
-      const checkTimer = setInterval(() => {
-        try {
-          if (driveWin.closed) {
-            clearInterval(checkTimer);
-            window.removeEventListener('focus', onWindowFocus);
-            doRedirect();
-          }
-        } catch (_) {
-          clearInterval(checkTimer);
-        }
-      }, 400);
-
-      // Also listen for window focus when user returns from the closed tab
-      const onWindowFocus = () => {
-        setTimeout(() => {
-          try {
-            if (!driveWin || driveWin.closed) {
-              clearInterval(checkTimer);
-              window.removeEventListener('focus', onWindowFocus);
-              doRedirect();
-            }
-          } catch (_) {}
-        }, 200);
-      };
-
-      window.addEventListener('focus', onWindowFocus);
-
-      // Clean up after 30 minutes
-      setTimeout(() => {
-        clearInterval(checkTimer);
-        window.removeEventListener('focus', onWindowFocus);
-      }, 30 * 60 * 1000);
-    } else {
-      navigate('/admin/google-drive');
-    }
+    if (typeof onClose === 'function') onClose();
+    window.open(GDRIVE_URL, '_blank', 'noopener,noreferrer');
   }
 
   function navClass(path) {
@@ -391,17 +344,21 @@ export default function Sidebar({ open, onClose, onLogout, user, archiveMode = f
                 </span>
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={handleOpenGoogleDrive}
-                title="Open Google Drive (Directs to Dashboard when closed)"
+              <a
+                href={GDRIVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  if (typeof onClose === 'function') onClose();
+                }}
+                title="Open Google Drive Repository"
                 className={navClass('/admin/google-drive')}
               >
                 <div className="flex items-center space-x-3">
                   <HardDrive className="w-5 h-5" />
                   <span>Google Drive</span>
                 </div>
-              </button>
+              </a>
             )
           )}
 

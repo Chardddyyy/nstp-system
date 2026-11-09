@@ -25,8 +25,8 @@ function doPost(e) {
     var rawData = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     var data = JSON.parse(rawData);
 
-    // Kuhanin ang opisyal na folder sa Google Drive ng account
-    var targetFolderId = data.folderId || '1guX6NbrH7GcB9xNOsSJxMMlVk4Ifulmv';
+    // Kuhanin ang opisyal na folder sa Google Drive ng account para sa backups
+    var targetFolderId = data.folderId || '1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1';
     var folder = null;
     if (targetFolderId) {
       try {

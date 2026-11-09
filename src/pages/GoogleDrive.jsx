@@ -57,51 +57,7 @@ export default function GoogleDrive() {
   }, [navigate]);
 
   const handleOpenDrive = () => {
-    // Open Google Drive in a new tab without noopener to allow monitoring window.closed
-    const driveWin = window.open(GDRIVE_URL, '_blank');
-
-    if (driveWin) {
-      let redirected = false;
-      const doRedirect = () => {
-        if (redirected) return;
-        redirected = true;
-        navigate('/admin/dashboard');
-      };
-
-      // Periodic check if the Google Drive tab was closed
-      const checkTimer = setInterval(() => {
-        try {
-          if (driveWin.closed) {
-            clearInterval(checkTimer);
-            window.removeEventListener('focus', onWindowFocus);
-            doRedirect();
-          }
-        } catch (_) {
-          clearInterval(checkTimer);
-        }
-      }, 400);
-
-      // Listen for window focus when user returns from the closed tab
-      const onWindowFocus = () => {
-        setTimeout(() => {
-          try {
-            if (!driveWin || driveWin.closed) {
-              clearInterval(checkTimer);
-              window.removeEventListener('focus', onWindowFocus);
-              doRedirect();
-            }
-          } catch (_) {}
-        }, 200);
-      };
-
-      window.addEventListener('focus', onWindowFocus);
-
-      // Failsafe cleanup after 30 minutes
-      setTimeout(() => {
-        clearInterval(checkTimer);
-        window.removeEventListener('focus', onWindowFocus);
-      }, 30 * 60 * 1000);
-    }
+    window.open(GDRIVE_URL, '_blank', 'noopener,noreferrer');
   };
 
   const handleCopyLink = () => {
@@ -357,11 +313,22 @@ export default function GoogleDrive() {
                   <div>
                     <h4 className="font-black text-gray-900 text-sm">Automated MySQL Backups</h4>
                     <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                      Every midnight snapshot and critical action (batch sections, approvals) sends a dual-redundancy backup directly into this cloud folder via webhook.
+                      Every midnight snapshot and critical action sends a dual-redundancy backup directly into the dedicated automatic backup folder.
                     </p>
-                    <span className="inline-block mt-2 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                      Disaster Recovery
-                    </span>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                        Disaster Recovery
+                      </span>
+                      <a
+                        href="https://drive.google.com/drive/u/3/folders/1KLcAXPauT6WDRwOgSbOaCLSaNWyciXh1"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors inline-flex items-center gap-1"
+                      >
+                        <span>Open Backup Folder</span>
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
