@@ -2531,7 +2531,7 @@ function AdminDashboard() {
                           </div>
                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <button type="button"
-                              onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
+                              onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}? Official Digital ID will be automatically sent to their email.`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
                               className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-xs"
                             >
                               <CheckCircle className="w-4 h-4" /> Approve
@@ -2703,7 +2703,7 @@ function AdminDashboard() {
                               <div className="flex items-center gap-2">
                                 <button type="button"
 
-                                  onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}?`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
+                                  onClick={() => showConfirm(`Approve enrollment for ${enrollment.fullName}? Official Digital ID will be automatically sent to their email.`, async () => { try { await approveEnrollment(enrollment.id); } catch { } })}
                                   className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
                                 >
                                   <CheckCircle className="w-3.5 h-3.5" /> Approve
@@ -3879,7 +3879,7 @@ function AdminDashboard() {
                     const track = String(selectedEnrollment.nstpComponent || selectedEnrollment.department || 'CWTS').toUpperCase().trim();
                     const allowedSections = getAvailableSectionsForDept(track);
                     const finalSec = (assignNstpSection && allowedSections.includes(assignNstpSection)) ? assignNstpSection : (allowedSections[0] || `${track} 1`);
-                    showConfirm(`Approve enrollment for ${selectedEnrollment.fullName} and assign to ${finalSec}?`, async () => {
+                    showConfirm(`Approve enrollment for ${selectedEnrollment.fullName} and assign to ${finalSec}? Official Digital ID will be automatically sent to their email.`, async () => {
                       try {
                         await approveEnrollment(selectedEnrollment.id, finalSec);
                         setSelectedEnrollment(null);

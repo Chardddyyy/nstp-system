@@ -7073,6 +7073,67 @@ app.put('/api/enrollments/:id', authenticateToken, async (req, res) => {
               }),
               req.ip || 'unknown'
             );
+
+            // ── AUTOMATED DIGITAL ID EMAIL DISPATCH UPON ENROLLMENT APPROVAL ──
+            try {
+              const [approvedStudentRows] = await pool.execute(
+                'SELECT * FROM students WHERE studentId = ? LIMIT 1',
+                [studentIdVal]
+              );
+              const approvedStudent = (approvedStudentRows && approvedStudentRows[0]) ? approvedStudentRows[0] : enrollment;
+
+              if (approvedStudent) {
+                // Ensure 2x2 photo is preserved
+                if (!approvedStudent.id_photo_2x2) {
+                  approvedStudent.id_photo_2x2 = enrollment.id_photo_2x2 || enrollment.photo || enrollment.registration_photo || null;
+                  approvedStudent.photo = approvedStudent.id_photo_2x2;
+                }
+
+                const targetEmail = (approvedStudent.email || enrollment.email || '').trim();
+                if (targetEmail && targetEmail.includes('@')) {
+                  const studentPayload = {
+                    ...enrollment,
+                    ...approvedStudent,
+                    fullName: approvedStudent.name || enrollment.student_name || enrollment.fullName,
+                    studentId: studentIdVal,
+                    department: dept,
+                    section: approvedStudent.nstp_section || approvedStudent.section || resolvedNstpSec,
+                    nstp_section: approvedStudent.nstp_section || resolvedNstpSec,
+                    nstp_serial_id: approvedStudent.nstp_serial_id || matriculationNumber,
+                    qr_token: approvedStudent.qr_token || token,
+                    email: targetEmail,
+                    emergencyContact: approvedStudent.emergencyContact || enrollment.emergencyContact || 'Emergency Contact',
+                    emergencyNumber: approvedStudent.emergencyNumber || enrollment.emergencyNumber || '09000000000',
+                    id_photo_2x2: approvedStudent.id_photo_2x2 || enrollment.id_photo_2x2 || enrollment.photo
+                  };
+
+                  console.log(`[AUTO DIGITAL ID] Automatically dispatching Digital ID to ${targetEmail} for approved student ${studentIdVal}...`);
+
+                  // Fire-and-forget in background so approval API response remains fast
+                  sendDigitalIdEmail(studentPayload, targetEmail)
+                    .then(res => {
+                      if (res && res.sent !== false) {
+                        console.log(`[AUTO DIGITAL ID] ✓ Successfully auto-sent Digital ID to ${targetEmail} for student ${studentIdVal}`);
+                        auditLog(
+                          'send_digital_id',
+                          req.user?.id || 1,
+                          `Auto-sent official Digital ID to ${targetEmail} upon enrollment approval`,
+                          req.ip || 'unknown'
+                        );
+                      } else {
+                        console.warn(`[AUTO DIGITAL ID NOTICE] Email delivery notice for ${targetEmail}:`, res?.error || 'unconfirmed');
+                      }
+                    })
+                    .catch(err => {
+                      console.error(`[AUTO DIGITAL ID ERROR] Failed to auto-send Digital ID to ${targetEmail}:`, err.message);
+                    });
+                } else {
+                  console.log(`[AUTO DIGITAL ID] Skipped dispatch: No valid recipient email for student ${studentIdVal}`);
+                }
+              }
+            } catch (autoIdErr) {
+              console.error('[AUTO DIGITAL ID ERROR] Notice in auto-dispatch routine:', autoIdErr.message);
+            }
           }
         } catch (insertError) {
           console.error('Error inserting student during enrollment approval:', insertError);

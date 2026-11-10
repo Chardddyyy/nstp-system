@@ -2992,6 +2992,9 @@ function App() {
     deleteNotifications([`enrollment-${id}`, String(id)]);
     const studentsData = await studentsAPI.getAll();
     setStudents(studentsData);
+    if (typeof showToast === 'function') {
+      showToast('Enrollment approved! Official Digital ID has been automatically sent to student\'s email.', 'success', 'Enrollment Approved');
+    }
     return updated;
   }
 
@@ -2999,6 +3002,9 @@ function App() {
     await enrollmentsAPI.update(id, 'Declined');
     setPendingEnrollments(prev => prev.filter(e => e.id !== id));
     deleteNotifications([`enrollment-${id}`, String(id)]);
+    if (typeof showToast === 'function') {
+      showToast('Enrollment application declined.', 'info', 'Enrollment Declined');
+    }
   }
 
   // ── Report management ─────────────────────────────────────────────────────────
